@@ -2,6 +2,7 @@
 import sys
 import freetype
 import string
+import math
 import os.path
 
 CHARS = string.ascii_letters + string.digits + string.punctuation
@@ -52,11 +53,10 @@ def get_metrics(c):
             face.glyph.metrics.horiBearingY // 64
     ]
 
-font_simple_name = os.path.splitext(os.path.basename(face_name))[0].replace("-", "_").replace(" ", "_").strip(string.digits + string.whitespace + "./\"'!@#$%^&*()[]{};,.").lower()
-header_name = "FONT_" + font_simple_name.upper()
-header_name += "_" + str(size_pixels) + "_H"
+font_simple_name = os.path.splitext(os.path.basename(face_name))[0].replace("-", "_").replace(" ", "_").strip(string.digits + string.whitespace + "./\"'!@#$%^&*()[]{};,.").lower() + "_" + str(size_pixels)
+header_name = "FONT_" + font_simple_name.upper() + "_H"
 
-print(f"#ifndef {header_name}\n#define{header_name}")
+print(f"#ifndef {header_name}\n#define {header_name}")
 print("#include <stdint.h>")
 print()
 print(f"namespace font::{font_simple_name} {{")
@@ -68,7 +68,7 @@ metrics = {}
 for i in range(256):
     if i in CHAR_NUMS:
         img, dat = get_character_as_bool_array(chr(i))
-        metrics[i] = len(img[0]), len(img), len(img[0]) // 8
+        metrics[i] = len(img[0]), len(img), int(math.ceil(len(img[0]) / 8))
         print("const uint8_t data_{}[] = {{".format(i))
         zipped = [(", ".join(str(u) for u in x), "".join("#" if z else " " for z in y)) for x, y in zip(dat, img)]
         for i in zipped:
@@ -86,7 +86,7 @@ for i in range(256):
     j = list(metrics[i])
     j.extend(get_metrics(chr(i)))
     j = [str(x) for x in j]
-    print("\t{{ {} }}, // {}".format(", ".join(j), chr(i)))
+    print("\t{{ {} }}, // {}  ".format(", ".join(j), chr(i) if chr(i) != "\\" else "backslash"))
 print("};")
 
 print("const uint8_t * data[] = {")
