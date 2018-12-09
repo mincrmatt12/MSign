@@ -70,9 +70,6 @@ namespace led {
 				LL_TIM_DisableDMAReq_UPDATE(TIM1);
 				//LL_TIM_EnableUpdateEvent(TIM1);
 
-				// Force TIM1 to send its output the lazy arsehole
-				TIM1->BDTR |= TIM_BDTR_MOE;
-
 				// setup gpios
 				LL_GPIO_InitTypeDef gpio_init = {0};
 				gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6 | LL_GPIO_PIN_7;
@@ -129,6 +126,9 @@ namespace led {
 					delaying = false;
 					oe = true;
 					LL_TIM_DisableIT_UPDATE(TIM1);
+					asm volatile ("nop");
+					asm volatile ("nop");
+					asm volatile ("nop");
 					if (show) do_next();
 					else show = true;
 					return;
@@ -139,6 +139,9 @@ namespace led {
 					LL_TIM_DisableIT_UPDATE(TIM1);
 					delaying = false;
 					oe = true;
+					asm volatile ("nop");
+					asm volatile ("nop");
+					asm volatile ("nop");
 				}
 				else return;
 				if (show) do_next();
@@ -207,7 +210,7 @@ namespace led {
 			}
 
 			void do_next() {
-				if (row == FB::height) {
+				if (row == (FB::stb_lines)) {
 					// We are now finished
 					blasting = false;
 					// Stop the timer entirely
@@ -219,14 +222,14 @@ namespace led {
 				GPIOB->ODR |= row & 0x000f;
 
 				strobe = true;
-				oe = false;
 				show = false;
 				strobe = false;
 				if (++pos < 8) {
 					// Send off the next row
 					blast_row();
 					// Start the waiting.
-					wait(((1 << pos) / 5) << 2);		
+					oe = false;
+					wait(((1 << pos) / 4) << 2);		
 					return;
 				}
 				else if (++row < FB::stb_lines) {
@@ -234,13 +237,15 @@ namespace led {
 					pos = 0;
 					// Blast and wait
 					blast_row();
-					wait((256/5) << 2);		
+					oe = false;
+					wait((256/4) << 2);		
 					return;
 				}
 				else {
 					// Alright, row is now == fb::height, so run the wait code
 					// Just wait, but force it to run us again.
 					show = true;
+					oe = false;
 					wait(1);
 				}
 			}

@@ -2,40 +2,29 @@
 #include "matrix.h"
 #include "nvic.h"
 #include "rcc.h"
+#include "rng.h"
 
 led::Matrix<led::FrameBuffer<64, 32>> matrix;
 
 int main() {
 	rcc::init();
 	nvic::init();
+	rng::init();
 
 	matrix.init();
-	for (int i = 0; i < 64; ++i) {
-		for (int j = 0; j < 32; ++j) {
-			matrix.get_inactive_buffer().r(i, j) = 0;
-			matrix.get_inactive_buffer().g(i, j) = 0;
-			matrix.get_inactive_buffer().b(i, j) = 255;
+	int b = 0;
+	for (int x = 0; x < 64; ++x) {
+		for (int y = 0; y < 32; ++y) {
+			matrix.get_inactive_buffer().r(x, y) = rng::get() % 256;
+			matrix.get_inactive_buffer().g(x, y) = rng::get() % 256;
+			matrix.get_inactive_buffer().b(x, y) = rng::get() % 256;
 		}
 	}
 	matrix.swap_buffers();
-	int i = 0, j = 0, k = 0, y = 0;
 	while (true) {
 		matrix.display();
-		i += 1; y += 1;
-		y %= 30;
-		if (i == 256) {i = 0; ++j;}
-		if (j == 256) {j = 0; ++k;}
-		if (k == 256) {k = 0;}
-		for (int x = 0; x < 64; ++ x) {
-			matrix.get_inactive_buffer().r(x, y) = i;
-			matrix.get_inactive_buffer().g(x, y) = j;
-			matrix.get_inactive_buffer().b(x, y) = k;
-			matrix.get_inactive_buffer().r(x, y+1) = i;
-			matrix.get_inactive_buffer().g(x, y+1) = j;
-			matrix.get_inactive_buffer().b(x, y+1) = k;
+		while (matrix.is_active()) {
 		}
-		while (matrix.is_active()) {;}
-		matrix.swap_buffers();
 	}
 }
 
