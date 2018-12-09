@@ -48,9 +48,9 @@ def get_metrics(c):
 
     face.load_char(c, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_MONO)
     return [
-            face.glyph.metrics.horiAdvance // 64,
-            face.glyph.metrics.horiBearingX // 64,
-            face.glyph.metrics.horiBearingY // 64
+            int(math.ceil(face.glyph.metrics.horiAdvance / 64)),
+            round(face.glyph.metrics.horiBearingX / 64),
+            round(face.glyph.metrics.horiBearingY / 64)
     ]
 
 font_simple_name = os.path.splitext(os.path.basename(face_name))[0].replace("-", "_").replace(" ", "_").strip(string.digits + string.whitespace + "./\"'!@#$%^&*()[]{};,.").lower() + "_" + str(size_pixels)
