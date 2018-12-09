@@ -243,7 +243,7 @@ namespace led {
 					blast_row();
 					// Start the waiting.
 					oe = false;
-					wait(((1 << pos) / 4) << 2);		
+					wait(((1 << pos) / 5) << 2);		
 					return;
 				}
 				else if (++row < FB::stb_lines) {
@@ -252,7 +252,7 @@ namespace led {
 					// Blast and wait
 					blast_row();
 					oe = false;
-					wait((256/4) << 2);		
+					wait((256/5) << 2);		
 					return;
 				}
 				else {
@@ -260,7 +260,7 @@ namespace led {
 					// Just wait, but force it to run us again.
 					show = true;
 					oe = false;
-					wait(1);
+					wait((256/5) << 2);
 				}
 			}
 		};
