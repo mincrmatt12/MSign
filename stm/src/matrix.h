@@ -22,12 +22,12 @@ namespace led {
 				uint8_t mask = (1 << pos);
 				for (uint16_t j = 0, x = 0; j < (Width*2); j += 2, ++x) {
 					byte_stream[j] = 
-						(((r(x, i)           & mask) == mask) ? 1  : 0) +
-						(((g(x, i)           & mask) == mask) ? 2  : 0) +
-						(((b(x, i)           & mask) == mask) ? 4  : 0) +
-						(((r(x, i+stb_lines) & mask) == mask) ? 8  : 0) +
-						(((g(x, i+stb_lines) & mask) == mask) ? 16 : 0) +
-						(((b(x, i+stb_lines) & mask) == mask) ? 32 : 0);
+						(((_r(x, i)           & mask) == mask) ? 1  : 0) +
+						(((_g(x, i)           & mask) == mask) ? 2  : 0) +
+						(((_b(x, i)           & mask) == mask) ? 4  : 0) +
+						(((_r(x, i+stb_lines) & mask) == mask) ? 8  : 0) +
+						(((_g(x, i+stb_lines) & mask) == mask) ? 16 : 0) +
+						(((_b(x, i+stb_lines) & mask) == mask) ? 32 : 0);
 					byte_stream[j+1] = byte_stream[j] + 64;
 				}
 				byte_stream[(Width*2)] = 0x00;
@@ -35,17 +35,17 @@ namespace led {
 
 			uint8_t & r(uint16_t x, uint16_t y) {
 				if (x < Width && y < Height)
-					return data[x*3 + y*Width*3];
+					return _r(x, y);
 				return junk;
 			}
 			uint8_t & g(uint16_t x, uint16_t y) {
 				if (x < Width && y < Height)
-					return data[x*3 + y*Width*3 + 1];
+					return _g(x, y);
 				return junk;
 			}
 			uint8_t & b(uint16_t x, uint16_t y) {
 				if (x < Width && y < Height)
-					return data[x*3 + y*Width*3 + 2];
+					return _b(x, y);
 				return junk;
 			}
 
@@ -57,6 +57,18 @@ namespace led {
 
 		private:
 			uint8_t data[Width*Height*3];
+
+			inline uint8_t & _r(uint16_t x, uint16_t y) {
+				return data[x*3 + y*Width*3 + 0];
+			}
+
+			inline uint8_t & _g(uint16_t x, uint16_t y) {
+				return data[x*3 + y*Width*3 + 1];
+			}
+
+			inline uint8_t & _b(uint16_t x, uint16_t y) {
+				return data[x*3 + y*Width*3 + 2];
+			}
 
 			uint8_t junk; // used as failsafe for read/write out of bounds
 		};
@@ -136,7 +148,7 @@ namespace led {
 
 			void tim_elapsed() {
 				if (!delaying) return;
-				if (delay_counter > 512) {
+				if (delay_counter > 204) {
 					delaying = false;
 					oe = true;
 					LL_TIM_DisableIT_UPDATE(TIM1);
@@ -224,6 +236,8 @@ namespace led {
 			}
 
 			void do_next() {
+				// set address pins
+				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 				if (row == (FB::stb_lines)) {
 					// We are now finished
 					blasting = false;
@@ -231,28 +245,24 @@ namespace led {
 					LL_TIM_DisableCounter(TIM1);
 					return;
 				}
-				// set address pins
-				GPIOB->ODR &= 0xfff0;
-				GPIOB->ODR |= row & 0x000f;
-
 				strobe = true;
 				show = false;
 				strobe = false;
 				if (++pos < 8) {
-					// Send off the next row
-					blast_row();
 					// Start the waiting.
 					oe = false;
 					wait(((1 << pos) / 5) << 2);		
+					// Send off the next row
+					blast_row();
 					return;
 				}
 				else if (++row < FB::stb_lines) {
+					oe = false;
+					wait((256/5) << 2);		
 					// Set back to first bit
 					pos = 0;
 					// Blast and wait
 					blast_row();
-					oe = false;
-					wait((256/5) << 2);		
 					return;
 				}
 				else {
