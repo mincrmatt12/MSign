@@ -33,9 +33,21 @@ namespace led {
 				byte_stream[(Width*2)] = 0x00;
 			}
 
-			uint8_t & r(uint16_t x, uint16_t y) {return data[x*3 + y*Width*3];}
-			uint8_t & g(uint16_t x, uint16_t y) {return data[x*3 + y*Width*3 + 1];}
-			uint8_t & b(uint16_t x, uint16_t y) {return data[x*3 + y*Width*3 + 2];}
+			uint8_t & r(uint16_t x, uint16_t y) {
+				if (x < Width && y < Height)
+					return data[x*3 + y*Width*3];
+				return junk;
+			}
+			uint8_t & g(uint16_t x, uint16_t y) {
+				if (x < Width && y < Height)
+					return data[x*3 + y*Width*3 + 1];
+				return junk;
+			}
+			uint8_t & b(uint16_t x, uint16_t y) {
+				if (x < Width && y < Height)
+					return data[x*3 + y*Width*3 + 2];
+				return junk;
+			}
 
 			uint8_t * byte_stream;
 
@@ -45,6 +57,8 @@ namespace led {
 
 		private:
 			uint8_t data[Width*Height*3];
+
+			uint8_t junk; // used as failsafe for read/write out of bounds
 		};
 
 	template<typename FB>
