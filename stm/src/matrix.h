@@ -248,17 +248,19 @@ namespace led {
 				strobe = true;
 				show = false;
 				strobe = false;
-				if (++pos < 8) {
+				uint8_t drawn_pos = pos;
+				++pos;
+				if (pos < 8) {
 					// Start the waiting.
 					oe = false;
-					wait(((1 << pos) / 5) << 2);		
+					wait(1 << drawn_pos);		
 					// Send off the next row
 					blast_row();
 					return;
 				}
 				else if (++row < FB::stb_lines) {
 					oe = false;
-					wait((256/5) << 2);		
+					wait(1 << drawn_pos);		
 					// Set back to first bit
 					pos = 0;
 					// Blast and wait
@@ -270,7 +272,7 @@ namespace led {
 					// Just wait, but force it to run us again.
 					show = true;
 					oe = false;
-					wait((256/5) << 2);
+					wait(1 << drawn_pos);
 				}
 			}
 		};
