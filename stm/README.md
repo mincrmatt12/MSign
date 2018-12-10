@@ -1,4 +1,4 @@
-# SignCode
+# STM codebase
 
 LEDSignCodebase, not public because it'll probably get api keys at some point.
 
@@ -23,8 +23,6 @@ LEDSignCodebase, not public because it'll probably get api keys at some point.
 Uses DMA to the GPIO to drive R0-B1 as well as the clock.
 DMA is triggered off of TIM1 update event; as is the delay between different bits of color in PCM encoding.
 
-## Content
+## Protocol
 
-Connected to an esp8266, communicating over serial.
-
-<TODO>
+Talks to the ESP8266 code with something that I'll make up at some point (over serial)
