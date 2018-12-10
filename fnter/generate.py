@@ -48,10 +48,15 @@ def get_metrics(c):
 
     face.load_char(c, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_MONO)
     return [
-            int(math.ceil(face.glyph.metrics.horiAdvance / 64)),
-            int(face.glyph.metrics.horiBearingX / 64),
-            int(face.glyph.metrics.horiBearingY / 64)
+            int(math.floor(face.glyph.metrics.horiAdvance / 64)),
+            int(math.ceil(face.glyph.metrics.horiBearingX / 64)),
+            int(round_away_from_zero(face.glyph.metrics.horiBearingY / 64))
     ]
+
+def round_away_from_zero(x):
+    a = abs(x)
+    r = math.floor(a) + math.floor(2 * (a % 1))
+    return r if x >= 0 else -r
 
 def calc_kerning(c):
     global face
@@ -59,7 +64,7 @@ def calc_kerning(c):
     entries = []
     for other in sorted(CHAR_NUMS):
         kerning = face.get_kerning(c, chr(other))
-        pix = int(kerning.x / 64)
+        pix = int(round_away_from_zero(kerning.x / 64))
         if pix == 0:
             continue
         else:
