@@ -10,6 +10,6 @@ void nvic::init() {
 	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5, 0));
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM1_UP_TIM10_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4, 0));
-	NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4, 0));
+	NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 }

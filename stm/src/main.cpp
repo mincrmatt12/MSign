@@ -24,14 +24,9 @@ int main() {
 	char buf[5];
 	while (true) {
 		matrix.display();
-		if ((rng::get() % 128) < 110) {;}
-		else {x += rng::get() % 3;}
-		x %= 255;
-		for (uint16_t x0 = 0; x0 < 64; ++x0) {
-			uint16_t mult = abs(x0-(x-95));
-			draw::rect(matrix.get_inactive_buffer(), x0, 0, x0+1, 32, mult, mult, mult);
-		}
+		++x;
 		__itoa(x, buf, 10);
+		draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 		draw::text(matrix.get_inactive_buffer(), buf, font::lato_bold_15::info, 0, 16, 255, 127, 0);
 		while (matrix.is_active()) {
 		}
@@ -46,9 +41,9 @@ extern "C" void DMA2_Stream5_IRQHandler() {
 	}
 }
 
-extern "C" void TIM1_UP_TIM10_IRQHandler() {
-	if (LL_TIM_IsActiveFlag_UPDATE(TIM1)) {
-		LL_TIM_ClearFlag_UPDATE(TIM1);
+extern "C" void TIM1_BRK_TIM9_IRQHandler() {
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM9)) {
+		LL_TIM_ClearFlag_UPDATE(TIM9);
 		matrix.tim_elapsed();
 	}
 }

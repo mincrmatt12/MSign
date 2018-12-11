@@ -81,7 +81,7 @@ namespace led {
 			}
 			void init() {
 				// Enable clocks
-				LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);	 // timer
+				LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1 | LL_APB2_GRP1_PERIPH_TIM9);	 // timer
 				LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD | LL_AHB1_GRP1_PERIPH_GPIOB | LL_AHB1_GRP1_PERIPH_DMA2 | LL_AHB1_GRP1_PERIPH_GPIOE); // gpios
 
 				// Setup the timer.
@@ -89,12 +89,17 @@ namespace led {
 
 				tim_init.Prescaler  = 0;
 				tim_init.Autoreload = 1;
-				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV2;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				// enable dma
+				tim_init.Prescaler  = 36;
+				tim_init.Autoreload = 1;
+				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
+				LL_TIM_Init(TIM9, &tim_init);
+
+				LL_TIM_DisableARRPreload(TIM9);
 				LL_TIM_DisableDMAReq_UPDATE(TIM1);
-				//LL_TIM_EnableUpdateEvent(TIM1);
+				LL_TIM_EnableIT_UPDATE(TIM1);
 
 				// setup gpios
 				LL_GPIO_InitTypeDef gpio_init = {0};
@@ -106,11 +111,6 @@ namespace led {
 				LL_GPIO_Init(GPIOD, &gpio_init);
 				gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
 				LL_GPIO_Init(GPIOB, &gpio_init);
-				gpio_init.Pin = LL_GPIO_PIN_13;
-				gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
-				gpio_init.Pull = LL_GPIO_PULL_DOWN;
-				gpio_init.Alternate = LL_GPIO_AF_1;
-				LL_GPIO_Init(GPIOE, &gpio_init);
 			}
 
 			void display() {
@@ -147,29 +147,12 @@ namespace led {
 			}
 
 			void tim_elapsed() {
+				LL_TIM_DisableCounter(TIM9);
+				LL_TIM_DisableIT_UPDATE(TIM9);
 				if (!delaying) return;
-				if (delay_counter > 204) {
-					delaying = false;
-					oe = true;
-					LL_TIM_DisableIT_UPDATE(TIM1);
-					asm volatile ("nop");
-					asm volatile ("nop");
-					asm volatile ("nop");
-					if (show) do_next();
-					else show = true;
-					return;
-				}
-				// decrement counter
-				if (--delay_counter == 0) {
-					// disable the interrupt
-					LL_TIM_DisableIT_UPDATE(TIM1);
-					delaying = false;
-					oe = true;
-					asm volatile ("nop");
-					asm volatile ("nop");
-					asm volatile ("nop");
-				}
-				else return;
+				oe = true;
+				delaying = false;
+				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 				if (show) do_next();
 				else show = true;
 			}
@@ -201,7 +184,7 @@ namespace led {
 				// Setup le dma
 				LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
 				LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-				LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_HIGH);
+				LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_VERYHIGH);
 				LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_NORMAL);
 				LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_PERIPH_NOINCREMENT);
 				LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MEMORY_INCREMENT);
@@ -232,12 +215,14 @@ namespace led {
 				delaying = true;
 				delay_counter = ticks;
 				// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
-				LL_TIM_EnableIT_UPDATE(TIM1);
+				LL_TIM_SetAutoReload(TIM9, ticks);
+				LL_TIM_SetCounter(TIM9, 0);
+				LL_TIM_EnableCounter(TIM9);
+				LL_TIM_EnableIT_UPDATE(TIM9);
 			}
 
 			void do_next() {
 				// set address pins
-				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 				if (row == (FB::stb_lines)) {
 					// We are now finished
 					blasting = false;
