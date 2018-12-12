@@ -31,14 +31,11 @@ led::Matrix<led::FrameBuffer<64, 32>> matrix;
 sched::TaskPtr tasks[8] = {nullptr};
 uint8_t task_index = 0;
 
-// increments per skipped task
+// increments per skipped task, used to make sure tasks run on time
 uint8_t skipped_counter[8] = {0};
 
 // true when the display is ready
 bool    display_ready = false;
-
-// counter since display was ready
-uint16_t display_counter = 0;
 
 int main() {
 	rcc::init();

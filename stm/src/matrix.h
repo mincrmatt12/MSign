@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "gpio.h"
 #include <stdint.h>
 #include <string.h>
 #include "stm32f2xx.h"
@@ -8,7 +9,6 @@
 #include "stm32f2xx_ll_bus.h"
 #include "stm32f2xx_ll_gpio.h"
 #include "stm32f2xx_ll_dma.h"
-#include "gpio.h"
 
 namespace led {
 
