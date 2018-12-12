@@ -51,14 +51,12 @@ int main() {
 	// Main loop of software
 	while (true) {
 		matrix.display();
-		// New frame is being displayed; is everything finished?
-		if (task_index >= 8) {
-			task_index = 0;
-		}
 		// ... scheduler loop ...
 		while (matrix.is_active()) {
+			// Are we done?
 			if (task_index >= 8) {
 				if (display_ready) continue;
+				// No, we are starting anew
 				task_index = 0;
 			}
 
