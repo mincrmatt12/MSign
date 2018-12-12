@@ -84,7 +84,7 @@ flags = [
     # General flags
     # You 100% do NOT need -DUSE_CLANG_COMPLETER in your flags; only the YCM
     # source code needs it.
-    '-DUSE_CLANG_COMPLETER'
+    '-E'
     # ,'-MMD -DUSB_VID=null'
     # ,'-DUSB_PID=null'
 ]
@@ -171,13 +171,14 @@ def get_platformio_environment(wdir):
     ## Platformio automatically copies over the libs you use after your first run.
     ## Be warned that you will not receive autocompletion on libraries until after
     ## your first `platformio run`.
-    _includes.insert(0,wdir + "/src")
-    _includes.insert(0,wdir + "/.pioenvs")
     
     # Create "-I<include_file>" list
     inc_list=[]
     for i in _includes: 
-        inc_list.append('-I'+i)
+        if "packages" in i or "armnoneeabi" in i or "CMSIS" in i:
+            inc_list.extend(["-isystem", i])
+        else:
+            inc_list.extend(['-I',i])
  
  
     return(flags + new_cxx_flags + inc_list )
@@ -191,6 +192,9 @@ def FlagsForFile( filename, **kwargs ):
  
     logger.debug("List of FLAGS hand back to YCM:")
     for a in allflags: logger.debug(a)
+
+    if "stm/src" in filename:
+        allflags.extend(["-x", "c++"])
  
     return {
         'flags': allflags,

@@ -1,9 +1,9 @@
 #ifndef GPIO_H
-#define GPIO_H
+#define GPIO_h
 
-#include <stdint.h>
 #include "stm32f2xx.h"
 #include "stm32f2xx_ll_gpio.h"
+#include <stdint.h>
 
 namespace gpio {
 	template<uint32_t Port, uint32_t Mask>
@@ -20,4 +20,4 @@ namespace gpio {
 	};
 }
 
-#endif 
+#endif
