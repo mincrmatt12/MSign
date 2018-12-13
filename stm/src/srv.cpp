@@ -109,6 +109,7 @@ bool srv::Servicer::close_slot(uint8_t slot_id) {
 
 	this->pending_operations[this->pending_count] = 0x10000000 | slot_id;
 	++this->pending_count;
+	return true;
 }
 
 bool srv::Servicer::ack_slot(uint8_t slot_id) {
@@ -121,6 +122,7 @@ bool srv::Servicer::ack_slot(uint8_t slot_id) {
 
 	this->pending_operations[this->pending_count] = 0x20000000 | slot_id;
 	++this->pending_count;
+	return true;
 }
 
 inline const uint8_t * srv::Servicer::slot(uint8_t slot_id) {
