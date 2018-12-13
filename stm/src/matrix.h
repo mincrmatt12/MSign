@@ -89,7 +89,7 @@ namespace led {
 
 				tim_init.Prescaler  = 0;
 				tim_init.Autoreload = 1;
-				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV2;
+				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM1, &tim_init);
 
 				tim_init.Prescaler  = 36;

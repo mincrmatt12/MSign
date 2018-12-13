@@ -31,7 +31,7 @@ namespace srv {
 		bool close_slot(uint8_t slot_id);
 
 		// interrupt handlers
-		void dma_finish();
+		void dma_finish(bool incoming);
 
 		void loop()      override;
 		bool done()      override;
@@ -40,12 +40,20 @@ namespace srv {
 	private:
 		uint8_t slots[256][16];
 		uint8_t dma_buffer[64];
-		uint8_t dma_out_buffer[64];
+		uint8_t dma_out_buffer[16];
 		uint8_t slot_states[64] = {0}; // 2 bits per
 		uint32_t pending_operations[6]; // pending operations, things that need to be sent out
 
 		uint8_t state = 0;
 		uint8_t pending_count = 0;
+		bool is_sending = false;
+
+		void send();
+		void start_recv();
+		void recv_full();
+
+		void process_command();
+		void do_send_operation(uint32_t operation);
 	};
 
 }
