@@ -20,6 +20,8 @@
 
 led::Matrix<led::FrameBuffer<64, 32>> matrix;
 
+srv::Servicer servicer;
+
 // Scheduler parameters
 
 // Slots 0-2: display tasks; need to be run before swap_buffers
@@ -55,8 +57,6 @@ int main() {
 	nvic::init();
 	rng::init();
 	matrix.init();
-
-	srv::Servicer servicer;
 
 	servicer.init();
 	tasks[3] = &servicer;
