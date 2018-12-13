@@ -262,6 +262,7 @@ void srv::Servicer::do_send_operation(uint32_t operation) {
 				dma_out_buffer[2] = 0x21;
 
 				dma_out_buffer[3] = param & 0x0000FF;
+				send();
 			}
 			break;
 		case 0x20:
@@ -272,6 +273,7 @@ void srv::Servicer::do_send_operation(uint32_t operation) {
 				dma_out_buffer[2] = 0x22;
 
 				dma_out_buffer[3] = param & 0x0000FF;
+				send();
 			}
 			break;
 

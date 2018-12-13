@@ -8,6 +8,7 @@
 #include "fonts/dejavu_10.h"
 #include "fonts/vera_7.h"
 #include "sched.h"
+#include "srv.h"
 
 // strange parse error - put this last...
 
@@ -37,13 +38,48 @@ uint8_t skipped_counter[8] = {0};
 // true when the display is ready
 bool    display_ready = false;
 
+template <typename FB>
+void show_test_pattern(uint8_t stage, FB& fb) {
+	draw::fill(fb, 0, 0, 0);
+	draw::text(fb, "DISP .. OK", font::vera_7::info, 0, 7, 255, 255, 255);
+	if (stage == 1) {
+		draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 14, 255, 0, 0);
+	}
+	else if (stage >= 2) {
+		draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
+	}
+}
+
 int main() {
 	rcc::init();
 	nvic::init();
 	rng::init();
 	matrix.init();
 
-	// .... TODO: INIT esp comms, should be dispalying some test pattern while this occurs .......
+	srv::Servicer servicer;
+
+	servicer.init();
+	tasks[3] = &servicer;
+
+	show_test_pattern(0, matrix.get_inactive_buffer());
+	matrix.swap_buffers();
+
+	// Init esp comms
+	while (!servicer.ready()) {
+		servicer.loop();
+		matrix.display();
+		while (matrix.is_active()) {;}
+		show_test_pattern(1, matrix.get_inactive_buffer());
+		matrix.swap_buffers();
+	}
+
+	show_test_pattern(2, matrix.get_inactive_buffer());
+	matrix.swap_buffers();
+
+	matrix.display();
+	while (matrix.is_active()) {;}
+
+	// .. TODO: init display code ...
 
 	// Main loop of software
 	while (true) {
@@ -106,19 +142,5 @@ run_it:
 			matrix.swap_buffers(); 
 			display_ready = false;
 		}
-	}
-}
-
-extern "C" void DMA2_Stream5_IRQHandler() {
-	if (LL_DMA_IsActiveFlag_TC5(DMA2)) {
-		LL_DMA_ClearFlag_TC5(DMA2);
-		matrix.dma_finish();
-	}
-}
-
-extern "C" void TIM1_BRK_TIM9_IRQHandler() {
-	if (LL_TIM_IsActiveFlag_UPDATE(TIM9)) {
-		LL_TIM_ClearFlag_UPDATE(TIM9);
-		matrix.tim_elapsed();
 	}
 }

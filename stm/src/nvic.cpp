@@ -4,6 +4,10 @@
 #include "stm32f2xx_hal.h"
 #include "stm32f2xx_hal_tim.h"
 
+#include "matrix.h"
+
+extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
+
 void nvic::init() {
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
@@ -18,4 +22,18 @@ void nvic::init() {
 
 	NVIC_SetPriority(DMA1_Stream6_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
 	NVIC_EnableIRQ(DMA1_Stream6_IRQn);
+}
+
+extern "C" void DMA2_Stream5_IRQHandler() {
+	if (LL_DMA_IsActiveFlag_TC5(DMA2)) {
+		LL_DMA_ClearFlag_TC5(DMA2);
+		matrix.dma_finish();
+	}
+}
+
+extern "C" void TIM1_BRK_TIM9_IRQHandler() {
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM9)) {
+		LL_TIM_ClearFlag_UPDATE(TIM9);
+		matrix.tim_elapsed();
+	}
 }
