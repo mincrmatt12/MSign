@@ -1,4 +1,5 @@
 #include "esp_common.h"
+#include "printf.h"
 
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
@@ -44,4 +45,8 @@ uint32 user_rf_cal_sector_set(void)
 }
 
 void user_init() {
+	init_printf();
+	printf("Starting up SignBACK v1.0\n");
+
+	// todo things
 }
