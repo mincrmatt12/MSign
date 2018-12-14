@@ -87,9 +87,9 @@ namespace led {
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
 
-				tim_init.Prescaler  = 0;
+				tim_init.Prescaler  = 5; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
 				tim_init.Autoreload = 1;
-				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
+				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV2;
 				LL_TIM_Init(TIM1, &tim_init);
 
 				tim_init.Prescaler  = 36;
