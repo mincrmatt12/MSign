@@ -175,11 +175,7 @@ def get_platformio_environment(wdir):
     # Create "-I<include_file>" list
     inc_list=[]
     for i in _includes: 
-        if "packages" in i or "armnoneeabi" in i or "CMSIS" in i:
-            inc_list.extend(["-isystem", i])
-        else:
-            inc_list.extend(['-I',i])
- 
+        inc_list.extend(['-I',i])
  
     return(flags + new_cxx_flags + inc_list )
  
@@ -193,7 +189,16 @@ def FlagsForFile( filename, **kwargs ):
     logger.debug("List of FLAGS hand back to YCM:")
     for a in allflags: logger.debug(a)
 
-    allflags.extend(["-x", "c++"])
+    if os.path.basename(filename) not in ["user_main.c", "printf.h", "tasks.h"]:
+        allflags.extend(["-x", "c++"])
+
+    oldflags = allflags[:]
+    allflags = []
+    for i in oldflags:
+        if i != "-mlongcalls":
+            allflags.append(i)
+        else:
+            allflags.append("-mlong-calls")
  
     return {
         'flags': allflags,

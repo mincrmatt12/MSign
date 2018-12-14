@@ -1,5 +1,6 @@
 #include "esp_common.h"
 #include "printf.h"
+#include "tasks/tasks.h"
 
 /******************************************************************************
  * FunctionName : user_rf_cal_sector_set
@@ -45,8 +46,10 @@ uint32 user_rf_cal_sector_set(void)
 }
 
 void user_init() {
+	system_uart_swap();
 	init_printf();
 	printf("Starting up SignBACK v1.0\n");
 
 	// todo things
+	xTaskCreate(&sign_serial_task, "ser", configMINIMAL_STACK_SIZE, NULL, 4, NULL);
 }
