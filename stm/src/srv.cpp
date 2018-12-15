@@ -32,7 +32,9 @@ void srv::Servicer::loop() {
 					dma_out_buffer[0] = 0xa5;
 					dma_out_buffer[1] = 0x00;
 					dma_out_buffer[2] = 0x10;
+					while (is_sending) {;}
 					send();
+					start_recv();
 					state = STATE_HANDSHAKE_RECV;
 					break;
 				}
@@ -364,8 +366,12 @@ void srv::Servicer::dma_finish(bool incoming) {
 		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
 		// first, check if we need to handle the handshake command
 		if (state == STATE_HANDSHAKE_RECV) {
-			if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x01) {
+			if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x11) {
 				state = STATE_HANDSHAKE_SENT;
+				return;
+			}
+			else {
+				state = STATE_UNINIT;
 				return;
 			}
 		}

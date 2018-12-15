@@ -75,9 +75,20 @@ int main() {
 
 	show_test_pattern(2, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
+	show_test_pattern(2, matrix.get_inactive_buffer());
+	matrix.swap_buffers();
 
-	matrix.display();
-	while (matrix.is_active()) {;}
+	uint16_t finalize_counter = 100;
+	while (finalize_counter--) {
+		if (finalize_counter < 40) {
+			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);
+		}
+		if (finalize_counter < 20) {
+			draw::fill(matrix.get_inactive_buffer(), 0, 255, 0);
+		}
+		matrix.display();
+		while (matrix.is_active()) {;}
+	}
 
 	// .. TODO: init display code ...
 
