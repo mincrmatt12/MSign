@@ -9,7 +9,7 @@ namespace serial {
 	typedef bool (*QueryHandler)(uint16_t slot_id, uint8_t *& buffer, uint8_t & length);
 
 	struct SerialInterface {
-		void run();
+		void loop();
 		void update_data(uint16_t slot_id, uint8_t * buffer, uint8_t length);
 		void register_handler(const QueryHandler handler);
 
