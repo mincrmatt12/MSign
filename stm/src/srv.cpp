@@ -100,6 +100,7 @@ bool srv::Servicer::open_slot(uint16_t data_id, bool continuous, uint8_t &slot_i
 
 	slot_id_out = slot;
 	this->slot_states[slot / 4] |= (1 << (((slot % 4) * 2) + 0)); // mark slot as open, not connected
+	this->slot_states[slot / 4] &= ~(1 << (((slot % 4) * 2) + 1)); // mark slot as open, not connected
 	return true;
 }
 
