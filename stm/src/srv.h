@@ -24,9 +24,10 @@ namespace srv {
 		// persistent means to allocate from the end of the array.:w
 		//
 		bool open_slot(uint16_t data_id, bool continuous, uint8_t &slot_id_out, bool persistent=false);
-		inline bool slot_open(uint8_t slot_id);
-		inline bool slot_connected(uint8_t slot_it);
-		inline const uint8_t * slot(uint8_t slot_id);
+		bool slot_open(uint8_t slot_id);
+		bool slot_connected(uint8_t slot_it);
+		bool slot_dirty(uint8_t slot_id, bool mark_clean=false);
+		const uint8_t * slot(uint8_t slot_id);
 		bool ack_slot(uint8_t slot_id);
 		bool close_slot(uint8_t slot_id);
 
@@ -42,6 +43,7 @@ namespace srv {
 		uint8_t dma_buffer[64];
 		uint8_t dma_out_buffer[16];
 		uint8_t slot_states[64] = {0}; // 2 bits per
+		uint8_t slot_dirties[32] = {0};
 		uint32_t pending_operations[6]; // pending operations, things that need to be sent out
 
 		uint8_t state = 0;

@@ -1178,7 +1178,7 @@ const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bea
 	{ 6, 10, 1, 7, 0, 10 }, // 7  
 	{ 6, 10, 1, 7, 0, 10 }, // 8  
 	{ 5, 10, 1, 7, 0, 10 }, // 9  
-	{ 1, 7, 1, 3, 0, 7 }, // :  
+	{ 1, 7, 1, 3, 1, 7 }, // :  
 	{ 2, 9, 1, 3, 0, 7 }, // ;  
 	{ 5, 7, 1, 7, 0, 8 }, // <  
 	{ 5, 3, 1, 7, 0, 7 }, // =  
@@ -1377,7 +1377,7 @@ const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bea
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
 };
-const uint8_t * data[] = {
+const uint8_t * const data[] = {
 	nullptr,
 	nullptr,
 	nullptr,
@@ -1710,7 +1710,7 @@ const int16_t kerning[][3] = {
 	{ 117, 89, -1 }, // u + Y -> -1 
 	{ 122, 84, -1 }, // z + T -> -1 
 };
-const void * info[] = { // metrics, data, pointer to kern_size, kerning
+const void * const info[] = { // metrics, data, pointer to kern_size, kerning
 	metrics,
 	data,
 	&kerning_size,

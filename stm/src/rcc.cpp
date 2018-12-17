@@ -37,4 +37,5 @@ void rcc::init() {
 	LL_Init1msTick(120000000);
 	LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
 	LL_SetSystemCoreClock(120000000);
+	LL_SYSTICK_EnableIT();
 }

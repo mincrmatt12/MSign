@@ -2,6 +2,8 @@
 #include <ESP8266WiFi.h>
 #include "serial.h"
 #include "config.h"
+#include "wifi.h"
+#include "time.h"
 
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
@@ -13,15 +15,11 @@ void setup() {
 	Serial1.println(F("\nStarting Sign Backend."));
 	Serial1.println(F("You are looking at the debug output."));
 
+	wifi::prepare();
 	serial::interface.ensure_handshake();
 	config::manager.load_from_sd();
-
-	// start up wifi with parameters loaded
-	
-	WiFi.mode(WIFI_STA);
-	WiFi.hostname("signesp");
-	WiFi.begin(config::manager.get_value(config::SSID), 
-			   config::manager.get_value(config::PSK));
+	wifi::init();
+	time::init();
 }
 
 void loop() {

@@ -5,10 +5,12 @@
 #include "stm32f2xx_hal_tim.h"
 
 #include "srv.h"
+#include "tasks/timekeeper.h"
 #include "matrix.h"
 
 extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
 extern srv::Servicer servicer;
+extern tasks::Timekeeper timekeeper;
 
 void nvic::init() {
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
@@ -24,6 +26,9 @@ void nvic::init() {
 
 	NVIC_SetPriority(DMA2_Stream7_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
 	NVIC_EnableIRQ(DMA2_Stream7_IRQn);
+
+	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2, 0));
+	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
 extern "C" void DMA2_Stream5_IRQHandler() {
@@ -57,4 +62,8 @@ extern "C" void DMA2_Stream7_IRQHandler() {
 			// aaaa
 		}
 	}
+}
+
+extern "C" void SysTick_Handler() {
+	timekeeper.systick_handler();
 }

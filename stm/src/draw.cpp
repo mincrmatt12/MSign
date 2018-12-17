@@ -24,4 +24,33 @@ namespace draw {
 		}
 		return 0;
 	}
+
+	uint16_t text_size(const uint8_t *text, const void * const font[], bool kern_on) {
+		uint16_t len = 0;
+		uint8_t c, c_prev = 0;
+
+		auto data = reinterpret_cast<const uint8_t * const * const >(font[1]);
+		auto metrics = reinterpret_cast<const int16_t *>(font[0]);
+		const int16_t * kern;
+		uint32_t kern_table_size = 0;
+		if (font[2] != nullptr) {
+			kern_table_size = *reinterpret_cast<const uint32_t *>(font[2]);
+			kern = reinterpret_cast<const int16_t *>(font[3]);
+		}
+
+		while ((c = *(text++)) != 0) {
+			if (c == ' ') {
+				len += 2;
+				continue;
+			}
+			if (c_prev != 0 && kern_table_size != 0 && kern_on) {
+				len += search_kern_table(c_prev, c, kern, kern_table_size);
+			}
+			c_prev = c;
+			if (data[c] == nullptr) continue; // invalid character
+			len += *(metrics + (c * 6) + 3);
+		}
+
+		return len;
+	}
 }

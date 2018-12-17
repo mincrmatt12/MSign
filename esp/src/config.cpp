@@ -6,15 +6,20 @@
 config::ConfigManager config::manager;
 const char * config::entry_names[] = {
 	"ssid",
-	"psk"
+	"psk",
+	"ntpserver"
 };
 
 
 config::ConfigManager::ConfigManager() {
 	this->data = (char *)malloc(128);
+	memset(this->offsets, 0xFF, sizeof(this->offsets));
 }
 
-const char * config::ConfigManager::get_value(config::Entry e) {
+const char * config::ConfigManager::get_value(config::Entry e, const char * value) {
+	if (this->offsets[e] == 0xFFFF) {
+		return value;
+	}
 	return (this->data + this->offsets[e]);
 }
 

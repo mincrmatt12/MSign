@@ -19,7 +19,7 @@ bool srv::Servicer::important() {
 }
 
 bool srv::Servicer::done() {
-	return (this->pending_count != 0 && !is_sending); // always runs in one loop iter
+	return (this->pending_count == 0 && !is_sending); // always runs in one loop iter
 }
 
 void srv::Servicer::loop() {
@@ -129,18 +129,29 @@ bool srv::Servicer::ack_slot(uint8_t slot_id) {
 	return true;
 }
 
-inline const uint8_t * srv::Servicer::slot(uint8_t slot_id) {
+const uint8_t * srv::Servicer::slot(uint8_t slot_id) {
 	return this->slots[slot_id];
 }
 
 // packed 2-bit array, with bit 1 in each pair being connected bit 0 being open.
 
-inline bool srv::Servicer::slot_connected(uint8_t i) {
+bool srv::Servicer::slot_connected(uint8_t i) {
 	return (this->slot_states[i / 4] & (1 << (((i % 4) * 2) + 1))) != 0;
 }
 
-inline bool srv::Servicer::slot_open(uint8_t i) {
+bool srv::Servicer::slot_open(uint8_t i) {
 	return (this->slot_states[i / 4] & (1 << (((i % 4) * 2) + 0))) != 0;
+}
+
+bool srv::Servicer::slot_dirty(uint8_t i, bool mark_clean) {
+	if (mark_clean) {
+		bool current_val = slot_dirty(i, false);
+		this->slot_dirties[i / 8] &= ~(1 << (i % 8));
+		return current_val;
+	}
+	else {
+		return (this->slot_dirties[i / 8] & (1 << (i % 8))) != 0;
+	}
 }
 
 bool srv::Servicer::ready() {
@@ -148,6 +159,13 @@ bool srv::Servicer::ready() {
 }
 
 void srv::Servicer::init() {
+	// Set name
+	
+	name[0] = 's';
+	name[1] = 'r';
+	name[2] = 'v';
+	name[3] = 'c';
+
 	// Enable clocks
 
 	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2 | LL_AHB1_GRP1_PERIPH_GPIOG);
@@ -272,7 +290,7 @@ void srv::Servicer::recv_full() {
 
 void srv::Servicer::do_send_operation(uint32_t operation) {
 	// switch on the operation
-	uint8_t op = (operation >> 16) & 0xFF;
+	uint8_t op = (operation >> 24) & 0xFF;
 	uint32_t param = operation & 0xFFFFFF;
 
 	switch (op) {
@@ -356,6 +374,8 @@ void srv::Servicer::process_command() {
 
 				memset(slots[slot], 0, 16);
 				memcpy(slots[slot], &dma_buffer[4], len);
+
+				slot_dirties[slot / 8] |= (1 << (slot % 8));
 			}
 			break;
 		// TODO: notif

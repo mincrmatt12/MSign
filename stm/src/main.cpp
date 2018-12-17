@@ -9,6 +9,8 @@
 #include "fonts/vera_7.h"
 #include "sched.h"
 #include "srv.h"
+#include "tasks/timekeeper.h"
+#include "tasks/clock.h"
 
 // strange parse error - put this last...
 
@@ -21,6 +23,9 @@
 led::Matrix<led::FrameBuffer<64, 32>> matrix;
 
 srv::Servicer servicer;
+uint64_t rtc_time;
+
+tasks::Timekeeper timekeeper{rtc_time};
 
 // Scheduler parameters
 
@@ -31,10 +36,10 @@ srv::Servicer servicer;
 // Slot 0 is usually the active display
 // Slot 1 is usually the switcher, responsible for managing slot 0
 // Slot 2 is an overlay, which can be started in response to a notification
-sched::TaskPtr tasks[8] = {nullptr};
+sched::TaskPtr task_list[8] = {nullptr};
 uint8_t task_index = 0;
 
-// increments per skipped task, used to make sure tasks run on time
+// increments per skipped task, used to make sure task_list run on time
 uint8_t skipped_counter[8] = {0};
 
 // true when the display is ready
@@ -59,7 +64,8 @@ int main() {
 	matrix.init();
 
 	servicer.init();
-	tasks[3] = &servicer;
+	task_list[3] = &servicer;
+	task_list[5] = &timekeeper;
 
 	show_test_pattern(0, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
@@ -91,6 +97,10 @@ int main() {
 	}
 
 	// .. TODO: init display code ...
+	
+	tasks::ClockScreen screen;
+	screen.init();
+	task_list[0] = &screen;
 
 	// Main loop of software
 	while (true) {
@@ -106,7 +116,7 @@ int main() {
 
 			// Check if the current task is null, if so skip
 			
-			if (tasks[task_index] == nullptr) {
+			if (task_list[task_index] == nullptr) {
 				++task_index;
 				if (task_index == 3) display_ready = true;
 				continue;
@@ -121,7 +131,7 @@ int main() {
 			else {
 				if (!display_ready) {
 					// we are running on borrowed time, skip unless important
-					if (tasks[task_index]->important()) goto run_it;
+					if (task_list[task_index]->important()) goto run_it;
 					goto skip;
 				}
 				else {
@@ -142,8 +152,8 @@ run_it:
 			if (skipped_counter[task_index] > 0)
 				--skipped_counter[task_index];
 
-			tasks[task_index]->loop();
-			if (tasks[task_index]->done()) {
+			task_list[task_index]->loop();
+			if (task_list[task_index]->done()) {
 				++task_index;
 				if (task_index == 3) display_ready = true;
 			}

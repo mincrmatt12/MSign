@@ -11,10 +11,17 @@ namespace sched {
 		// Run a loop of the the task; if done, restart
 		virtual void loop() = 0;
 		// Does the task have something urgently required, i.e. should we not delay or skip this task.
-		virtual bool important() = 0;
+		// All tasks always try to run, so use this is data is pending.
+		virtual bool important() {return false;}
 	};
 
 	using TaskPtr = Task *;
+
+	struct Screen {
+		virtual void init() {}
+
+		virtual void deinit() {}
+	};
 
 }
 

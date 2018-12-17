@@ -43,8 +43,11 @@ void serial::SerialInterface::loop() {
 	else if (Serial.available() >= 3) {
 		uint8_t buf[3];
 		Serial.readBytes(buf, 3);
-		if (buf[0] != 0xa5) {
-			Serial1.println(F("Recieved junk from STM32, invalid header.\n"));
+		if (buf[0] == 0xa6) {
+			Serial1.println(F("STM32 is having an identity crisis, it thinks it's an ESP8266"));
+		}
+		else if (buf[0] != 0xa5) {
+			Serial1.println(F("STM32 is drunk; sent invalid header."));
 		}
 		else if (buf[1] != 0x00) {
 			pending_command = buf[2];
@@ -70,12 +73,12 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				// open conn
 				if (size < 4) goto size_error;
 
-				if (buf[0] == 0x01) {
-					// continuous enable.
+				if (buf[0] == 0x00) {
+					// polled enable.
 					slots_continuous[buf[1]] = *(uint16_t *)(buf + 2);
 				}
 				else {
-					// poll enable.
+					// else cont.
 					slots_polled[buf[1]] = *(uint16_t *)(buf + 2);
 				}
 
@@ -115,7 +118,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 			{
 				if (size < 1) goto size_error;
 
-				update_polled_data(buf[1]);
+				update_polled_data(buf[0]);
 			}
 			break;
 		default:
@@ -154,13 +157,12 @@ void serial::SerialInterface::update_polled_data(uint8_t slot_id) {
 
 	return;
 ok:
-
 	send_data_to(slot_id, buf, length);
 }
 
 void serial::SerialInterface::register_handler(const QueryHandler handler) {
 	if (number_of_handlers == 8) {
-		Serial1.printf("Too many query handlers...\n");
+		Serial1.println(F("Too many query handlers...\n"));
 		return;
 	}
 	handlers[number_of_handlers++] = handler;

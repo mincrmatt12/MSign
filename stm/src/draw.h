@@ -21,9 +21,11 @@ namespace draw {
 
 	int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size);
 
+	uint16_t text_size(const uint8_t *text, const void * const font[], bool kern_on=true); 
+
 	// returns where the next character would have been
 	template<typename FB>
-	uint16_t text(FB &fb, const uint8_t *text, const void * font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on=true) {
+	uint16_t text(FB &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on=true) {
 		uint16_t pen = x;
 		uint8_t c, c_prev = 0;
 
@@ -52,7 +54,7 @@ namespace draw {
 	}
 
 	template<typename FB>
-	uint16_t text(FB &fb, const char * text, const void *font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on=true) {
+	uint16_t text(FB &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on=true) {
 		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, r, g, b, kern_on);
 	}
 
