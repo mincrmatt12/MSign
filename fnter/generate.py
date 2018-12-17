@@ -109,7 +109,7 @@ for i in range(256):
     print("\t{{ {} }}, // {}  ".format(", ".join(j), chr(i) if chr(i) != "\\" else "backslash"))
 print("};")
 
-print("const uint8_t * data[] = {")
+print("const uint8_t * const data[] = {")
 for i in range(256):
     if i not in metrics:
         print("\tnullptr,")
@@ -134,11 +134,11 @@ if table:
         print("\t{{ {} }}, // {} + {} -> {} ".format(", ".join(str(x) for x in i), a, b, i[2]))
     print("};")
 
-    print("const void * info[] = { // metrics, data, pointer to kern_size, kerning")
+    print("const void * const info[] = { // metrics, data, pointer to kern_size, kerning")
     print("\tmetrics,\n\tdata,\n\t&kerning_size,\n\tkerning\n};")
 else:
     print("// no kerning data available")
-    print("const void * info[] = { // metrics, data, pointer to kern_size, kerning")
+    print("const void * const info[] = { // metrics, data, pointer to kern_size, kerning")
     print("\tmetrics,\n\tdata,\n\tnullptr,\n\tnullptr\n};")
     
 
