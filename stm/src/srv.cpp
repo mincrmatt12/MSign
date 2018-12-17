@@ -15,7 +15,7 @@
 #define STATE_DMA_READY 5
 
 bool srv::Servicer::important() {
-	return this->state == STATE_DMA_READY || (!done());
+	return !done();
 }
 
 bool srv::Servicer::done() {
@@ -56,12 +56,6 @@ void srv::Servicer::loop() {
 		}
 	}
 	else {
-		if (this->state == STATE_DMA_READY) {
-			// we are now about to process a command
-			process_command();
-			// ok, now do get the next one.
-			start_recv();
-		}
 		if (this->pending_count > 0 && !is_sending) {
 			uint32_t pending_operation = this->pending_operations[--this->pending_count];
 			do_send_operation(pending_operation);
@@ -397,10 +391,15 @@ void srv::Servicer::dma_finish(bool incoming) {
 			}
 		}
 		else if (state == STATE_DMA_WAIT_SIZE) {
+			if (dma_buffer[0] != 0xa6) {
+				start_recv();
+			}
 			recv_full();
 		}
 		else {
-			state = STATE_DMA_READY;
+			process_command();
+
+			start_recv();
 		}
 	}
 	else {
