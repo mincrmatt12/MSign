@@ -9,7 +9,7 @@
 extern srv::Servicer servicer;
 
 bool tasks::Timekeeper::important() {
-	return (current_time - last_run_time) > 600000 || last_run_time <= 2;
+	return (current_time - last_run_time) > 30000 || last_run_time <= 2;
 }
 
 bool tasks::Timekeeper::done() {

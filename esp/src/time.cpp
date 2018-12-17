@@ -3,8 +3,8 @@
 #include "config.h"
 #include "common/slots.h"
 
+#include <TimeLib.h>
 #include <NtpClientLib.h>
-#include <Time.h>
 
 bool active = false;
 
@@ -12,7 +12,12 @@ void time::init() {
 	serial::interface.register_handler([](uint16_t data_id, uint8_t * buffer, uint8_t & length) {
 			if (data_id == slots::TIME_OF_DAY && active) {
 				uint64_t current_time = get_time();
-				if (current_time < 100) return false;
+				if (current_time < 10000000) {
+					return false;
+				}
+				if (timeStatus() != timeSet) {
+					return false;
+				}
 				memcpy(buffer, &current_time, 8);
 				length = 8;
 				return true;
@@ -35,5 +40,7 @@ void time::stop() {
 }
 
 uint64_t time::get_time() {
-	return static_cast<uint64_t>(NTP.getTime()) * 1000;
+	Serial1.print(F("now() returns"));
+	Serial1.println(now());
+	return static_cast<uint64_t>(now()) * 1000;
 }
