@@ -1,3 +1,4 @@
 # eagle's backup files
 
 *.*#[0-9]*
+*.[bsh]##
