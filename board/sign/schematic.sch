@@ -18287,6 +18287,7 @@ W = angled&lt;p&gt;
 <part name="GND3" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="GND4" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="J3" library="connector" deviceset="DM3AT-SF-PEJM5" device=""/>
+<part name="C18" library="rcl" library_urn="urn:adsk.eagle:library:334" deviceset="C-EU" device="050-024X044" package3d_urn="urn:adsk.eagle:package:23643/1" value="10pF"/>
 </parts>
 <sheets>
 <sheet>
@@ -18569,6 +18570,10 @@ W = angled&lt;p&gt;
 <attribute name="NAME" x="205.74" y="104.14" size="1.27" layer="95"/>
 <attribute name="VALUE" x="205.74" y="68.58" size="1.27" layer="96"/>
 </instance>
+<instance part="C18" gate="G$1" x="274.32" y="68.58" smashed="yes" rot="R90">
+<attribute name="NAME" x="273.939" y="70.104" size="1.778" layer="95" rot="R90"/>
+<attribute name="VALUE" x="279.019" y="70.104" size="1.778" layer="96" rot="R90"/>
+</instance>
 </instances>
 <busses>
 </busses>
@@ -18652,9 +18657,9 @@ W = angled&lt;p&gt;
 <label x="134.62" y="160.02" size="1.778" layer="95"/>
 </segment>
 <segment>
-<pinref part="JP1" gate="A" pin="13"/>
-<wire x1="297.18" y1="68.58" x2="287.02" y2="68.58" width="0.1524" layer="91"/>
-<label x="287.02" y="68.58" size="1.778" layer="95"/>
+<pinref part="C18" gate="G$1" pin="1"/>
+<wire x1="271.78" y1="68.58" x2="259.08" y2="68.58" width="0.1524" layer="91"/>
+<label x="259.08" y="68.58" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="A" class="0">
@@ -19322,6 +19327,13 @@ W = angled&lt;p&gt;
 <pinref part="IC1" gate="MCU" pin="VCAP2"/>
 <pinref part="C5" gate="G$1" pin="+"/>
 <wire x1="30.48" y1="104.14" x2="12.7" y2="104.14" width="0.1524" layer="91"/>
+</segment>
+</net>
+<net name="N$4" class="0">
+<segment>
+<pinref part="JP1" gate="A" pin="13"/>
+<pinref part="C18" gate="G$1" pin="2"/>
+<wire x1="297.18" y1="68.58" x2="279.4" y2="68.58" width="0.1524" layer="91"/>
 </segment>
 </net>
 </nets>
