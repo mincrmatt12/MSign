@@ -195,14 +195,46 @@ namespace tasks {
 			102,
 			214
 		};
+		tris[12] = {
+			{1, -1, 4},
+			{2, -1, 2},
+			{3, -1, 4},
+			255, 
+			255,
+			255
+		};
+		tris[13] = {
+			{1, -1, 4},
+			{2, -1, 2},
+			{2, 1, 3},
+			255,
+			127,
+			127
+		};
+		tris[14] = {
+			{3, -1, 4},
+			{2, -1, 2},
+			{2, 1, 3},
+			255,
+			127,
+			255
+		};
+		tris[15] = {
+			{3, -1, 4},
+			{1, -1, 4},
+			{2, 1, 3},
+			255,
+			127,
+			255
+		};
 	}
 
 	bool Renderer::done() {
-		return current_tri == 12;
+		return current_tri == 16;
 	}
 
 	void Renderer::loop() {
-		if (current_tri == 12) current_tri = 0;
+		if (current_tri == 16) current_tri = 0;
 		if (current_tri == 0) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			update_matricies();
@@ -212,8 +244,8 @@ namespace tasks {
 	}
 
 	void Renderer::update_matricies() {
-		uint32_t a = rtc_time %= 6000;
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 10.0f) * Mat4::lookat({3, 0, 0}, {0, 0, 0}, {0, 1, 0}) * Mat4::rotate({0, 1, 0}, ((float)a / 6000.0f) * 6.28);
+		uint32_t a = rtc_time % 8000;
+		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 10.0f) * Mat4::lookat({5.5, 0, 0}, {0, 0, 0}, {0, 1, 0}) * Mat4::rotate({0, 1, 0}, ((float)a / 8000.0f) * 6.28);
 	}
 
 	void Renderer::draw_triangle(const Tri& t) {
@@ -233,9 +265,12 @@ namespace tasks {
 		int16_t by = ((b.y + 1) / 2) * 32;
 		int16_t cy = ((c.y + 1) / 2) * 32;
 
-		draw::line(matrix.get_inactive_buffer(), ax, ay, bx, by, t.r, t.g, t.b);
-		draw::line(matrix.get_inactive_buffer(), bx, by, cx, cy, t.r, t.g, t.b);
-		draw::line(matrix.get_inactive_buffer(), cx, cy, ax, ay, t.r, t.g, t.b);
+		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
+			draw::line(matrix.get_inactive_buffer(), ax, ay, bx, by, t.r, t.g, t.b);
+		if (1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z)
+			draw::line(matrix.get_inactive_buffer(), bx, by, cx, cy, t.r, t.g, t.b);
+		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
+			draw::line(matrix.get_inactive_buffer(), cx, cy, ax, ay, t.r, t.g, t.b);
 	}
 
 }

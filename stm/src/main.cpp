@@ -4,12 +4,12 @@
 #include "rng.h"
 #include "fonts/latob_15.h"
 #include "fonts/latob_12.h"
-#include "fonts/tahoma_9.h"
 #include "fonts/dejavu_10.h"
 #include "fonts/vera_7.h"
 #include "sched.h"
 #include "srv.h"
 #include "tasks/timekeeper.h"
+#include "tasks/clock.h"
 #include "tasks/threed.h"
 
 // strange parse error - put this last...
@@ -99,8 +99,11 @@ int main() {
 	// .. TODO: init display code ...
 	
 	tasks::Renderer screen;
+	tasks::ClockScreen clocka;
 	screen.init();
+	clocka.init();
 	task_list[0] = &screen;
+	task_list[1] = &clocka;
 
 	// Main loop of software
 	while (true) {

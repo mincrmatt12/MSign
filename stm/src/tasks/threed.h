@@ -136,7 +136,7 @@ namespace tasks {
 		void update_matricies();
 
 		int current_tri = 0;
-		Tri tris[12];
+		Tri tris[16];
 
 		Mat4 perpview;
 	};
