@@ -1,6 +1,6 @@
+#include "rng.h"
 #include "threed.h"
 #include "draw.h"
-#include <cmath>
 
 extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
 extern uint64_t rtc_time;
@@ -57,14 +57,14 @@ namespace tasks {
 	} 
 
 	Mat4 Mat4::lookat(const Vec3& from, const Vec3& to, const Vec3& up) {
-		Vec3 forward = (from - to).normalize();
-		Vec3 right = (-forward.cross(up)).normalize();
-		Vec3 real_up = forward.cross(right);
+		Vec3 zaxis = (from - to).normalize();
+		Vec3 xaxis = zaxis.cross(up).normalize();
+		Vec3 yaxis = xaxis.cross(zaxis);
 
 		return {
-			right.x, right.y, right.z,       -right.dot  (from),
-			up.x, up.y, up.z,                -real_up.dot(from),
-			forward.x, forward.y, forward.z, -forward.dot(from),
+			xaxis.x , xaxis.y , xaxis.z , -xaxis.dot (from) ,
+			yaxis.x , yaxis.y , yaxis.z , -yaxis.dot(from)  ,
+			zaxis.x , zaxis.y , zaxis.z , -zaxis.dot(from)  ,
 			0, 0, 0, 1
 		};
 	}
@@ -244,8 +244,42 @@ namespace tasks {
 	}
 
 	void Renderer::update_matricies() {
-		uint32_t a = rtc_time % 8000;
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 10.0f) * Mat4::lookat({5.5, 0, 0}, {0, 0, 0}, {0, 1, 0}) * Mat4::rotate({0, 1, 0}, ((float)a / 8000.0f) * 6.28);
+		interp_progress += (rtc_time - last_update) * 2;
+		last_update = rtc_time;
+
+		if (interp_progress > 10000) {
+			interp_progress = 0;
+
+			camera_pos = camera_target;
+			camera_look = camera_look_target;
+
+			do {
+				camera_target = Vec3{
+					(float)(rng::get() % 10) - 5.0f,
+					(float)(rng::get() % 10) - 5.0f,
+					(float)(rng::get() % 10) - 5.0f
+				};
+			} while ((camera_pos - camera_target).length() < 4.5);
+
+			do {
+				camera_look_target = Vec3{
+					(float)(rng::get() % 10) - 5.0f,
+					(float)(rng::get() % 10) - 5.0f,
+					(float)(rng::get() % 10) - 5.0f
+				};
+			} while ((camera_look - camera_look_target).length() < 4.5);
+		}
+
+		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 10000.0f);
+		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 10000.0f);
+
+		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
+
+		for (uint16_t x = 0; x < 64; ++x) {
+			for (uint16_t y = 0; y < 32; ++y) {
+				z_buf[x][y] = 500.0f;
+			}
+		}
 	}
 
 	void Renderer::draw_triangle(const Tri& t) {
@@ -257,20 +291,24 @@ namespace tasks {
 		b = b / b.w;
 		c = c / c.w;
 
-		int16_t ax = ((a.x + 1) / 2) * 64;
-		int16_t bx = ((b.x + 1) / 2) * 64;
-		int16_t cx = ((c.x + 1) / 2) * 64;
+		a.y = -a.y;
+		b.y = -b.y;
+		c.y = -c.y;
 
-	    int16_t ay = ((a.y + 1) / 2) * 32;
-		int16_t by = ((b.y + 1) / 2) * 32;
-		int16_t cy = ((c.y + 1) / 2) * 32;
+		int16_t ax = round(((a.x + 1) / 2) * 64);
+		int16_t bx = round(((b.x + 1) / 2) * 64);
+		int16_t cx = round(((c.x + 1) / 2) * 64);
+
+	    int16_t ay = round(((a.y + 1) / 2) * 32);
+		int16_t by = round(((b.y + 1) / 2) * 32);
+		int16_t cy = round(((c.y + 1) / 2) * 32);
 
 		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
-			draw::line(matrix.get_inactive_buffer(), ax, ay, bx, by, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, t.r, t.g, t.b);
 		if (1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z)
-			draw::line(matrix.get_inactive_buffer(), bx, by, cx, cy, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), bx, by, cx, cy, b.z, c.z, t.r, t.g, t.b);
 		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
-			draw::line(matrix.get_inactive_buffer(), cx, cy, ax, ay, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, t.r, t.g, t.b);
 	}
 
 }
