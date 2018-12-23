@@ -22,12 +22,12 @@ namespace led {
 				uint8_t mask = (1 << pos);
 				for (uint16_t j = 0, x = 0; j < (Width*2); j += 2, ++x) {
 					byte_stream[j] = 
-						(((_r(x, i)           & mask) == mask) ? 1  : 0) +
-						(((_g(x, i)           & mask) == mask) ? 2  : 0) +
-						(((_b(x, i)           & mask) == mask) ? 4  : 0) +
-						(((_r(x, i+stb_lines) & mask) == mask) ? 8  : 0) +
-						(((_g(x, i+stb_lines) & mask) == mask) ? 16 : 0) +
-						(((_b(x, i+stb_lines) & mask) == mask) ? 32 : 0);
+						((_r(x, i)           & mask) ? 1  : 0) +
+						((_g(x, i)           & mask) ? 2  : 0) +
+						((_b(x, i)           & mask) ? 4  : 0) +
+						((_r(x, i+stb_lines) & mask) ? 8  : 0) +
+						((_g(x, i+stb_lines) & mask) ? 16 : 0) +
+						((_b(x, i+stb_lines) & mask) ? 32 : 0);
 					byte_stream[j+1] = byte_stream[j] + 64;
 				}
 				byte_stream[(Width*2)] = 0x00;
@@ -87,12 +87,12 @@ namespace led {
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
 
-				tim_init.Prescaler  = 5; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
+				tim_init.Prescaler  = 6; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV2;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 36;
+				tim_init.Prescaler  = 32;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
