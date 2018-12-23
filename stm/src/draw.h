@@ -2,6 +2,7 @@
 #define DRAW_H
 
 #include "matrix.h"
+#include <cstdlib>
 
 namespace draw {
 	template<typename FB>
@@ -73,6 +74,73 @@ namespace draw {
 	void fill(FB &fb, uint8_t r, uint8_t g, uint8_t b) {
 		rect(fb, 0, 0, FB::width, FB::height, r, g, b);
 	}
+
+	namespace detail {
+		template<typename FB>
+		void line_impl_low(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+			int dx = x1 - x0;
+			int dy = y1 - y0;
+			int yi = 1;
+			if (dy < 0) {
+				yi = -1;
+				dy = -dy;
+			}
+			int D = 2*dy - dx;
+			int16_t y = y0;
+
+			for (int16_t x = x0; x <= x1; ++x) {
+				fb.r((uint16_t)x, (uint16_t)y) = r;
+				fb.g((uint16_t)x, (uint16_t)y) = g;
+				fb.b((uint16_t)x, (uint16_t)y) = b;
+				if (D > 0) {
+					y += yi;
+					D -= 2*dx;
+				}
+				D += 2*dy;
+			}
+		}
+
+		template<typename FB>
+		void line_impl_high(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+			int dx = x1 - x0;
+			int dy = y1 - y0;
+			int xi = 1;
+			if (dx < 0) {
+				xi = -1;
+				dx = -dx;
+			}
+			int D = 2*dx - dy;
+			int16_t x = x0;
+
+			for (int16_t y = y0; y <= y1; ++y) {
+				fb.r((uint16_t)x, (uint16_t)y) = r;
+				fb.g((uint16_t)x, (uint16_t)y) = g;
+				fb.b((uint16_t)x, (uint16_t)y) = b;
+				if (D > 0) {
+					x += xi;
+					D -= 2*dy;
+				}
+				D += 2*dx;
+			}
+		}
+	}
+
+	template<typename FB>
+		void line(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+			if (abs(y1 - y0) < abs(x1 - x0)) {
+				if (x0 > x1)
+					detail::line_impl_low(fb, x1, y1, x0, y0, r, g, b);
+				else
+					detail::line_impl_low(fb, x0, y0, x1, y1, r, g, b);
+			}
+			else {
+				if (y0 > y1)
+					detail::line_impl_high(fb, x1, y1, x0, y0, r, g, b);
+				else
+					detail::line_impl_high(fb, x0, y0, x1, y1, r, g, b);
+			}
+		}
+
 }
 
 #endif

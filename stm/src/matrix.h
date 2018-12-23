@@ -34,33 +34,33 @@ namespace led {
 			}
 
 			uint8_t & r(uint16_t x, uint16_t y) {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _r(x, y);
 				return junk;
 			}
 			uint8_t & g(uint16_t x, uint16_t y) {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _g(x, y);
 				return junk;
 			}
 			uint8_t & b(uint16_t x, uint16_t y) {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _b(x, y);
 				return junk;
 			}
 
 			const uint8_t & r(uint16_t x, uint16_t y) const {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _r(x, y);
 				return junk;
 			}
 			const uint8_t & g(uint16_t x, uint16_t y) const {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _g(x, y);
 				return junk;
 			}
 			const uint8_t & b(uint16_t x, uint16_t y) const {
-				if (!on_screen(x, y))
+				if (on_screen(x, y))
 					return _b(x, y);
 				return junk;
 			}
