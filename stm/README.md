@@ -31,5 +31,5 @@ See the code / esp8266 readme.
 
 | Pin  | Mapped |
 | ---- | ------ |
-| `TX` | `PA2`  |
-| `RX` | `PA3`  |
+| `TX` | `PG14`  |
+| `RX` | `PG9`  |

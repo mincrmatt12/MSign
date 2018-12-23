@@ -19134,22 +19134,17 @@ W = angled&lt;p&gt;
 </net>
 <net name="TX" class="0">
 <segment>
-<pinref part="IC1" gate="MCU" pin="PA2"/>
-<wire x1="43.18" y1="86.36" x2="43.18" y2="78.74" width="0.1524" layer="91"/>
-<label x="43.18" y="78.74" size="1.778" layer="95" rot="R90"/>
-</segment>
-<segment>
 <pinref part="IC2" gate="G$1" pin="GPIO13"/>
 <wire x1="27.94" y1="30.48" x2="10.16" y2="30.48" width="0.1524" layer="91"/>
 <label x="10.16" y="30.48" size="1.778" layer="95"/>
 </segment>
+<segment>
+<pinref part="IC1" gate="MCU" pin="PG14"/>
+<wire x1="40.64" y1="241.3" x2="40.64" y2="251.46" width="0.1524" layer="91"/>
+<label x="40.64" y="248.92" size="1.778" layer="95"/>
+</segment>
 </net>
 <net name="RX" class="0">
-<segment>
-<pinref part="IC1" gate="MCU" pin="PA3"/>
-<wire x1="45.72" y1="86.36" x2="45.72" y2="78.74" width="0.1524" layer="91"/>
-<label x="45.72" y="78.74" size="1.778" layer="95" rot="R90"/>
-</segment>
 <segment>
 <pinref part="IC2" gate="G$1" pin="GPIO15"/>
 <wire x1="60.96" y1="30.48" x2="88.9" y2="30.48" width="0.1524" layer="91"/>
@@ -19157,6 +19152,11 @@ W = angled&lt;p&gt;
 <pinref part="R2" gate="G$1" pin="2"/>
 <wire x1="88.9" y1="30.48" x2="101.6" y2="30.48" width="0.1524" layer="91"/>
 <junction x="88.9" y="30.48"/>
+</segment>
+<segment>
+<pinref part="IC1" gate="MCU" pin="PG9"/>
+<wire x1="53.34" y1="241.3" x2="53.34" y2="251.46" width="0.1524" layer="91"/>
+<label x="53.34" y="248.92" size="1.778" layer="95"/>
 </segment>
 </net>
 <net name="SCLK" class="0">
