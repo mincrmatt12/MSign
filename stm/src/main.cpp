@@ -10,7 +10,7 @@
 #include "sched.h"
 #include "srv.h"
 #include "tasks/timekeeper.h"
-#include "tasks/threed.h"
+#include "tasks/clock.h"
 
 // strange parse error - put this last...
 
@@ -98,7 +98,7 @@ int main() {
 
 	// .. TODO: init display code ...
 	
-	tasks::Renderer screen;
+	tasks::ClockScreen screen;
 	screen.init();
 	task_list[0] = &screen;
 
