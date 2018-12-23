@@ -1473,7 +1473,7 @@ const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bea
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
 };
-const uint8_t * data[] = {
+const uint8_t * const data[] = {
 	nullptr,
 	nullptr,
 	nullptr,
@@ -1911,7 +1911,7 @@ const int16_t kerning[][3] = {
 	{ 122, 84, -1 }, // z + T -> -1 
 	{ 122, 89, -1 }, // z + Y -> -1 
 };
-const void * info[] = { // metrics, data, pointer to kern_size, kerning
+const void * const info[] = { // metrics, data, pointer to kern_size, kerning
 	metrics,
 	data,
 	&kerning_size,
