@@ -98,143 +98,12 @@ namespace tasks {
 		};
 	}
 
-	void Renderer::init() {
-		tris[0] = {
-			{-1, -1, -1},
-			{-1,  1, -1},
-			{ 1,  1, -1},
-			255,
-			255,
-			255
-		};
-		tris[1] = {
-			{-1, -1, -1},
-			{ 1,  1, -1},
-			{ 1, -1, -1},
-			255,
-			255,
-			0
-		};
-		tris[2] = {
-			{-1, -1,  1},
-			{-1,  1,  1},
-			{ 1,  1,  1},
-			0,
-			255,
-			255
-		};
-		tris[3] = {
-			{-1, -1,  1},
-			{ 1,  1,  1},
-			{ 1, -1,  1},
-			255,
-			0,
-			255
-		};
-		tris[4] = {
-			{-1, -1, -1},
-			{-1, -1,  1},
-			{-1,  1,  1},
-			0,
-			255,
-			255
-		};
-		tris[5] = {
-			{-1, -1, -1},
-			{-1,  1,  1},
-			{-1,  1, -1},
-			0,
-			255,
-			0
-		};
-		tris[6] = {
-			{ 1, -1, -1},
-			{ 1, -1,  1},
-			{ 1,  1,  1},
-			0,
-			255,
-			255
-		};
-		tris[7] = {
-			{ 1, -1, -1},
-			{ 1,  1,  1},
-			{ 1,  1, -1},
-			0,
-			255,
-			0
-		};
-		tris[8] = {
-			{-1, -1, -1},
-			{ 1, -1, -1},
-			{ 1, -1,  1},
-			0,
-			0,
-			255
-		};
-		tris[9] = {
-			{-1, -1, -1},
-			{ 1, -1,  1},
-			{ 1, -1, -1},
-			255,
-			0,
-			0
-		};
-		tris[10] = {
-			{-1,  1, -1},
-			{ 1,  1, -1},
-			{ 1,  1,  1},
-			127,
-			127,
-			255
-		};
-		tris[11] = {
-			{-1,  1, -1},
-			{ 1,  1,  1},
-			{ 1,  1, -1},
-			56,
-			102,
-			214
-		};
-		tris[12] = {
-			{1, -1, 4},
-			{2, -1, 2},
-			{3, -1, 4},
-			255, 
-			255,
-			255
-		};
-		tris[13] = {
-			{1, -1, 4},
-			{2, -1, 2},
-			{2, 1, 3},
-			255,
-			127,
-			127
-		};
-		tris[14] = {
-			{3, -1, 4},
-			{2, -1, 2},
-			{2, 1, 3},
-			255,
-			127,
-			255
-		};
-		tris[15] = {
-			{3, -1, 4},
-			{1, -1, 4},
-			{2, 1, 3},
-			255,
-			127,
-			255
-		};
-	}
-
 	bool Renderer::done() {
-		return current_tri == 16;
+		return current_tri == 206;
 	}
 
 	void Renderer::loop() {
-		if (current_tri == 16) current_tri = 0;
+		if (current_tri == 206) current_tri = 0;
 		if (current_tri == 0) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			update_matricies();
@@ -253,27 +122,22 @@ namespace tasks {
 			camera_pos = camera_target;
 			camera_look = camera_look_target;
 
-			do {
-				camera_target = Vec3{
-					(float)(rng::get() % 10) - 5.0f,
-					(float)(rng::get() % 10) - 5.0f,
-					(float)(rng::get() % 10) - 5.0f
-				};
-			} while ((camera_pos - camera_target).length() < 4.5);
-
-			do {
-				camera_look_target = Vec3{
-					(float)(rng::get() % 10) - 5.0f,
-					(float)(rng::get() % 10) - 5.0f,
-					(float)(rng::get() % 10) - 5.0f
-				};
-			} while ((camera_look - camera_look_target).length() < 4.5);
+			camera_target = Vec3{
+				0,
+				(float)(rng::get() % 1000) / 1000.0f,
+				((float)(rng::get() % 2000) / 1000.0f) - 1.0f
+			};
+			camera_look_target = Vec3{
+				(float)(rng::get() % 2) - 1.0f,
+				(float)(rng::get() % 2) - 1.0f,
+				(float)(rng::get() % 2) - 1.0f
+			};
 		}
 
 		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 10000.0f);
 		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 10000.0f);
 
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
+		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, {0, 0, 0}, {0, 1, 0});
 
 		for (uint16_t x = 0; x < 64; ++x) {
 			for (uint16_t y = 0; y < 32; ++y) {
@@ -303,12 +167,19 @@ namespace tasks {
 		int16_t by = round(((b.y + 1) / 2) * 32);
 		int16_t cy = round(((c.y + 1) / 2) * 32);
 
+		float avg = (a.z + b.z + c.z) / 3.0f;
+		avg = powf((avg + 1) / 2.03, 2.0f);
+
+		uint8_t cr = (float)t.r * (1 - avg);
+		uint8_t cg = (float)t.g * (1 - avg);
+		uint8_t cb = (float)t.b * (1 - avg);
+
 		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
-			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);
 		if (1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z)
-			line(matrix.get_inactive_buffer(), bx, by, cx, cy, b.z, c.z, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), bx, by, cx, cy, b.z, c.z, cr, cg, cb);
 		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
-			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, t.r, t.g, t.b);
+			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, cr, cg, cb);
 	}
 
 }

@@ -62,6 +62,8 @@ namespace tasks {
 		Vec4(const Vec3 & a, float w) : x(a.x), y(a.y), z(a.z), w(w) {}
 		Vec4(float a, float b, float c, float d) : x(a), y(b), z(c), w(d) {}
 
+		operator Vec3() const {return Vec3(x, y, z);}
+
 		Vec4 & operator+=(const Vec4& rhs) {
 			this->x += rhs.x;
 			this->y += rhs.y;
@@ -138,7 +140,7 @@ namespace tasks {
 		void update_matricies();
 
 		int current_tri = 0;
-		Tri tris[16];
+		Tri tris[206];
 
 		Mat4 perpview;
 		Vec3 camera_pos, camera_target;
