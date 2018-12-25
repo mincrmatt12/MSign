@@ -11,6 +11,9 @@ namespace tasks {
 
 		void loop() override;
 		bool done() override {return true;}
+	private:
+		void draw_bus();
+		bool draw_slot(uint16_t y, const char * name, uint64_t time1, uint64_t time2);
 	};
 }
 

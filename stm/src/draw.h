@@ -8,8 +8,8 @@ namespace draw {
 	template<typename FB>
 	void bitmap(FB &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool mirror=false) {
 		for (uint16_t i = 0, y0 = y; i < height; ++i, ++y0) {
-			for (uint16_t j = 0, x0 = x; j < width; ++j, ++x0) {
-				if (mirror) j = (width-j) - 1;
+			for (uint16_t j0 = 0, x0 = x; j0 < width; ++j0, ++x0) {
+				uint16_t j = mirror ? (width - j0) - 1 : j0;
 				uint8_t byte = j / 8;
 				uint8_t bit = 1 << (7 - (j % 8));
 				if ((bitmap[(i * stride) + byte] & bit) != 0) {

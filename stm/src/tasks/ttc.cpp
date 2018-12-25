@@ -21,10 +21,7 @@ extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
 extern tasks::Timekeeper timekeeper;
 
 void tasks::TTCScreen::loop() {
-	uint16_t pos = ((timekeeper.current_time / 100) % 90) - 14;
-
-	draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
-	draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos, 1, 230, 230, 230);
+	draw_bus();
 
 	draw::rect(matrix.get_inactive_buffer(), 0, 8, 64, 9, 1, 1, 1);
 
@@ -32,12 +29,18 @@ void tasks::TTCScreen::loop() {
 	uint16_t size = draw::text_size("75N to S.Drive", font::tahoma_9::info);
 	t_pos %= (size * 2 + 1);
 	t_pos =  (size * 2 + 1) - t_pos;
-	t_pos -= size;
-	
+	t_pos -=  size;
 
 	draw::text(matrix.get_inactive_buffer(), "75N to S.Drive", font::tahoma_9::info, t_pos, 16, 40, 255, 40);
 
 	draw::rect(matrix.get_inactive_buffer(), 44, 9, 64, 32, 3, 3, 3);
 	draw::text(matrix.get_inactive_buffer(), "2,2m", font::vera_7::info, 44, 15, 255, 255, 255);
 	draw::rect(matrix.get_inactive_buffer(), 0, 16, 64, 17, 1, 1, 1);
+}
+
+void tasks::TTCScreen::draw_bus() {
+	uint16_t pos = ((timekeeper.current_time / 100) % 90) - 14;
+
+	draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
+	draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos, 1, 230, 230, 230, true);
 }
