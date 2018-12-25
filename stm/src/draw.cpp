@@ -1,6 +1,11 @@
 #include "draw.h"
 
 namespace draw {
+
+	uint16_t text_size(const char * text, const void * const font[], bool kern_on) {
+		return text_size(reinterpret_cast<const uint8_t *>(text), font, kern_on);
+	}
+
 	int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size) {
 		uint32_t start = 0, end = size;
 		uint16_t needle = ((uint16_t)a + ((uint16_t)b << 8));

@@ -23,6 +23,7 @@ namespace draw {
 	int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size);
 
 	uint16_t text_size(const uint8_t *text, const void * const font[], bool kern_on=true); 
+	uint16_t text_size(const char* text,    const void * const font[], bool kern_on=true);
 
 	// returns where the next character would have been
 	template<typename FB>
