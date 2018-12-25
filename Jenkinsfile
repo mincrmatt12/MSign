@@ -10,12 +10,12 @@ pipeline {
       parallel {
         stage('Build STM') {
           steps {
-            sh 'pio run -d stm'
+            sh 'python2 -m platformio run -d stm'
           }
         }
         stage('Build ESP') {
           steps {
-            sh 'pio run -d esp'
+            sh 'python2 -m platformio run -d esp'
           }
         }
       }
