@@ -22,7 +22,7 @@ pipeline {
     }
     stage('Archive') {
       steps {
-        archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.elf', onlyIfSuccessful: true)
+        archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
       }
     }
   }
