@@ -94,6 +94,9 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				if (buf[0] == 0x00) {
 					update_polled_data(buf[1]);
 				}
+				else {
+					update_open_handlers(slots_continuous[buf[1]]);
+				}
 			}
 			break;
 		case CLOSE_CONN:
@@ -172,5 +175,11 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 	uint16_t pos = search_for(data_id, this->slots_continuous);
 	if (pos != (uint16_t)(~0)) {
 		send_data_to(pos, buffer, length);
+	}
+}
+
+void serial::SerialInterface::update_open_handlers(uint16_t data_id) {
+	for (uint8_t i = 0; i < number_of_o_handlers; ++i) {
+		o_handlers[i](data_id);
 	}
 }
