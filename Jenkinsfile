@@ -12,9 +12,9 @@ pipeline {
           steps {
             sh 'python2 -m platformio run -d stm'
 			script {
-				var espsize = sh(returnStdout: true, script: 'arm-none-eabi-size esp/.pioenvs/nodemcuv2/firmware.elf').readLines()[1].split('\t')
-				var flash = espsize[0] as Integer + espsize[1] as Integer
-				var ram = espsize[1] as Integer + espsize[2] as Integer
+				def espsize = sh(returnStdout: true, script: 'arm-none-eabi-size esp/.pioenvs/nodemcuv2/firmware.elf').readLines()[1].split('\t')
+				def flash = espsize[0] as Integer + espsize[1] as Integer
+				def ram = espsize[1] as Integer + espsize[2] as Integer
 
 				File out = new File("esp.csv")
 				out << '"flash","ram"\n'
@@ -31,9 +31,9 @@ pipeline {
           steps {
             sh 'python2 -m platformio run -d esp'
 			script {
-				var stmsize = sh(returnStdout: true, script: 'arm-none-eabi-size stm/.pioenvs/nucleo_f207zg/firmware.elf').readLines()[1].split('\t')
-				var flash = stmsize[0] as Integer + stmsize[1] as Integer
-				var ram = stmsize[1] as Integer + stmsize[2] as Integer
+				def stmsize = sh(returnStdout: true, script: 'arm-none-eabi-size stm/.pioenvs/nucleo_f207zg/firmware.elf').readLines()[1].split('\t')
+				def flash = stmsize[0] as Integer + stmsize[1] as Integer
+				def ram = stmsize[1] as Integer + stmsize[2] as Integer
 
 				File out = new File("stm.csv")
 				out << '"flash","ram"\n'
