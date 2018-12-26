@@ -25,6 +25,7 @@ pipeline {
 				group: 'SignCode Size',
 				title: 'STM',
 				style: 'line'
+			}
         }
         stage('Build ESP') {
           steps {
@@ -43,7 +44,7 @@ pipeline {
 				group: 'SignCode Size',
 				title: 'ESP',
 				style: 'line'
-          }
+			}
           }
         }
       }
