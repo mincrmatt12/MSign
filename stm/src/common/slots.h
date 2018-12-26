@@ -25,8 +25,7 @@ namespace slots {
 
 	struct TTCInfo {
 		uint16_t flags;
-		uint8_t nameLenA;
-		uint8_t nameLenB;
+		uint8_t nameLen[3];
 
 		enum Flag : uint16_t {
 			ALERT_0 = 1,

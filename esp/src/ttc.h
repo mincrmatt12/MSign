@@ -2,13 +2,12 @@
 #define TTC_H
 
 #include "common/slots.h"
-#include "json.h"
 
 namespace ttc {
 	void init();
 	void loop();
 
-	void do_update(const char * stop_id, uint8_t slot);
+	void do_update(const char * stop_id, const char * dtag, uint8_t slot);
 	void on_open(uint16_t data_id);
 
 	slots::TTCInfo info;

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "wifi.h"
 #include "time.h"
+#include "ttc.h"
 
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
@@ -20,9 +21,11 @@ void setup() {
 	config::manager.load_from_sd();
 	wifi::init();
 	time::init();
+	ttc::init();
 }
 
 void loop() {
 	serial::interface.loop();
+	ttc::loop();
 	delay(1);
 }
