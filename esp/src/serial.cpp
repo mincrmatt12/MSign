@@ -171,6 +171,14 @@ void serial::SerialInterface::register_handler(const QueryHandler handler) {
 	handlers[number_of_handlers++] = handler;
 }
 
+void serial::SerialInterface::register_handler(const OpenHandler handler) {
+	if (number_of_o_handlers == 8) {
+		Serial1.println(F("Too many query handlers...\n"));
+		return;
+	}
+	o_handlers[number_of_o_handlers++] = handler;
+}
+
 void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buffer, uint8_t length) {
 	uint16_t pos = search_for(data_id, this->slots_continuous);
 	if (pos != (uint16_t)(~0)) {

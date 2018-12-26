@@ -10,10 +10,10 @@ namespace ttc {
 	void do_update(const char * stop_id, const char * dtag, uint8_t slot);
 	void on_open(uint16_t data_id);
 
-	slots::TTCInfo info;
-	slots::TTCTime times[3];
+	extern slots::TTCInfo info;
+	extern slots::TTCTime times[3];
 
-	uint64_t time_since_last_update = 0;
+	extern uint64_t time_since_last_update;
 }
 
 #endif

@@ -10,6 +10,11 @@
 WiFiClient client;
 HttpClient http_client(client);
 
+slots::TTCInfo ttc::info;
+slots::TTCTime ttc::times[3];
+
+uint64_t       ttc::time_since_last_update = 0;
+
 void ttc::init() {
 	memset(ttc::times, 0, sizeof(ttc::times));
     ttc::info = { 0 };
