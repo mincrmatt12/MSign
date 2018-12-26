@@ -109,34 +109,11 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		json::PathNode &top = *stack[stack_ptr-1];
 		json::PathNode &parent = *stack[stack_ptr-2];
 
-		uint8_t e1 = stack[1]->index;
-		uint8_t e2 = parent.index;
-
-		if ((state.e1 != e1 || state.e2 != e2) && state.tag) {
-			// apply it here
-			
-			if (state.e2 < 2) {
-				if (state.layover) {
-					ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
-				}
-				if (state.e2 == 0) {
-					ttc::times[slot].tA = state.epoch;
-				}
-				else {
-					ttc::times[slot].tB = state.epoch;
-				}
-
-				on_open(slots::TTC_TIME_1 + slot);
-			}
-
-			// update
-			state.tag = false;
-			state.e1 = e1;
-			state.e2 = e2;
-		}
-
 		if (parent.is_array() && strcmp(parent.name, "prediction") == 0) {
 			// use the first two only
+
+			state.e1 = stack[1]->index;
+			state.e2 = parent.index;
 			
 			if (strcmp(top.name, "affectedByLayover") == 0) {
 				// is it's value true?
@@ -152,21 +129,31 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				sscanf(v.str_val, "%llu", &state.epoch);
 			}
 		}
+		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
+			if (state.tag && state.e2 < 2) {
+				if (state.layover) {
+					ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+				}
+				if (state.e2 == 0) {
+					ttc::times[slot].tA = state.epoch;
+				}
+				else {
+					ttc::times[slot].tB = state.epoch;
+				}
+
+				on_open(slots::TTC_TIME_1 + slot);
+
+				Serial1.print("Adding ttc entry in slot ");
+				Serial1.print(slot);
+				Serial1.print(" at time epoch=");
+				Serial1.print((unsigned long)state.epoch);
+				Serial1.println();
+			}
+			state.tag = false;
+			state.layover = false;
+			state.epoch = 0;
+		}
 	});
 
-	parser.parse(body, body_length);
-
-	if (state.tag && state.e2 < 2) {
-		if (state.layover) {
-			ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
-		}
-		if (state.e2 == 0) {
-			ttc::times[slot].tA = state.epoch;
-		}
-		else {
-			ttc::times[slot].tB = state.epoch;
-		}
-
-		on_open(slots::TTC_TIME_1 + slot);
-	}
+	parser.parse(body, body_length); // parse while calling our function.
 }
