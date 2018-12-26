@@ -48,7 +48,6 @@ pipeline {
           }
         }
       }
-    }
     stage('Archive') {
       steps {
         archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
