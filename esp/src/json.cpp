@@ -249,11 +249,11 @@ ok:
 	}
 
 	if (isint) {
-		Value v{integer};
+		Value v{negative ? -integer : integer};
 		cb(stack, stack_ptr, v);
 	}
 	else {
-		Value v{whole};
+		Value v{negative ? -whole : whole};
 		cb(stack, stack_ptr, v);
 	}
 
