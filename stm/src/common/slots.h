@@ -8,6 +8,14 @@ namespace slots {
 		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected; size 1
 
 		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; size 4; polled
+
+		TTC_INFO = 0x20,
+		TTC_NAME_1 = 0x21,
+		TTC_NAME_2 = 0x22,
+		TTC_NAME_3 = 0x23,
+		TTC_TIME_1 = 0x24,
+		TTC_TIME_2 = 0x25,
+		TTC_TIME_3 = 0x26
 	};
 
 #pragma pack (push, 1)

@@ -5,6 +5,11 @@
 
 #include <TimeLib.h>
 #include <NtpClientLib.h>
+#include <Timezone.h>
+
+TimeChangeRule usEDT = {"EDT", Second, Sun, Mar, 2, -240};
+TimeChangeRule usEST = {"EST", First, Sun, Nov, 2, -300};
+Timezone torontoTZ(usEDT, usEST);
 
 bool active = false;
 
@@ -29,7 +34,7 @@ void time::init() {
 void time::start() {
 	const char * time_server = config::manager.get_value(config::TIME_ZONE_SERVER, "pool.ntp.org");
 	NTP.onNTPSyncEvent([](NTPSyncEvent_t e){active=true;});
-	NTP.begin(time_server, -5);
+	NTP.begin(time_server);
 	Serial1.print("Starting timeserver with ");
 	Serial1.println(time_server);
 }
@@ -42,5 +47,5 @@ void time::stop() {
 uint64_t time::get_time() {
 	Serial1.print(F("now() returns"));
 	Serial1.println(now());
-	return static_cast<uint64_t>(now()) * 1000;
+	return static_cast<uint64_t>(torontoTZ.toLocal(now())) * 1000;
 }

@@ -357,6 +357,7 @@ bool json::JSONParser::parse_string() {
 	else {
 		Value v{b};
 		cb(stack, stack_ptr, v);
+		free(b);
 	}
 	return true;
 }

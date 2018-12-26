@@ -7,7 +7,18 @@ config::ConfigManager config::manager;
 const char * config::entry_names[] = {
 	"ssid",
 	"psk",
-	"ntpserver"
+	"ntpserver",
+
+	// TTC PARAMETERS
+	"stopid1",
+	"stopid2",
+	"stopid3",
+	"dirtag1",
+	"dirtag2",
+	"dirtag3",
+	"shortname1",
+	"shortname2",
+	"shortname3"
 };
 
 

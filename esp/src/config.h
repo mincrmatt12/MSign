@@ -9,6 +9,17 @@ namespace config {
 		PSK,
 		TIME_ZONE_SERVER,
 
+		// TTC stuff
+		STOPID1,
+		STOPID2,
+		STOPID3,
+		DTAG1,
+		DTAG2,
+		DTAG3,
+		SNAME1,
+		SNAME2,
+		SNAME3,
+
 		// leave me
 		ENTRY_COUNT
 	};
