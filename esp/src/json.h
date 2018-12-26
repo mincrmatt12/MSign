@@ -28,7 +28,8 @@ namespace json {
 			FLOAT,
 			INT,
 			BOOL,
-			NONE
+			NONE,
+			OBJ // technically a none, but called at the end of an object.
 		} type;
 		
 		union {
@@ -38,7 +39,7 @@ namespace json {
 			bool bool_val;
 		};
 
-		Value() : type(NONE) {}
+		Value(Type t=NONE) : type(t) {}
 		Value(float v) : type(FLOAT), float_val(v) {}
 		Value(int64_t v) : type(INT), int_val(v) {}
 		Value(bool b) : type(BOOL), bool_val(b) {}

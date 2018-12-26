@@ -348,6 +348,7 @@ bool json::JSONParser::parse_object() {
 	}
 
 	++head;
+	cb(stack, stack_ptr, Value{Value::OBJ});
 	return true;
 }
 
