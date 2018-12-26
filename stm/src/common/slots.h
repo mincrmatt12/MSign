@@ -16,18 +16,22 @@ namespace slots {
 	};
 
 	struct TTCInfo {
-		uint8_t alerts;
+		uint16_t flags;
 		uint8_t nameLenA;
 		uint8_t nameLenB;
 
-		enum Alert : uint8_t {
+		enum Flag : uint16_t {
 			ALERT_0 = 1,
 			ALERT_1 = 2,  // there is an alert
 			ALERT_2 = 4,
 
 			EXIST_0 = 8,
 			EXIST_1 = 16,  // the slot has data r.n.
-			EXIST_2 = 32
+			EXIST_2 = 32,
+
+			DELAY_0 = 64,
+			DELAY_1 = 128, // the slot is reported as delayed
+			DELAY_2 = 256
 		};
 	};
 #pragma pack (pop)
