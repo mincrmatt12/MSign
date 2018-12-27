@@ -26,19 +26,11 @@ pipeline {
 			}
 		}
 		stage('Log size') {
-			steps {
-				sh 'python3 get_sizes.py'
-				plot csvFileName: 'plot-signcode-stmsize.csv',
-						 csvSeries: [[file: 'stm.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']],
-						 group: 'SignCode Size',
-						 title: 'STM',
-						 style: 'line'
-			    plot csvFileName: 'plot-signcode-stmsize.csv',
-						 csvSeries: [[file: 'esp.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']],
-						 group: 'SignCode Size',
-						 title: 'ESP',
-						 style: 'line'
-			}
+		  steps {
+			sh 'python3.6 get_sizes.py'
+			plot(csvFileName: 'plot-signcode-stmsize.csv', csvSeries: [[file: 'stm.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']], group: 'SignCode Size', title: 'STM', style: 'line')
+			plot(csvFileName: 'plot-signcode-stmsize.csv', csvSeries: [[file: 'esp.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']], group: 'SignCode Size', title: 'ESP', style: 'line')
+		  }
 		}
 		stage('Archive') {
 			steps {
