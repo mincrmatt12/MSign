@@ -68,6 +68,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		char url[80];
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
+		Serial1.println(url);
+
 		if (http_client.get("webservices.nextbus.com", url) != 0) return;
 	}
 	
@@ -80,6 +82,10 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 
 	char * pos = body;
 	uint64_t ts = millis();
+	
+	Serial1.print("Updating slot ");
+	Serial1.println(slot);
+
 	while ((http_client.connected() || http_client.available()) && (millis() - ts) < 100) {
 		if (http_client.available()) {
 			int size = http_client.available();
@@ -87,6 +93,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 			pos += size;
 			if (pos - body >= body_length) break;
 			ts = millis();
+			Serial1.write((uint8_t *)pos - size, size);
+			delay(1);
 		}
 		else {
 			delay(1);

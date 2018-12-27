@@ -11,8 +11,6 @@ WiFiEventHandler got_ip, discon;
 bool wifi_available = false;
 
 void wifi::prepare() {
-	WiFi.disconnect();
-	WiFi.mode(WIFI_OFF);
 	Serial1.println("Discon.");
 }
 
@@ -34,6 +32,8 @@ void wifi::init() {
 	});
 
 	// start up wifi with parameters loaded
+	WiFi.persistent(false);
+	WiFi.mode(WIFI_STA);
 	WiFi.begin(config::manager.get_value(config::SSID), 
 			   config::manager.get_value(config::PSK));
 }
