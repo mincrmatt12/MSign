@@ -5,6 +5,7 @@
 #include "serial.h"
 #include "TimeLib.h"
 #include "wifi.h"
+#include <inttypes.h>
 #include "config.h"
 
 WiFiClient client;
@@ -39,6 +40,7 @@ void ttc::loop() {
 		}
 
 		serial::interface.update_data(slots::TTC_INFO, (const uint8_t *)&info, sizeof(info));
+		time_since_last_update = now();
 	}
 }
 
@@ -78,30 +80,31 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	http_client.skipResponseHeaders();
 	int body_length = http_client.contentLength();
 
-	char body[body_length];
+	char * body = (char*)malloc(body_length);
+	if (body == nullptr) {
+		Serial1.println(F("Oh no..."));
+	}
+
+	Serial1.printf("Bodylen = %d\n", body_length);
+	Serial1.println(ESP.getFreeHeap());
 
 	char * pos = body;
 	uint64_t ts = millis();
+	uint64_t read_so_far = 0;
 	
-	Serial1.print("Updating slot ");
+	Serial1.print(F("Updating slot "));
 	Serial1.println(slot);
 
-	while ((http_client.connected() || http_client.available()) && (millis() - ts) < 100) {
+	while ((http_client.connected() || http_client.available() || read_so_far < body_length) && (millis() - ts) < 500) {
 		if (http_client.available()) {
-			int size = http_client.available();
-			http_client.read((uint8_t *)pos, size);
-			pos += size;
-			if (pos - body >= body_length) break;
+			*pos++ = http_client.read();
+			++read_so_far;
 			ts = millis();
-			Serial1.write((uint8_t *)pos - size, size);
-			delay(1);
 		}
 		else {
-			delay(1);
+			delay(5);
 		}
 	}
-
-	if (millis() - ts < 100) return;
 
 	http_client.stop();
 
@@ -139,7 +142,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				state.tag = true;
 			
 			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
-				sscanf(v.str_val, "%llu", &state.epoch);
+				Serial1.println(sscanf(v.str_val, "%llu", &state.epoch));
 			}
 		}
 		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
@@ -156,11 +159,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 
 				on_open(slots::TTC_TIME_1 + slot);
 
-				Serial1.print("Adding ttc entry in slot ");
-				Serial1.print(slot);
-				Serial1.print(" at time epoch=");
-				Serial1.print((unsigned long)state.epoch);
-				Serial1.println();
+				Serial1.print(F("Adding ttc entry in slot "));
+				Serial1.println(slot);
 			}
 			state.tag = false;
 			state.layover = false;
@@ -168,5 +168,9 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		}
 	});
 
-	parser.parse(body, body_length); // parse while calling our function.
+	if (!parser.parse(body, body_length)) {
+		Serial1.println(F("JSON fucked up."));
+	} // parse while calling our function.
+
+	free(body);
 }

@@ -15,8 +15,6 @@ namespace json {
 		PathNode(char * name_in) : name(name_in), index(0), array(false) {}
 		PathNode(char * name_in, uint16_t index) : name(name_in), index(index), array(true) {}
 
-		~PathNode() {free(name);}
-
 		inline bool is_array() const {return array && !is_root();}
 		inline bool is_root() const {return name == nullptr;}
 		inline bool is_obj() const {return !array && !is_root();}

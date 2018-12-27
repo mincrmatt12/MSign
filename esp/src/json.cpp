@@ -1,5 +1,6 @@
 #include "json.h"
 #include "string.h"
+#include "HardwareSerial.h"
 
 json::JSONParser::JSONParser(JSONCallback && c) : cb(c) {
 	this->stack_ptr = 0;
@@ -286,6 +287,7 @@ char * json::JSONParser::parse_string_text() {
 			}
 			++length;
 		}
+		if (head > this->text_size) return nullptr;
 	}
 
 	char * buf = (char *)malloc(length+1);
@@ -341,6 +343,7 @@ bool json::JSONParser::parse_object() {
 		++head;
 		parse_value();
 		pop();
+		free(n);
 		if (!advance_whitespace()) return false;
 		if (text[head] == ',') continue;
 		else if (text[head] == '}') break;

@@ -73,12 +73,16 @@ void config::ConfigManager::load_from_sd() {
 			else {
 				entry_value[pos++] = 0;
 
-				for (int e = 0; e < config::ENTRY_COUNT; ++e) {
+				int e;
+				for (e = 0; e < config::ENTRY_COUNT; ++e) {
 					if (strcmp(config::entry_names[e], entry_name) == 0) {
 						add_entry(static_cast<Entry>(e), entry_value);
 						Serial1.printf("Set %s (%02x) = %s\n", entry_name, e, entry_value);
+						break;
 					}
 				}
+
+				if (e == config::ENTRY_COUNT) Serial1.printf("Invalid key %s\n", entry_name);
 
 				mode = false;
 				pos = 0;
