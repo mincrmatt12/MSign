@@ -3,6 +3,7 @@
 
 #include "sched.h"
 #include <stdint.h>
+#include <type_traits>
 
 namespace srv {
 
@@ -27,7 +28,14 @@ namespace srv {
 		bool slot_open(uint8_t slot_id);
 		bool slot_connected(uint8_t slot_it);
 		bool slot_dirty(uint8_t slot_id, bool mark_clean=false);
+
 		const uint8_t * slot(uint8_t slot_id);
+		
+		template<typename T>
+		inline std::enable_if_t<sizeof(T) <= 16, const T&> slot(uint8_t slot_id) const {
+			return *(reinterpret_cast<const T*>(this->slots[slot_id]));
+		}
+
 		bool ack_slot(uint8_t slot_id);
 		bool close_slot(uint8_t slot_id);
 
@@ -44,7 +52,7 @@ namespace srv {
 		uint8_t dma_out_buffer[16];
 		uint8_t slot_states[64] = {0}; // 2 bits per
 		uint8_t slot_dirties[32] = {0};
-		uint32_t pending_operations[6]; // pending operations, things that need to be sent out
+		uint32_t pending_operations[16]; // pending operations, things that need to be sent out
 
 		uint8_t state = 0;
 		uint8_t pending_count = 0;
