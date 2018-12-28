@@ -166,15 +166,18 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
 			if (state.tag && state.e2 < 2) {
 				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
-				if (state.layover) {
-					ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
-				}
 				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
 					ttc::times[slot].tB = ttc::times[slot].tB;
 					ttc::times[slot].tA = state.epoch;
+					if (state.layover) {
+						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+					}
 				}
 				else if (state.epoch < ttc::times[slot].tB || ttc::times[slot].tB == 0) {
 					ttc::times[slot].tB = state.epoch;
+					if (state.layover) {
+						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+					}
 				}
 
 				on_open(slots::TTC_TIME_1 + slot);

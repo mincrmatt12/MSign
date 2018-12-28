@@ -122,6 +122,16 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 	}
 
 	draw::rect(matrix.get_inactive_buffer(), 44, y - 7, 64, y+1, 3, 3, 3);
+	if (delay && alert) {
+		draw::rect(matrix.get_inactive_buffer(), 62, y - 7, 64, y - 3, 255, 20, 20);
+		draw::rect(matrix.get_inactive_buffer(), 62, y - 3, 64, y + 1, 230, 230, 20);
+	}
+	else if (delay) {
+		draw::rect(matrix.get_inactive_buffer(), 62, y - 7, 64, y + 1, 255, 20, 20);
+	}
+	else if (alert) {
+		draw::rect(matrix.get_inactive_buffer(), 62, y - 7, 64, y + 1, 230, 230, 20);
+	}
 	draw::text(matrix.get_inactive_buffer(), time_str, font::vera_7::info, 44, y-1, 255, 255, 255);
 	draw::rect(matrix.get_inactive_buffer(), 0, y, 64, y + 1, 1, 1, 1);
 
