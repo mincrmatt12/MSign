@@ -32,6 +32,7 @@ void ttc::loop() {
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
 			if (stopid != nullptr) {
+				memset(&ttc::times[slot], 0, sizeof(slots::TTCTime));
 				const char * dtag = config::manager.get_value((config::Entry)(config::DTAG1 + slot));
 				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + slot));
 				serial::interface.update_data(slots::TTC_NAME_1 + slot, (const uint8_t *)name, strlen(name));
@@ -168,10 +169,11 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				if (state.layover) {
 					ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
 				}
-				if (state.e2 == 0) {
+				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
+					ttc::times[slot].tB = ttc::times[slot].tB;
 					ttc::times[slot].tA = state.epoch;
 				}
-				else {
+				else if (state.epoch < ttc::times[slot].tB || ttc::times[slot].tB == 0) {
 					ttc::times[slot].tB = state.epoch;
 				}
 

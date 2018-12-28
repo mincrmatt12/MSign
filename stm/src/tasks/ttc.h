@@ -20,6 +20,8 @@ namespace tasks {
 		uint8_t s_n[3] = {0xff};
 
 		bool ready;
+
+		uint8_t bus_type = 1;
 	};
 }
 

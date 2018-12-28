@@ -4,6 +4,7 @@
 #include "fonts/vera_7.h"
 #include "srv.h"
 #include "common/slots.h"
+#include "rng.h"
 #include "draw.h"
 
 namespace bitmap {
@@ -52,10 +53,15 @@ void tasks::TTCScreen::loop() {
 }
 
 void tasks::TTCScreen::draw_bus() {
-	uint16_t pos = ((timekeeper.current_time / 100) % 90) - 14;
+	uint16_t pos = ((timekeeper.current_time / 80) % 154) - 45;
+	if (pos == 108) {
+		bus_type = rng::get() % 3;
+		bus_type += 1;
+	}
 
 	draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
-	draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos, 1, 230, 230, 230, true);
+	for (uint8_t i = 0; i < bus_type; ++i)
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
 }
 
 bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time1, uint64_t time2, bool alert, bool delay) {
