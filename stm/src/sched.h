@@ -18,9 +18,9 @@ namespace sched {
 	using TaskPtr = Task *;
 
 	struct Screen {
-		virtual void init() {}
+		virtual bool init() {return true;}
 
-		virtual void deinit() {}
+		virtual bool deinit() {return true;}
 	};
 
 }

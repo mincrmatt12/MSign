@@ -56,6 +56,10 @@ namespace draw {
 			len += *(metrics + (c * 6) + 3);
 		}
 
+		c = *(text - 1);
+		len -= *(metrics + (c * 6) + 3);
+		len += *(metrics + (c * 6));
+
 		return len;
 	}
 }

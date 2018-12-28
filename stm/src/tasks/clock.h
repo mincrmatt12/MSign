@@ -6,7 +6,7 @@
 
 namespace tasks {
 	struct ClockScreen : public sched::Task, public sched::Screen {
-		void init() override;
+		bool init() override;
 
 		void loop() override;
 		bool done() override {return true;}

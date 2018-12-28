@@ -8,6 +8,8 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 		if (array[offset] == val) return offset;
 		if (array[256-offset-1] == val) return 256-offset-1;
 	}
+
+	Serial1.printf("Invalid search_for on %d\n", val);
 	return ~0;
 }
 
@@ -183,6 +185,9 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 	uint16_t pos = search_for(data_id, this->slots_continuous);
 	if (pos != (uint16_t)(~0)) {
 		send_data_to(pos, buffer, length);
+	}
+	else {
+
 	}
 }
 

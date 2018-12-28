@@ -3,6 +3,7 @@
 #include "json.h"
 #include "WiFiClient.h"
 #include "serial.h"
+#include "time.h"
 #include "TimeLib.h"
 #include "wifi.h"
 #include <inttypes.h>
@@ -138,15 +139,16 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					state.layover = true;
 				}
 			}
-			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR && strcmp(v.str_val, dtag))
+			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR && strcmp(v.str_val, dtag) == 0)
 				state.tag = true;
 			
 			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
-				Serial1.println(sscanf(v.str_val, "%llu", &state.epoch));
+				state.epoch = time::millis_to_local(atoll(v.str_val));
 			}
 		}
 		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
 			if (state.tag && state.e2 < 2) {
+				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 				if (state.layover) {
 					ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
 				}
@@ -160,7 +162,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				on_open(slots::TTC_TIME_1 + slot);
 
 				Serial1.print(F("Adding ttc entry in slot "));
-				Serial1.println(slot);
+				Serial1.print(slot);
 			}
 			state.tag = false;
 			state.layover = false;

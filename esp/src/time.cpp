@@ -49,3 +49,10 @@ uint64_t time::get_time() {
 	Serial1.println(now());
 	return static_cast<uint64_t>(torontoTZ.toLocal(now())) * 1000;
 }
+
+uint64_t time::to_local(uint64_t utc){
+	return (torontoTZ.toLocal(utc));
+}
+uint64_t time::millis_to_local(uint64_t js_utc){
+	return (js_utc % 1000) + to_local(js_utc / 1000) * 1000;
+}

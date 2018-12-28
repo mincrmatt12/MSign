@@ -8,7 +8,7 @@
 extern uint64_t rtc_time;
 extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
 
-void tasks::ClockScreen::init() {
+bool tasks::ClockScreen::init() {
 	name[0] = 'c';
 	name[1] = 'k';
 	name[2] = 's';
@@ -17,6 +17,8 @@ void tasks::ClockScreen::init() {
 	bg_color[0] = rng::get() % 256;
 	bg_color[1] = rng::get() % 256;
 	bg_color[2] = rng::get() % 256;
+
+	return true;
 }
 
 void tasks::ClockScreen::loop() {
