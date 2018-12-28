@@ -37,13 +37,16 @@ void tasks::TTCScreen::loop() {
 
 	if (ready) {
 		// Check first slot
-		if (info.flags & slots::TTCInfo::EXIST_0) {
-			memcpy(name, servicer.slot(s_n[0]), info.nameLen[0]);
-			if (
-				draw_slot(y, name, servicer.slot<slots::TTCTime>(s_t[0]).tA, servicer.slot<slots::TTCTime>(s_t[0]).tB,
-					info.flags & slots::TTCInfo::ALERT_0,
-					info.flags & slots::TTCInfo::DELAY_0)
-			) y += 7;		
+		for (uint8_t slot = 0; slot < 3; ++slot) {
+			if (info.flags & (slots::TTCInfo::EXIST_0 << slot)) {
+				memset(name, 0, 17);
+				memcpy(name, servicer.slot(s_n[slot]), info.nameLen[slot]);
+				if (
+					draw_slot(y, name, servicer.slot<slots::TTCTime>(s_t[slot]).tA, servicer.slot<slots::TTCTime>(s_t[slot]).tB,
+						info.flags & (slots::TTCInfo::ALERT_0 << slot),
+						info.flags & (slots::TTCInfo::DELAY_0 << slot))
+				) y += 7;		
+			}
 		}
 	}
 }

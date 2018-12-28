@@ -8,6 +8,7 @@
 #include "wifi.h"
 #include <inttypes.h>
 #include "config.h"
+#include "string.h"
 
 WiFiClient client;
 HttpClient http_client(client);
@@ -75,6 +76,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 
 		if (http_client.get("webservices.nextbus.com", url) != 0) return;
 	}
+
 	
 	if (http_client.responseStatusCode() != 200) {http_client.stop(); return;}
 
@@ -119,6 +121,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		bool layover = false;
 		bool tag = false;
 	} state;
+
+	char * dirtag = strdup(dtag);
 	
 	json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 		if (stack_ptr < 2) return;
@@ -126,7 +130,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		json::PathNode &top = *stack[stack_ptr-1];
 		json::PathNode &parent = *stack[stack_ptr-2];
 
-		if (parent.is_array() && strcmp(parent.name, "prediction") == 0) {
+		if ((parent.is_array() || parent.is_obj()) && strcmp(parent.name, "prediction") == 0) {
 			// use the first two only
 
 			state.e1 = stack[1]->index;
@@ -139,9 +143,21 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					state.layover = true;
 				}
 			}
-			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR && strcmp(v.str_val, dtag) == 0)
-				state.tag = true;
-			
+			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
+			{
+				strcpy(dirtag, dtag);
+				char *test_str = strtok(dirtag, ",");
+				while (test_str != NULL) {
+					Serial1.println(test_str);
+					Serial1.println(v.str_val);
+					if (strcmp(test_str, v.str_val) == 0) {
+						state.tag = true; break;
+					}
+					else {
+						test_str = strtok(NULL, ",");
+					}
+				}
+			}
 			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
 				state.epoch = time::millis_to_local(atoll(v.str_val));
 			}
@@ -173,6 +189,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	if (!parser.parse(body, body_length)) {
 		Serial1.println(F("JSON fucked up."));
 	} // parse while calling our function.
+
+	free(dirtag);
 
 	free(body);
 }
