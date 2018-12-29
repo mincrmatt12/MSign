@@ -14,7 +14,10 @@ namespace serial {
 		NEW_DATA,
 		ACK_OPEN_CONN = 0x30,
 		ACK_CLOSE_CONN,
-		SLOT_DATA = 0x40
+		SLOT_DATA = 0x40,
+		RESET = 0x50,
+		PING,
+		PONG
 	};
 
 	// returns true if new data was added to the buffer and length

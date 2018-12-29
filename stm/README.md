@@ -50,10 +50,13 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 | `ACK_OPEN_CONN` | `0x30` |
 | `ACK_CLOSE_CONN` | `0x31` |
 | `SLOT_DATA` | `0x40` |
+| `RESET` | `0x50` |
+| `PING` | `0x51` |
+| `PONG` | `0x52` |
 
 ### Handshake
 
-STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, stm finishes with `HANDSHAKE_OK`. All commands have payload size 0 and no payload.
+STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, stm finishes with `HANDSHAKE_OK`. All handshake commands have payload size 0 and no payload.
 
 ### Slots
 
@@ -82,7 +85,7 @@ These two commands both have the same payload data, containing the slot ID that 
 ##### Getting data
 
 Continuous slots will periodically send the `SLOT_DATA` command from the ESP.
-Polled slots must send the `NEW_DATA` command from the STM, containing the slot ID to update as its payload.
+Polled slots MUST send the `NEW_DATA` command from the STM, containing the slot ID to update as its payload.
 
 The `SLOT_DATA` command's format is as follows.
 
@@ -94,6 +97,14 @@ The `SLOT_DATA` command's format is as follows.
 ```
 
 It is the only variable-length packet currently in the protocol. Data past the end of the payload but before the 16-byte cutoff should be interpreted as zero.
+
+### Other commands
+
+When either device sends the `RESET` command, both devices should reset. Usually sent by the ESP upon grabbing new configuration -- but the STM can also send it in rare cases.
+
+When either device sends the `PING` command, the other MUST respond with the `PONG` command, UNLESS the handshake has not been completed.
+
+The above three commands have no payload.
 
 ## Serial
 

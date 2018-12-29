@@ -56,11 +56,17 @@ namespace srv {
 
 		uint8_t state = 0;
 		uint8_t pending_count = 0;
+
+		uint64_t last_comm = 0;
 		bool is_sending = false;
+		bool sent_ping = false;
+		
+		uint16_t retry_counter = 0;
 
 		void send();
 		void start_recv();
 		void recv_full();
+		void cancel_recv();
 
 		void process_command();
 		void do_send_operation(uint32_t operation);

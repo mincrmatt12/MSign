@@ -46,7 +46,7 @@ void tasks::TTCScreen::loop() {
 					draw_slot(y, name, servicer.slot<slots::TTCTime>(s_t[slot]).tA, servicer.slot<slots::TTCTime>(s_t[slot]).tB,
 						info.flags & (slots::TTCInfo::ALERT_0 << slot),
 						info.flags & (slots::TTCInfo::DELAY_0 << slot))
-				) y += 7;		
+				) y += 8;		
 			}
 		}
 	}

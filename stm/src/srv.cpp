@@ -1,5 +1,6 @@
 #include "srv.h"
 
+#include "tasks/timekeeper.h"
 #include <string.h>
 #include "stm32f2xx_ll_bus.h"
 #include "stm32f2xx_ll_usart.h"
@@ -7,12 +8,13 @@
 #include "stm32f2xx_ll_dma.h"
 #include "stm32f2xx.h"
 
+extern tasks::Timekeeper timekeeper;
+
 #define STATE_UNINIT 0
 #define STATE_HANDSHAKE_RECV 1
 #define STATE_HANDSHAKE_SENT 2
 #define STATE_DMA_WAIT_SIZE 3
 #define STATE_DMA_GOING 4
-#define STATE_DMA_READY 5
 
 bool srv::Servicer::important() {
 	return !done();
@@ -39,6 +41,16 @@ void srv::Servicer::loop() {
 					break;
 				}
 			case STATE_HANDSHAKE_RECV:
+				{
+					++retry_counter;
+					asm volatile ("nop");
+					asm volatile ("nop");
+					asm volatile ("nop");
+					asm volatile ("nop");
+					if (retry_counter == 300) {
+						NVIC_SystemReset();
+					}
+				}
 				break;
 			case STATE_HANDSHAKE_SENT:
 				{
@@ -59,6 +71,15 @@ void srv::Servicer::loop() {
 		if (this->pending_count > 0 && !is_sending) {
 			uint32_t pending_operation = this->pending_operations[--this->pending_count];
 			do_send_operation(pending_operation);
+		}
+
+		if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
+			this->pending_operations[pending_count++] = 0x51000000;
+			sent_ping = true;
+		}
+		if ((timekeeper.current_time - last_comm) > 25000) {
+			// Reset.
+			NVIC_SystemReset();
 		}
 	}
 }
@@ -326,6 +347,24 @@ void srv::Servicer::do_send_operation(uint32_t operation) {
 				send();
 			}
 			break;
+		case 0x50:
+			{
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x00;
+				dma_out_buffer[2] = 0x52;
+
+				send();
+			}
+			break;
+		case 0x51:
+			{
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x00;
+				dma_out_buffer[2] = 0x51;
+
+				send();
+			}
+			break;
 
 	}
 }
@@ -372,13 +411,31 @@ void srv::Servicer::process_command() {
 				slot_dirties[slot / 8] |= (1 << (slot % 8));
 			}
 			break;
+		case 0x50:
+			{
+				// RESET
+				NVIC_SystemReset();
+			}
+			break;
+		case 0x51:
+			{
+				// PING
+				if (pending_count == 16) break;
+				this->pending_operations[pending_count++] = 0x50000000;
+				break;
+			}
+		default:
+			break;
 		// TODO: notif
 	}
+
 }
 
 void srv::Servicer::dma_finish(bool incoming) {
 	if (incoming) {
 		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
+		last_comm = timekeeper.current_time;
+		sent_ping = false;
 		// first, check if we need to handle the handshake command
 		if (state == STATE_HANDSHAKE_RECV) {
 			if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x11) {
@@ -390,7 +447,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 				return;
 			}
 		}
-		else if (state == STATE_DMA_WAIT_SIZE) {
+		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
 				start_recv();
 			}
@@ -411,4 +468,8 @@ void srv::Servicer::dma_finish(bool incoming) {
 
 		is_sending = false;
 	}
+}
+
+void srv::Servicer::cancel_recv() {
+	LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
 }

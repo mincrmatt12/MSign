@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include "config.h"
 #include "string.h"
+#include "util.h"
 
 WiFiClient client;
 HttpClient http_client(client);
@@ -69,48 +70,19 @@ void ttc::on_open(uint16_t data_id) {
 }
 
 void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
+	util::Download result;
 	{
 		char url[80];
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
 		Serial1.println(url);
+		result = util::download_from(http_client, "webservices.nextbus.com", url);
 
-		if (http_client.get("webservices.nextbus.com", url) != 0) return;
-	}
-
-	
-	if (http_client.responseStatusCode() != 200) {http_client.stop(); return;}
-
-	http_client.skipResponseHeaders();
-	int body_length = http_client.contentLength();
-
-	char * body = (char*)malloc(body_length);
-	if (body == nullptr) {
-		Serial1.println(F("Oh no..."));
-	}
-
-	Serial1.printf("Bodylen = %d\n", body_length);
-	Serial1.println(ESP.getFreeHeap());
-
-	char * pos = body;
-	uint64_t ts = millis();
-	uint64_t read_so_far = 0;
-	
-	Serial1.print(F("Updating slot "));
-	Serial1.println(slot);
-
-	while ((http_client.connected() || http_client.available() || read_so_far < body_length) && (millis() - ts) < 500) {
-		if (http_client.available()) {
-			*pos++ = http_client.read();
-			++read_so_far;
-			ts = millis();
-		}
-		else {
-			delay(5);
+		if (result.error || result.buf == nullptr || result.length == 0) {
+			if (result.buf != nullptr) free(result.buf);
+			return;
 		}
 	}
-
-	http_client.stop();
 
 	// message is here now read it
 	
@@ -191,11 +163,10 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		}
 	});
 
-	if (!parser.parse(body, body_length)) {
+	if (!parser.parse(result.buf, result.length)) {
 		Serial1.println(F("JSON fucked up."));
 	} // parse while calling our function.
 
 	free(dirtag);
-
-	free(body);
+	free(result.buf);
 }
