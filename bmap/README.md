@@ -17,3 +17,7 @@ lmnopqrs tuv
 abcdefghijk
 lmnopqrstuv
 ```
+
+# bmap
+
+Essentially just the bitmap converter in fnter -- takes a png, searches for areas without transparency and maps them.
