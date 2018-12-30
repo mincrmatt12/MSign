@@ -27,5 +27,6 @@ void setup() {
 void loop() {
 	serial::interface.loop();
 	ttc::loop();
+	wifi::loop();
 	delay(1);
 }

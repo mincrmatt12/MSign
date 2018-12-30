@@ -39,6 +39,9 @@ namespace serial {
 		void register_handler(const QueryHandler handler);
 		void register_handler(const OpenHandler handler);
 
+		// Reset, informing the STM beforehand.
+		void reset();
+
 	private:
 		void handle_command(serial::Command cmd, uint8_t size, uint8_t *buf);
 		void send_data_to(uint8_t slot_id, const uint8_t * buffer, uint8_t length);

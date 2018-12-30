@@ -29,7 +29,7 @@ namespace config {
 		ConfigManager();
 		
 		void load_from_sd();
-		void check_for_new();
+		bool use_new_config(const char * data, uint32_t size);
 		const char * get_value(Entry e, const char * value=nullptr);
 	private:
 		void add_entry(Entry e, const char *buffer);

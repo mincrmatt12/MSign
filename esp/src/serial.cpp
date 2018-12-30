@@ -62,6 +62,17 @@ void serial::SerialInterface::loop() {
 	}
 }
 
+void serial::SerialInterface::reset() {
+	uint8_t buf_reply[3] = {
+		0xa6,
+		0x00,
+		RESET
+	};
+
+	Serial.write(buf_reply, 3);
+	ESP.restart();
+}
+
 void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, uint8_t *buf) {
 	switch (cmd) {
 		case HANDSHAKE_INIT:
@@ -71,15 +82,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				Serial1.println(F("Encountered handshake commands in main loop."));
 				
 				// Reset target, then reset us.
-				
-				uint8_t buf_reply[3] = {
-					0xa6,
-					0x00,
-					RESET
-				};
-
-				Serial.write(buf_reply, 3);
-				ESP.restart();
+				reset();
 			}
 			break;
 		case OPEN_CONN:

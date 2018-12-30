@@ -27,14 +27,27 @@ config::ConfigManager::ConfigManager() {
 	memset(this->offsets, 0xFF, sizeof(this->offsets));
 }
 
+bool config::ConfigManager::use_new_config(const char * data, uint32_t size) {
+	SdFatSoftSpi<D6, D2, D5> sd;
+	if (!sd.begin(D1)) {
+		Serial1.println(F("SD Card couldn't init.\n"));
+		return false;
+	}
+
+	SdFile config("config.txt", O_WRITE);
+	config.truncate(0); // erase file.
+	config.write(data, size);
+	config.close();
+
+	return true;
+}
+
 const char * config::ConfigManager::get_value(config::Entry e, const char * value) {
 	if (this->offsets[e] == 0xFFFF) {
 		return value;
 	}
 	return (this->data + this->offsets[e]);
 }
-
-void config::ConfigManager::check_for_new() {} // TODO
 
 void config::ConfigManager::load_from_sd() {
 	// Alright, here comes the stupidity

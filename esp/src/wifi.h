@@ -5,6 +5,7 @@ namespace wifi {
 	void prepare();
 	void init();
 	bool available();
+	void loop();
 }
 
 #endif
