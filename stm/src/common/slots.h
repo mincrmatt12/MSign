@@ -15,7 +15,11 @@ namespace slots {
 		TTC_NAME_3 = 0x23,
 		TTC_TIME_1 = 0x24,
 		TTC_TIME_2 = 0x25,
-		TTC_TIME_3 = 0x26
+		TTC_TIME_3 = 0x26,
+
+		WEATHER_ICON = 0x40,
+		WEATHER_INFO = 0x44,
+		WEATHER_STATUS = 0x45
 	};
 
 #pragma pack (push, 1)
@@ -41,10 +45,25 @@ namespace slots {
 			DELAY_2 = 256
 		};
 	};
+
+	struct WeatherInfo {
+		float ctemp;
+		float ltemp;
+		float htemp;
+		uint8_t status_size;
+	};
+
+	struct VStr {
+		uint8_t index;
+		uint8_t size;
+		uint8_t data[14];
+	};
 #pragma pack (pop)
 
 	static_assert(sizeof(TTCTime) <= 16, "TTC time too large");
 	static_assert(sizeof(TTCInfo) <= 16, "TTCInfo too large");
+	static_assert(sizeof(WeatherInfo) <= 16, "WeatherInfo too large");
+	static_assert(sizeof(VStr) <= 16, "VStr too large");
 }
 
 #endif

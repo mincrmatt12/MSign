@@ -1,8 +1,11 @@
 #include "util.h"
 #include "string.h"
+#include "HttpClient.h"
 
-util::Download util::download_from(HttpClient &client, const char *host, const char *path, uint32_t timeout) {
-	if (client.get(host, path) != 0) {
+const char * msign_ua = "MSign/1.0.0 ESP8266";
+
+util::Download util::download_from(HttpClient &client, const char *host, const char *path, const char * const headers[][2], uint32_t timeout) {
+	if (client.startRequest(host, 80, path, HTTP_METHOD_GET, msign_ua) != 0) {
 		return {
 			0,
 			nullptr,
@@ -10,6 +13,14 @@ util::Download util::download_from(HttpClient &client, const char *host, const c
 			true
 		};
 	}
+
+	for (int i = 0;;++i) {
+		if (headers[i][0] == nullptr || headers[i][1] == nullptr) break;
+		client.sendHeader(headers[i][0], headers[i][1]);
+		Serial1.printf("dwnld: %s, %s --> %s\n", path, headers[i][0], headers[i][1]);
+	}
+
+	client.endRequest();
 
 	Download result = {0};
 	result.status_code = client.responseStatusCode();
@@ -45,4 +56,9 @@ util::Download util::download_from(HttpClient &client, const char *host, const c
 	client.stop();
 
 	return result;
+}
+
+util::Download util::download_from(HttpClient &client, const char *host, const char *path, uint32_t timeout) {
+	const char * const headers[][2] = {{nullptr, nullptr}};
+	return download_from(client, host, path, headers, timeout);
 }

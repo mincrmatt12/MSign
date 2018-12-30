@@ -34,6 +34,7 @@ void wifi::init() {
 	// start up wifi with parameters loaded
 	WiFi.persistent(false);
 	WiFi.mode(WIFI_STA);
+	WiFi.hostname("msign");
 	WiFi.begin(config::manager.get_value(config::SSID), 
 			   config::manager.get_value(config::PSK));
 }
