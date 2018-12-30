@@ -2,7 +2,7 @@
 #include "threed.h"
 
 
-void threed::Renderer::init() {
+bool threed::Renderer::init() {
 
 tris[0] = {
     { -0.218, 0.12, -0.402 },
@@ -2063,4 +2063,5 @@ tris[205] = {
     163
 };
 
+return true;
 }
