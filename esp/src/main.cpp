@@ -5,6 +5,7 @@
 #include "wifi.h"
 #include "time.h"
 #include "ttc.h"
+#include "weather.h"
 
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
@@ -22,11 +23,13 @@ void setup() {
 	wifi::init();
 	time::init();
 	ttc::init();
+	weather::init();
 }
 
 void loop() {
 	serial::interface.loop();
 	ttc::loop();
 	wifi::loop();
+	weather::loop();
 	delay(1);
 }

@@ -1,10 +1,14 @@
 #include "util.h"
 #include "string.h"
 #include "HttpClient.h"
+#include "WiFiClient.h"
+
+WiFiClient cl;
+HttpClient client(cl);
 
 const char * msign_ua = "MSign/1.0.0 ESP8266";
 
-util::Download util::download_from(HttpClient &client, const char *host, const char *path, const char * const headers[][2], uint32_t timeout) {
+util::Download util::download_from(const char *host, const char *path, const char * const headers[][2], uint32_t timeout) {
 	if (client.startRequest(host, 80, path, HTTP_METHOD_GET, msign_ua) != 0) {
 		return {
 			0,
@@ -58,7 +62,7 @@ util::Download util::download_from(HttpClient &client, const char *host, const c
 	return result;
 }
 
-util::Download util::download_from(HttpClient &client, const char *host, const char *path, uint32_t timeout) {
+util::Download util::download_from(const char *host, const char *path, uint32_t timeout) {
 	const char * const headers[][2] = {{nullptr, nullptr}};
-	return download_from(client, host, path, headers, timeout);
+	return download_from(host, path, headers, timeout);
 }

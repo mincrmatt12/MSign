@@ -18,7 +18,11 @@ const char * config::entry_names[] = {
 	"dirtag3",
 	"shortname1",
 	"shortname2",
-	"shortname3"
+	"shortname3",
+
+	"wapikey",
+	"wapilat",
+	"wapilon"
 };
 
 

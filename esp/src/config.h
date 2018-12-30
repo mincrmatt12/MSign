@@ -20,6 +20,10 @@ namespace config {
 		SNAME2,
 		SNAME3,
 
+		WEATHER_KEY,
+		WEATHER_LAT,
+		WEATHER_LONG,
+
 		// leave me
 		ENTRY_COUNT
 	};

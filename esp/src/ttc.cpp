@@ -11,9 +11,6 @@
 #include "string.h"
 #include "util.h"
 
-WiFiClient client;
-HttpClient http_client(client);
-
 slots::TTCInfo ttc::info;
 slots::TTCTime ttc::times[3];
 
@@ -76,7 +73,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
 		Serial1.println(url);
-		result = util::download_from(http_client, "webservices.nextbus.com", url);
+		result = util::download_from("webservices.nextbus.com", url);
 
 		if (result.error || result.buf == nullptr || result.length == 0) {
 			if (result.buf != nullptr) free(result.buf);
