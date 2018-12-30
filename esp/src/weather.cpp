@@ -78,5 +78,6 @@ void weather::loop() {
 		json.parse(down.buf, down.length);
 
 		time_since_last_update = now();
+		free(down.buf);
 	}
 }
