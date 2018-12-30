@@ -2,7 +2,7 @@
 #include "rng.h"
 #include <time.h>
 
-#include "fonts/latob_12.h"
+#include "fonts/tahoma_9.h"
 #include "draw.h"
 
 extern uint64_t rtc_time;
@@ -29,10 +29,7 @@ void tasks::ClockScreen::loop() {
 
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 
-	draw::fill(matrix.get_inactive_buffer(), bg_color[0], bg_color[1], bg_color[2]);
-	uint16_t text_size = draw::text_size((uint8_t *)buf, font::lato_bold_12::info);
-	uint16_t box_width = text_size + 2;
-
-	draw::rect(matrix.get_inactive_buffer(), (32 - box_width / 2), 10, (32 + box_width / 2 + 1), 22, 0, 0, 0);
-	draw::text(matrix.get_inactive_buffer(), buf, font::lato_bold_12::info, (32 - text_size / 2), 21, 240, 240, 240);
+	uint16_t width = draw::text_size(buf, font::tahoma_9::info);
+	//draw::rect(matrix.get_inactive_buffer(), (32 - box_width / 2), 10, (32 + box_width / 2 + 1), 22, 0, 0, 0);
+	draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 32 - (width / 2), 7, 240, 240, 240);
 }
