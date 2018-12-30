@@ -3,7 +3,7 @@
 #include <string.h>
 #include <cmath>
 
-namespace tasks {
+namespace threed {
 
 	struct Vec3 {
 		float x, y, z;
