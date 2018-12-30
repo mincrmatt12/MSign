@@ -11,9 +11,7 @@ namespace weather {
 	extern char * info_buffer;
 	extern uint8_t buffer_size;
 	extern uint8_t echo_index;
-
 	extern char icon[16];
-
 	extern uint64_t time_since_last_update;
 }
 

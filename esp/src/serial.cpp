@@ -10,7 +10,6 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 		if (array[256-offset-1] == val) return 256-offset-1;
 	}
 
-	Serial1.printf("Invalid search_for on %d\n", val);
 	return ~0;
 }
 

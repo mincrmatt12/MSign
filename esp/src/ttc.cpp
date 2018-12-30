@@ -20,7 +20,7 @@ void ttc::init() {
 	memset(ttc::times, 0, sizeof(ttc::times));
     ttc::info = { 0 };
 
-	serial::interface.register_handler((serial::OpenHandler)&ttc::on_open);
+	serial::interface.register_handler(&ttc::on_open);
 }
 
 void ttc::loop() {

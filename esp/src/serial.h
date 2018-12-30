@@ -23,7 +23,7 @@ namespace serial {
 	// returns true if new data was added to the buffer and length
 	typedef bool (*QueryHandler)(uint16_t data_id, uint8_t * buffer, uint8_t & length);
 	// void, called whenever a slot is opened
-	typedef bool (*OpenHandler)  (uint16_t data_id);
+	typedef void (*OpenHandler) (uint16_t data_id);
 
 	// returns ~0 on fail.
 	uint16_t search_for(uint16_t val, uint16_t array[64]);
