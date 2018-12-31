@@ -63,7 +63,7 @@ void weather::init() {
 }
 
 void weather::loop() {
-	if (time_since_last_update == 0 || (now() - time_since_last_update) > 240000) {
+	if (time_since_last_update == 0 || (now() - time_since_last_update) > 135) {
 		// Do a weather update.
 		
 		if (!wifi::available()) return;
