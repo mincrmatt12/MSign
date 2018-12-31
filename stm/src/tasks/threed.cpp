@@ -105,7 +105,6 @@ namespace threed {
 	void Renderer::loop() {
 		if (current_tri == 206) current_tri = 0;
 		if (current_tri == 0) {
-			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			update_matricies();
 		}
 		draw_triangle(tris[current_tri]);

@@ -2063,5 +2063,10 @@ tris[205] = {
     163
 };
 
+name[0] = '3';
+name[1] = 'd';
+name[2] = 'r';
+name[3] = 'd';
+
 return true;
 }

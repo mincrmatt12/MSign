@@ -59,7 +59,6 @@ void tasks::TTCScreen::draw_bus() {
 		bus_type += 1;
 	}
 
-	draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 	for (uint8_t i = 0; i < bus_type; ++i)
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
 }

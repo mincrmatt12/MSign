@@ -11,6 +11,7 @@
 #include "tasks/timekeeper.h"
 #include "tasks/clock.h"
 #include "tasks/ttc.h"
+#include "tasks/weather.h"
 
 // strange parse error - put this last...
 
@@ -98,7 +99,7 @@ int main() {
 
 	// .. TODO: init display code ...
 	
-	tasks::TTCScreen screen;
+	tasks::WeatherScreen screen;
 	screen.init();
 	task_list[0] = &screen;
 
@@ -161,6 +162,7 @@ run_it:
 
 		if (display_ready) {
 			matrix.swap_buffers(); 
+			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			display_ready = false;
 		}
 	}

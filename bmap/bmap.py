@@ -18,14 +18,17 @@ if len(img.getbands()) != 4:
 stride = int(math.ceil(w / 8))
 data = []
 
+color = []
+
 for y in range(h):
     for x in range(w):
         if x % 8 == 0:
             data.append(0)
         if img.getpixel((x, y))[3] != 0:
             data[-1] |= (1 << (7 - (x % 8)))
+            color = img.getpixel((x, y))[:3]
 
-print(f"// w={w}, h={h}, stride={stride}")
+print(f"// w={w}, h={h}, stride={stride}, color={color[0]}, {color[1]}, {color[2]}")
 print("const uint8_t data = {")
 
 for pos in range(0, len(data), stride):
