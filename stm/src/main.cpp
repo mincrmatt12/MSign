@@ -9,13 +9,11 @@
 #include "sched.h"
 #include "srv.h"
 #include "tasks/timekeeper.h"
-#include "tasks/clock.h"
-#include "tasks/ttc.h"
-#include "tasks/weather.h"
 
 // strange parse error - put this last...
 
 #include "draw.h"
+#include "tasks/dispman.h"
 #include <stdlib.h>
 #include <cmath>
 
@@ -27,6 +25,8 @@ srv::Servicer servicer;
 uint64_t rtc_time;
 
 tasks::Timekeeper timekeeper{rtc_time};
+
+tasks::DispMan dispman;
 
 // Scheduler parameters
 
@@ -66,6 +66,7 @@ int main() {
 
 	servicer.init();
 	task_list[3] = &servicer;
+	task_list[4] = &dispman;
 	task_list[5] = &timekeeper;
 
 	show_test_pattern(0, matrix.get_inactive_buffer());
@@ -97,11 +98,7 @@ int main() {
 		while (matrix.is_active()) {;}
 	}
 
-	// .. TODO: init display code ...
-	
-	tasks::WeatherScreen screen;
-	screen.init();
-	task_list[0] = &screen;
+	dispman.init();
 
 	// Main loop of software
 	while (true) {

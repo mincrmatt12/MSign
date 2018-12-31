@@ -48,7 +48,6 @@ void weather::init() {
 	});
 
 	serial::interface.register_handler([](uint16_t data_id){
-		serial::interface.update_data(slots::WEATHER_INFO, (uint8_t *)&weather::info, sizeof(weather::info));
 		switch (data_id) {
 			case slots::WEATHER_ICON:
 				serial::interface.update_data(slots::WEATHER_ICON, (uint8_t *)weather::icon,  strlen(weather::icon));

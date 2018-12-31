@@ -200,9 +200,9 @@ bool tasks::WeatherScreen::init() {
 bool tasks::WeatherScreen::deinit() {
 	// TODO: fix me
 	if (!(
-		servicer.close_slot(slots::WEATHER_INFO) &&
-		servicer.close_slot(slots::WEATHER_ICON) &&
-		servicer.close_slot(slots::WEATHER_STATUS)
+		servicer.close_slot(s_info) &&
+		servicer.close_slot(s_icon) &&
+		servicer.close_slot(s_status)
 	)) {
 		return false;
 	}

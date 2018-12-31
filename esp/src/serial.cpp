@@ -10,6 +10,8 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 		if (array[256-offset-1] == val) return 256-offset-1;
 	}
 
+	Serial1.printf("Failed search %d\n", val);
+
 	return ~0;
 }
 
@@ -120,14 +122,14 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				// close the connection
 				if (size < 1) goto size_error;
 
-				slots_continuous[buf[1]] = 0x00;
-				slots_polled[buf[1]] = 0x00;
+				slots_continuous[buf[0]] = 0x00;
+				slots_polled[buf[0]] = 0x00;
 
 				uint8_t buf_reply[4] = {
 					0xa6,
 					0x01,
 					ACK_CLOSE_CONN,
-					buf[1]
+					buf[0]
 				};
 
 				Serial.write(buf_reply, 4);
@@ -223,7 +225,8 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 	}
 }
 
-void serial::SerialInterface::update_open_handlers(uint16_t data_id) {
+void serial::SerialInterface::update_open_handlers(uint8_t slot_id) {
+	uint16_t data_id = this->slots_continuous[slot_id];
 	for (uint8_t i = 0; i < number_of_o_handlers; ++i) {
 		o_handlers[i](data_id);
 	}

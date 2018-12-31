@@ -46,7 +46,7 @@ namespace serial {
 		void handle_command(serial::Command cmd, uint8_t size, uint8_t *buf);
 		void send_data_to(uint8_t slot_id, const uint8_t * buffer, uint8_t length);
 		void update_polled_data(uint8_t slot_id);
-		void update_open_handlers(uint16_t data_id);
+		void update_open_handlers(uint8_t data_id);
 
 		uint16_t slots_continuous[256];
 		uint16_t slots_polled[256];

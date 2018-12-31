@@ -391,7 +391,7 @@ void srv::Servicer::process_command() {
 				// service a ACK_CLOSE_CONN.
 				uint8_t slot = dma_buffer[3];
 
-				this->slot_states[slot / 4] &= ~(0b11 << ((slot % 4)*2)); // mark the slot as unopen and disconnected
+				this->slot_states[slot / 4] &= ~(uint8_t)(0b11 << ((slot % 4)*2)); // mark the slot as unopen and disconnected
 			}
 			break;
 		case 0x40:
