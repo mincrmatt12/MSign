@@ -282,21 +282,21 @@ void tasks::WeatherScreen::loop() {
 
 	if (this->status_update_state == 0) {
 		text_size = draw::text_size(status, font::tahoma_9::info);
-		if (text_size < 44) {
-			draw::text(matrix.get_inactive_buffer(), status, font::tahoma_9::info, 44 - text_size / 2, 29, 240, 240, 240);
+		if (text_size < 64) {
+			draw::text(matrix.get_inactive_buffer(), status, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
 		}
 		else {
 			uint16_t t_pos = (uint16_t)(timekeeper.current_time / 50);
 			t_pos %= (text_size * 2) + 1;
 			t_pos =  ((text_size * 2) + 1) - t_pos;
 			t_pos -= text_size;
-			draw::text(matrix.get_inactive_buffer(), status, font::tahoma_9::info, 22 + t_pos, 29, 240, 240, 240);
+			draw::text(matrix.get_inactive_buffer(), status, font::tahoma_9::info, t_pos, 29, 240, 240, 240);
 		}
 	}
 
-	draw::rect(matrix.get_inactive_buffer(), 0, 0, 22, 32, 0, 0, 0);
+	draw::rect(matrix.get_inactive_buffer(), 0, 0, 22, 20, 0, 0, 0);
 
-	uint16_t y = 5 + (uint16_t)(5.0f * sinf((float)(timekeeper.current_time) / 1000.0f));
+	uint16_t y = (uint16_t)(5.0f * sinf((float)(timekeeper.current_time) / 1000.0f)) - 1;
 
 	const char * icon = (const char*)servicer.slot(s_icon);
 
