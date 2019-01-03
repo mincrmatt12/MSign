@@ -1,4 +1,3 @@
-FROM python:2.7-alpine
+FROM alpine:edge
 
-RUN apk add --no-cache python3
-RUN pip2 install platformio
+RUN apk add --no-cache platformio-core python3
