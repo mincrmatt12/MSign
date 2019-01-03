@@ -1,7 +1,7 @@
 pipeline {
 	agent {
 		docker {
-			image 'johannweging/platformio'
+			image 'sglahn/platformio-core'
 			label 'linux && docker'
 		}
 	}
