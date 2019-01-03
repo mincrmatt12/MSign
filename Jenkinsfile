@@ -1,8 +1,7 @@
 pipeline {
 	agent {
-		docker {
-			image 'sglahn/platformio-core'
-			label 'linux'
+		node {
+			label 'scala'
 		}
 	}
 	stages {
