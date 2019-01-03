@@ -2,7 +2,7 @@ pipeline {
 	agent {
 		docker {
 			image 'sglahn/platformio-core'
-			label 'linux && docker'
+			label 'linux'
 		}
 	}
 	stages {
