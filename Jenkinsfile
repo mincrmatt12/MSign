@@ -2,7 +2,6 @@ pipeline {
 	agent {
 		dockerfile {
 			label 'docker && linux'
-			args '-u root:root'
 		}
 	}
 	stages {
@@ -16,6 +15,7 @@ pipeline {
 			parallel {
 				stage('Build STM') {
 					steps {
+						sh 'echo $HOME; cd ~; ls'
 						sh 'python2 -m platformio run -d stm'
 					}
 				}
