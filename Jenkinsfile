@@ -1,7 +1,7 @@
 pipeline {
 	agent {
-		dockerfile {
-			label 'docker && linux'
+		node {
+			label 'scala'
 		}
 	}
 	stages {
