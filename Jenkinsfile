@@ -2,6 +2,7 @@ pipeline {
 	agent {
 		dockerfile {
 			label 'docker && linux'
+			args "-u jenkins:jenkins"
 		}
 	}
 	stages {
