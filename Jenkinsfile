@@ -2,7 +2,7 @@ pipeline {
 	agent {
 		dockerfile {
 			label 'docker && linux'
-			args "-u pio:pio"
+			args "-u root:root"
 		}
 	}
 	stages {
