@@ -19,7 +19,13 @@ namespace slots {
 
 		WEATHER_ICON = 0x40,
 		WEATHER_INFO = 0x44,
-		WEATHER_STATUS = 0x45
+		WEATHER_STATUS = 0x45,
+
+		CALFIX_INFO = 0x50,
+		CALFIX_CLS1 = 0x51,
+		CALFIX_CLS2 = 0x52,
+		CALFIX_CLS3 = 0x53,
+		CALFIX_CLS4 = 0x54,
 	};
 
 #pragma pack (push, 1)
@@ -58,12 +64,19 @@ namespace slots {
 		uint8_t size;
 		uint8_t data[14];
 	};
+
+	struct CalfixInfo {
+		uint8_t day;
+		uint8_t sched;
+	};
+
 #pragma pack (pop)
 
 	static_assert(sizeof(TTCTime) <= 16, "TTC time too large");
 	static_assert(sizeof(TTCInfo) <= 16, "TTCInfo too large");
 	static_assert(sizeof(WeatherInfo) <= 16, "WeatherInfo too large");
 	static_assert(sizeof(VStr) <= 16, "VStr too large");
+	static_assert(sizeof(CalfixInfo) <= 16, "CalfixInfo too large");
 }
 
 #endif
