@@ -16,6 +16,7 @@ pipeline {
 				stage('Build STM') {
 					steps {
 						sh 'python2 -m platformio run -d stm'
+						sh 'python2 -m platformio run -d stmboot'
 					}
 				}
 				stage('Build ESP') {
@@ -34,7 +35,8 @@ pipeline {
 		}
 		stage('Archive') {
 			steps {
-				archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
+				archiveArtifacts(artifacts: 'esp/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
+				archiveArtifacts(artifacts: 'stm*/.pioenvs/**/firmware.elf', onlyIfSuccessful: true)
 			}
 		}
 	}
