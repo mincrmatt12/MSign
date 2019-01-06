@@ -35,8 +35,7 @@ pipeline {
 		}
 		stage('Archive') {
 			steps {
-				archiveArtifacts(artifacts: 'esp/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
-				archiveArtifacts(artifacts: 'stm*/.pioenvs/**/firmware.elf', onlyIfSuccessful: true)
+				archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
 			}
 		}
 	}
