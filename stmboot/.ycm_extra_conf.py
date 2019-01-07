@@ -193,7 +193,7 @@ def FlagsForFile( filename, **kwargs ):
     logger.debug("List of FLAGS hand back to YCM:")
     for a in allflags: logger.debug(a)
 
-    allflags.extend(["-x", "c++"])
+    allflags.extend(["-x", "c"])
  
     return {
         'flags': allflags,
