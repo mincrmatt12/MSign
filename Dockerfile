@@ -1,4 +1,6 @@
-FROM python:2.7-alpine
+FROM python:2.7
+
+RUN apt-get update && apt-get install git
 
 RUN pip install platformio
 
