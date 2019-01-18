@@ -1,7 +1,8 @@
 pipeline {
 	agent {
-		node {
-			label 'scala'
+		dockerfile {
+			label 'linux && docker'
+			args "-u 1001:1001 -v/home/jenkins:/home/jenkins"
 		}
 	}
 	stages {
