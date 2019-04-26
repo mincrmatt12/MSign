@@ -137,6 +137,10 @@ void wifi::loop() {
 				case 0x30:
 					update_config();
 					break;
+				case 0x40:
+					{
+						Serial1.println(F("Starting update!"));
+					}
 				default:
 					break;
 			}

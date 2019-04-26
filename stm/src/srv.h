@@ -14,6 +14,8 @@ namespace srv {
 	//
 	// The slots are assigned automatically, (although long term slots can be specified to optimize the searching algorithm)
 	// Once a slot is no longer required to be updated, it can be stopped.
+	//
+	// This class also handles the update procedure.
 	struct Servicer : public sched::Task {
 		
 		// non-task interface
