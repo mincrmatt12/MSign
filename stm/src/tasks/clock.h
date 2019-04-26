@@ -1,7 +1,7 @@
 #ifndef CLOCK_S_H
 #define CLOCK_S_H
 
-#include "sched.h"
+#include "schedef.h"
 #include <stdint.h>
 
 namespace tasks {

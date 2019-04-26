@@ -1,7 +1,7 @@
 #ifndef DISPMAN_H
 #define DISPMAN_H
 
-#include "sched.h"
+#include "schedef.h"
 #include "tasks/clock.h"
 #include "tasks/ttc.h"
 #include "tasks/weather.h"

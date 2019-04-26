@@ -1,7 +1,7 @@
 #ifndef TIMEKEEPER_H
 #define TIMEKEEPER_H
 
-#include "sched.h"
+#include "schedef.h"
 #include <stdint.h>
 
 namespace tasks {

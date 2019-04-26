@@ -1,5 +1,5 @@
-#ifndef SCHED_H
-#define SCHED_H
+#ifndef SCHEDEF_H
+#define SCHEDEF_H
 
 namespace sched {
 

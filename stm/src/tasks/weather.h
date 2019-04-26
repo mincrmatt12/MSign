@@ -1,7 +1,7 @@
 #ifndef WEATHER_H
 #define WEATHER_H
 
-#include "sched.h"
+#include "schedef.h"
 #include <stdint.h>
 
 namespace tasks {
