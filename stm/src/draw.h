@@ -4,6 +4,8 @@
 #include "matrix.h"
 #include <cstdlib>
 
+typedef led::Matrix<led::FrameBuffer<64, 32>> matrix_type;
+
 namespace draw {
 	template<typename FB>
 	void bitmap(FB &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool mirror=false) {

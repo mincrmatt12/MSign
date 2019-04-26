@@ -10,7 +10,7 @@
 
 #include <cmath>
 extern uint64_t rtc_time;
-extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
+extern matrix_type matrix;
 extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
 

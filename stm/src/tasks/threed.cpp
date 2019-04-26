@@ -2,7 +2,7 @@
 #include "threed.h"
 #include "draw.h"
 
-extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
+extern matrix_type matrix;
 extern uint64_t rtc_time;
 
 namespace threed {
