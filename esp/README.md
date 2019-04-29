@@ -28,8 +28,9 @@ Send the text `Mn` to handshake, nothing is returned.
 | `0x10` | Reset |
 | `0x20` | Dump config, null terminated string returned |
 | `0x30` | Update config |
+| `0x40` | Update system |
 
-### Update config
+#### Update config
 
 Send the command, then the config file size, then finally the entire config file.
 
@@ -42,3 +43,13 @@ Returns one of three values
 | `0x00` | OK |
 
 When done, the system resets.
+
+#### Update system
+
+This command has the following format
+
+```
+
+| 32 bit unsigned size of stm code | 
+
+```

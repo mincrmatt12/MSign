@@ -49,6 +49,7 @@ void serial::SerialInterface::loop() {
 		Serial.readBytes(buf, 3);
 		if (buf[0] == 0xa6) {
 			Serial1.println(F("STM32 is having an identity crisis, it thinks it's an ESP8266"));
+			Serial.read(); // borks everything a bit more, but it'll eventually grab enough bytes to fix things.
 		}
 		else if (buf[0] != 0xa5) {
 			Serial1.println(F("STM32 is drunk; sent invalid header."));

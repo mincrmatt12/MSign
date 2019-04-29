@@ -68,6 +68,7 @@ int main() {
 	
 
 	// verify is ok, we can now erase the update partition and mark everything as hunkidory.
+	// this also means that a program can check a 
 	
 	bootcmd_t new_bcm = {
 		.signature = {0xae, 0x7d},
@@ -117,6 +118,7 @@ void write_bcmd(const bootcmd_t * p) {
 void interact_bcmd(bool invalidate, uint8_t safe) {
 	if (BCMD->signature[0] != 0xae || BCMD->signature[1] != 0x7d || invalidate) {
 		// overwrite the BMCD structure
+
 		
 		bootcmd_t new_bcm = {
 			.signature = {0xae, 0x7d},
