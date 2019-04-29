@@ -1,4 +1,3 @@
-#include "stm32f2xx.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rng.h"
@@ -102,9 +101,9 @@ int main() {
 
 	// Main loop of software
 	while (true) {
-		matrix.display();
+		timekeeper.loop();
 		// ... scheduler loop ...
-		while (matrix.is_active()) {
+		for (uint8_t jj = 0; jj < 64; ++jj) {
 			// Are we done?
 			if (task_index >= 8) {
 				if (display_ready) continue;
@@ -161,6 +160,8 @@ run_it:
 			matrix.swap_buffers(); 
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			display_ready = false;
+			matrix.display();
 		}
 	}
+
 }

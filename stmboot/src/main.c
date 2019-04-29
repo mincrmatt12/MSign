@@ -93,8 +93,7 @@ void jump_to_program() {
 
 	__set_MSP(*(uint32_t *)(0x08004000));
 
-	uint32_t address = *(uint32_t *)(0x08004004);
-	( (void ( * )( void ) ) address ) ();
+	uint32_t address = *(uint32_t *)(0x08004004); ((void(*)(void))address)();
 }
 
 void write_bcmd(const bootcmd_t * p) {

@@ -122,9 +122,9 @@ namespace threed {
 			camera_look = camera_look_target;
 
 			camera_target = Vec3{
-				((float)(rng::get() % 2000) / 1000.0f) - 1.0f,
-				(float)(rng::get() % 1000) / 1000.0f,
-				(float)(rng::get() % 1000) / 1000.0f
+				((float)(rng::get() % 2000) / 1200.0f) - 1.0f,
+				(float)(rng::get() % 1000) / 1400.0f,
+				(float)(rng::get() % 1000) / 1400.0f
 			};
 			camera_look_target = Vec3{
 				(float)(rng::get() % 2) - 1.0f,

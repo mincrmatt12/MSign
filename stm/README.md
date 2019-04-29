@@ -44,6 +44,7 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 | `HANDSHAKE_INIT` | `0x10` |
 | `HANDSHAKE_RESP` | `0x11` |
 | `HANDSHAKE_OK` | `0x12` |
+| `HANDSHAKE_UOK` | `0x13` |
 | `OPEN_CONN` | `0x20` |
 | `CLOSE_CONN` | `0x21` |
 | `NEW_DATA` | `0x22` |
@@ -53,10 +54,16 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 | `RESET` | `0x50` |
 | `PING` | `0x51` |
 | `PONG` | `0x52` |
+| `UPDATE_CMD` | `0x60` |
+| `UPDATE_IMG_DATA` | `0x61` |
+| `UPDATE_IMG_START` | `0x62` |
+| `UPDATE_STATUS` | `0x63` |
+
 
 ### Handshake
 
-STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, stm finishes with `HANDSHAKE_OK`. All handshake commands have payload size 0 and no payload.
+STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, STM finishes with `HANDSHAKE_OK`. All handshake commands have payload size 0 and no payload.
+The command `HANDSHAKE_UOK` is sent to indicate that the STM should enter update mode.
 
 ### Slots
 
@@ -105,6 +112,75 @@ When either device sends the `RESET` command, both devices should reset. Usually
 When either device sends the `PING` command, the other MUST respond with the `PONG` command, UNLESS the handshake has not been completed.
 
 The above three commands have no payload.
+
+### Update commands
+
+The update procedure is rather complicated due to the requirement to update two things.
+The first step is the ESP receiving an update package. While it is downloading the package, it updates various status slots to inform. Once it has finished, it will send a `RESET` command to reset the device.
+When the system reboots, the ESP shall respond with `HANDSHAKE_UOK` on successful handshaking. Once this occurs, the STM enter update mode. Once the update finishes for the STM, it must send an appropriate `UPDATE_STATUS` to the ESP. Once this occurs,
+the ESP will update itself. When it finishes, the STM will hear a `UPDATE_CMD` to reset itself to normal mode. At this point, the system is updated.
+
+#### Detailed flow
+
+After the `RESET`, the ESP will send various `UPDATE_CMD`s, and then the image.
+
+The `UPDATE_CMD` message looks like this:
+
+```
+| 0xFF |
+ |
+ ---- cmd ID
+```
+
+where `cmd ID` is:
+
+| ID | Meaning |
+| :--- | :--- |
+| `0x10` | Cancel update mode / reset to normal mode |
+| `0x11` | Prepare to recieve image
+| `0x30` | Image read error |
+| `0x31` | Image checksum error |
+| `0x32` | Invalid state error |
+
+Once message `0x11` is sent, the STM should get ready to recieve the `UPDATE_IMG_START`. This message contains:
+
+The STM can respond with `UPDATE_STATUS` messages, with the same format
+
+| ID | Meaning |
+| :--- | ------ |
+| `0x12`| Ready for image |
+| `0x13`| Ready for chunk |
+| `0x20` | Beginning copy process |
+| `0x21` | Copy process completed |
+| `0x30` | Resend last chunk, csum error |
+| `0x31` | Resend last chunk, write error |
+| `0x40` | Irrecoverable error, abort procedure |
+| `0x41` | Irrecoverable error, try again |
+
+Note there are no errors for copy process as if it fails the code won't run. If the ESP doesn't get anything for a few minutes it can report failure and ask for manual reflashing.
+
+```
+| 0xCC CC | 0xSS SS SS SS | 0xCNCN |
+  |          |               |
+  |          |               ------ chunck count, little endian 16bits
+  |          ---- size of new image, bytes, little endian 32bits
+  ---- checksum, little endian 16bits, CRC16
+```
+
+Then, the STM can send `UPDATE_STATUS` commands to get the chunks.
+
+Once it sends the `0x13` message, the ESP responds with a chunk like this:
+
+```
+| 0xCC | 0xAA AA AA AA | <data for rest of message>
+ |        |               |
+ |        |               -- chunk data (size = msgsize - 5)
+ |        --- offset relative to beginning of image, little-endian 32bits
+ ---- CRC-8 checksum for this chunk
+```
+
+After each chunk, the STM can respond with an error or a new message.
+If the stm deduces it has received all chunks, it sends the finished message and updates itself.
 
 ## Serial
 
