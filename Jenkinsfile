@@ -25,22 +25,6 @@ pipeline {
 						sh 'python2 -m platformio run -d esp'
 					}
 				}
-				stage('Build SIM') {
-					agent {
-						docker {
-							image 'rikorose/gcc-cmake:gcc-7'
-							label 'linux && docker'
-							args "-u 1001:1001"
-						}
-					}
-					steps {
-						dir('cmake-build-release') {
-							sh "cmake .. -DCMAKE_BUILD_TYPE=Release"
-							sh "make"
-							stash name: "sim-build", includes: "sim"
-						}
-					}
-				}
 			}
 		}
 		stage('Log size') {
@@ -53,8 +37,6 @@ pipeline {
 		stage('Archive') {
 			steps {
 				archiveArtifacts(artifacts: '*/.pioenvs/**/firmware.bin', onlyIfSuccessful: true)
-				unstash "sim-build"
-				archiveArtifacts(artifacts: 'sim', onlyIfSuccessful: true)
 			}
 		}
 	}
