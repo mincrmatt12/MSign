@@ -767,3 +767,30 @@ void srv::Servicer::dma_finish(bool incoming) {
 void srv::Servicer::cancel_recv() {
 	LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
 }
+
+const char * srv::Servicer::update_status() {
+	switch (this->update_state) {
+		case USTATE_WAITING_FOR_READY:
+			snprintf(update_status_buffer, 16, "UPD .. WAIT");
+			break;
+		case USTATE_ERASING_BEFORE_IMAGE:
+			snprintf(update_status_buffer, 16, "UPD .. ESIMG");
+			break;
+		case USTATE_FAILED:
+			snprintf(update_status_buffer, 16, "UPD .. FAIL");
+			break;
+		case USTATE_PACKET_WRITE_FAIL_CSUM:
+			snprintf(update_status_buffer, 16, "UPD .. CFAIL");
+			break;
+		case USTATE_ERASING_BEFORE_PACKET:
+			snprintf(update_status_buffer, 16, "UPD .. EPS%02d", update_package_sector_counter);
+			break;
+		case USTATE_WAITING_FOR_PACKET:
+			snprintf(update_status_buffer, 16, "UPD .. P%04d", update_chunks_remaining);
+			break;
+		default:
+			break;
+	}
+
+	return update_status_buffer;
+}

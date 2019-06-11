@@ -21,7 +21,7 @@ namespace srv {
 		// non-task interface
 		void init(); // starts the system, begins dma, and starts handshake procedure
 		bool ready(); // is the esp talking?
-		bool updating(); // are we in update mode?
+		bool updating() {return is_updating;} // are we in update mode?
 
 		// slot interface
 		//
