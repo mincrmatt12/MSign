@@ -47,14 +47,24 @@ uint8_t skipped_counter[8] = {0};
 bool    display_ready = false;
 
 template <typename FB>
-void show_test_pattern(uint8_t stage, FB& fb) {
+void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	draw::fill(fb, 0, 0, 0);
 	draw::text(fb, "DISP .. OK", font::vera_7::info, 0, 7, 255, 255, 255);
-	if (stage == 1) {
-		draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 14, 255, 0, 0);
-	}
-	else if (stage >= 2) {
-		draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
+	switch (stage) {
+		case 1:
+			draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 14, 255, 0, 0);
+			break;
+		case 2:
+			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
+			break;
+		case 3:
+			draw::text(fb, "ESP .. UPD", font::vera_7::info, 0, 14, 255, 255, 255);
+			if (extra) {
+				draw::text(fb, extra, font::vera_7::info, 0, 19, 255, 255, 255);
+			}
+			break;
+		default:
+			break;
 	}
 }
 
@@ -79,6 +89,19 @@ int main() {
 		while (matrix.is_active()) {;}
 		show_test_pattern(1, matrix.get_inactive_buffer());
 		matrix.swap_buffers();
+	}
+
+	if (servicer.updating()) {
+		// Go into a simple servicer only update mode
+		while (true) {
+			servicer.loop();
+			matrix.display();
+			while (matrix.is_active()) {;}
+			show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
+			matrix.swap_buffers();
+		}
+
+		// Servicer will eventually reset the STM.
 	}
 
 	show_test_pattern(2, matrix.get_inactive_buffer());
@@ -113,7 +136,7 @@ int main() {
 			}
 
 			// Check if the current task is null, if so skip
-			
+
 			if (task_list[task_index] == nullptr) {
 				++task_index;
 				if (task_index == 3) display_ready = true;
@@ -121,7 +144,7 @@ int main() {
 			}
 
 			// Are we in a display slot?
-			
+
 			if (task_index <= 2) {
 				// If so, then we need to treat the task as important
 				goto run_it;

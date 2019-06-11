@@ -144,12 +144,13 @@ where `cmd ID` is:
 
 Once message `0x11` is sent, the STM should get ready to recieve the `UPDATE_IMG_START`. This message contains:
 
-The STM can respond with `UPDATE_STATUS` messages, with the same format
+The STM can respond with `UPDATE_STATUS` messages, with the same format.
 
 | ID | Meaning |
 | :--- | ------ |
-| `0x12`| Ready for image |
-| `0x13`| Ready for chunk |
+| `0x10` | Entered update mode |
+| `0x12` | Ready for image |
+| `0x13` | Ready for chunk |
 | `0x20` | Beginning copy process |
 | `0x21` | Copy process completed |
 | `0x30` | Resend last chunk, csum error |
@@ -172,9 +173,9 @@ Then, the STM can send `UPDATE_STATUS` commands to get the chunks.
 Once it sends the `0x13` message, the ESP responds with a chunk like this:
 
 ```
-| 0xCC | 0xAA AA AA AA | <data for rest of message>
+| 0xCC 0xCC | <data for rest of message>
  |        |               |
- |        |               -- chunk data (size = msgsize - 5)
+ |        |               -- chunk data (size = msgsize - 5) extra bytes are padded with zeros
  |        --- offset relative to beginning of image, little-endian 32bits
  ---- CRC-8 checksum for this chunk
 ```

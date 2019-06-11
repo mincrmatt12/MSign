@@ -27,6 +27,8 @@ The `BCMD` struct, also known as the "update params" can be used to tell the boo
 By writing a `BOOTCMD_UPDATE` or 1 into the `cmd` byte, the bootloader will attempt to update the code currently residing in the `APPLICATION` partition with that of the `UPDATE PKG` one. The `size` value
 _must_ be set to the size of the new code, otherwise the bootloader might just erase the entire partition.
 
+Of course, in practice the updater simply zeros out the last sector as part of the update procedure then writes an entirely new bcmd struct.
+
 The signature bytes should be left alone, but can be checked to be equal to `0xae 0x7d` to see if the BCMD struct actually exists.
 
 When the update is finished, all of sector 11 is erased, which means that some of the update itself, but more importantly the area at the end of flash will be erased. 

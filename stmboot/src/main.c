@@ -124,7 +124,8 @@ void interact_bcmd(bool invalidate, uint8_t safe) {
 			.cmd = BOOTCMD_RUN,
 			.size = 0,
 			.is_safe = safe,
-			.current_size = 0
+			.current_size = 0,
+			.did_just_update = 0
 		};
 
 		write_bcmd(&new_bcm);

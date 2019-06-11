@@ -7,14 +7,109 @@
 #include "stm32f2xx_ll_gpio.h"
 #include "stm32f2xx_ll_dma.h"
 #include "stm32f2xx.h"
+#include "stm32f207xx.h"
+#include "common/bootcmd.h"
+#include "common/util.h"
 
 extern tasks::Timekeeper timekeeper;
 
 #define STATE_UNINIT 0
 #define STATE_HANDSHAKE_RECV 1
 #define STATE_HANDSHAKE_SENT 2
-#define STATE_DMA_WAIT_SIZE 3
-#define STATE_DMA_GOING 4
+#define STATE_UPDATE_STARTING 3
+#define STATE_DMA_WAIT_SIZE 4
+#define STATE_DMA_GOING 5
+
+#define USTATE_WAITING_FOR_READY 0
+#define USTATE_ERASING_BEFORE_IMAGE 1
+#define USTATE_WAITING_FOR_PACKET 2
+#define USTATE_PACKET_WRITTEN 3
+#define USTATE_ERASING_BEFORE_PACKET 4
+#define USTATE_FAILED 10
+#define USTATE_PACKET_WRITE_FAIL_CSUM 11
+
+// Updating routines
+
+uint32_t update_package_data_ptr;
+uint32_t update_package_data_counter = 0;
+uint8_t update_package_sector_counter = 5;
+
+void begin_update(uint8_t &state) {
+	// Set data_ptr to the beginning of the update memory area.
+	
+	update_package_data_ptr = 0x0808'0000;
+	update_package_sector_counter = 8; // sector 8 is currently being written into.
+	update_package_data_counter = 0;
+
+	// Unlock FLASH
+	
+	FLASH->KEYR = FLASH_KEY1;
+	FLASH->KEYR = FLASH_KEY2;
+
+	// Erase sector 8
+	
+	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SER_Pos);
+
+	// Actually erase
+	
+	FLASH->CR |= FLASH_CR_STRT;
+
+	state = USTATE_ERASING_BEFORE_IMAGE;
+}
+
+void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased=false) {
+	if (!util::crc_valid(data, amt)) {
+		state = USTATE_PACKET_WRITE_FAIL_CSUM;
+		return;
+	}
+
+	// Append data to counter
+	if ((update_package_data_counter + amt) >= 131072 && !already_erased) {
+		++update_package_sector_counter;
+
+		// Erase the sector
+
+		CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+		FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SER_Pos);
+
+		// Actually erase
+		
+		FLASH->CR |= FLASH_CR_STRT;
+
+		state = USTATE_ERASING_BEFORE_PACKET;
+
+		return;
+	}
+
+	// Otherwise, just program the data
+	update_package_data_counter += amt;
+
+	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
+	FLASH->CR |= FLASH_CR_PG;
+
+	while (amt--) {
+		(*(uint8_t *)(update_package_data_ptr)) = *(data++); // Program this byte
+
+		// Wait for busy
+		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+			asm volatile ("nop");
+			asm volatile ("nop");
+			asm volatile ("nop");
+			asm volatile ("nop");
+			asm volatile ("nop");
+		}
+
+		// Program next byte
+	}
+
+	// Clear pg byte
+	
+	CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
+
+	state = USTATE_PACKET_WRITTEN;
+}
+
 
 bool srv::Servicer::important() {
 	return !done();
@@ -63,6 +158,19 @@ void srv::Servicer::loop() {
 					start_recv();
 					break;
 				}
+			case STATE_UPDATE_STARTING:
+				{
+					// Enter update mode, and tell the ESP we did
+					
+					dma_out_buffer[0] = 0xa5;
+					dma_out_buffer[1] = 0x01;
+					dma_out_buffer[2] = 0x63;
+					dma_out_buffer[3] = 0x10; // UPDATE_STATUS; cmd=update mode entered
+
+					send();
+					is_updating = true; // Mark update mode.
+					start_recv(); // Begin recieveing messages
+				}
 			default:
 				break;
 		}
@@ -80,6 +188,125 @@ void srv::Servicer::loop() {
 		if ((timekeeper.current_time - last_comm) > 25000) {
 			// Reset.
 			NVIC_SystemReset();
+		}
+	}
+
+	// Update ASYNC logic
+	if (this->is_updating) {
+		switch (this->update_state) {
+			case USTATE_ERASING_BEFORE_IMAGE:
+				{
+					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+						// Report readiness for bytes
+						this->update_state = USTATE_WAITING_FOR_PACKET;
+						this->pending_operations[pending_count++] = 0x60'0000'12;
+
+						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+					}
+					break;
+				}
+			case USTATE_ERASING_BEFORE_PACKET:
+				{
+					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+						this->update_state = USTATE_WAITING_FOR_PACKET;
+
+						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+						append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
+					}
+					break;
+				}
+			case USTATE_PACKET_WRITTEN:
+				{
+					if (--this->update_chunks_remaining == 0) {
+						// We are done?
+						//
+						// Verify checksum
+						
+						if (util::compute_crc((uint8_t *)(0x0804'0000), this->update_total_size) != this->update_checksum) {
+							this->update_state = USTATE_FAILED;
+							this->pending_operations[pending_count++] = 0x60'0000'40;
+
+							break;
+						}
+
+						// Checksum is OK, write the BCMD
+						
+						if (update_package_sector_counter < 11) {
+							// Erase sector 11
+							
+							CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+							FLASH->CR |= FLASH_CR_SER | (11 << FLASH_CR_SNB_Pos);
+
+							// Actually erase
+							
+							FLASH->CR |= FLASH_CR_STRT;
+
+							while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {;}
+
+							CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+						}
+						
+						bootcmd::bootcmd_t bcmd;
+						bcmd.cmd = bootcmd::BOOTCMD_UPDATE;
+						bcmd.signature[0] = 0xae;
+						bcmd.signature[1] = 0x7d;
+						bcmd.did_just_update = 0;
+						bcmd.size = this->update_total_size;
+
+						// Write BCMD
+						
+						CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
+						FLASH->CR |= FLASH_CR_PG;
+
+						for (uint32_t i = 0; i < sizeof(bcmd); ++i) {
+							*((uint8_t *)(BCMD_BASE) + i) = *((uint8_t *)(&bcmd) + i);
+
+							while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+								asm volatile ("nop");
+								asm volatile ("nop");
+								asm volatile ("nop");
+								asm volatile ("nop");
+								asm volatile ("nop");
+							}
+						}
+
+						// Clear pg byte
+						
+						CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
+
+						// Relock FLASH
+						
+						FLASH->CR |= FLASH_CR_LOCK;
+
+						// Send out final message
+						
+						do_send_operation(0x60'0000'20);
+
+						// Wait a bit for DMA
+						
+						for (int i = 0; i < 100000; ++i) {
+							asm volatile ("nop");
+						}
+
+						// Reset
+						
+						NVIC_SystemReset();
+
+						// At this point the bootloader will update us.
+					}
+
+					this->update_state = USTATE_WAITING_FOR_PACKET;
+					this->pending_operations[pending_count++] = 0x60'0000'13;
+					break;
+				}
+			case USTATE_PACKET_WRITE_FAIL_CSUM:
+				{
+					this->update_state = USTATE_WAITING_FOR_PACKET;
+					this->pending_operations[pending_count++] = 0x60'0000'30;
+					break;
+				}
+			default:
+				break;
 		}
 	}
 }
@@ -365,7 +592,19 @@ void srv::Servicer::do_send_operation(uint32_t operation) {
 				send();
 			}
 			break;
+		// update
+		case 0x60:
+			{
+				// send an update_status
+				
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x01;
+				dma_out_buffer[2] = 0x63;
+				dma_out_buffer[3] = param & 0xFF;
 
+				send();
+			}
+			break;
 	}
 }
 
@@ -424,11 +663,62 @@ void srv::Servicer::process_command() {
 				this->pending_operations[pending_count++] = 0x50000000;
 				break;
 			}
+		case 0x60:
+			{
+				// UPDATE_CMD
+				process_update_cmd(dma_buffer[3]);
+				break;
+			}
+		case 0x61: 
+			{
+				// UPDATE_MSG_START
+				
+				this->update_chunks_remaining = *(uint16_t *)(dma_buffer + 10);
+				this->update_total_size = *(uint32_t *)(dma_buffer + 5);
+				this->update_checksum = *(uint16_t *)(dma_buffer + 3);
+
+				// Send the next status
+				
+				this->pending_operations[pending_count++] = 0x60'0000'13;
+				break;
+			}
+		case 0x62:
+			{
+				this->update_pkg_size = (256 - 3);
+				memcpy(this->update_pkg_buffer, this->dma_buffer + 5, 251);  // copy data
+				memcpy(this->update_pkg_buffer + 251, this->dma_buffer + 3, 2); // copy crc
+
+				append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size);
+				break;
+			}
 		default:
 			break;
 		// TODO: notif
 	}
 
+}
+
+void srv::Servicer::process_update_cmd(uint8_t cmd) {
+	switch (cmd) {
+		case 0x10:
+			{
+				// Cancel updates
+				NVIC_SystemReset();
+			}
+		case 0x11:
+			{
+				// Prepare to read byte
+				begin_update(this->update_state);
+
+				// When BSY bit is 0 the loop will send us to the right state.
+				break;
+			}
+		default:
+			{
+				update_state = USTATE_FAILED;
+			}
+			break;
+	}
 }
 
 void srv::Servicer::dma_finish(bool incoming) {
@@ -440,6 +730,10 @@ void srv::Servicer::dma_finish(bool incoming) {
 		if (state == STATE_HANDSHAKE_RECV) {
 			if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x11) {
 				state = STATE_HANDSHAKE_SENT;
+				return;
+			}
+			else if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x13) {
+				state = STATE_UPDATE_STARTING;
 				return;
 			}
 			else {

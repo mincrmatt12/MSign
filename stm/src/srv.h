@@ -21,6 +21,7 @@ namespace srv {
 		// non-task interface
 		void init(); // starts the system, begins dma, and starts handshake procedure
 		bool ready(); // is the esp talking?
+		bool updating(); // are we in update mode?
 
 		// slot interface
 		//
@@ -48,6 +49,9 @@ namespace srv {
 		bool done()      override;
 		bool important() override;
 
+		// Update state introspections
+		const char * update_status();
+
 	private:
 		uint8_t slots[256][16];
 		uint8_t dma_buffer[64];
@@ -71,7 +75,21 @@ namespace srv {
 		void cancel_recv();
 
 		void process_command();
+		void process_update_cmd(uint8_t cmd);
 		void do_send_operation(uint32_t operation);
+
+		// Logic related to update
+		
+		bool is_updating = false;
+		uint8_t update_state = 0;
+
+		char update_status_buffer[16];
+		uint8_t update_pkg_buffer[256];
+		uint32_t update_pkg_size;
+
+		uint32_t update_total_size;
+		uint16_t update_checksum;
+		uint16_t update_chunks_remaining;
 	};
 
 }

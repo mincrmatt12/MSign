@@ -18,6 +18,7 @@ typedef struct _bootcmd {
 	uint8_t cmd;
 	
 	uint32_t size;
+	uint8_t did_just_update;
 
 #ifdef __cplusplus
 	private:
@@ -29,7 +30,11 @@ typedef struct _bootcmd {
 } bootcmd_t;
 
 #define BCMD_BASE 0x080FC000
+#ifndef __cplusplus
 #define BCMD ((__IO bootcmd_t *)BCMD_BASE)
+#else
+#define BCMD ((__IO bootcmd::bootcmd_t *)BCMD_BASE)
+#endif
 
 #ifdef __cplusplus
 };
