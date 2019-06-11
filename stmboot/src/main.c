@@ -75,7 +75,8 @@ int main() {
 		.cmd = BOOTCMD_RUN,
 		.size = 0,
 		.is_safe = 1,
-		.current_size = BCMD->size
+		.current_size = BCMD->size,
+		.did_just_update = 1,
 	};
 
 	write_bcmd(&new_bcm);

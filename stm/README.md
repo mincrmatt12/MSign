@@ -154,9 +154,7 @@ The STM can respond with `UPDATE_STATUS` messages, with the same format.
 | `0x20` | Beginning copy process |
 | `0x21` | Copy process completed |
 | `0x30` | Resend last chunk, csum error |
-| `0x31` | Resend last chunk, write error |
-| `0x40` | Irrecoverable error, abort procedure |
-| `0x41` | Irrecoverable error, try again |
+| `0x40` | Checksum error on entire thing, abort procedure |
 
 Note there are no errors for copy process as if it fails the code won't run. If the ESP doesn't get anything for a few minutes it can report failure and ask for manual reflashing.
 
@@ -174,10 +172,9 @@ Once it sends the `0x13` message, the ESP responds with a chunk like this:
 
 ```
 | 0xCC 0xCC | <data for rest of message>
- |        |               |
- |        |               -- chunk data (size = msgsize - 5) extra bytes are padded with zeros
- |        --- offset relative to beginning of image, little-endian 32bits
- ---- CRC-8 checksum for this chunk
+  |            |
+  |            -- chunk data (size = msgsize - 5) extra bytes are padded with zeros
+  ---- CRC-16 checksum for this chunk
 ```
 
 After each chunk, the STM can respond with an error or a new message.
