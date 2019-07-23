@@ -79,48 +79,12 @@ bool json::JSONParser::parse_number() {
 	else {
 		if (text[head] > '9' || text[head] < '1') return false;
 		while (head < text_size) {
-			switch (text[head]) {
-				case '0':
-					integer *= 10;
-					break;
-				case '1':
-					integer *= 10;
-					integer += 1;
-					break;
-				case '2':
-					integer *= 10;
-					integer += 2;
-					break;
-				case '3':
-					integer *= 10;
-					integer += 3;
-					break;
-				case '4':
-					integer *= 10;
-					integer += 4;
-					break;
-				case '5':
-					integer *= 10;
-					integer += 5;
-					break;
-				case '6':
-					integer *= 10;
-					integer += 6;
-					break;
-				case '7':
-					integer *= 10;
-					integer += 7;
-					break;
-				case '8':
-					integer *= 10;
-					integer += 8;
-					break;
-				case '9':
-					integer *= 10;
-					integer += 9;
-					break;
-				default:
-					goto ok;
+			if (text[head] >= '0' && text[head] <= '9') {
+				integer *= 10;
+				integer += text[head] - '0';
+			}
+			else {
+				goto ok;
 			}
 			++head;
 		}
@@ -135,49 +99,14 @@ ok:
 		++head;
 		if (!advance_whitespace()) return false;
 		while (head < text_size) {
-			switch (text[head]) {
-				case '0':
-					whole *= 10;
-					break;
-				case '1':
-					whole *= 10;
-					whole += 1;
-					break;
-				case '2':
-					whole *= 10;
-					whole += 2;
-					break;
-				case '3':
-					whole *= 10;
-					whole += 3;
-					break;
-				case '4':
-					whole *= 10;
-					whole += 4;
-					break;
-				case '5':
-					whole *= 10;
-					whole += 5;
-					break;
-				case '6':
-					whole *= 10;
-					whole += 6;
-					break;
-				case '7':
-					whole *= 10;
-					whole += 7;
-					break;
-				case '8':
-					whole *= 10;
-					whole += 8;
-					break;
-				case '9':
-					whole *= 10;
-					whole += 9;
-					break;
-				default:
-					goto ok2;
+			if (text[head] >= '0' && text[head] <= '9') {
+				whole *= 10;
+				whole += text[head] - '0';
 			}
+			else {
+				goto ok2;
+			}
+	
 			++head;
 			fractional_offset += 1;
 		}
@@ -198,48 +127,12 @@ ok:
 		if (text[head] == '-') div = true;
 		++head;
 		while (head < text_size) {
-			switch (text[head]) {
-				case '0':
-					e_str *= 10;
-					break;
-				case '1':
-					e_str *= 10;
-					e_str += 1;
-					break;
-				case '2':
-					e_str *= 10;
-					e_str += 2;
-					break;
-				case '3':
-					e_str *= 10;
-					e_str += 3;
-					break;
-				case '4':
-					e_str *= 10;
-					e_str += 4;
-					break;
-				case '5':
-					e_str *= 10;
-					e_str += 5;
-					break;
-				case '6':
-					e_str *= 10;
-					e_str += 6;
-					break;
-				case '7':
-					e_str *= 10;
-					e_str += 7;
-					break;
-				case '8':
-					e_str *= 10;
-					e_str += 8;
-					break;
-				case '9':
-					e_str *= 10;
-					e_str += 9;
-					break;
-				default:
-					goto ok3;
+			if (text[head] >= '0' && text[head] <= '9') {
+				e_str *= 10;
+				e_str += text[head] - '0';
+			}
+			else {
+				goto ok3;
 			}
 			++head;
 		}

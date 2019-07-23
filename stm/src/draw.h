@@ -131,7 +131,7 @@ namespace draw {
 
 	template<typename FB>
 	void line(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
-		if (abs(y1 - y0) < abs(x1 - x0)) {
+		if (std::abs(y1 - y0) < std::abs(x1 - x0)) {
 			if (x0 > x1)
 				detail::line_impl_low(fb, x1, y1, x0, y0, r, g, b);
 			else
