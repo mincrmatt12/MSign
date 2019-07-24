@@ -96,8 +96,8 @@ int main() {
 		while (true) {
 			servicer.loop();
 			matrix.display();
-			while (matrix.is_active()) {;}
 			show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
+			while (matrix.is_active()) {;}
 			matrix.swap_buffers();
 		}
 
