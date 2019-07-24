@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.4.2">
+<eagle version="9.4.1">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -19396,10 +19396,10 @@ LETTER landscape</description>
 
 The STM and ESP</description>
 <plain>
-<wire x1="116.84" y1="5.08" x2="231.14" y2="5.08" width="0.254" layer="97"/>
+<wire x1="114.3" y1="5.08" x2="231.14" y2="5.08" width="0.254" layer="97"/>
 <wire x1="231.14" y1="5.08" x2="231.14" y2="114.3" width="0.254" layer="97"/>
-<wire x1="231.14" y1="114.3" x2="116.84" y2="114.3" width="0.254" layer="97"/>
-<wire x1="116.84" y1="114.3" x2="116.84" y2="5.08" width="0.254" layer="97"/>
+<wire x1="231.14" y1="114.3" x2="114.3" y2="114.3" width="0.254" layer="97"/>
+<wire x1="114.3" y1="114.3" x2="114.3" y2="5.08" width="0.254" layer="97"/>
 <wire x1="109.22" y1="5.08" x2="-7.62" y2="5.08" width="0.254" layer="97"/>
 <wire x1="-7.62" y1="5.08" x2="-7.62" y2="68.58" width="0.254" layer="97"/>
 <wire x1="-7.62" y1="68.58" x2="109.22" y2="68.58" width="0.254" layer="97"/>
