@@ -13,7 +13,7 @@ extern srv::Servicer servicer;
 extern tasks::Timekeeper timekeeper;
 
 void nvic::init() {
-	SCB->VTOR = 0x4000;
+	SCB->VTOR = 0x4000; // set vector table relocation to 0x4000 since that's where our image starts.
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
 	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));

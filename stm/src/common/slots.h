@@ -5,27 +5,31 @@
 
 namespace slots {
 	enum DataID : uint16_t {
-		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected; size 1
+		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
+		TIME_STATUS = 0x02,			// BOOL; 0 - waiting for NTP, 1 - NTP in sync
 
-		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; size 4; polled
+		UPDATE_STATE = 0x1a01,		// UINT8_T; enum - see below
+		UPDATE_PCENT_DOWN = 0x1a02, // UINT8_t; percent downloaded of the update package 
 
-		TTC_INFO = 0x20,
-		TTC_NAME_1 = 0x21,
-		TTC_NAME_2 = 0x22,
-		TTC_NAME_3 = 0x23,
-		TTC_TIME_1 = 0x24,
-		TTC_TIME_2 = 0x25,
-		TTC_TIME_3 = 0x26,
+		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; polled
 
-		WEATHER_ICON = 0x40,
-		WEATHER_INFO = 0x44,
-		WEATHER_STATUS = 0x45,
+		TTC_INFO = 0x20,			// STRUCT; TTCInfo
+		TTC_NAME_1 = 0x21,			// VSTR; name of bus/tram in slot 1; polled
+		TTC_NAME_2 = 0x22,			// ''
+		TTC_NAME_3 = 0x23,			// ''
+		TTC_TIME_1 = 0x24,			// STRUCT; TTCTime - time of next two buses
+		TTC_TIME_2 = 0x25,			// ''
+		TTC_TIME_3 = 0x26,			// ''
 
-		CALFIX_INFO = 0x50,
-		CALFIX_CLS1 = 0x51,
-		CALFIX_CLS2 = 0x52,
-		CALFIX_CLS3 = 0x53,
-		CALFIX_CLS4 = 0x54,
+		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
+		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
+		WEATHER_STATUS = 0x45,		// VSTR; current summary; polled
+
+		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
+		CALFIX_CLS1 = 0x51,			// STRUCT; ClassInfo, name and room
+		CALFIX_CLS2 = 0x52,			// ''
+		CALFIX_CLS3 = 0x53,			// ''
+		CALFIX_CLS4 = 0x54,			// ''
 	};
 
 #pragma pack (push, 1)
@@ -70,13 +74,31 @@ namespace slots {
 		uint8_t sched;
 	};
 
+	struct ClassInfo {
+		uint8_t name[11];
+		uint16_t room;
+	};
+
 #pragma pack (pop)
 
-	static_assert(sizeof(TTCTime) <= 16, "TTC time too large");
-	static_assert(sizeof(TTCInfo) <= 16, "TTCInfo too large");
-	static_assert(sizeof(WeatherInfo) <= 16, "WeatherInfo too large");
-	static_assert(sizeof(VStr) <= 16, "VStr too large");
-	static_assert(sizeof(CalfixInfo) <= 16, "CalfixInfo too large");
+#define SLOT_CHECK_DEF(sn)	static_assert(sizeof(sn) <= 16, #sn " too large")
+
+	SLOT_CHECK_DEF(TTCTime);
+	SLOT_CHECK_DEF(TTCInfo);
+	SLOT_CHECK_DEF(WeatherInfo);
+	SLOT_CHECK_DEF(VStr);
+	SLOT_CHECK_DEF(CalfixInfo);
+	SLOT_CHECK_DEF(ClassInfo);
+
+	enum struct UpdateStatusCode : uint8_t {
+		NO_UPDATE = 0x00,
+		DOWNLOADING_UPDATE = 0x01,  // downloading update, check percentage in other slot
+		PREPARING_UPDATE = 0x02,	// preparing to update, writing files to the SD card, verifying CRCs
+		ABOUT_TO_UPDATE = 0x03, 	// going to reset the STM soon, show a final warning
+		// error flags, cleared after a bit
+		UPDATE_DOWNLOAD_FAILED = 0x10, // download interrupted
+		UPDATE_PREPARE_FAILED = 0x11, // update preparation failed
+	};
 }
 
 #endif
