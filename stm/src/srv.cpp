@@ -373,7 +373,7 @@ void srv::Servicer::init() {
 	// Enable clocks
 
 	LL_AHB1_GRP1_EnableClock(UART_DMA_PERIPH | UART_GPIO_PERIPH);
-	LL_APB2_GRP1_EnableClock(UART_UART_PERIPH);
+	UART_ENABLE_CALL(UART_UART_PERIPH);
 
 	// Setup USART
 	

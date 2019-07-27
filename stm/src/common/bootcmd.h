@@ -2,6 +2,7 @@
 #define BOOTCMD_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -9,10 +10,12 @@ extern "C" {
 
 void bootcmd_init();
 
-enum bootcmd_t {
+enum _bootcmd_t {
 	BOOTCMD_RUN = 0x00ull,
 	BOOTCMD_UPDATE = 0x01
 };
+typedef enum _bootcmd_t bootcmd_t;
+
 bool bootcmd_did_just_update();
 bootcmd_t bootcmd_get_cmd();
 
