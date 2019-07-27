@@ -9,6 +9,7 @@
 #include "stm32f2xx_ll_bus.h"
 #include "stm32f2xx_ll_gpio.h"
 #include "stm32f2xx_ll_dma.h"
+#include "pins.h"
 
 namespace led {
 
@@ -102,7 +103,7 @@ namespace led {
 			void init() {
 				// Enable clocks
 				LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1 | LL_APB2_GRP1_PERIPH_TIM9);	 // timer
-				LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_GPIOD | LL_AHB1_GRP1_PERIPH_GPIOB | LL_AHB1_GRP1_PERIPH_DMA2 | LL_AHB1_GRP1_PERIPH_GPIOE); // gpios
+				LL_AHB1_GRP1_EnableClock(SIGN_GPIO_PERIPH | LL_AHB1_GRP1_PERIPH_GPIOB | LL_AHB1_GRP1_PERIPH_DMA2 | LL_AHB1_GRP1_PERIPH_GPIOE); // gpios
 
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
@@ -128,7 +129,7 @@ namespace led {
 				gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 				gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 				gpio_init.Pull = LL_GPIO_PULL_NO;
-				LL_GPIO_Init(GPIOD, &gpio_init);
+				LL_GPIO_Init(SIGN_DATA_Port, &gpio_init);
 				gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
 				LL_GPIO_Init(GPIOB, &gpio_init);
 			}
@@ -212,7 +213,7 @@ namespace led {
 				LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_5, LL_DMA_MDATAALIGN_BYTE);
 
 				LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_5);
-				LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_5, (uint32_t)dma_buffer, (uint32_t)(&GPIOD->ODR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+				LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_5, (uint32_t)dma_buffer, (uint32_t)(&SIGN_DATA_Port->ODR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 
 				LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_5, (FB::width * 2) + 1);
 

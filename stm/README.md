@@ -2,7 +2,11 @@
 
 LEDSignCodebase, not public because it'll probably get api keys at some point.
 
+The code will run on a nucleo-f207zg or the msign, which uses an stm32f205rgt
+
 ## HUB75
+
+### Pinout on nucleo
 
 | Pin   | Mapped |
 | ----- | ------ |
@@ -20,8 +24,26 @@ LEDSignCodebase, not public because it'll probably get api keys at some point.
 | `LAT` | `PB5`  |
 | `OE`  | `PB6`  |
 
+### Pinout on board
+
+| Pin   | Mapped |
+| ----- | ------ |
+| `R0`  | `PC0`  |
+| `G0`  | `PC1`  |
+| `B0`  | `PC2`  |
+| `R1`  | `PC3`  |
+| `G1`  | `PC4`  |
+| `B1`  | `PC5`  |
+| `A`   | `PB0`  |
+| `B`   | `PB1`  |
+| `C`   | `PB2`  |
+| `D`   | `PB3`  |
+| `CLK` | `PD6`  |
+| `LAT` | `PB5`  |
+| `OE`  | `PB6`  |
+
 Uses DMA to the GPIO to drive R0-B1 as well as the clock.
-DMA is triggered off of TIM1 update event; as is the delay between different bits of color in PCM encoding.
+DMA is triggered off of TIM1 update event; the delay between different bits of color in PCM encoding goes off of TIM9.
 
 ## Protocol
 
@@ -182,7 +204,20 @@ If the stm deduces it has received all chunks, it sends the finished message and
 
 ## Serial
 
+### Pinout on nucleo
+
+USART6.
+
 | Pin  | Mapped |
 | ---- | ------ |
 | `TX` | `PG14`  |
 | `RX` | `PG9`  |
+
+### Pinout on board
+
+USART2.
+
+| Pin  | Mapped |
+| ---- | ------ |
+| `TX` | `PA2`  |
+| `RX` | `PA3`  |

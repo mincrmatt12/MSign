@@ -4,41 +4,31 @@
 #include <stdint.h>
 
 #ifdef __cplusplus
-namespace bootcmd {
 extern "C" {
 #endif
 
-enum bootcmd_cmd_t {
-	BOOTCMD_RUN = 0x00,
+void bootcmd_init();
+
+enum bootcmd_t {
+	BOOTCMD_RUN = 0x00ull,
 	BOOTCMD_UPDATE = 0x01
 };
+bool bootcmd_did_just_update();
+bootcmd_t bootcmd_get_cmd();
 
-typedef struct _bootcmd {
-	uint8_t signature[2];
-	uint8_t cmd;
-	
-	uint32_t size;
-	uint8_t did_just_update;
+uint32_t bootcmd_update_size();
+void     bootcmd_request_update(uint32_t size);
+void 	 bootcmd_service_update();
 
-#ifdef __cplusplus
-	private:
-#endif
-
-	uint8_t is_safe;
-	uint32_t current_size;
-	
-} bootcmd_t;
-
-#define BCMD_BASE 0x080FC000
-#ifndef __cplusplus
-#define BCMD ((__IO bootcmd_t *)BCMD_BASE)
-#else
-#define BCMD ((__IO bootcmd::bootcmd_t *)BCMD_BASE)
-#endif
+// BOOTCMD is implemented using the RTC backup registers, similar to the ESP8266's eboot.
+//
+// Register Map
+// 00 - bootcmd
+// 01 - did just update flag, cleared by application
+// 02 - requested update size
 
 #ifdef __cplusplus
 };
-}
 #endif
 
 #endif

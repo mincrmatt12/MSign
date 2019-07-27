@@ -7,9 +7,9 @@
 #include "stm32f2xx_ll_gpio.h"
 #include "stm32f2xx_ll_dma.h"
 #include "stm32f2xx.h"
-#include "stm32f207xx.h"
 #include "common/bootcmd.h"
 #include "common/util.h"
+#include "pins.h"
 
 extern tasks::Timekeeper timekeeper;
 
@@ -93,7 +93,6 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 
 		// Wait for busy
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-			asm volatile ("nop");
 			asm volatile ("nop");
 			asm volatile ("nop");
 			asm volatile ("nop");
@@ -231,44 +230,7 @@ void srv::Servicer::loop() {
 
 						// Checksum is OK, write the BCMD
 						
-						if (update_package_sector_counter < 11) {
-							// Erase sector 11
-							
-							CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-							FLASH->CR |= FLASH_CR_SER | (11 << FLASH_CR_SNB_Pos);
-
-							// Actually erase
-							
-							FLASH->CR |= FLASH_CR_STRT;
-
-							while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {;}
-
-							CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
-						}
-						
-						bootcmd::bootcmd_t bcmd;
-						bcmd.cmd = bootcmd::BOOTCMD_UPDATE;
-						bcmd.signature[0] = 0xae;
-						bcmd.signature[1] = 0x7d;
-						bcmd.did_just_update = 0;
-						bcmd.size = this->update_total_size;
-
-						// Write BCMD
-						
-						CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
-						FLASH->CR |= FLASH_CR_PG;
-
-						for (uint32_t i = 0; i < sizeof(bcmd); ++i) {
-							*((uint8_t *)(BCMD_BASE) + i) = *((uint8_t *)(&bcmd) + i);
-
-							while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-								asm volatile ("nop");
-								asm volatile ("nop");
-								asm volatile ("nop");
-								asm volatile ("nop");
-								asm volatile ("nop");
-							}
-						}
+						bootcmd_request_update(this->update_total_size);
 
 						// Clear pg byte
 						
@@ -410,8 +372,8 @@ void srv::Servicer::init() {
 
 	// Enable clocks
 
-	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA2 | LL_AHB1_GRP1_PERIPH_GPIOG);
-	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_USART6);
+	LL_AHB1_GRP1_EnableClock(UART_DMA_PERIPH | UART_GPIO_PERIPH);
+	LL_APB2_GRP1_EnableClock(UART_UART_PERIPH);
 
 	// Setup USART
 	
@@ -424,58 +386,58 @@ void srv::Servicer::init() {
 	usart_init.StopBits = LL_USART_STOPBITS_1;
 	usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
 	
-	LL_USART_Init(USART6, &usart_init);
+	LL_USART_Init(ESP_USART, &usart_init);
 
-	LL_USART_EnableDMAReq_RX(USART6);
-	LL_USART_EnableDMAReq_TX(USART6);
+	LL_USART_EnableDMAReq_RX(ESP_USART);
+	LL_USART_EnableDMAReq_TX(ESP_USART);
 
-	LL_USART_ConfigAsyncMode(USART6);
-	LL_USART_Enable(USART6);
+	LL_USART_ConfigAsyncMode(ESP_USART);
+	LL_USART_Enable(ESP_USART);
 
-	LL_USART_EnableDMAReq_RX(USART6);
-	LL_USART_EnableDMAReq_TX(USART6);
+	LL_USART_EnableDMAReq_RX(ESP_USART);
+	LL_USART_EnableDMAReq_TX(ESP_USART);
 
 	// Setup DMA channels
 
-	LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_2, LL_DMA_CHANNEL_5); // RX
-	LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_7, LL_DMA_CHANNEL_5); // TX
+	LL_DMA_SetChannelSelection(UART_DMA, UART_DMA_RX_Stream, UART_DMA_Channel); // RX
+	LL_DMA_SetChannelSelection(UART_DMA, UART_DMA_TX_Stream, UART_DMA_Channel); // TX
 
 	// Config addresses doesn't actually set this.. it just reads it.
 
-	LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_2, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
-	LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_7, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+	LL_DMA_SetDataTransferDirection(UART_DMA, UART_DMA_RX_Stream, LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
+	LL_DMA_SetDataTransferDirection(UART_DMA, UART_DMA_TX_Stream, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 	
-	LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_2, LL_DMA_PRIORITY_HIGH);
-	LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_7, LL_DMA_PRIORITY_MEDIUM);
+	LL_DMA_SetStreamPriorityLevel(UART_DMA, UART_DMA_RX_Stream, LL_DMA_PRIORITY_HIGH);
+	LL_DMA_SetStreamPriorityLevel(UART_DMA, UART_DMA_TX_Stream, LL_DMA_PRIORITY_MEDIUM);
 
-	LL_DMA_SetMode(DMA2, LL_DMA_STREAM_2, LL_DMA_MODE_NORMAL);
-	LL_DMA_SetMode(DMA2, LL_DMA_STREAM_7, LL_DMA_MODE_NORMAL);
+	LL_DMA_SetMode(UART_DMA, UART_DMA_RX_Stream, LL_DMA_MODE_NORMAL);
+	LL_DMA_SetMode(UART_DMA, UART_DMA_TX_Stream, LL_DMA_MODE_NORMAL);
 
-	LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_2, LL_DMA_PERIPH_NOINCREMENT);
-	LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_2, LL_DMA_MEMORY_INCREMENT);
-	LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_7, LL_DMA_PERIPH_NOINCREMENT);
-	LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_7, LL_DMA_MEMORY_INCREMENT);
+	LL_DMA_SetPeriphIncMode(UART_DMA, UART_DMA_RX_Stream, LL_DMA_PERIPH_NOINCREMENT);
+	LL_DMA_SetMemoryIncMode(UART_DMA, UART_DMA_RX_Stream, LL_DMA_MEMORY_INCREMENT);
+	LL_DMA_SetPeriphIncMode(UART_DMA, UART_DMA_TX_Stream, LL_DMA_PERIPH_NOINCREMENT);
+	LL_DMA_SetMemoryIncMode(UART_DMA, UART_DMA_TX_Stream, LL_DMA_MEMORY_INCREMENT);
 
-	LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_2, LL_DMA_PDATAALIGN_BYTE);
-	LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_2, LL_DMA_MDATAALIGN_BYTE);
-	LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_7, LL_DMA_PDATAALIGN_BYTE);
-	LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_7, LL_DMA_MDATAALIGN_BYTE);
+	LL_DMA_SetPeriphSize(UART_DMA, UART_DMA_RX_Stream, LL_DMA_PDATAALIGN_BYTE);
+	LL_DMA_SetMemorySize(UART_DMA, UART_DMA_RX_Stream, LL_DMA_MDATAALIGN_BYTE);
+	LL_DMA_SetPeriphSize(UART_DMA, UART_DMA_TX_Stream, LL_DMA_PDATAALIGN_BYTE);
+	LL_DMA_SetMemorySize(UART_DMA, UART_DMA_TX_Stream, LL_DMA_MDATAALIGN_BYTE);
 
-	LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_2);
-	LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_7);
+	LL_DMA_DisableFifoMode(UART_DMA, UART_DMA_RX_Stream);
+	LL_DMA_DisableFifoMode(UART_DMA, UART_DMA_TX_Stream);
 
 	// Setup GPIO
 	
 	LL_GPIO_InitTypeDef gpio_init = {0};
 
 	gpio_init.Alternate = LL_GPIO_AF_8;
-	gpio_init.Pin = LL_GPIO_PIN_9 | LL_GPIO_PIN_14;
+	gpio_init.Pin = ESP_USART_TX | ESP_USART_RX;
 	gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 	gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
 	gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 	gpio_init.Pull = LL_GPIO_PULL_UP;
 
-	LL_GPIO_Init(GPIOG, &gpio_init);
+	LL_GPIO_Init(ESP_USART_Port, &gpio_init);
 }
 
 void srv::Servicer::send() {
@@ -483,19 +445,19 @@ void srv::Servicer::send() {
 	if (is_sending) return;
 	is_sending = true;
 
-	LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_7, 
+	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_TX_Stream, 
 			(uint32_t)(dma_out_buffer),
 			LL_USART_DMA_GetRegAddr(USART6),
 			LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-	LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_7, dma_out_buffer[1] + 3);
+	LL_DMA_SetDataLength(UART_DMA, UART_DMA_TX_Stream, dma_out_buffer[1] + 3);
 
-	LL_DMA_DisableIT_HT(DMA2, LL_DMA_STREAM_7);
-	LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_7);
-	LL_DMA_EnableIT_TE(DMA2, LL_DMA_STREAM_7);
+	LL_DMA_DisableIT_HT(UART_DMA, UART_DMA_TX_Stream);
+	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_TX_Stream);
+	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_TX_Stream);
 	
 	LL_USART_Enable(USART6);
 	LL_USART_ClearFlag_TC(USART6);
-	LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_7);
+	LL_DMA_EnableStream(UART_DMA, UART_DMA_TX_Stream);
 
 	LL_USART_EnableDMAReq_TX(USART6);
 }
@@ -504,30 +466,30 @@ void srv::Servicer::start_recv() {
 	state = STATE_DMA_WAIT_SIZE;
 	// setup a receieve of 3 bytes
 
-	LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_2, 
+	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
 			LL_USART_DMA_GetRegAddr(USART6),
 			(uint32_t)(this->dma_buffer),
 			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
-	LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_2, 3);
+	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, 3);
 
-	LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_2);
-	LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_2);
+	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
+	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
 
 void srv::Servicer::recv_full() {
 	state = STATE_DMA_GOING;
 	// setup a recieve similar to out_buffer
 
-	LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_2, 
+	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
 			LL_USART_DMA_GetRegAddr(USART6),
 			(uint32_t)(&this->dma_buffer[3]),
 			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
-	LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_2, dma_buffer[1]);
+	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, dma_buffer[1]);
 
-	LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_2);
-	LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_2);
+	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
+	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
 
 void srv::Servicer::do_send_operation(uint32_t operation) {
@@ -723,7 +685,7 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 
 void srv::Servicer::dma_finish(bool incoming) {
 	if (incoming) {
-		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
+		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 		last_comm = timekeeper.current_time;
 		sent_ping = false;
 		// first, check if we need to handle the handshake command
@@ -754,7 +716,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 	}
 	else {
-		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_7);
+		LL_DMA_DisableStream(UART_DMA, UART_DMA_TX_Stream);
 
 		while (!LL_USART_IsActiveFlag_TC(USART6)) {
 			;
@@ -765,7 +727,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 }
 
 void srv::Servicer::cancel_recv() {
-	LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_2);
+	LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 }
 
 const char * srv::Servicer::update_status() {
