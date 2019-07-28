@@ -2,6 +2,7 @@
 #define WEATHER_H
 
 #include "schedef.h"
+#include "../vstr.h"
 #include <stdint.h>
 
 namespace tasks {
@@ -14,13 +15,9 @@ namespace tasks {
 		void loop() override;
 
 	private:
-
-		void update_status();
 		
-		char status[128];
-		uint8_t status_update_state = 0;
-
-		uint8_t s_info, s_status, s_icon;
+		srv::vstr::VSWrapper s_status;
+		uint8_t s_info, s_icon;
 
 	};
 }
