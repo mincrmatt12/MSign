@@ -1,8 +1,7 @@
 #include "json.h"
-#include "string.h"
-#include "HardwareSerial.h"
+#include <string.h>
 
-json::JSONParser::JSONParser(JSONCallback && c) : cb(c) {
+json::JSONParser::JSONParser(JSONCallback && c) : cb(std::move(c)) {
 	this->stack_ptr = 0;
 	push();
 }
@@ -16,9 +15,15 @@ bool json::JSONParser::parse(const char *text) {
 }
 
 bool json::JSONParser::parse(const char *text, size_t size) {
-	this->text = text;
-	this->text_size = size;
-	this->head = 0;
+	return parse([&, head=0] () mutable {
+		if (head >= size) return (char)0;
+		return text[head++];
+	});
+}
+
+bool json::JSONParser::parse(TextCallback && cb) {
+	this->tcb = std::move(cb);
+
 	while (this->stack_ptr > 1) pop(); // just in case
 	if (this->stack_ptr < 1) push(); // root node
 
@@ -31,7 +36,7 @@ bool json::JSONParser::parse_value() {
 	if (!advance_whitespace()) return false;
 
 	// check the current value at head
-	switch (text[head]) {
+	switch (peek()) {
 		case '{':
 			return parse_object();
 		case '-':
@@ -66,48 +71,48 @@ bool json::JSONParser::parse_number() {
 	float whole = 0.0;
 	bool isint = true;
 
-	if (text[head] == '-') {
-		++head;
+	if (peek() == '-') {
+		next();
 		negative = true;
 		if (!advance_whitespace()) return false;
 	}
 
-	if (text[head] == '0') {
-		++head;
+	if (peek() == '0') {
+		next();
 		if (!advance_whitespace()) return false;
 	}
 	else {
-		if (text[head] > '9' || text[head] < '1') return false;
-		while (head < text_size) {
-			if (text[head] >= '0' && text[head] <= '9') {
+		if (peek() > '9' || peek() < '1') return false;
+		while (peek() != 0) {
+			if (peek() >= '0' && peek() <= '9') {
 				integer *= 10;
-				integer += text[head] - '0';
+				integer += peek() - '0';
 			}
 			else {
 				goto ok;
 			}
-			++head;
+			next();
 		}
 		return false;
 	}
 ok:
 	// Check if we have to do a fractional part
 	if (!advance_whitespace()) return false;
-	if (text[head] == '.') {
+	if (peek() == '.') {
 		whole = integer;
 		isint = false;
-		++head;
+		next();
 		if (!advance_whitespace()) return false;
-		while (head < text_size) {
-			if (text[head] >= '0' && text[head] <= '9') {
+		while (peek() != 0) {
+			if (peek() >= '0' && peek() <= '9') {
 				whole *= 10;
-				whole += text[head] - '0';
+				whole += peek() - '0';
 			}
 			else {
 				goto ok2;
 			}
 	
-			++head;
+			next();
 			fractional_offset += 1;
 		}
 		return false;
@@ -115,7 +120,7 @@ ok:
 		for (int i = 0; i < fractional_offset; ++i) whole /= 10;
 	}
 	if (!advance_whitespace()) return false;
-	if (text[head] == 'e' || text[head] == 'E') {
+	if (peek() == 'e' || peek() == 'E') {
 		// parse an E string
 		if (isint) {
 			isint = false;
@@ -123,18 +128,18 @@ ok:
 		}
 		int e_str = 0;
 		bool div = false;
-		++head;
-		if (text[head] == '-') div = true;
-		++head;
-		while (head < text_size) {
-			if (text[head] >= '0' && text[head] <= '9') {
+		next();
+		if (peek() == '-') div = true;
+		next();
+		while (peek() != 0) {
+			if (peek() >= '0' && peek() <= '9') {
 				e_str *= 10;
-				e_str += text[head] - '0';
+				e_str += peek() - '0';
 			}
 			else {
 				goto ok3;
 			}
-			++head;
+			next();
 		}
 		return false;
 	ok3:
@@ -155,95 +160,111 @@ ok:
 }
 
 bool json::JSONParser::advance_whitespace() {
-	while (text[head] == ' ' ||
-		   text[head] == '\t' ||
-		   text[head] == '\n') {
-		if (++head == text_size) return false;
+	while (peek() == ' ' ||
+		   peek() == '\t' ||
+		   peek() == '\n') {
+		if (next() == 0) return false;
 	}
 	return true;
 }
 
 char * json::JSONParser::parse_string_text() {
-	if (text[head] != '"') return nullptr;
-	++head;
-	ptrdiff_t start = head;
-	ptrdiff_t length = 0;
-	while (text[head] != '"') {
-		if (text[head] != '\\') ++head, ++length;
-		else {
-			++head;
-			if (text[head] == 'u') {
-				head += 5;
-			}
-			else {
-				head += 1;
-			}
-			++length;
-		}
-		if (head > this->text_size) return nullptr;
-	}
+	if (peek() != '"') return nullptr;
+	size_t bufsize = 16;
+	size_t idx = 0;
+	char * tbuf = (char *)malloc(16);
 
-	char * buf = (char *)malloc(length+1);
-	buf[length] = 0;
-	for (ptrdiff_t lhead = start, i = 0; lhead < head; ++lhead, ++i) {
-		if (text[lhead] != '\\') buf[i] = text[lhead];
+	auto append = [&tbuf, &bufsize, &idx](char c) {
+		if (idx < bufsize) {
+add:
+			tbuf[idx++] = c;
+		}
 		else {
-			++lhead;
-			switch (text[lhead]) {
-				case '"': buf[i] = '"'; break;
-				case '\\': buf[i] = '\\'; break;
-				case 'b': buf[i] = '\b'; break;
-				case 'f': buf[i] = '\f'; break;
-				case 'n': buf[i] = '\n'; break;
-				case 'r': buf[i] = '\r'; break;
-				case 't': buf[i] = '\t'; break;
+			bufsize += (bufsize / 2);
+			tbuf = (char *)realloc(tbuf, bufsize);
+			goto add;
+		}
+	};
+
+	next();
+	while (peek() != '"') {
+		if (peek() == 0) return free(tbuf), nullptr;
+
+		if (peek() != '\\') {
+			append(peek());
+			next();
+		}
+		else {
+			switch (next()) {
+				case 'b':
+					append('\b');
+					break;
+				case 'f':
+					append('\f');
+					break;
+				case 'n':
+					append('\n');
+					break;
+				case 'r':
+					append('\r');
+					break;
+				case 't':
+					append('\t');
+					break;
 				case 'u':
-					lhead += 3; // lazy
+					// the sign has no support for unicode anyways, so we just ignore it
+					next(); next();
+					break;
 				default:
-					buf[i] = text[lhead];
+					append(peek());
+					break;
 			}
+			next();
 		}
 	}
-	++head;
-	return buf;
+	next();
+	
+	tbuf = (char*)realloc(tbuf, idx + 1);
+	tbuf[idx] = 0;
+	return tbuf;
 }
 
 bool json::JSONParser::parse_array() {
 	top().array = true;
 	top().index = 0;
 
-	while (head < text_size) {
-		++head;
+	while (peek() != 0) {
+		next();
 		parse_value();
 		if (!advance_whitespace()) return false;
-		if (text[head] == ',') ++top().index;
-		else if (text[head] == ']') break;
+		if (peek() == ',') ++top().index;
+		else if (peek() == ']') break;
 		else return false;
 	}
 	 
-	++head;
+	next();
 	return true;
 }
 
 bool json::JSONParser::parse_object() {
-	while (head < text_size) {
-		++head;
+	while (peek() != 0) {
+		next();
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
 		push(n);
 		if (!advance_whitespace()) return false;
-		if (text[head] != ':') return false;
-		++head;
+		if (peek() != ':') return false;
+		next();
 		parse_value();
 		pop();
 		free(n);
 		if (!advance_whitespace()) return false;
-		if (text[head] == ',') continue;
-		else if (text[head] == '}') break;
+		if (peek() == ',') continue;
+		else if (peek() == '}') break;
 		else return false;
 	}
 
-	++head;
+	next();
 	cb(stack, stack_ptr, Value{Value::OBJ});
 	return true;
 }
@@ -260,21 +281,36 @@ bool json::JSONParser::parse_string() {
 }
 
 bool json::JSONParser::parse_singleton() {
-	switch (text[head]) {
+	switch (peek()) {
 		case 't':
 			cb(stack, stack_ptr, Value{true});
-			head += 4;
+			next(); next(); next(); next();
 			break;
 		case 'f':
 			cb(stack, stack_ptr, Value{false});
-			head += 5;
+			next(); next(); next(); next(); next();
 			break;
 		case 'n':
 			cb(stack, stack_ptr, Value{});
-			head += 4;
+			next(); next(); next(); next();
 			break;
 		default:
 			return false;
 	}
 	return true;
+}
+
+char json::JSONParser::peek() {
+	if (this->need) {
+		temp = tcb();
+		this->need = false;
+	}
+
+	return temp;
+}
+
+char json::JSONParser::next() {
+	this->need = false;
+	temp = tcb();
+	return temp;
 }
