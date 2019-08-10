@@ -77,10 +77,11 @@ void weather::loop() {
 
 		Serial1.println(url);
 
-		util::Download down = util::download_from("darksky.i.mm12.xyz", url);
+		int16_t status_code;
+		auto cb = util::download_with_callback("darksky.i.mm12.xyz", url, status_code);
 
-		if (down.error || down.buf == nullptr || down.length == 0) {
-			if (down.buf != nullptr) free(down.buf);
+		if (status_code < 200 || status_code >= 300) {
+			util::stop_download();
 			return;
 		}
 
@@ -133,13 +134,11 @@ void weather::loop() {
 				}
 		});
 		
-		json.parse(down.buf, down.length);
+		json.parse(std::move(cb));
 
 		time_since_last_update = now();
 
 		serial::interface.update_data(slots::WEATHER_ICON, (uint8_t *)weather::icon,  strlen(weather::icon));
 		serial::interface.update_data(slots::WEATHER_INFO, (uint8_t *)&weather::info, sizeof(weather::info));
-
-		free(down.buf);
 	}
 }

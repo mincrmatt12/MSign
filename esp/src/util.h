@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <HardwareSerial.h>
+#include <functional>
 
 namespace util {
 
@@ -17,4 +18,14 @@ namespace util {
 	// Does not make a c_str, returns the length in a struct however. The response may be less than length if error is set.
 	Download download_from(const char * host, const char * path);
 	Download download_from(const char * host, const char * path, const char * const headers[][2]);
+	Download download_from(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body=nullptr);
+	// Starts the downloader, but returns a function that will return
+	std::function<char (void)> download_with_callback(const char * host, const char * path);
+	std::function<char (void)> download_with_callback(const char * host, const char * path, const char * const headers[][2]);
+	std::function<char (void)> download_with_callback(const char * host, const char * path, int16_t &status_code_out);
+	std::function<char (void)> download_with_callback(const char * host, const char * path, const char * const headers[][2], int16_t &status_code_out);
+	std::function<char (void)> download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body);
+	std::function<char (void)> download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out);
+	// Make sure a callback is stopped
+	void stop_download();
 }

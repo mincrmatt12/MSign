@@ -2,14 +2,19 @@
 #include "string.h"
 #include "WiFiClient.h"
 
+// shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
 struct Downloader {
 	WiFiClient cl;
 	uint16_t response_code;
+	int32_t  response_size;
 
 	// send a request
 	bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const char * body=nullptr) {
+		if (cl.connected()) cl.stop();
+		response_size = -1;
+		response_code = 0;
 		// connect to the server
 		if (!cl.connect(host, 80)) return false;
 
@@ -111,6 +116,34 @@ struct Downloader {
 					}
 					cl.read();
 				}
+				if (starting == 'C') {
+					// could be the content-length
+					while (cl.available() < 2) {
+						delay(5);
+						if (millis() - to_start > 500) {
+							cl.stop();
+							return false;
+						}
+					}
+					if (cl.read() == 'o') {
+						if (cl.read() == 'n') {
+							// wait for the space
+							if (!cl.find(' ')) {
+								cl.stop();
+								return false;
+							}
+
+							// read an integer
+							response_size = cl.parseInt();
+
+							// read another newline
+							if (!cl.find('\n')) {
+								cl.stop();
+								return false;
+							}
+						}
+					}
+				}
 				break;
 			}
 		}
@@ -147,12 +180,103 @@ private:
 	}
 } dwnld;
 
-util::Download util::download_from(const char *host, const char *path, const char * const headers[][2]) {
-	dwnld.request(host, path, "GET", headers);
+util::Download util::download_from(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
+	dwnld.request(host, path, method, headers, body);
+	
+	util::Download d;
+	d.status_code = dwnld.response_code;
+	d.error = false;
+	if (dwnld.response_code < 200 || dwnld.response_code >= 300) {
+		dwnld.close();
+		Serial1.printf("dwlnd: got code %d\n", dwnld.response_code);
+		d.error = true;
+		return d;
+	}
 
+	if (dwnld.response_size >= 0) {
+		d.length = dwnld.response_size;
+		d.buf = (char *)malloc(d.length);
+		for (int32_t i = 0; i < d.length; ++i) {
+			auto x = dwnld.next();
+			if (x != -1) {
+				d.buf[i] = (char)x;
+			}
+			else {
+				free(d.buf);
+				d.error = true;
+				return d;
+			}
+		}
+	}
+	else {
+		// download until the connection ends
+		d.length = 128;
+		d.buf = (char *)malloc(d.length);
+		size_t i = 0;
+		int16_t x;
+		while ((x = dwnld.next()) != -1) {
+			if (i == d.length) {
+				d.length += 128;
+				d.buf = (char *)realloc(d.buf, d.length);
+				if (d.buf == nullptr) {
+					d.error = true;
+					return d;
+				}
+			}
+			d.buf[i++] = x;
+		}
+		d.buf = (char *)realloc(d.buf, i);
+		d.length = i;
+	}
+
+	return d;
 }
 
 util::Download util::download_from(const char *host, const char *path) {
 	const char * const headers[][2] = {{nullptr, nullptr}};
 	return download_from(host, path, headers);
+}
+
+util::Download util::download_from(const char * host, const char * path, const char * const headers[][2]) {
+	return download_from(host, path, headers, "GET");
+}
+
+
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
+	dwnld.request(host, path, method, headers, body);
+
+	status_code_out = dwnld.response_code;
+	size_out = dwnld.response_size;
+
+	return []() -> char {
+		auto x = dwnld.next();
+		if (x == -1) return 0;
+		return x;
+	};
+}
+
+std::function<char (void)> util::download_with_callback(const char * host, const char * path) {
+	const char * const headers[][2] = {{nullptr, nullptr}};
+	return download_with_callback(host, path, headers);
+}
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2]) {
+	int16_t st;
+	return download_with_callback(host, path, headers, st);
+}
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, int16_t &status_code_out) {
+	const char * const headers[][2] = {{nullptr, nullptr}};
+	return download_with_callback(host, path, headers, status_code_out);
+}
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], int16_t &status_code_out) {
+	int32_t so;
+	return download_with_callback(host, path, headers, "GET", nullptr, status_code_out, so);
+}
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body) {
+	int16_t sco;
+	int32_t so;
+	return download_with_callback(host, path, headers, method, body, sco, so);
+}
+
+void util::stop_download() {
+	dwnld.close();
 }

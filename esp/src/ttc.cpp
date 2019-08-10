@@ -66,18 +66,16 @@ void ttc::on_open(uint16_t data_id) {
 }
 
 void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
-	util::Download result;
-	{
-		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
+	char url[80];
+	snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
-		Serial1.println(url);
-		result = util::download_from("webservices.nextbus.com", url);
+	Serial1.println(url);
+	int16_t status_code;
+	auto cb = util::download_with_callback("webservices.nextbus.com", url, status_code);
 
-		if (result.error || result.buf == nullptr || result.length == 0) {
-			if (result.buf != nullptr) free(result.buf);
-			return;
-		}
+	if (status_code < 200 || status_code > 299) {
+		util::stop_download();
+		return;
 	}
 
 	// message is here now read it
@@ -159,10 +157,9 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		}
 	});
 
-	if (!parser.parse(result.buf, result.length)) {
+	if (!parser.parse(std::move(cb))) {
 		Serial1.println(F("JSON fucked up."));
 	} // parse while calling our function.
 
 	free(dirtag);
-	free(result.buf);
 }
