@@ -3,6 +3,7 @@
 
 #include "srv.h"
 #include "common/slots.h"
+#include <string.h>
 
 extern srv::Servicer servicer;
 
@@ -34,7 +35,7 @@ namespace srv::vstr {
 						const auto& vs = servicer.slot<slots::VStr>(handle);
 						if (vs.size > Len) {
 							state = 0; // too large error
-							data = &raw;
+							data = (T *)&raw;
 							return true;
 						}
 
@@ -43,7 +44,7 @@ namespace srv::vstr {
 							size = (vs.size - vs.index);
 							state = 0;
 							memcpy((raw + vs.index), vs.data, size);
-							data = &raw;
+							data = (T *)&raw;
 							return true;
 						}
 
