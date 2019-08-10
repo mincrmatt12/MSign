@@ -32,33 +32,33 @@ namespace led {
 
 				for (uint_fast16_t j = 0; j < Width; ++j) {
 					asm volatile (
-						"ldrb r2, [%[Lo]]\n\t" // First, we load the value at _lo_ to r2, which we'll write at the end
+						"ldrb r2, [%[Lo]], #1\n\t" // First, we load the value at _lo_ to r2, which we'll write at the end
 						"tst r2, %[Mask]\n\t" // Do a clobber-less and
 						"ite eq\n\t"  			// thumb requires explicit checks on the flags
 						"moveq r2, #0\n\t"    // If the result is zero, set to 0
 						"movne r2, #1\n\t"    // Otherwise, set to 1
 						// different pattern for the rest of them
-						"ldrb r10, [%[Lo], #1]\n\t" // Load the g value to r10
+						"ldrb r10, [%[Lo]], #1\n\t" // Load the g value to r10
 						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #2\n\t" // if result is nonzero or with 2
 						// this continues for the b bit
-						"ldrb r10, [%[Lo], #2]\n\t" // Load the g value to r10
+						"ldrb r10, [%[Lo]], #1\n\t" // Load the g value to r10
 						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #4\n\t" // if result is nonzero or with 4
 						// now, we switch to the Hi byte
-						"ldrb r10, [%[Hi]]\n\t" // Load the g value to r10
+						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
 						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #8\n\t" // if result is nonzero or with 8
 						// this continues for the g bit
-						"ldrb r10, [%[Lo], #1]\n\t" // Load the g value to r10
+						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
 						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #16\n\t" // if result is nonzero or with 16
 						// this continues for the b bit
-						"ldrb r10, [%[Lo], #2]\n\t" // Load the g value to r10
+						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
 						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #32\n\t" // if result is nonzero or with 32
