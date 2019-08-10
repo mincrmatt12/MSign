@@ -17,21 +17,65 @@ namespace led {
 		struct FrameBuffer {
 			FrameBuffer() {
 				memset(data, 0x0, sizeof(data));
+				byte_stream[(Width*2)] = 0x00;
 			}
 
 			void prepare_stream(uint16_t i, uint8_t pos) {
-				uint8_t mask = (1 << pos);
-				for (uint16_t j = 0, x = 0; j < (Width*2); j += 2, ++x) {
-					byte_stream[j] = 
-						((_r(x, i)           & mask) ? 1  : 0) +
-						((_g(x, i)           & mask) ? 2  : 0) +
-						((_b(x, i)           & mask) ? 4  : 0) +
-						((_r(x, i+stb_lines) & mask) ? 8  : 0) +
-						((_g(x, i+stb_lines) & mask) ? 16 : 0) +
-						((_b(x, i+stb_lines) & mask) ? 32 : 0);
-					byte_stream[j+1] = byte_stream[j] + 64;
+				// ARM assembler is fairly interesting 
+				// we can have nearly any instruction execute conditionally
+				// and the and operation will set flags if it ends with an S...
+
+				uint8_t * lo = &_r(0, i);
+				uint8_t * hi = &_r(0, i|stb_lines);
+				uint8_t * bs = &byte_stream[0];
+				uint_fast8_t mask = (1 << pos);
+
+				for (uint_fast16_t j = 0; j < Width; ++j) {
+					asm volatile (
+						"ldrb r2, [%[Lo]]\n\t" // First, we load the value at _lo_ to r2, which we'll write at the end
+						"tst r2, %[Mask]\n\t" // Do a clobber-less and
+						"ite eq\n\t"  			// thumb requires explicit checks on the flags
+						"moveq r2, #0\n\t"    // If the result is zero, set to 0
+						"movne r2, #1\n\t"    // Otherwise, set to 1
+						// different pattern for the rest of them
+						"ldrb lr, [%[Lo], #1]\n\t" // Load the g value to lr
+						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"it ne\n\t"
+						"orrne r2, r2, #2\n\t" // if result is nonzero or with 2
+						// this continues for the b bit
+						"ldrb lr, [%[Lo], #2]\n\t" // Load the g value to lr
+						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"it ne\n\t"
+						"orrne r2, r2, #4\n\t" // if result is nonzero or with 4
+						// now, we switch to the Hi byte
+						"ldrb lr, [%[Hi]]\n\t" // Load the g value to lr
+						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"it ne\n\t"
+						"orrne r2, r2, #8\n\t" // if result is nonzero or with 8
+						// this continues for the g bit
+						"ldrb lr, [%[Lo], #1]\n\t" // Load the g value to lr
+						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"it ne\n\t"
+						"orrne r2, r2, #16\n\t" // if result is nonzero or with 16
+						// this continues for the b bit
+						"ldrb lr, [%[Lo], #2]\n\t" // Load the g value to lr
+						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"it ne\n\t"
+						"orrne r2, r2, #32\n\t" // if result is nonzero or with 32
+						// now, r2 contains the value for bs
+						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
+						// the next byte requires or 16
+						"orr r2, r2, #64\n\t" // set the clock line
+						// store the byte
+						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
+						// now, increase the lo and hi
+						"add %[Lo], %[Lo], #3\n\t"
+						"add %[Hi], %[Hi], #3\n\t"
+						: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
+						: "0"(lo), "1"(hi), "2"(bs), [Mask]"r"(mask)
+						: "r2", "cc", "lr"
+					);
 				}
-				byte_stream[(Width*2)] = 0x00;
 			}
 
 			uint8_t & r(uint16_t x, uint16_t y) {

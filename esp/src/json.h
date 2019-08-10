@@ -45,6 +45,7 @@ namespace json {
 	};
 
 	typedef std::function<void (PathNode **, uint8_t, const Value&)> JSONCallback;
+	typedef std::function<char (void)> TextCallback;
 
 	class JSONParser {
 	public:
@@ -53,6 +54,7 @@ namespace json {
 
 		bool parse(const char * text);
 		bool parse(const char * text, size_t size);
+		bool parse(TextCallback && c);
 	private:
 		PathNode& top() {
 			return *stack[stack_ptr - 1];
@@ -79,14 +81,17 @@ namespace json {
 
 		bool advance_whitespace();
 
+		char peek();
+		char next();
+
+		char temp = 0;
+		bool need = true;
+
 		PathNode * stack[32];
 		uint8_t    stack_ptr;
 
-		const char * text;
-		ptrdiff_t    head;
-		size_t       text_size;
-
 		JSONCallback cb;
+		TextCallback tcb;
 	};
 }
 
