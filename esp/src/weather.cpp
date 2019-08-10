@@ -6,6 +6,7 @@
 #include "time.h"
 #include "wifi.h"
 #include "TimeLib.h"
+#include <string.h>
 
 slots::WeatherInfo weather::info;
 char * weather::info_buffer;

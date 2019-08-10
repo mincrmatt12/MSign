@@ -1,4 +1,7 @@
-#include <HttpClient.h>
+#include <string.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <HardwareSerial.h>
 
 namespace util {
 

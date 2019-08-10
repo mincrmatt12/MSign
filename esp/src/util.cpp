@@ -29,6 +29,7 @@ struct Downloader {
 			char buf[20];
 			ultoa(size, buf, 10);
 			write_header("Content-Length", buf);
+			Serial1.printf("dwnld: bodys %d\n", (int)size);
 		}
 
 		// send the headers
@@ -37,6 +38,8 @@ struct Downloader {
 			write_header(headers[i][0], headers[i][1]);
 			Serial1.printf("dwnld: %s, %s --> %s\n", path, headers[i][0], headers[i][1]);
 		}
+
+		Serial1.printf("dwnld: %s %s\n", method, path);
 
 		// send blank line
 		cl.write("\r\n");
