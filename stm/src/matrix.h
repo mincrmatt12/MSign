@@ -38,28 +38,28 @@ namespace led {
 						"moveq r2, #0\n\t"    // If the result is zero, set to 0
 						"movne r2, #1\n\t"    // Otherwise, set to 1
 						// different pattern for the rest of them
-						"ldrb lr, [%[Lo], #1]\n\t" // Load the g value to lr
-						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"ldrb r10, [%[Lo], #1]\n\t" // Load the g value to r10
+						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #2\n\t" // if result is nonzero or with 2
 						// this continues for the b bit
-						"ldrb lr, [%[Lo], #2]\n\t" // Load the g value to lr
-						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"ldrb r10, [%[Lo], #2]\n\t" // Load the g value to r10
+						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #4\n\t" // if result is nonzero or with 4
 						// now, we switch to the Hi byte
-						"ldrb lr, [%[Hi]]\n\t" // Load the g value to lr
-						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"ldrb r10, [%[Hi]]\n\t" // Load the g value to r10
+						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #8\n\t" // if result is nonzero or with 8
 						// this continues for the g bit
-						"ldrb lr, [%[Lo], #1]\n\t" // Load the g value to lr
-						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"ldrb r10, [%[Lo], #1]\n\t" // Load the g value to r10
+						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #16\n\t" // if result is nonzero or with 16
 						// this continues for the b bit
-						"ldrb lr, [%[Lo], #2]\n\t" // Load the g value to lr
-						"tst lr, %[Mask]\n\t"      // Again, set flags for lr & mask
+						"ldrb r10, [%[Lo], #2]\n\t" // Load the g value to r10
+						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
 						"it ne\n\t"
 						"orrne r2, r2, #32\n\t" // if result is nonzero or with 32
 						// now, r2 contains the value for bs
@@ -73,7 +73,7 @@ namespace led {
 						"add %[Hi], %[Hi], #3\n\t"
 						: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
 						: "0"(lo), "1"(hi), "2"(bs), [Mask]"r"(mask)
-						: "r2", "cc", "lr"
+						: "r2", "cc", "r10"
 					);
 				}
 			}
