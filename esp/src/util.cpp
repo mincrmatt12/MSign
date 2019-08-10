@@ -51,6 +51,7 @@ struct Downloader {
 		auto to_start = millis();
 
 		while (cl.available() < 4) {
+			delay(5);
 			if (millis() - to_start > 500) {
 				cl.stop();
 				return false;
@@ -83,6 +84,7 @@ struct Downloader {
 		to_start = millis();
 		while (true) {
 			while (!cl.available()) {
+				delay(5);
 				if (millis() - to_start > 500) {
 					cl.stop();
 					return false;
@@ -98,6 +100,7 @@ struct Downloader {
 			else {
 				if (starting == '\r') {
 					while (!cl.available()) {
+						delay(5);
 						if (millis() - to_start > 500) {
 							cl.stop();
 							return false;
@@ -122,6 +125,7 @@ struct Downloader {
 		else {
 			auto to_start = millis();
 			while (!cl.available()) {
+				delay(5);
 				if (millis() - to_start > 20) {
 					cl.stop();
 					return -1;
@@ -142,9 +146,10 @@ private:
 
 util::Download util::download_from(const char *host, const char *path, const char * const headers[][2]) {
 	dwnld.request(host, path, "GET", headers);
+
 }
 
-util::Download util::download_from(const char *host, const char *path, uint32_t) {
+util::Download util::download_from(const char *host, const char *path) {
 	const char * const headers[][2] = {{nullptr, nullptr}};
 	return download_from(host, path, headers);
 }
