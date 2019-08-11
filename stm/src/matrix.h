@@ -68,9 +68,6 @@ namespace led {
 						"orr r2, r2, #64\n\t" // set the clock line
 						// store the byte
 						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
-						// now, increase the lo and hi
-						"add %[Lo], %[Lo], #3\n\t"
-						"add %[Hi], %[Hi], #3\n\t"
 						: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
 						: "0"(lo), "1"(hi), "2"(bs), [Mask]"r"(mask)
 						: "r2", "cc", "r10"
