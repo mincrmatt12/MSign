@@ -1,7 +1,8 @@
 #include "config.h"
-
 #include <SPI.h>
 #include <SdFat.h>
+
+extern SdFatSoftSpi<D6, D2, D5> sd;
 
 config::ConfigManager config::manager;
 const char * config::entry_names[] = {
@@ -32,12 +33,6 @@ config::ConfigManager::ConfigManager() {
 }
 
 bool config::ConfigManager::use_new_config(const char * data, uint32_t size) {
-	SdFatSoftSpi<D6, D2, D5> sd;
-	if (!sd.begin(D1)) {
-		Serial1.println(F("SD Card couldn't init.\n"));
-		return false;
-	}
-
 	SdFile config("config.txt", O_WRITE);
 	config.truncate(0); // erase file.
 	config.write(data, size);
@@ -54,15 +49,6 @@ const char * config::ConfigManager::get_value(config::Entry e, const char * valu
 }
 
 void config::ConfigManager::load_from_sd() {
-	// Alright, here comes the stupidity
-	
-	SdFatSoftSpi<D6, D2, D5> sd;
-	if (!sd.begin(D1)) {
-		Serial1.println(F("SD Card couldn't init.\n"));
-		delay(1000);
-		ESP.restart();
-	}
-	
 	// Make sure the config file exists before we read it.
 	
 	if (!sd.exists("config.txt")) {

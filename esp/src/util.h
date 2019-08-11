@@ -1,3 +1,6 @@
+#ifndef MS_UTIL_H
+#define MS_UTIL_H
+
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -19,7 +22,7 @@ namespace util {
 	Download download_from(const char * host, const char * path);
 	Download download_from(const char * host, const char * path, const char * const headers[][2]);
 	Download download_from(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body=nullptr);
-	// Starts the downloader, but returns a function that will return
+	// Starts the downloader, but returns a function that will return a byte (1-255) indicating data or 0 indicating end of transmission. Not designed for use with binary data.
 	std::function<char (void)> download_with_callback(const char * host, const char * path);
 	std::function<char (void)> download_with_callback(const char * host, const char * path, const char * const headers[][2]);
 	std::function<char (void)> download_with_callback(const char * host, const char * path, int16_t &status_code_out);
@@ -29,3 +32,4 @@ namespace util {
 	// Make sure a callback is stopped
 	void stop_download();
 }
+#endif

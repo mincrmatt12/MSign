@@ -1,12 +1,108 @@
 #include "util.h"
-#include "string.h"
-#include "WiFiClient.h"
+#include <string.h>
+#include <WiFiClient.h>
+#include <WiFiClientSecureBearSSL.h>
+#include <SdFat.h>
+#include <Time.h>
 
 // shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
+#define TO_C if (millis() - to_start > 500) { cl.stop(); return false; } 
+extern SdFatSoftSpi<D6, D2, D5> sd;
+
+struct HttpAdapter {
+	typedef WiFiClient Client;
+
+	bool connect(Client& c, const char* host) {
+		return c.connect(host, 80);
+	}
+};
+
+struct HttpsAdapter {
+	typedef BearSSL::WiFiClientSecure Client;
+	BearSSL::CertStore cs;
+	bool inited = false;
+
+	struct BSAdapFile : BearSSL::CertStoreFile {
+		File f;
+		const char * d;
+		
+		BSAdapFile(const char * fd) : d(fd) {}
+
+		bool open(bool write=false) {
+			sd.chdir("ca");
+			if (!sd.exists(d) && !write) {
+				return false;
+			}
+			else {
+				f = sd.open(d, write ? FILE_WRITE : FILE_READ);
+				return f.isOpen();
+			}
+		}
+		bool seek(size_t absolute_pos) {
+			return f.seek(absolute_pos);
+		}
+		ssize_t read(void *dest, size_t bytes) {
+			return f.read(dest, bytes);
+		}
+		ssize_t write(void *dest, size_t bytes) {
+			return f.write(dest, bytes);
+		}
+		void close() {
+			f.close();
+		}
+	} b_ar = BSAdapFile("cacert.ar"), b_idx = BSAdapFile("cacert.idx");
+
+	// initializing 
+	void init() {
+		Serial1.println("Initing ssl certs from SD card...");
+
+		if (!sd.exists("ca")) {
+			Serial1.println("CA directory not found");
+			return;
+		}
+
+		sd.chdir("ca");
+
+		// check if the certs.ar file exists in the ca directory
+		if (!sd.exists("cacert.ar")) {
+			Serial1.println("CA file not found");
+			sd.chdir();
+			return;
+		}
+
+		sd.chdir();
+		int c;
+
+		if (!(c = cs.initCertStore(&b_idx, &b_ar))) {
+			Serial1.println("Didn't get any certs from the SD card");
+			return;
+		}
+
+		inited = true;
+		Serial1.printf("loaded %d certs\n", c);
+	}
+
+	bool connect(Client& c, const char * host) {
+		if (!inited) {
+			init();
+			if (!inited) return false;
+
+			c.setCertStore(&cs);
+		}
+		if (now() < 1000) {
+			return false;
+		}
+		c.setX509Time(now());
+		return c.connect(host, 443);
+	}
+};
+
+template<typename Adapter>
 struct Downloader {
-	WiFiClient cl;
+	typename Adapter::Client cl;
+	Adapter ad;
 	uint16_t response_code;
 	int32_t  response_size;
 
@@ -16,11 +112,11 @@ struct Downloader {
 		response_size = -1;
 		response_code = 0;
 		// connect to the server
-		if (!cl.connect(host, 80)) return false;
+		if (!ad.connect(cl, host)) return false;
 
 		// send the request
 		cl.write(method);
-		cl.write(' ');
+		cl.print(' ');
 		cl.write(path);
 		cl.write(" HTTP/1.0\r\n");
 
@@ -60,11 +156,9 @@ struct Downloader {
 
 		while (cl.available() < 4) {
 			delay(5);
-			if (millis() - to_start > 500) {
-				cl.stop();
-				return false;
-			}
+			TO_C;
 		}
+
 		if (!cl.read(buf, 4)) {
 			cl.stop();
 			return false;
@@ -93,10 +187,7 @@ struct Downloader {
 		while (true) {
 			while (!cl.available()) {
 				delay(5);
-				if (millis() - to_start > 500) {
-					cl.stop();
-					return false;
-				}
+				TO_C;
 			}
 			char starting = cl.read();
 			if (starting != '\r' || starting != '\n') {
@@ -109,39 +200,29 @@ struct Downloader {
 				if (starting == '\r') {
 					while (!cl.available()) {
 						delay(5);
-						if (millis() - to_start > 500) {
-							cl.stop();
-							return false;
-						}
+						TO_C;
 					}
 					cl.read();
 				}
 				if (starting == 'C') {
 					// could be the content-length
-					while (cl.available() < 2) {
-						delay(5);
-						if (millis() - to_start > 500) {
-							cl.stop();
-							return false;
-						}
+					char buf[15] = {0};
+					if (cl.readBytesUntil(':', buf, 15) != 13) goto skip;
+					if (strcmp(buf, "ontent-Length") != 0) goto skip;
+					// wait for the space
+					if (!cl.find(' ')) {
+						cl.stop();
+						return false;
 					}
-					if (cl.read() == 'o') {
-						if (cl.read() == 'n') {
-							// wait for the space
-							if (!cl.find(' ')) {
-								cl.stop();
-								return false;
-							}
 
-							// read an integer
-							response_size = cl.parseInt();
+					// read an integer
+					response_size = cl.parseInt();
 
-							// read another newline
-							if (!cl.find('\n')) {
-								cl.stop();
-								return false;
-							}
-						}
+skip:
+					// read another newline
+					if (!cl.find('\n')) {
+						cl.stop();
+						return false;
 					}
 				}
 				break;
@@ -178,9 +259,13 @@ private:
 		cl.write(value);
 		cl.write("\r\n");
 	}
-} dwnld;
+};
 
-util::Download util::download_from(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
+Downloader<HttpAdapter> dwnld;
+Downloader<HttpsAdapter> dwnld_s;
+
+template<typename T, Downloader<T>& dwnld>
+inline util::Download download_from_impl(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
 	dwnld.request(host, path, method, headers, body);
 	
 	util::Download d;
@@ -232,6 +317,15 @@ util::Download util::download_from(const char *host, const char *path, const cha
 	return d;
 }
 
+util::Download util::download_from(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
+	if (host[0] != '_') {
+		return ::download_from_impl<HttpAdapter, dwnld>(host, path, headers, method, body);
+	}
+	else {
+		return ::download_from_impl<HttpsAdapter, dwnld_s>(++host, path, headers, method, body);
+	}
+}
+
 util::Download util::download_from(const char *host, const char *path) {
 	const char * const headers[][2] = {{nullptr, nullptr}};
 	return download_from(host, path, headers);
@@ -242,7 +336,8 @@ util::Download util::download_from(const char * host, const char * path, const c
 }
 
 
-std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
+template<typename T, Downloader<T>& dwnld>
+inline std::function<char (void)> download_with_callback_impl(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
 	dwnld.request(host, path, method, headers, body);
 
 	status_code_out = dwnld.response_code;
@@ -253,6 +348,15 @@ std::function<char (void)> util::download_with_callback(const char * host, const
 		if (x == -1) return 0;
 		return x;
 	};
+}
+
+std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
+	if (host[0] != '_') {
+		return ::download_with_callback_impl<HttpAdapter, dwnld>(host, path, headers, method, body, status_code_out, size_out);
+	}
+	else {
+		return ::download_with_callback_impl<HttpsAdapter, dwnld_s>(++host, path, headers, method, body, status_code_out, size_out);
+	}
 }
 
 std::function<char (void)> util::download_with_callback(const char * host, const char * path) {
