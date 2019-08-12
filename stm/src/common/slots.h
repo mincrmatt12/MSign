@@ -12,6 +12,8 @@ namespace slots {
 		UPDATE_PCENT_DOWN = 0x1a02, // UINT8_t; percent downloaded of the update package 
 
 		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; polled
+		REQUEST_SCREEN = 0x11, 		// UINT8_T; screen ID to request, sent very infrequently
+		VIRTUAL_BUTTONMAP = 0x12, 	// UINT8_t; bitmap, override of the data on GPIOA for the buttons
 
 		TTC_INFO = 0x20,			// STRUCT; TTCInfo
 		TTC_NAME_1 = 0x21,			// VSTR; name of bus/tram in slot 1; polled
@@ -30,6 +32,20 @@ namespace slots {
 		CALFIX_CLS2 = 0x52,			// ''
 		CALFIX_CLS3 = 0x53,			// ''
 		CALFIX_CLS4 = 0x54,			// ''
+		CALFIX_PRDH1 = 0x55, 		// STRUCT; PeriodInfo, start time for period 1 & 2
+		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
+
+		MODEL_INFO = 0x0900, 		// UINT16_t; number of triangles in the model
+		MODEL_XYZ1 = 0x0901, 		// STRUCT; Vec3; position of point 1; requested per triangle
+		MODEL_XYZ2 = 0x0902, 		// ''
+		MODEL_XYZ3 = 0x0903, 		// ''
+		MODEL_RGB  = 0x0904, 		// '', color of triangle
+		MODEL_CAM_MINPOS = 0x9005,  // STRUCT; Vec3; minimum position of the camera 
+		MODEL_CAM_MAXPOS = 0x9006,  // ''; maximum position of the camera 
+		MODEL_CAM_FOCUS  = 0x9007,  // ''; lookat point of camera
+		MODEL_CAM_POS_OVR = 0x9010, // ''; overriden position of camera       |
+		MODEL_CAM_TGT_OVR = 0x9011, // ''; overriden lookat point of camera   |> if these three options are all zero use random camera
+		MODEL_CAM_UP_OVR = 0x9012,  // ''; overriden up vector of camera      |
 	};
 
 #pragma pack (push, 1)
@@ -60,7 +76,7 @@ namespace slots {
 		float ctemp;
 		float ltemp;
 		float htemp;
-		uint8_t status_size;
+		uint8_t status_size; // deprecated
 	};
 
 	struct VStr {
@@ -71,12 +87,17 @@ namespace slots {
 
 	struct CalfixInfo {
 		uint8_t day;
-		uint8_t sched;
+		bool active;
+		bool abnormal;
 	};
 
 	struct ClassInfo {
 		uint8_t name[11];
 		uint16_t room;
+	};
+
+	struct PeriodInfo {
+		uint64_t ps1, ps2;
 	};
 
 #pragma pack (pop)
@@ -89,6 +110,7 @@ namespace slots {
 	SLOT_CHECK_DEF(VStr);
 	SLOT_CHECK_DEF(CalfixInfo);
 	SLOT_CHECK_DEF(ClassInfo);
+	SLOT_CHECK_DEF(PeriodInfo);
 
 	enum struct UpdateStatusCode : uint8_t {
 		NO_UPDATE = 0x00,

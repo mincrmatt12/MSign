@@ -2,9 +2,7 @@
 #define UPD_H
 
 namespace upd {
-
-	void update_main();
-
+	bool needed(); // is an update needed, based on the state of the SD card
 }
 
 #endif /* ifndef UPD_H */
