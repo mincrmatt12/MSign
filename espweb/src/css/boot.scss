@@ -1,0 +1,15 @@
+// Add overrides to bootstrap themes:
+
+@import "~bootswatch/dist/darkly/variables";
+$font-family-sans-serif:      "Roboto Mono", "Courier New", monospace !important;
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,700&display=swap');
+@import "~bootstrap/scss/bootstrap";
+@import "~bootswatch/dist/darkly/bootswatch";
+
+.contbrd {
+	padding-top: 10px;
+}
+
+.hr-gray {
+	border-color: #666666;
+}

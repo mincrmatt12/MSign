@@ -1,0 +1,6 @@
+build/
+web/
+node_modules/*
+*.lock
+yarn-error*
+*.log
