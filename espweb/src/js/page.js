@@ -16,6 +16,7 @@ import "core-js/stable";
 import "regenerator-runtime/runtime";
 
 import GlobalPane from "./pane/global"
+import TTCPane from "./pane/ttc"
 
 class App extends React.Component {
 	constructor(props) {
@@ -149,7 +150,7 @@ class App extends React.Component {
 
 				<Container className="contbrd">
 					<Row>
-						<Col xs="4" md="2">
+						<Col xs="5" sm="4" md="3" lg="2">
 							<Card bg="light">
 								<Nav variant="pills" className="flex-column">
 									<LinkContainer to="/" exact>
@@ -167,11 +168,14 @@ class App extends React.Component {
 								</Nav>
 							</Card>
 						</Col>
-						<Col xs="8" md="10">
+						<Col xs="7" sm="8" md="9" lg="10">
 							{this.state.error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
 							{!this.state.loaded ? <Alert variant='info'>loading...</Alert> : <div>
 								<Route path="/" exact render={(props) => {
 									return <GlobalPane configState={this.state.global} updateState={this.createUpdateFunc('global')} />
+								}} />
+								<Route path="/ttc"    render={(props) => {
+									return <TTCPane    configState={this.state.ttc   } updateState={this.createUpdateFunc('ttc')} />
 								}} />
 							</div>}
 						</Col>
