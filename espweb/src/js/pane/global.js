@@ -41,11 +41,11 @@ class GlobalPane extends React.Component {
 
 			<Form.Group controlId="cuser_ctrl">
 				<Form.Label>config login user</Form.Label>
-				<FormControl type='config panel username' value={this.props.configState.configuser} onChange={(e) => {this.upload('configuser', e.target.value);}} />
+				<FormControl placeholder='admin' type='config panel username' value={this.props.configState.configuser} onChange={(e) => {this.upload('configuser', e.target.value);}} />
 			</Form.Group>
 			<Form.Group controlId="psk_ctrl">
 				<Form.Label>config login password</Form.Label>
-				<FormControl type='password' value={this.props.configState.configpass} onChange={(e) => {this.upload('configpass', e.target.value);}} />
+				<FormControl placeholder='admin' type='password' value={this.props.configState.configpass} onChange={(e) => {this.upload('configpass', e.target.value);}} />
 			</Form.Group>
 
 			<hr className="hr-gray" />

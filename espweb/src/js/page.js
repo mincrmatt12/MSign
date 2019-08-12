@@ -17,6 +17,8 @@ import "regenerator-runtime/runtime";
 
 import GlobalPane from "./pane/global"
 import TTCPane from "./pane/ttc"
+import WeatherPane from "./pane/weather"
+import ApiPane from "./pane/apikeys"
 
 class App extends React.Component {
 	constructor(props) {
@@ -115,8 +117,13 @@ class App extends React.Component {
 	}
 
 	beginLoad() {
-		fetch("/a/getconf.txt") 
-			.then((resp) => resp.text())
+		fetch("/a/conf.txt") 
+			.then((resp) => {
+				if (resp.ok) {
+					return resp.text();
+				}
+				throw new Error("invalid response");
+			})
 			.then((txt) => {
 				this.updateFromConfigTxt(txt);
 				this.setState({loaded: true});
@@ -171,11 +178,17 @@ class App extends React.Component {
 						<Col xs="7" sm="8" md="9" lg="10">
 							{this.state.error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
 							{!this.state.loaded ? <Alert variant='info'>loading...</Alert> : <div>
-								<Route path="/" exact render={(props) => {
-									return <GlobalPane configState={this.state.global} updateState={this.createUpdateFunc('global')} />
+								<Route path="/" exact     render={(props) => {
+									return <GlobalPane  configState={this.state.global } updateState={this.createUpdateFunc('global')} />
 								}} />
-								<Route path="/ttc"    render={(props) => {
-									return <TTCPane    configState={this.state.ttc   } updateState={this.createUpdateFunc('ttc')} />
+								<Route path="/ttc"        render={(props) => {
+									return <TTCPane     configState={this.state.ttc    } updateState={this.createUpdateFunc('ttc')} />
+								}} />
+								<Route path="/weather"    render={(props) => {
+									return <WeatherPane configState={this.state.weather} updateState={this.createUpdateFunc('weather')} />
+								}} />
+								<Route path="/apikey"     render={(props) => {
+									return <ApiPane     configState={this.state.apikeys} updateState={this.createUpdateFunc('apikeys')} />
 								}} />
 							</div>}
 						</Col>

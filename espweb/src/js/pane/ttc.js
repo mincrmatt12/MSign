@@ -39,6 +39,10 @@ class TTCPane extends React.Component {
 		console.log([...this.props.configState.dirtags.keys()]);
 		return <div>
 			<hr className="hr-gray" />
+			
+			<p><a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=predictions&a=ttc&r=&s=" target="_blank">predictions</a>
+			</p>
+
 			{[...this.props.configState.dirtags.keys()].map((x) => (
 				<Card className="mb-3">
 					<Container>
