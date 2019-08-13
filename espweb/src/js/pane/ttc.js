@@ -53,7 +53,7 @@ class TTCPane extends React.Component {
 								<FormControl type='text' value={this.props.configState.dirtags[x]} onChange={(e) => {this.upload('dirtags', x, e.target.value);}} />
 							</Form.Group>
 							<Form.Group controlId={"stopid_ctrl" + x}>
-								<Form.Label>stop id</Form.Label>
+								<Form.Label>stop tag</Form.Label>
 								<FormControl type='text' value={this.props.configState.stopids[x]} onChange={(e) => {this.upload('stopids', x, e.target.value);}} />
 							</Form.Group>
 							<Form.Group controlId={"name_ctrl" + x}>
