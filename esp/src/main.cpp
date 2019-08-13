@@ -7,6 +7,7 @@
 #include "time.h"
 #include "ttc.h"
 #include "weather.h"
+#include "webui.h"
 	
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -17,7 +18,7 @@ void setup() {
 
 	Serial.swap();
 
-	Serial1.println(F("\nStarting Sign Backend."));
+	Serial1.println(F("\n==== Starting Sign Backend. ===="));
 	Serial1.println(F("You are looking at the debug output."));
 
 	wifi::prepare();
@@ -34,6 +35,7 @@ void setup() {
 	time::init();
 	ttc::init();
 	weather::init();
+	webui::init();
 }
 
 void loop() {
@@ -41,5 +43,6 @@ void loop() {
 	ttc::loop();
 	wifi::loop();
 	weather::loop();
+	webui::loop();
 	delay(1);
 }

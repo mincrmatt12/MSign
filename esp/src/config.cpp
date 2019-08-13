@@ -21,9 +21,14 @@ const char * config::entry_names[] = {
 	"shortname2",
 	"shortname3",
 
+	// WEATHER PARAMETERS
 	"wapikey",
 	"wapilat",
-	"wapilon"
+	"wapilon",
+
+	// CONFIG PARAMETERS
+	"configuser",
+	"configpass"
 };
 
 
@@ -37,6 +42,13 @@ bool config::ConfigManager::use_new_config(const char * data, uint32_t size) {
 	config.truncate(0); // erase file.
 	config.write(data, size);
 	config.close();
+
+	free(this->data);
+	this->data = (char *)malloc(128);
+	this->size = 128;
+	memset(this->offsets, 0xFF, sizeof(this->offsets));
+
+	load_from_sd();
 
 	return true;
 }

@@ -24,6 +24,9 @@ namespace config {
 		WEATHER_LAT,
 		WEATHER_LONG,
 
+		CONFIG_USER,
+		CONFIG_PASS,
+
 		// leave me
 		ENTRY_COUNT
 	};
