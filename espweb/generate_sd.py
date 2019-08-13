@@ -21,14 +21,15 @@ def copy_all_certificates():
     res = []
 
     for x in os.listdir("cert"):
-        if os.path.splitext(x)[1] == "der":
+        if os.path.splitext(x)[1] == ".der":
             shutil.copy(os.path.join("cert", x), os.path.join("build", x))
             res.append(os.path.join("build", x))
         else:
             newname = os.path.join("build", os.path.splitext(x)[0] + ".der")
             ssl = Popen(['openssl','x509','-inform','PEM','-outform','DER','-out', newname], shell = False, stdin = PIPE)
             pipe = ssl.stdin
-            pipe.write(thisPem)
+            with open(os.path.join("cert", x)) as f:
+                pipe.write(f.read())
             pipe.close()
             ssl.wait()
             res.append(newname)
