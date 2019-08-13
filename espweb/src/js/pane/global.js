@@ -31,7 +31,7 @@ class GlobalPane extends React.Component {
 				<Form.Label>ntp server</Form.Label>
 				<InputGroup>
 					<InputGroup.Prepend>
-						<InputGroup.Text id="httpaddon1">http://</InputGroup.Text>
+						<InputGroup.Text id="httpaddon1">ntp://</InputGroup.Text>
 					</InputGroup.Prepend>
 					<FormControl type='text' value={this.props.configState.ntpserver} onChange={(e) => {this.upload('ntpserver', e.target.value);}} placeholder='pool.ntp.org'/>
 				</InputGroup>
