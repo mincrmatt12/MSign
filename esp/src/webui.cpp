@@ -185,7 +185,9 @@ namespace webui {
 			return;
 		}
 
-		web_state = SEND_NOTFOUND;
+		link_state = SEND_NOTFOUND;
+		web_state = WAITING_FOR_END_OF_HEADERS;
+		Serial1.println("case6");
 	}
 	void _apipost(const char * path, size_t size) {
 		// currently does nothing, but soon will do _much more_ :tm:
@@ -197,17 +199,26 @@ namespace webui {
 			return;
 		}
 
-		web_state = SEND_INVALID_REQUEST;
+		link_state = SEND_INVALID_REQUEST;
+		web_state = WAITING_FOR_END_OF_HEADERS;
+
+		Serial1.println("case5");
 	}
 
 	void _startrequest() {
+		Serial1.printf("startreq: %.*s, name: %.*s\n", method_idx, method_buffer, name_idx, name_buffer);
+
 		if (name_idx < 1 || name_buffer[0] != '/') {
-			web_state = SEND_NOTFOUND;
+			Serial1.println("case1");
+			link_state = SEND_NOTFOUND;
+			web_state = WAITING_FOR_END_OF_HEADERS;
 			return;
 		}
 
 		if (strncmp(name_buffer, "/favicon.ico", name_idx) == 0) {
-			web_state = SEND_NOTFOUND;
+			Serial1.println("case2");
+			link_state = SEND_NOTFOUND;
+			web_state = WAITING_FOR_END_OF_HEADERS;
 			return;
 		}
 
@@ -215,7 +226,9 @@ namespace webui {
 			if (strncmp(method_buffer, "GET", method_idx) == 0) _apiget(&name_buffer[3], name_idx - 3);
 			else if (strncmp(method_buffer, "POST", method_idx) == 0) _apipost(&name_buffer[3], name_idx - 3);
 			else {
-				web_state = SEND_INVALID_REQUEST;
+				Serial1.println("case3");
+				link_state = SEND_INVALID_REQUEST;
+				web_state = WAITING_FOR_END_OF_HEADERS;
 			}
 			return;
 		}
@@ -223,6 +236,7 @@ namespace webui {
 		// Begin checking for auth headers
 		web_state = WAITING_FOR_AUTH_HEADER;
 		link_state = SEND_NORMAL_FILE;
+		Serial1.println("case4");
 	}
 
 	void _endrequest() {
@@ -253,6 +267,7 @@ namespace webui {
 	}
 
 	void loop() {
+		if (!webclient.connected()) web_state = NOT_CONNECTED;
 		if (web_state == NOT_CONNECTED) {
 			webclient = webserver.available();
 			if (webclient) {
@@ -262,6 +277,9 @@ namespace webui {
 			}
 			return;
 		}
+
+		Serial1.print(F("                                   webstate: "));
+		Serial1.println(web_state);
 
 		switch (web_state) {
 			case WAITING_FOR_REQUEST:
@@ -352,23 +370,32 @@ namespace webui {
 						if (header_idx == 64) {
 							// Invalid request.
 							
+							Serial1.printf("%.*s", header_idx, header_buffer);
 							web_state = SEND_INVALID_REQUEST;
 							return;
 						}
-						char c = webclient.read();
+						char c = webclient.peek();
+						Serial.print("AAAAA");
+						Serial.println(c);
+						if (c == '\n') {
+							web_state = SEND_INVALID_AUTH;
+							web_state = WAITING_FOR_END_OF_HEADERS;
+							return;
+						}
+						c = webclient.read();
 						if (c == ' ') {
 							if (strncmp(header_buffer, "Authorization:", header_idx) == 0)
 								{ web_state = WAITING_FOR_AUTH_HEADER2; header_idx = 0; }
 							else 
 								web_state = WAITING_FOR_AUTH_HEADER3;
+							break;
 						}
-						else if (c == '\r' || c == '\n') {
+						else if (c == '\r') {
 							yield();
-							if (c == '\r') {
-								webclient.read();
-							}
 
 							web_state = SEND_INVALID_AUTH;
+							web_state = WAITING_FOR_END_OF_HEADERS;
+							break;
 						}
 						else {
 							header_buffer[header_idx++] = c;
@@ -380,8 +407,9 @@ namespace webui {
 				{
 					while (webclient.available()) {
 						if (webclient.read() == '\n') {
-							web_state = link_state < SEND_CONFIG_WRITE ? WAITING_FOR_END_OF_HEADERS : FILLING_UP_REQUEST_HEADER_DATA;
+							web_state = link_state < SEND_CONFIG_WRITE ? WAITING_FOR_AUTH_HEADER : FILLING_UP_REQUEST_HEADER_DATA;
 							header_idx = 0;
+							break;
 						}
 					}
 				}
@@ -447,6 +475,7 @@ namespace webui {
 								{ header_idx = 0; body_size = webclient.parseInt(); web_state = WAITING_FOR_AUTH_HEADER3;}
 							else 
 								web_state = WAITING_FOR_AUTH_HEADER3; // reused here due to how link_state works
+							break;
 						}
 						else if (c == '\r' || c == '\n') {
 							yield();
@@ -455,6 +484,7 @@ namespace webui {
 							}
 
 							web_state = SEND_INVALID_REQUEST;
+							break;
 						}
 						else {
 							header_buffer[header_idx++] = c;
