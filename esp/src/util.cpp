@@ -8,7 +8,7 @@
 // shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
-#define TO_C if (millis() - to_start > 500) { cl.stop(); return false; } 
+#define TO_C if (millis() - to_start > 500) { cl.stop(); Serial1.println(F("tn: "));Serial1.println(__LINE__); return false; } 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
 struct HttpAdapter {
@@ -31,22 +31,33 @@ struct HttpsAdapter {
 		BSAdapFile(const char * fd) : d(fd) {}
 
 		bool open(bool write=false) {
-			sd.chdir("ca");
+			sd.chdir("/ca");
 			if (!sd.exists(d) && !write) {
+				sd.chdir();
+				Serial1.print(F("couldn't open"));
+				Serial1.println(d);
 				return false;
 			}
 			else {
 				f = sd.open(d, write ? FILE_WRITE : FILE_READ);
+				sd.chdir();
+				if (!f.isOpen()) {
+					Serial1.print(F("couldn't open s2"));
+					Serial1.println(d);
+				}
 				return f.isOpen();
 			}
 		}
 		bool seek(size_t absolute_pos) {
+			Serial1.printf("ccsseek %s %d\n", d, (int)absolute_pos);
 			return f.seek(absolute_pos);
 		}
 		ssize_t read(void *dest, size_t bytes) {
+			Serial1.printf("ccsread %s %d\n", d, (int)bytes);
 			return f.read(dest, bytes);
 		}
 		ssize_t write(void *dest, size_t bytes) {
+			Serial1.printf("ccswrite %s %d\n", d, (int)bytes);
 			return f.write(dest, bytes);
 		}
 		void close() {
@@ -58,12 +69,7 @@ struct HttpsAdapter {
 	void init() {
 		Serial1.println("Initing ssl certs from SD card...");
 
-		if (!sd.exists("ca")) {
-			Serial1.println("CA directory not found");
-			return;
-		}
-
-		sd.chdir("ca");
+		sd.chdir("/ca");
 
 		// check if the certs.ar file exists in the ca directory
 		if (!sd.exists("cacert.ar")) {
@@ -76,7 +82,8 @@ struct HttpsAdapter {
 		int c;
 
 		if (!(c = cs.initCertStore(&b_idx, &b_ar))) {
-			Serial1.println("Didn't get any certs from the SD card");
+			Serial1.print("Didn't get any certs from the SD card (c=");
+			Serial1.println(c);
 			return;
 		}
 
@@ -113,6 +120,7 @@ struct Downloader {
 		response_code = 0;
 		// connect to the server
 		if (!ad.connect(cl, host)) return false;
+		Serial1.printf_P(F("dwndl,req: %s %s\n"), host, path);
 
 		// send the request
 		cl.write(method);
@@ -169,6 +177,8 @@ struct Downloader {
 			return false;
 		}
 
+		Serial1.println(F("dbgreq got h"));
+
 		cl.setTimeout(500);
 
 		// alright, let's read till we hit the space
@@ -182,19 +192,21 @@ struct Downloader {
 			return false;
 		}
 
+		Serial1.print(F("dbgreq got hcode: "));
+		Serial1.println(response_code);
+
 		// now, consume all the headers.
 		to_start = millis();
 		while (true) {
+			Serial1.println(F("hloop debgrq"));
 			while (!cl.available()) {
 				delay(5);
 				TO_C;
 			}
 			char starting = cl.read();
-			if (starting != '\r' || starting != '\n') {
-				if (!cl.find('\n')) {
-					cl.stop();
-					return false;
-				}
+			Serial1.println(starting);
+			if (starting == '\n') {
+				break;
 			}
 			else {
 				if (starting == '\r') {
@@ -203,31 +215,46 @@ struct Downloader {
 						TO_C;
 					}
 					cl.read();
+					break;
 				}
-				if (starting == 'C') {
+				else if (starting == 'C') {
 					// could be the content-length
 					char buf[15] = {0};
-					if (cl.readBytesUntil(':', buf, 15) != 13) goto skip;
+					if (cl.readBytesUntil(':', buf, 14) != 13) goto skip;
+					Serial1.println(buf);
 					if (strcmp(buf, "ontent-Length") != 0) goto skip;
 					// wait for the space
 					if (!cl.find(' ')) {
+						Serial1.println(F("f3"));
 						cl.stop();
 						return false;
 					}
 
 					// read an integer
 					response_size = cl.parseInt();
+					Serial1.println(F("got rlen: "));
+					Serial1.println(response_size);
 
 skip:
 					// read another newline
 					if (!cl.find('\n')) {
+						Serial1.println(F("f2"));
 						cl.stop();
 						return false;
 					}
 				}
-				break;
+				else {
+					if (!cl.find('\n')) {
+						Serial1.println(F("f2"));
+						cl.stop();
+						return false;
+					}
+				}
 			}
 		}
+
+		Serial1.print(F("ready: "));
+		Serial1.println(response_size);
 
 		// at this point we are after all the headers (two newlines found w/o another character before then
 		return true;

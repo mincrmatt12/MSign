@@ -11,8 +11,9 @@ from subprocess import Popen, PIPE, call
 def create_directory():
     if not os.path.exists("build"):
         os.mkdir("build")
-    if not os.path.exists("build/ca"):
-        os.mkdir("build/ca")
+    if os.path.exists("build/ca"):
+        shutil.rmtree("build/ca")
+    os.mkdir("build/ca")
     if os.path.exists("build/web"):
         shutil.rmtree("build/web")
 
@@ -38,7 +39,9 @@ def copy_all_certificates():
 
 
 def create_archive(files):
+    print(files)
     cmd = ['ar', 'q', 'build/ca/cacert.ar'] + files
+    print(cmd)
     call(cmd)
 
     for i in files:

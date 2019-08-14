@@ -430,7 +430,7 @@ void srv::Servicer::init() {
 	
 	LL_GPIO_InitTypeDef gpio_init = {0};
 
-	gpio_init.Alternate = LL_GPIO_AF_8;
+	gpio_init.Alternate = UART_Af;
 	gpio_init.Pin = ESP_USART_TX | ESP_USART_RX;
 	gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 	gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
@@ -447,7 +447,7 @@ void srv::Servicer::send() {
 
 	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_TX_Stream, 
 			(uint32_t)(dma_out_buffer),
-			LL_USART_DMA_GetRegAddr(USART6),
+			LL_USART_DMA_GetRegAddr(ESP_USART),
 			LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 	LL_DMA_SetDataLength(UART_DMA, UART_DMA_TX_Stream, dma_out_buffer[1] + 3);
 
@@ -455,11 +455,11 @@ void srv::Servicer::send() {
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_TX_Stream);
 	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_TX_Stream);
 	
-	LL_USART_Enable(USART6);
-	LL_USART_ClearFlag_TC(USART6);
+	LL_USART_Enable(ESP_USART);
+	LL_USART_ClearFlag_TC(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_TX_Stream);
 
-	LL_USART_EnableDMAReq_TX(USART6);
+	LL_USART_EnableDMAReq_TX(ESP_USART);
 }
 
 void srv::Servicer::start_recv() {
@@ -467,7 +467,7 @@ void srv::Servicer::start_recv() {
 	// setup a receieve of 3 bytes
 
 	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
-			LL_USART_DMA_GetRegAddr(USART6),
+			LL_USART_DMA_GetRegAddr(ESP_USART),
 			(uint32_t)(this->dma_buffer),
 			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
@@ -482,7 +482,7 @@ void srv::Servicer::recv_full() {
 	// setup a recieve similar to out_buffer
 
 	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
-			LL_USART_DMA_GetRegAddr(USART6),
+			LL_USART_DMA_GetRegAddr(ESP_USART),
 			(uint32_t)(&this->dma_buffer[3]),
 			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
@@ -718,7 +718,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 	else {
 		LL_DMA_DisableStream(UART_DMA, UART_DMA_TX_Stream);
 
-		while (!LL_USART_IsActiveFlag_TC(USART6)) {
+		while (!LL_USART_IsActiveFlag_TC(ESP_USART)) {
 			;
 		}
 

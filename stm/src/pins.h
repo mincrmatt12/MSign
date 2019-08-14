@@ -1,7 +1,6 @@
 #ifndef PINS_H
 #define PINS_H
 
-#include "stm32f2xx_ll_gpio.h"
 // Define a bunch of names depending on the active build target
 
 #ifdef STM32F207xx
@@ -23,6 +22,19 @@
 #define UART_GPIO_PERIPH LL_AHB1_GRP1_PERIPH_GPIOG
 #define UART_UART_PERIPH LL_APB2_GRP1_PERIPH_USART6
 #define UART_ENABLE_CALL LL_APB2_GRP1_EnableClock
+#define UART_Af LL_GPIO_AF_8
+
+#define NVIC_SRV_RX_IRQ_NAME DMA2_Stream2_IRQn
+#define NVIC_SRV_TX_IRQ_NAME DMA2_Stream1_IRQn
+
+#define NVIC_SRV_RX_IRQ_HANDLER DMA2_Stream2_IRQHandler
+#define NVIC_SRV_TX_IRQ_HANDLER DMA2_Stream1_IRQHandler
+
+#define NVIC_SRV_RX_ACTV LL_DMA_IsActiveFlag_TC1
+#define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC2
+
+#define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC1
+#define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC2
 
 #endif
 
@@ -45,6 +57,19 @@
 #define UART_GPIO_PERIPH LL_AHB1_GRP1_PERIPH_GPIOA
 #define UART_UART_PERIPH LL_APB1_GRP1_PERIPH_USART2
 #define UART_ENABLE_CALL LL_APB1_GRP1_EnableClock
+#define UART_Af LL_GPIO_AF_7
+
+#define NVIC_SRV_RX_IRQ_NAME DMA1_Stream5_IRQn
+#define NVIC_SRV_TX_IRQ_NAME DMA1_Stream6_IRQn
+
+#define NVIC_SRV_RX_IRQ_HANDLER DMA1_Stream5_IRQHandler
+#define NVIC_SRV_TX_IRQ_HANDLER DMA1_Stream6_IRQHandler
+
+#define NVIC_SRV_RX_ACTV LL_DMA_IsActiveFlag_TC5
+#define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC6
+
+#define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC5
+#define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC6
 
 #endif
 

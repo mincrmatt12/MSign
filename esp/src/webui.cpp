@@ -70,19 +70,12 @@ namespace webui {
 	int body_size = 0;
 
 	void init() {
-		// make sure the web files are present
-		if (!sd.chdir("web")) {
-			Serial1.println(F("SD doesn't contain the web/ folder"));
-			delay(1000);
-			ESP.restart();
-		}
-
-		if (!sd.exists("page.html") || !sd.exists("page.js") || ~sd.exists("page.css")) {
+		sd.chdir("/web");
+		if (!sd.exists("page.html") || !sd.exists("page.js") || !sd.exists("page.css")) {
 			Serial1.println(F("SD doesn't contain the web/ folder contents"));
 			delay(1000);
 			ESP.restart();
 		}
-
 		sd.chdir();
 
 		// Initialize the webserver
@@ -250,9 +243,9 @@ namespace webui {
 			mt = "text/html";
 		}
 
-		sd.chdir("web");
+		sd.chdir("web", true);
 		sending_file = sd.open(fname);
-		sd.chdir();
+		sd.chdir(true);
 
 		_send_resp_header(mt);
 
