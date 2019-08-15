@@ -198,11 +198,11 @@ bool tasks::WeatherScreen::init() {
 
 bool tasks::WeatherScreen::deinit() {
 	// TODO: fix me
+	s_status.close();
 	if (!(
 		servicer.close_slot(s_info) &&
-		servicer.close_slot(s_icon)
+		servicer.close_slot(s_icon) 
 	)) {
-		s_status.close();
 		return false;
 	}
 	return true;

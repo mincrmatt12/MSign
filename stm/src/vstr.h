@@ -32,7 +32,7 @@ namespace srv::vstr {
 					return false;
 				case 2:
 					if (servicer.slot_dirty(handle, true)) {
-						const auto& vs = servicer.slot<slots::VStr>(handle);
+						const auto vs = slots::VStr(servicer.slot<slots::VStr>(handle)); // make sure we copy this in case there's some voodoo
 						if (vs.size >= Len) {
 							state = 0; // too large error
 							data = nullptr;

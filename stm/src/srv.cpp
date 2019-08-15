@@ -120,6 +120,10 @@ bool srv::Servicer::done() {
 
 void srv::Servicer::loop() {
 	if (this->state < STATE_DMA_WAIT_SIZE) {
+		if (last_comm > 10000) {
+			// invalid state error -- attempt going back to the main loop
+			start_recv();
+		}
 		// currently doing the handshake
 		switch (this->state) {
 			case STATE_UNINIT:
@@ -128,7 +132,6 @@ void srv::Servicer::loop() {
 					dma_out_buffer[0] = 0xa5;
 					dma_out_buffer[1] = 0x00;
 					dma_out_buffer[2] = 0x10;
-					int i = 0;
 					send();
 					start_recv();
 					state = STATE_HANDSHAKE_RECV;
@@ -154,6 +157,10 @@ void srv::Servicer::loop() {
 					dma_out_buffer[2] = 0x12;
 					send();
 
+
+					// clear the overrun flag
+					LL_USART_ClearFlag_ORE(ESP_USART);
+					LL_USART_ClearFlag_PE(ESP_USART);
 					start_recv();
 					break;
 				}
@@ -178,6 +185,14 @@ void srv::Servicer::loop() {
 		if (this->pending_count > 0 && !is_sending) {
 			uint32_t pending_operation = this->pending_operations[--this->pending_count];
 			do_send_operation(pending_operation);
+		}
+
+		// authenticate last_time makes sense
+		if (timekeeper.current_time - last_comm > 200000) {
+			// the failsafe should have activated, otherwise we've gone madd
+			last_comm = timekeeper.current_time; // there was probably a time glitch
+			// shit happens
+			return;
 		}
 
 		if ((timekeeper.current_time - last_comm) > 5000 && !sent_ping) {
@@ -617,6 +632,7 @@ void srv::Servicer::process_command() {
 				// memset(the array, 0)
 				uint8_t slot = dma_buffer[3];
 				uint8_t len = dma_buffer[1] - 1;
+				if (len > 16) len = 16;
 
 				memset(slots[slot], 0, 16);
 				memcpy(slots[slot], &dma_buffer[4], len);
@@ -633,7 +649,7 @@ void srv::Servicer::process_command() {
 		case 0x51:
 			{
 				// PING
-				if (pending_count == 16) break;
+				if (pending_count == 32) break;
 				this->pending_operations[pending_count++] = 0x50000000;
 				break;
 			}
@@ -697,7 +713,33 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 
 void srv::Servicer::dma_finish(bool incoming) {
 	if (incoming) {
+		// check for error
+		if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
+			NVIC_SRV_RXE_CLRF(UART_DMA);
+			LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
+
+			// do some handling:
+			LL_USART_ClearFlag_ORE(ESP_USART);
+			LL_USART_ClearFlag_FE(ESP_USART);
+			LL_USART_ClearFlag_NE(ESP_USART);
+			LL_USART_ClearFlag_PE(ESP_USART);
+			
+			if (dma_buffer[0] == 0xa6 && dma_buffer[1] < 128) {
+				// this actually seems to be a command; let's try and parse it...
+				
+				goto continue_parse;
+			}
+			else {
+				// reset the state
+				start_recv();
+
+				// attempt to continue processing
+				return;
+			}
+		}
+
 		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
+continue_parse:
 		last_comm = timekeeper.current_time;
 		sent_ping = false;
 		// first, check if we need to handle the handshake command
@@ -722,6 +764,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 		else {
 			process_command();
+			dma_buffer[0] = 0x00;
 
 			start_recv();
 		}

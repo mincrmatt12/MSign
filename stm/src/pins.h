@@ -31,9 +31,11 @@
 #define NVIC_SRV_TX_IRQ_HANDLER DMA2_Stream1_IRQHandler
 
 #define NVIC_SRV_RX_ACTV LL_DMA_IsActiveFlag_TC1
+#define NVIC_SRV_RXE_ACTV LL_DMA_IsActiveFlag_TE1
 #define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC2
 
 #define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC1
+#define NVIC_SRV_RXE_CLRF LL_DMA_ClearFlag_TE1
 #define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC2
 
 #endif
@@ -66,9 +68,11 @@
 #define NVIC_SRV_TX_IRQ_HANDLER DMA1_Stream6_IRQHandler
 
 #define NVIC_SRV_RX_ACTV LL_DMA_IsActiveFlag_TC5
+#define NVIC_SRV_RXE_ACTV LL_DMA_IsActiveFlag_TE5
 #define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC6
 
 #define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC5
+#define NVIC_SRV_RXE_CLRF LL_DMA_ClearFlag_TE5
 #define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC6
 
 #endif
