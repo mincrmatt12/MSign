@@ -40,7 +40,7 @@ class TTCPane extends React.Component {
 		return <div>
 			<hr className="hr-gray" />
 			
-			<p><a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=predictions&a=ttc&r=&s=" target="_blank">predictions</a>
+			<p><a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=predictions&a=ttc&stopId=" target="_blank">predictions</a>
 			</p>
 
 			{[...this.props.configState.dirtags.keys()].map((x) => (
@@ -53,12 +53,12 @@ class TTCPane extends React.Component {
 								<FormControl type='text' value={this.props.configState.dirtags[x]} onChange={(e) => {this.upload('dirtags', x, e.target.value);}} />
 							</Form.Group>
 							<Form.Group controlId={"stopid_ctrl" + x}>
-								<Form.Label>stop tag</Form.Label>
+								<Form.Label>stop id</Form.Label>
 								<FormControl type='text' value={this.props.configState.stopids[x]} onChange={(e) => {this.upload('stopids', x, e.target.value);}} />
 							</Form.Group>
 							<Form.Group controlId={"name_ctrl" + x}>
 								<Form.Label>display name</Form.Label>
-								<FormControl type='text' value={this.props.configState.names[x]} onChange={(e) => {this.upload('names', x, e.target.value);}} />
+								<FormControl type='text' value={this.props.configState.names[x]} onChange={(e) => {this.upload('names', x, e.target.value.substr(0, 16));}} />
 							</Form.Group>
 						</Col>
 						<Col sm="1" className="pl-3">

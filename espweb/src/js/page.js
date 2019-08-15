@@ -68,6 +68,37 @@ class App extends React.Component {
 		this.beginLoad();
 	}
 
+	serialize() {
+		let result = "";
+		// global params
+		result += "ssid=" + this.state.global.ssid + "\n";
+		result += "psk=" + this.state.global.psk + "\n";
+
+		// optional global params
+		if (this.state.global.ntpserver !== "")
+			result += "ntpserver=" + this.state.global.ntpserver + "\n";
+		if (this.state.global.configuser !== "")
+			result += "configuser=" + this.state.global.configuser + "\n";
+		if (this.state.global.configpass !== "")
+			result += "configpass=" + this.state.global.configpass + "\n";
+
+		// required weather api parameters
+		result += "wapilat=" + this.state.weather.latitude.toString() + "\n";
+		result += "wapilon=" + this.state.weather.longitude.toString() + "\n";
+
+		// api keys
+		result += "wapikey=" + this.state.apikeys.darksky + "\n";
+
+		// ttc
+		for (let i = 0; i < this.state.ttc.dirtags.length; ++i) {
+			result += "stopid" + (i + 1).toString() + "=" + this.state.ttc.stopids[i] + "\n";
+			result += "dirtag" + (i + 1).toString() + "=" + this.state.ttc.dirtags[i] + "\n";
+			result += "shortname" + (i + 1).toString() + "=" + this.state.ttc.names[i] + "\n";
+		}
+
+		return result;
+	}
+
 	updateFromConfigTxt(txt) {
 		for (const line of txt.split('\n')) {
 			if (line === "") continue;
@@ -116,6 +147,23 @@ class App extends React.Component {
 		}
 	}
 
+	saveConfig() {
+		fetch("/a/conf.txt", {
+			body: this.serialize(),
+			method: "POST"
+		}).then((resp) => {
+			if (!resp.ok) alert("couldn't save...");
+			else {
+				alert("saved config");
+				this.setState({dirty: false});
+			}
+		});
+	}
+
+	reboot() {
+		fetch("/a/reboot");
+	}
+
 	beginLoad() {
 		fetch("/a/conf.txt") 
 			.then((resp) => {
@@ -150,8 +198,8 @@ class App extends React.Component {
 				<Navbar bg="light">
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">
-						<Nav.Link disabled={!this.state.dirty}>save</Nav.Link>
-						<Nav.Link >reboot</Nav.Link>
+						<Nav.Link eventKey={1} href="#" disabled={!this.state.dirty} onSelect={() => {this.saveConfig();}}>save</Nav.Link>
+						<Nav.Link eventKey={2} href="#" onSelect={() => {this.reboot();}}>reboot</Nav.Link>
 					</Nav>
 				</Navbar>
 
