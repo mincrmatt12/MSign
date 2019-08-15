@@ -29,7 +29,7 @@ void ttc::loop() {
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
 			if (stopid != nullptr) {
-				memset(&ttc::times[slot], 0, sizeof(slots::TTCTime));
+				memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
 				const char * dtag = config::manager.get_value((config::Entry)(config::DTAG1 + slot));
 				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + slot));
 				serial::interface.update_data(slots::TTC_NAME_1 + slot, (const uint8_t *)name, strlen(name));
@@ -52,6 +52,8 @@ void ttc::on_open(uint16_t data_id) {
 		case slots::TTC_TIME_1:
 		case slots::TTC_TIME_2:
 		case slots::TTC_TIME_3:
+			Serial1.println("onopen: ");
+			Serial1.println(data_id);
 			serial::interface.update_data(data_id, (const uint8_t *)(&times[data_id - slots::TTC_TIME_1]), sizeof(slots::TTCTime));
 			break;
 		case slots::TTC_NAME_1:

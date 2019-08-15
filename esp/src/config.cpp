@@ -46,6 +46,7 @@ bool config::ConfigManager::use_new_config(const char * data, uint32_t size) {
 	free(this->data);
 	this->data = (char *)malloc(128);
 	this->size = 128;
+	this->ptr = 0;
 	memset(this->offsets, 0xFF, sizeof(this->offsets));
 
 	load_from_sd();

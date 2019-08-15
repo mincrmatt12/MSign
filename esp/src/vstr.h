@@ -21,6 +21,10 @@ namespace serial {
 
 		void operator()(uint8_t * buffer, uint8_t & length) {
 			slots::VStr vsw;
+			
+			if (data_size < echo_index) {
+				echo_index = 0;
+			}
 
 			vsw.index = echo_index;
 			vsw.size =  data_size;

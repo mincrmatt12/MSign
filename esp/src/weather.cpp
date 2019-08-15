@@ -93,7 +93,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 
 void weather::loop() {
 	if (now() < 100) return;
-	if (time_since_last_update == 0 || (now() - time_since_last_update) > 135) {
+	if (time_since_last_update == 0 || (now() - time_since_last_update) > 180) {
 		// Do a weather update.
 		
 		if (!wifi::available()) return;
@@ -112,7 +112,6 @@ void weather::loop() {
 
 		if (status_code < 200 || status_code >= 300) {
 			util::stop_download();
-			time_since_last_update = now() - 100;
 			return;
 		}
 

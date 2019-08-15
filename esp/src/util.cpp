@@ -8,11 +8,12 @@
 // shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
-#define TO_C if (millis() - to_start > 500) { cl.stop(); Serial1.println(F("tn: "));Serial1.println(__LINE__); return false; } 
+#define TO_C if ((millis() - to_start) > Adapter::timeout) { cl.stop(); Serial1.println(F("tn: "));Serial1.println(__LINE__); return false; } 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
 struct HttpAdapter {
 	typedef WiFiClient Client;
+	static const int timeout = 600;
 
 	bool connect(Client& c, const char* host) {
 		return c.connect(host, 80);
@@ -21,6 +22,7 @@ struct HttpAdapter {
 
 struct HttpsAdapter {
 	typedef BearSSL::WiFiClientSecure Client;
+	static const int timeout = 1200;
 	BearSSL::CertStore cs;
 	bool inited = false;
 
@@ -49,15 +51,12 @@ struct HttpsAdapter {
 			}
 		}
 		bool seek(size_t absolute_pos) {
-			Serial1.printf("ccsseek %s %d\n", d, (int)absolute_pos);
 			return f.seek(absolute_pos);
 		}
 		ssize_t read(void *dest, size_t bytes) {
-			Serial1.printf("ccsread %s %d\n", d, (int)bytes);
 			return f.read(dest, bytes);
 		}
 		ssize_t write(void *dest, size_t bytes) {
-			Serial1.printf("ccswrite %s %d\n", d, (int)bytes);
 			return f.write(dest, bytes);
 		}
 		void close() {
@@ -112,12 +111,14 @@ struct Downloader {
 	Adapter ad;
 	uint16_t response_code;
 	int32_t  response_size;
+	int32_t i = 0;
 
 	// send a request
 	bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const char * body=nullptr) {
 		if (cl.connected()) cl.stop();
 		response_size = -1;
 		response_code = 0;
+		i = 0;
 		// connect to the server
 		if (!ad.connect(cl, host)) return false;
 		Serial1.printf_P(F("dwndl,req: %s %s\n"), host, path);
@@ -265,16 +266,17 @@ skip:
 	}
 
 	int16_t next() {
-		if (!cl.connected()) return -1;
+		if (!cl.connected() && !cl.available()) return -1;
 		else {
 			auto to_start = millis();
 			while (!cl.available()) {
 				delay(5);
-				if (millis() - to_start > 20) {
+				if (millis() - to_start > (i >= response_size ? 60 : 900)) {
 					cl.stop();
 					return -1;
 				}
 			}
+			++i;
 			return cl.read();
 		}
 	}

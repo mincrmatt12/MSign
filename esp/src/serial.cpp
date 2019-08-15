@@ -1,6 +1,7 @@
 #include "HardwareSerial.h"
 #include "serial.h"
 #include "Esp.h"
+#include <Time.h>
 
 serial::SerialInterface serial::interface;
 
@@ -33,6 +34,8 @@ try_again:
 	Serial1.println(F("Connected to STM32"));
 }
 
+uint32_t last_pong_at = 0;
+
 void serial::SerialInterface::loop() {
 	// Check if there is incoming data for a header.
 	if (waiting_size != 0) {
@@ -61,6 +64,18 @@ void serial::SerialInterface::loop() {
 		else {
 			handle_command(static_cast<serial::Command>(buf[2]), 0, nullptr);
 		}
+	}
+
+	if (now() > 1000 && now() - last_pong_at > 5) {
+		last_pong_at = now();
+		uint8_t buf_reply[3] = {
+			0xa6,
+			0x00,
+			PONG
+		};
+
+		Serial.write(buf_reply, 3);
+		Serial1.println(F("PONGov"));
 	}
 }
 
@@ -159,6 +174,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 
 				Serial.write(buf_reply, 3);
 				Serial1.println(F("PONG"));
+				last_pong_at = now();
 			}
 			break;
 		default:
