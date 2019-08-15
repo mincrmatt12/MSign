@@ -33,22 +33,23 @@ namespace srv::vstr {
 				case 2:
 					if (servicer.slot_dirty(handle, true)) {
 						const auto& vs = servicer.slot<slots::VStr>(handle);
-						if (vs.size > Len) {
+						if (vs.size >= Len) {
 							state = 0; // too large error
-							data = (T *)&raw;
+							data = nullptr;
 							return true;
 						}
 
-						uint8_t size = 14;
 						if (vs.size - vs.index <= 14) {
-							size = (vs.size - vs.index);
+							size_t size = (vs.size - vs.index);
 							state = 0;
 							memcpy((raw + vs.index), vs.data, size);
 							data = (T *)&raw;
 							return true;
 						}
 
-						memcpy((raw + vs.index), vs.data, size);
+						if (vs.index > Len - 14) return false;
+
+						memcpy((raw + vs.index), vs.data, 14);
 						servicer.ack_slot(handle);
 						return false;
 					}

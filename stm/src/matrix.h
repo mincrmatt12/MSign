@@ -213,8 +213,14 @@ namespace led {
 				LL_TIM_DisableIT_UPDATE(TIM9);
 				if (!delaying) return;
 				oe = true;
+				asm volatile ("nop");
+				asm volatile ("nop");  // give the display some time to respond
+				asm volatile ("nop");
 				delaying = false;
 				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
+				asm volatile ("nop");
+				asm volatile ("nop");  // give the display some time to respond
+				asm volatile ("nop");
 				if (show) do_next();
 				else show = true;
 			}
@@ -225,7 +231,7 @@ namespace led {
 			volatile bool blasting = false;
 			uint8_t pos = 0;
 			uint16_t row = 0;
-			uint8_t dma_buffer[(FB::width * 2) + 1];
+			uint8_t dma_buffer[(FB::width * 2) + 3];
 
 			// impl for the wait system
 			uint16_t delay_counter = 0;

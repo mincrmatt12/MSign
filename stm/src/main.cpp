@@ -1,4 +1,5 @@
 #include "stm32f2xx.h"
+#include "stm32f2xx_ll_rcc.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rng.h"
@@ -56,15 +57,15 @@ void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 			break;
 		case 2:
 			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
-			draw::text(fb, "UPD .. NONE", font::vera_7::info, 0, 14, 255, 255, 255);
+			draw::text(fb, "UPD .. NONE", font::vera_7::info, 0, 21, 0, 255, 0);
 			break;
 		case 3:
 			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
 			if (extra) {
-				draw::text(fb, extra, font::vera_7::info, 0, 19, 40, 40, 255);
+				draw::text(fb, extra, font::vera_7::info, 0, 21, 40, 40, 255);
 			}
 			else {
-				draw::text(fb, "UPD .. INIT", font::vera_7::info, 0, 19, 40, 40, 255);
+				draw::text(fb, "UPD .. INIT", font::vera_7::info, 0, 21, 40, 40, 255);
 			}
 			break;
 		default:
@@ -113,13 +114,16 @@ int main() {
 	show_test_pattern(2, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
 
-	uint16_t finalize_counter = 60;
+	uint16_t finalize_counter = 120;
 	while (finalize_counter--) {
-		if (finalize_counter < 40) {
+		if (finalize_counter < 50) {
 			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);
 		}
-		if (finalize_counter < 20) {
+		if (finalize_counter < 34) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 255, 0);
+		}
+		if (finalize_counter < 18) {
+			draw::fill(matrix.get_inactive_buffer(), 0, 0, 255);
 		}
 		matrix.swap_buffers();
 		matrix.display();

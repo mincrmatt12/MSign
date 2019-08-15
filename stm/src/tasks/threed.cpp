@@ -126,17 +126,18 @@ namespace threed {
 				(float)(rng::get() % 1000) / 1000.0f,
 				(float)(rng::get() % 1000) / 1000.0f
 			};
-			camera_look_target = Vec3{
-				(float)(rng::get() % 2) - 1.0f,
-				(float)(rng::get() % 2) - 1.0f,
-				(float)(rng::get() % 2) - 1.0f
-			};
+			if (rng::get() % 2 == 0) {
+				camera_look_target = Vec3{0, 0, 0};
+			}
+			else {
+				camera_look_target = Vec3{-1, 0, 0};
+			}
 		}
 
 		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 10000.0f);
 		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 10000.0f);
 
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, {0, 0, 0}, {0, 1, 0});
+		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
 		for (uint16_t x = 0; x < 64; ++x) {
 			for (uint16_t y = 0; y < 32; ++y) {
@@ -167,7 +168,7 @@ namespace threed {
 		int16_t cy = round(((c.y + 1) / 2) * 32);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
-		avg = powf((avg + 1) / 2.03, 2.0f);
+		avg = std::min(std::pow(avg * 1.05, 1.5f), 0.95);
 
 		uint8_t cr = (float)t.r * (1 - avg);
 		uint8_t cg = (float)t.g * (1 - avg);

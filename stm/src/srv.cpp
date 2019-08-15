@@ -128,7 +128,7 @@ void srv::Servicer::loop() {
 					dma_out_buffer[0] = 0xa5;
 					dma_out_buffer[1] = 0x00;
 					dma_out_buffer[2] = 0x10;
-					while (is_sending) {;}
+					int i = 0;
 					send();
 					start_recv();
 					state = STATE_HANDSHAKE_RECV;
@@ -180,12 +180,24 @@ void srv::Servicer::loop() {
 			do_send_operation(pending_operation);
 		}
 
-		if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
+		if ((timekeeper.current_time - last_comm) > 5000 && !sent_ping) {
 			this->pending_operations[pending_count++] = 0x51000000;
 			sent_ping = true;
 		}
-		if ((timekeeper.current_time - last_comm) > 25000) {
+		if ((timekeeper.current_time - last_comm) > 15000 && sent_ping) {
+			this->pending_operations[pending_count++] = 0x51000000;
+			sent_ping = false;
+		}
+		if ((timekeeper.current_time - last_comm) > 27000 && !sent_ping) {
+			this->pending_operations[pending_count++] = 0x51000000;
+			sent_ping = true;
+		}
+		if ((timekeeper.current_time - last_comm) > 40000) {
 			// Reset.
+			if (timekeeper.current_time < last_comm) {
+				last_comm = timekeeper.current_time;
+				return;
+			}
 			NVIC_SystemReset();
 		}
 	}
@@ -295,7 +307,7 @@ bool srv::Servicer::open_slot(uint16_t data_id, bool continuous, uint8_t &slot_i
 
 	// ok, now we need to check if there's some available space in the pending buffer
 	
-	if (this->pending_count >= 16) {
+	if (this->pending_count >= 32) {
 		return false;
 	}
 
@@ -311,7 +323,7 @@ bool srv::Servicer::open_slot(uint16_t data_id, bool continuous, uint8_t &slot_i
 bool srv::Servicer::close_slot(uint8_t slot_id) {
 	if (!this->slot_open(slot_id)) return false;
 
-	if (this->pending_count >= 16) {
+	if (this->pending_count >= 32) {
 		return false;
 	}
 
@@ -324,7 +336,7 @@ bool srv::Servicer::ack_slot(uint8_t slot_id) {
 	if (!this->slot_open(slot_id)) return false;
 	if (!this->slot_connected(slot_id)) return false;
 
-	if (this->pending_count >= 16) {
+	if (this->pending_count >= 32) {
 		return false;
 	}
 
@@ -699,8 +711,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 				return;
 			}
 			else {
-				state = STATE_UNINIT;
-				return;
+				NVIC_SystemReset();
 			}
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {

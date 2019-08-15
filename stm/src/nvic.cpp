@@ -65,3 +65,12 @@ extern "C" void NVIC_SRV_TX_IRQ_HANDLER() {
 extern "C" void SysTick_Handler() {
 	timekeeper.systick_handler();
 }
+
+extern "C" void HardFault_Handler() {
+	// there was a hardfault... delay for a while so i know
+	for (int i = 0; i < F_CPU; ++i) {
+		asm volatile ("nop");
+		asm volatile ("nop");
+		asm volatile ("nop"); // wait 3 seconds
+	}
+}
