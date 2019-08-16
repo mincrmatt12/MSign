@@ -719,23 +719,14 @@ void srv::Servicer::dma_finish(bool incoming) {
 			LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 
 			// do some handling:
-			LL_USART_ClearFlag_ORE(ESP_USART);
-			LL_USART_ClearFlag_FE(ESP_USART);
-			LL_USART_ClearFlag_NE(ESP_USART);
-			LL_USART_ClearFlag_PE(ESP_USART);
-			
-			if (dma_buffer[0] == 0xa6 && dma_buffer[1] < 128) {
-				// this actually seems to be a command; let's try and parse it...
-				
-				goto continue_parse;
+			if (LL_USART_IsActiveFlag_ORE(ESP_USART)) {
+				LL_USART_ReceiveData8(ESP_USART);
 			}
-			else {
-				// reset the state
-				start_recv();
+			if (LL_USART_IsActiveFlag_FE(ESP_USART)) LL_USART_ClearFlag_FE(ESP_USART);
+			if (LL_USART_IsActiveFlag_NE(ESP_USART)) LL_USART_ClearFlag_NE(ESP_USART);
 
-				// attempt to continue processing
-				return;
-			}
+			start_recv();
+			return;
 		}
 
 		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
@@ -759,7 +750,10 @@ continue_parse:
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
 				start_recv();
+				LL_USART_ReceiveData8(ESP_USART); // try and get back in sync
+				return;
 			}
+
 			recv_full();
 		}
 		else {
