@@ -71,9 +71,9 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR) {
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
-				weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
 				Serial1.printf("summary = %s\n", v.str_val);
+				weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);
 			}
 		}
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
