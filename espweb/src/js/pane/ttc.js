@@ -47,7 +47,7 @@ class TTCPane extends React.Component {
 				<Card className="mb-3">
 					<Container>
 					<Row className="w-100 py-3" noGutters>
-						<Col sm="11">
+						<Col sm="11" xs="10">
 							<Form.Group controlId={"dirtags_ctrl" + x}>
 								<Form.Label>dirtags (comma seperated)</Form.Label>
 								<FormControl type='text' value={this.props.configState.dirtags[x]} onChange={(e) => {this.upload('dirtags', x, e.target.value);}} />
@@ -61,7 +61,7 @@ class TTCPane extends React.Component {
 								<FormControl type='text' value={this.props.configState.names[x]} onChange={(e) => {this.upload('names', x, e.target.value.substr(0, 16));}} />
 							</Form.Group>
 						</Col>
-						<Col sm="1" className="pl-3">
+						<Col sm="1" xs="2" className="pl-3">
 							<Button variant="danger" onClick={() => this.remove(x)} className="h-100 w-100">X</Button>
 						</Col>
 					</Row>

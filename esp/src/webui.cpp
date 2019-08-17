@@ -18,6 +18,10 @@ char * etags[3];
 namespace webui {
 	// god i hate this thing's api, it really is poop
 	
+	// update params
+	bool package_ok = false;
+	File writing_update;
+	
 	bool _doauth(bool tryagain=true) {
 		const char * user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
 		const char * pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
@@ -112,6 +116,65 @@ namespace webui {
 
 				webserver.send(204);
 				serial::interface.reset();
+		});
+		webserver.on("/a/newui", HTTP_POST, [](){
+				if (!_doauth()) {
+					// make sure we delete the update files.
+					if (sd.chdir("/upd")) {
+						sd.remove("webui.ar");
+						sd.chdir();
+					}
+				}
+				if (!package_ok) {
+					webserver.send(500, "text/plain", "invalid upload/aborted/something");
+					return;
+				}
+
+				sd.chdir("/upd");
+				File f = sd.open("state.txt", FILE_WRITE);
+				f.print("16"); // update UI
+				f.flush();
+				f.close();
+
+				sd.chdir();
+				webserver.send(200, "text/plain", "updating now");
+				delay(100);
+				ESP.restart();
+		}, [](){
+			// file upload handler
+			auto& upload = webserver.upload();
+
+			switch (upload.status) {
+				case UPLOAD_FILE_START: 
+					{
+						if (!sd.exists("/upd")) sd.mkdir("/upd");
+						sd.chdir("/upd");
+						writing_update = sd.open("webui.ar", FILE_WRITE);
+						sd.chdir();
+
+						Serial1.println(F("writing data from update to webui.ar"));
+					}
+					break;
+				case UPLOAD_FILE_END:
+					{
+						package_ok = true;
+						writing_update.flush();
+						writing_update.close();
+					}
+					break;
+				case UPLOAD_FILE_ABORTED:
+					{
+						writing_update.remove();
+						writing_update.close();
+						package_ok = false;
+					}
+					break;
+				case UPLOAD_FILE_WRITE:
+					{
+						writing_update.write(upload.buf, upload.currentSize);
+					}
+					break;
+			}
 		});
 
 		webserver.begin();

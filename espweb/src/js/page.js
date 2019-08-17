@@ -19,6 +19,8 @@ import GlobalPane from "./pane/global"
 import TTCPane from "./pane/ttc"
 import WeatherPane from "./pane/weather"
 import ApiPane from "./pane/apikeys"
+import ScCfgPane from "./pane/sc"
+import UpdatePane from "./pane/upd"
 
 class App extends React.Component {
 	constructor(props) {
@@ -60,6 +62,12 @@ class App extends React.Component {
 			weather: {
 				latitude: 0,
 				longitude: 0
+			},
+
+			sccfg: {
+				ttc: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
+				weather: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
+				model: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 			}
 		}
 	}
@@ -94,6 +102,28 @@ class App extends React.Component {
 			result += "stopid" + (i + 1).toString() + "=" + this.state.ttc.stopids[i] + "\n";
 			result += "dirtag" + (i + 1).toString() + "=" + this.state.ttc.dirtags[i] + "\n";
 			result += "shortname" + (i + 1).toString() + "=" + this.state.ttc.names[i] + "\n";
+		}
+
+		// sccfg
+		let needsNewSc = false;
+		for (let prop in this.state.sccfg) {
+			const name = {'ttc': 'ttc', 'weather': 'weather', 'model': '3d'}[prop];
+			const p = this.state.sccfg[prop];
+
+			if (p.duration != 12000) needsNewSc = true;
+
+			if (p.mode == 0) continue;
+			else if (p.mode == 1) {
+				result += "sc" + name + "=off\n";
+			}
+			else {
+				result += "sc" + name + "=" + p.startTime.toString() + "," + p.endTime.toString() + "\n";
+			}
+		}
+		if (needsNewSc) {
+			result += "sctimes=" + this.state.sccfg.ttc.duration.toString() + "," +
+								   this.state.sccfg.weather.duration.toString() + "," +
+								   this.state.sccfg.model.duration.toString() + "\n";
 		}
 
 		return result;
@@ -135,11 +165,41 @@ class App extends React.Component {
 					case 'dirtag1':
 					case 'dirtag2':
 					case 'dirtag3':
-						let idx = key[key.length - 1];
-						let prop = key[0] == 's' ? (key[1] == 't' ? 'stopids' : 'names') : 'dirtags';
+						{
+							let idx = key[key.length - 1];
+							let prop = key[0] == 's' ? (key[1] == 't' ? 'stopids' : 'names') : 'dirtags';
+							this.setState((s, _) => {
+								s.ttc[prop].splice(idx, 0, value);
+								return s;
+							});
+						}
+						break;
+					case 'scttc':
+					case 'scweather':
+					case 'sc3d':
+						{
+							let prop = key.substr(2);
+							if (prop == '3d') prop = 'model';
+							if (value == "on") break;
+							if (value == "off") this.setState((s, _) => {s.sccfg[prop].mode = 1; return s;});
+							else {
+								let startstop = value.split(",");
+								this.setState((s, _) => {
+									s.sccfg[prop].mode = 2;
+									s.sccfg[prop].startTime = Number.parseInt(startstop[0]);
+									s.sccfg[prop].endTime   = Number.parseInt(startstop[1]);
+									return s;
+								});
+							}
+						}
+						break;
+					case 'sctimes':
 						this.setState((s, _) => {
-							s.ttc[prop].splice(idx, 0, value);
-							return s;
+							let values = value.split(",").map((x) => Number.parseInt(x));
+
+							s.sccfg.ttc.duration = values[0];
+							s.sccfg.weather.duration = values[1];
+							s.sccfg.model.duration = values[2];
 						});
 						break;
 				}
@@ -198,8 +258,8 @@ class App extends React.Component {
 				<Navbar bg="light">
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">
-						<Nav.Link eventKey={1} href="#" disabled={!this.state.dirty} onSelect={() => {this.saveConfig();}}>save</Nav.Link>
-						<Nav.Link eventKey={2} href="#" onSelect={() => {this.reboot();}}>reboot</Nav.Link>
+						<Nav.Link eventKey={1} href="#" disabled={!this.state.dirty} active={false} onSelect={() => {this.saveConfig();}}>save</Nav.Link>
+						<Nav.Link eventKey={2} href="#" active={false} onSelect={() => {this.reboot();}}>reboot</Nav.Link>
 					</Nav>
 				</Navbar>
 
@@ -220,6 +280,12 @@ class App extends React.Component {
 									<LinkContainer to="/apikey">
 										<Nav.Link>apikeys</Nav.Link>
 									</LinkContainer>
+									<LinkContainer to="/sccfg">
+										<Nav.Link>sccfg</Nav.Link>
+									</LinkContainer>
+									<LinkContainer to="/upd">
+										<Nav.Link>sysupdate</Nav.Link>
+									</LinkContainer>
 								</Nav>
 							</Card>
 						</Col>
@@ -238,6 +304,12 @@ class App extends React.Component {
 								<Route path="/apikey"     render={(props) => {
 									return <ApiPane     configState={this.state.apikeys} updateState={this.createUpdateFunc('apikeys')} />
 								}} />
+								<Route path="/sccfg"      render={(props) => {
+									return <ScCfgPane   configState={this.state.sccfg  } updateState={this.createUpdateFunc('sccfg')} />
+								}} />
+
+
+								<Route path="/upd" component={UpdatePane} />
 							</div>}
 						</Col>
 					</Row>
