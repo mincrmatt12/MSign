@@ -40,12 +40,15 @@ namespace slots {
 		MODEL_XYZ2 = 0x0902, 		// ''
 		MODEL_XYZ3 = 0x0903, 		// ''
 		MODEL_RGB  = 0x0904, 		// '', color of triangle
-		MODEL_CAM_MINPOS = 0x9005,  // STRUCT; Vec3; minimum position of the camera 
-		MODEL_CAM_MAXPOS = 0x9006,  // ''; maximum position of the camera 
-		MODEL_CAM_FOCUS  = 0x9007,  // ''; lookat point of camera
+		MODEL_CAM_MINPOS  = 0x9005, // STRUCT; Vec3; minimum position of the camera 
+		MODEL_CAM_MAXPOS  = 0x9006, // ''; maximum position of the camera 
+		MODEL_CAM_FOCUS   = 0x9007, // ''; lookat point of camera
 		MODEL_CAM_POS_OVR = 0x9010, // ''; overriden position of camera       |
 		MODEL_CAM_TGT_OVR = 0x9011, // ''; overriden lookat point of camera   |> if these three options are all zero use random camera
-		MODEL_CAM_UP_OVR = 0x9012,  // ''; overriden up vector of camera      |
+		MODEL_CAM_UP_OVR  = 0x9012, // ''; overriden up vector of camera      |
+
+		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
+		SCCFG_TIMING = 0xb1,     	// STRUCT; ScCfgTime, how long to enable a certain screen; polled (inited to zero when SCCFG_INFO is updated, circular)
 	};
 
 #pragma pack (push, 1)
@@ -100,6 +103,24 @@ namespace slots {
 		uint64_t ps1, ps2;
 	};
 
+	struct ScCfgInfo {
+		uint16_t enabled_mask;
+		bool display_on;
+
+		enum EnabledMask : uint16_t {
+			TTC = 1,
+			WEATHER = 2,
+			MODEL = 4,
+			PERIODS = 8,
+			PARCELS = 16
+		};
+	};
+
+	struct ScCfgTime {
+		uint32_t millis_enabled;
+		uint8_t idx_order;
+	};
+
 #pragma pack (pop)
 
 #define SLOT_CHECK_DEF(sn)	static_assert(sizeof(sn) <= 16, #sn " too large")
@@ -111,6 +132,8 @@ namespace slots {
 	SLOT_CHECK_DEF(CalfixInfo);
 	SLOT_CHECK_DEF(ClassInfo);
 	SLOT_CHECK_DEF(PeriodInfo);
+	SLOT_CHECK_DEF(ScCfgInfo);
+	SLOT_CHECK_DEF(ScCfgTime);
 
 	enum struct UpdateStatusCode : uint8_t {
 		NO_UPDATE = 0x00,

@@ -27,6 +27,11 @@ namespace config {
 		CONFIG_USER,
 		CONFIG_PASS,
 
+		SC_TTC,
+		SC_WEATHER,
+		SC_3D,
+		SC_TIMES,
+
 		// leave me
 		ENTRY_COUNT
 	};

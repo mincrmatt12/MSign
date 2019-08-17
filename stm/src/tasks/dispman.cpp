@@ -12,13 +12,51 @@ void tasks::DispMan::init() {
 }
 
 void tasks::DispMan::loop() {
-	if (timekeeper.current_time - this->last_screen_transition > 12000) {
+	communicate();
+
+	if (data_ok && timekeeper.current_time - this->last_screen_transition > times_on[this->on]) {
 		teardown(this->on);
-		++this->on;
-		this->on %= this->count;
+		this->on = next(this->on);
 		activate(this->on);
-		setup((this->on + 1) % this->count);
+		setup(next(this->on));
 		last_screen_transition = timekeeper.current_time;
+	}
+}
+
+void tasks::DispMan::communicate() {
+	if (counter == 2) {
+		servicer.open_slot(slots::SCCFG_INFO, true, this->slot_cfg, true);
+		servicer.open_slot(slots::SCCFG_TIMING, false, this->slot_time, true);
+		++counter;
+	}
+	else if (counter == 3) {
+	}
+	else {
+		++counter;
+		return;
+	}
+
+	if (!servicer.slot_connected(this->slot_cfg)) return;
+
+	if (servicer.slot_dirty(this->slot_cfg, true)) {
+		// begin reading
+		
+		this->data_ok = false;
+		this->enabled_mask = servicer.slot<slots::ScCfgInfo>(this->slot_cfg).enabled_mask;
+
+		servicer.ack_slot(this->slot_time);
+	}
+
+	if (servicer.slot_dirty(this->slot_time, true)) {
+		const auto& dat = servicer.slot<slots::ScCfgTime>(this->slot_time);
+		this->times_on[dat.idx_order] = dat.millis_enabled;
+
+		if (dat.idx_order >= count - 1) {
+			this->data_ok = true;
+		}
+		else {
+			servicer.ack_slot(this->slot_time);
+		}
 	}
 }
 
@@ -37,17 +75,17 @@ void tasks::DispMan::setup(uint8_t i) {
 	}
 }
 
-void tasks::DispMan::teardown(uint8_t i) {
+void tasks::DispMan::teardown(uint8_t i, bool call_deinit) {
 	switch (i) {
 		case 0:
-			ttc.deinit();
+			if (call_deinit) ttc.deinit();
 			break;
 		case 1:
-			weather.deinit();
+			if (call_deinit) weather.deinit();
 			break;
 		case 2:
-			threedbg.deinit();
-			clockfg.deinit();
+			if (call_deinit) threedbg.deinit();
+			if (call_deinit) clockfg.deinit();
 
 			task_list[1] = nullptr;
 
@@ -68,4 +106,10 @@ void tasks::DispMan::activate(uint8_t i) {
 			task_list[1] = &clockfg;
 			break;
 	}
+}
+
+uint8_t tasks::DispMan::next(uint8_t i) {
+	++i; i %= count;
+	if (!enabled_mask) return i; // avoid infinite recursion
+	return (enabled_mask & (1 << i)) ? i : next(i);
 }

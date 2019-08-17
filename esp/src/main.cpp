@@ -7,7 +7,9 @@
 #include "time.h"
 #include "ttc.h"
 #include "weather.h"
+#include "sccfg.h"
 #include "webui.h"
+#include "upd.h"
 	
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -22,11 +24,17 @@ void setup() {
 	Serial1.println(F("You are looking at the debug output."));
 
 	wifi::prepare();
-	serial::interface.ensure_handshake();
 
 	if (!sd.begin(D1)) {
 		Serial1.println(F("SD Card couldn't init.\n"));
 		delay(1000);
+		ESP.restart();
+	}
+
+	// check for updates
+	auto reason = upd::needed();
+	if (reason == upd::WEB_UI) {
+		upd::update_website();
 		ESP.restart();
 	}
 
@@ -36,6 +44,8 @@ void setup() {
 	ttc::init();
 	weather::init();
 	webui::init();
+	sccfg::init();
+	serial::interface.ensure_handshake();
 }
 
 void loop() {
@@ -44,5 +54,6 @@ void loop() {
 	wifi::loop();
 	weather::loop();
 	webui::loop();
+	sccfg::loop();
 	delay(1);
 }

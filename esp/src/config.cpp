@@ -28,7 +28,13 @@ const char * config::entry_names[] = {
 
 	// CONFIG PARAMETERS
 	"configuser",
-	"configpass"
+	"configpass",
+	
+	// SCCFG PARAMETERS
+	"scttc",
+	"scweather",
+	"sc3d",
+	"sctimes"
 };
 
 
@@ -64,6 +70,7 @@ const char * config::ConfigManager::get_value(config::Entry e, const char * valu
 void config::ConfigManager::load_from_sd() {
 	// Make sure the config file exists before we read it.
 	
+	sd.chdir();
 	if (!sd.exists("config.txt")) {
 		Serial1.println(F("Config file missing, seed it with ssid/psdk/url and make the last entry update=now, or place the entire config there"));
 		delay(1000);
