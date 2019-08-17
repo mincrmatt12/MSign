@@ -130,7 +130,7 @@ namespace threed {
 				camera_look_target = Vec3{0, 0, 0};
 			}
 			else {
-				camera_look_target = Vec3{-1, 0, 0};
+				camera_look_target = Vec3{-0.5, 0.1, 0};
 			}
 		}
 
@@ -168,7 +168,7 @@ namespace threed {
 		int16_t cy = round(((c.y + 1) / 2) * 32);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
-		avg = std::min(std::pow(avg * 1.05, 1.5f), 0.95);
+		avg = std::min(std::pow(avg * 1.05, 1.52f), 0.97);
 
 		uint8_t cr = (float)t.r * (1 - avg);
 		uint8_t cg = (float)t.g * (1 - avg);
