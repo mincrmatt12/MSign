@@ -45,8 +45,6 @@ void time::stop() {
 }
 
 uint64_t time::get_time() {
-	Serial1.print(F("now() returns"));
-	Serial1.println(now());
 	return static_cast<uint64_t>(torontoTZ.toLocal(now())) * 1000;
 }
 

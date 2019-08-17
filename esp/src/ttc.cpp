@@ -45,6 +45,8 @@ void ttc::loop() {
 }
 
 void ttc::on_open(uint16_t data_id) {
+	Serial1.println("onopen: ");
+	Serial1.println(data_id);
 	switch (data_id) {
 		case slots::TTC_INFO:
 			serial::interface.update_data(slots::TTC_INFO, (const uint8_t *)&info, sizeof(info));
@@ -52,8 +54,6 @@ void ttc::on_open(uint16_t data_id) {
 		case slots::TTC_TIME_1:
 		case slots::TTC_TIME_2:
 		case slots::TTC_TIME_3:
-			Serial1.println("onopen: ");
-			Serial1.println(data_id);
 			serial::interface.update_data(data_id, (const uint8_t *)(&times[data_id - slots::TTC_TIME_1]), sizeof(slots::TTCTime));
 			break;
 		case slots::TTC_NAME_1:
@@ -61,6 +61,7 @@ void ttc::on_open(uint16_t data_id) {
 		case slots::TTC_NAME_3:
 			{
 				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + (data_id - slots::TTC_NAME_1)));
+				if (name == nullptr) return;
 				serial::interface.update_data(data_id, (const uint8_t *)name, strlen(name));
 				break;
 			}

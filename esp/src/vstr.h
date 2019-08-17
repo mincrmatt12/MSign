@@ -6,6 +6,7 @@
 #include <string.h>
 #include "serial.h"
 #include "common/slots.h"
+#include <HardwareSerial.h>
 
 namespace serial {
 	struct VStrSender {
@@ -16,14 +17,15 @@ namespace serial {
 		void set(uint8_t * dat, size_t data_size) {
 			data = dat;
 			this->data_size = data_size;
-			echo_index = 0;
+			this->echo_index = 0;
+			Serial1.println(F("vstr reset"));
 		}
 
 		void operator()(uint8_t * buffer, uint8_t & length) {
 			slots::VStr vsw;
 			
-			if (data_size < echo_index) {
-				echo_index = 0;
+			if (data_size < static_cast<size_t>(echo_index)) {
+				this->echo_index = 0;
 			}
 
 			vsw.index = echo_index;
@@ -37,8 +39,10 @@ namespace serial {
 				echo_index = 0;
 			}
 
-			memcpy(buffer, &vsw, sizeof(vsw));
-			length = sizeof(vsw);
+			Serial1.printf("vstr: %d %d\n", vsw.index, vsw.size);
+
+			memcpy(buffer, &vsw, 16);
+			length = 16;
 		}
 	};
 }

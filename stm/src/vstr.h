@@ -6,6 +6,7 @@
 #include <string.h>
 
 extern srv::Servicer servicer;
+extern uint64_t rtc_time;
 
 namespace srv::vstr {
 	// VStr's can contain any kind of data, the template is what to cast the pointer buffer to.
@@ -27,17 +28,29 @@ namespace srv::vstr {
 					return true;
 				case 1:
 					memset(raw, 0, Len);
-					state = 2;
+					if (!servicer.slot_connected(handle)) return false;
 					servicer.ack_slot(handle);
+					state = 2;
+					first_flag = true;
+					last_time = rtc_time;
 					return false;
 				case 2:
 					if (servicer.slot_dirty(handle, true)) {
-						const auto vs = slots::VStr(servicer.slot<slots::VStr>(handle)); // make sure we copy this in case there's some voodoo
+						last_time = rtc_time;
+						const auto& vs = servicer.slot<slots::VStr>(handle); // make sure we copy this in case there's some voodoo
+						if (vs.index > vs.size) return false;
+
 						if (vs.size >= Len) {
 							state = 0; // too large error
 							data = nullptr;
 							return true;
 						}
+
+						if (first_flag && vs.index != 0) {
+							servicer.ack_slot(handle);
+							return false;
+						}
+						first_flag = false;
 
 						if (vs.size - vs.index <= 14) {
 							size_t size = (vs.size - vs.index);
@@ -46,8 +59,6 @@ namespace srv::vstr {
 							data = (T *)&raw;
 							return true;
 						}
-
-						if (vs.index > Len - 14) return false;
 
 						memcpy((raw + vs.index), vs.data, 14);
 						servicer.ack_slot(handle);
@@ -71,6 +82,8 @@ namespace srv::vstr {
 	private:
 		uint8_t state = 0, handle;
 		uint8_t raw[Len];
+		uint64_t last_time = 0;
+		bool first_flag = true;
 	}; 
 
 	using VSWrapper = BasicVSWrapper<char>;

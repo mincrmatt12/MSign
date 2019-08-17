@@ -88,9 +88,16 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 					(int)((time2 - rtc_time) / 60000)
 		);
 		if (draw::text_size(time_str, font::vera_7::info) > 20) {
-			snprintf(time_str, 64, "%dm",
-					(int)((time1 - rtc_time) / 60000)
-			);
+			if (time1 - rtc_time < 60000) {
+				snprintf(time_str, 64, "%ds",
+						(int)((time1 - rtc_time) / 1000)
+				);
+			}
+			else {
+				snprintf(time_str, 64, "%dm",
+						(int)((time1 - rtc_time) / 60000)
+				);
+			}
 		}
 	}
 	else if (time1 > rtc_time) {
@@ -110,10 +117,10 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 	}
 
 	// Get the color of the text, green means > 1m < 5m, red means delay/alert / >10m, white if normal but close
-	if (alert || delay || (next_bus - rtc_time) > 600000) {
+	if (alert || (next_bus - rtc_time) > 600000) {
 		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y, 255, 20, 20);
 	}
-	else if ((next_bus - rtc_time) > 60000 && (next_bus - rtc_time) < 300000) {
+	else if ((next_bus - rtc_time) > 120000 && (next_bus - rtc_time) < 450000) {
 		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y, 40, 255, 40);
 	}
 	else {

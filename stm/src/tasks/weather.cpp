@@ -286,6 +286,11 @@ void tasks::WeatherScreen::loop() {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::rain, 20, 20, 3, 1, y, 43, 182, 255);
 	}
 	else {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 235, 235, 235);
+		if (icon[15] != 0 && icon[14] == 'd') {
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 245, 245, 245);
+		}
+		else if (icon[15] != 0) {
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 79, 79, 79);
+		}
 	}
 }

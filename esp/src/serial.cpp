@@ -108,7 +108,6 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				if (size < 4) goto size_error;
 
 				if (buf[0] == 0x00) {
-					// polled enable.
 					slots_continuous[buf[1]] = *(uint16_t *)(buf + 2);
 				}
 				else {
@@ -126,10 +125,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				Serial.write(buf_reply, 4);
 
 				if (buf[0] == 0x00) {
-					update_polled_data(buf[1]);
-				}
-				else {
-					update_open_handlers(slots_continuous[buf[1]]);
+					update_open_handlers(buf[1]);
 				}
 			}
 			break;
@@ -245,6 +241,7 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 void serial::SerialInterface::update_open_handlers(uint8_t slot_id) {
 	uint16_t data_id = this->slots_continuous[slot_id];
 	for (uint8_t i = 0; i < number_of_o_handlers; ++i) {
+		Serial1.printf("calling open handler at %p, \n", o_handlers[i]);
 		o_handlers[i](data_id);
 	}
 }
