@@ -195,15 +195,7 @@ void srv::Servicer::loop() {
 			return;
 		}
 
-		if ((timekeeper.current_time - last_comm) > 5000 && !sent_ping) {
-			this->pending_operations[pending_count++] = 0x51000000;
-			sent_ping = true;
-		}
-		if ((timekeeper.current_time - last_comm) > 15000 && sent_ping) {
-			this->pending_operations[pending_count++] = 0x51000000;
-			sent_ping = false;
-		}
-		if ((timekeeper.current_time - last_comm) > 27000 && !sent_ping) {
+		if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
 			this->pending_operations[pending_count++] = 0x51000000;
 			sent_ping = true;
 		}
@@ -214,6 +206,10 @@ void srv::Servicer::loop() {
 				return;
 			}
 			NVIC_SystemReset();
+		}
+
+		if (!LL_DMA_IsEnabledStream(UART_DMA, UART_DMA_RX_Stream)) {
+			start_recv();
 		}
 	}
 
@@ -730,7 +726,6 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 
 		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
-continue_parse:
 		last_comm = timekeeper.current_time;
 		sent_ping = false;
 		// first, check if we need to handle the handshake command
@@ -749,8 +744,8 @@ continue_parse:
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
-				start_recv();
 				LL_USART_ReceiveData8(ESP_USART); // try and get back in sync
+				start_recv();
 				return;
 			}
 
