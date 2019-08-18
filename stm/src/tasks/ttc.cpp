@@ -39,6 +39,10 @@ void tasks::TTCScreen::loop() {
 	if (ready) {
 		// Check first slot
 		for (uint8_t slot = 0; slot < 3; ++slot) {
+			if (info.nameLen[slot] > 16) {
+				ready = false;
+				return;
+			}
 			if (info.flags & (slots::TTCInfo::EXIST_0 << slot)) {
 				memset(name, 0, 17);
 				memcpy(name, servicer.slot(s_n[slot]), info.nameLen[slot]);
@@ -64,6 +68,7 @@ void tasks::TTCScreen::draw_bus() {
 }
 
 bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time1, uint64_t time2, bool alert, bool delay) {
+	if (!name) return false;
 	uint32_t t_pos = ((timekeeper.current_time / 50));
 	uint16_t size = draw::text_size(name, font::tahoma_9::info);
 
@@ -171,8 +176,8 @@ bool tasks::TTCScreen::deinit() {
 		servicer.close_slot(this->s_t[1]) &&
 		servicer.close_slot(this->s_t[2])
 	)) {
-		ready = false;
 		return false;
 	}
+	ready = false;
 	return true;
 }

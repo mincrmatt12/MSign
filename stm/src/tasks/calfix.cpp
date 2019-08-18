@@ -47,6 +47,7 @@ const uint8_t cls_fg_color_table[4][3] = {
 };
 
 void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_t room, uint16_t y_pos, uint8_t cl) {
+	if (!cname) return;
 	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 5, bg_color_table[cl][0], bg_color_table[cl][1], bg_color_table[cl][2]);
 	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 5, 64, y_pos + 6, 30, 30, 30);
 

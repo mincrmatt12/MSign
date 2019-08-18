@@ -15,6 +15,7 @@ namespace srv::vstr {
 	struct BasicVSWrapper {
 		const T* data = nullptr;  // can be null
 
+		bool is_updating() {return state > 0;}
 		bool open(uint16_t sid) {
 			if (servicer.open_slot(sid, false, handle)) {
 				state = 1;
@@ -64,12 +65,18 @@ namespace srv::vstr {
 						servicer.ack_slot(handle);
 						return false;
 					}
+					if (last_time - rtc_time > 50) {
+						last_time = rtc_time;
+						servicer.ack_slot(handle);
+						first_flag = true;
+					}
 					[[fallthrough]];
 				default:
 					return false;
 			}
 		}
 		void renew() {
+			if (is_updating()) return;
 			state = 1;
 			data = nullptr;
 		}
