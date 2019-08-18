@@ -126,6 +126,7 @@ class ScCfgPane extends React.Component {
 			<ScInnerPane title="ttc" configState={this.props.configState.ttc} uploadState={(x) => this.upload("ttc", x)} />
 			<ScInnerPane title="weather" configState={this.props.configState.weather} uploadState={(x) => this.upload("weather", x)} />
 			<ScInnerPane title="3d model" configState={this.props.configState.model} uploadState={(x) => this.upload("model", x)} />
+			<ScInnerPane title="school calendar" configState={this.props.configState.calfix} uploadState={(x) => this.upload("calfix", x)} />
 			<hr className="hr-gray" />
 		</div>
 	}

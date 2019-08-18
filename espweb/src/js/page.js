@@ -68,6 +68,7 @@ class App extends React.Component {
 				ttc: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 				weather: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 				model: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
+				calfix: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 			}
 		}
 	}
@@ -107,7 +108,7 @@ class App extends React.Component {
 		// sccfg
 		let needsNewSc = false;
 		for (let prop in this.state.sccfg) {
-			const name = {'ttc': 'ttc', 'weather': 'weather', 'model': '3d'}[prop];
+			const name = {'ttc': 'ttc', 'weather': 'weather', 'model': '3d', 'calfix': 'calfix'}[prop];
 			const p = this.state.sccfg[prop];
 
 			if (p.duration != 12000) needsNewSc = true;
@@ -123,7 +124,8 @@ class App extends React.Component {
 		if (needsNewSc) {
 			result += "sctimes=" + this.state.sccfg.ttc.duration.toString() + "," +
 								   this.state.sccfg.weather.duration.toString() + "," +
-								   this.state.sccfg.model.duration.toString() + "\n";
+								   this.state.sccfg.model.duration.toString() + "," + 
+								   this.state.sccfg.calfix.duration.toString() + "\n";
 		}
 
 		return result;
@@ -177,6 +179,7 @@ class App extends React.Component {
 					case 'scttc':
 					case 'scweather':
 					case 'sc3d':
+					case 'sccalfix':
 						{
 							let prop = key.substr(2);
 							if (prop == '3d') prop = 'model';
@@ -200,6 +203,7 @@ class App extends React.Component {
 							s.sccfg.ttc.duration = values[0];
 							s.sccfg.weather.duration = values[1];
 							s.sccfg.model.duration = values[2];
+							s.sccfg.calfix.duration = values[3];
 						});
 						break;
 				}
