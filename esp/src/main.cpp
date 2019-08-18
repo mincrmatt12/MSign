@@ -52,6 +52,8 @@ void setup() {
 	serial::interface.ensure_handshake();
 }
 
+int i = 0;
+
 void loop() {
 	serial::interface.loop();
 	ttc::loop();
@@ -59,5 +61,7 @@ void loop() {
 	weather::loop();
 	webui::loop();
 	sccfg::loop();
+	++i;
+	if (i % 800 == 0) Serial1.println(ESP.getFreeHeap());
 	delay(1);
 }

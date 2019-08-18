@@ -231,7 +231,7 @@ namespace webui {
 					{
 						if (!sd.exists("/upd")) sd.mkdir("/upd");
 						sd.chdir("/upd");
-						writing_update = sd.open(is_stm ? "stm.bin" : "esp.bin", FILE_WRITE);
+						writing_update = sd.open(is_stm ? "stm.bin" : "esp.bin", O_CREAT | O_WRITE | O_TRUNC);
 						sd.chdir();
 
 						Serial1.println(F("writing update data"));

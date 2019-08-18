@@ -262,7 +262,7 @@ skip:
 	}
 
 	void close() {
-		if (cl.connected()) cl.stop();
+		cl.stop();
 	}
 
 	int16_t next() {
@@ -412,4 +412,5 @@ std::function<char (void)> util::download_with_callback(const char * host, const
 
 void util::stop_download() {
 	dwnld.close();
+	dwnld_s.close();
 }

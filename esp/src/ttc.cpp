@@ -164,5 +164,6 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		Serial1.println(F("JSON fucked up."));
 	} // parse while calling our function.
 
+	util::stop_download();
 	free(dirtag);
 }

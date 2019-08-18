@@ -253,13 +253,13 @@ bool json::JSONParser::parse_object() {
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
 		push(n);
-		if (!advance_whitespace()) return false;
-		if (peek() != ':') return false;
+		if (!advance_whitespace()) {free(n); return false;}
+		if (peek() != ':') {free(n); return false;}
 		next();
 		parse_value();
 		pop();
 		free(n);
-		if (!advance_whitespace()) return false;
+		if (!advance_whitespace()) {free(n); return false;}
 		if (peek() == ',') continue;
 		else if (peek() == '}') break;
 		else return false;
