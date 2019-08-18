@@ -20,7 +20,7 @@ void setup() {
 
 	Serial.swap();
 
-	Serial1.println(F("\n==== Starting Sign Backend. ===="));
+	Serial1.println(F("\n==== Starting Sign Backend v2. ===="));
 	Serial1.println(F("You are looking at the debug output."));
 
 	wifi::prepare();

@@ -50,22 +50,23 @@ bool    display_ready = false;
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	draw::fill(fb, 0, 0, 0);
-	draw::text(fb, "STM .. OK", font::vera_7::info, 0, 7, 255, 255, 255);
+	draw::text(fb, "MSIGN .. V2", font::vera_7::info, 0, 7, 0, 255, 0);
+	draw::text(fb, "STM .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
 	switch (stage) {
 		case 1:
-			draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 14, 255, 0, 0);
+			draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 21, 255, 0, 0);
 			break;
 		case 2:
-			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
-			draw::text(fb, "UPD .. NONE", font::vera_7::info, 0, 21, 0, 255, 0);
+			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 21, 255, 255, 255);
+			draw::text(fb, "UPD .. NONE", font::vera_7::info, 0, 28, 0, 255, 0);
 			break;
 		case 3:
-			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 14, 255, 255, 255);
+			draw::text(fb, "ESP .. OK", font::vera_7::info, 0, 21, 255, 255, 255);
 			if (extra) {
-				draw::text(fb, extra, font::vera_7::info, 0, 21, 40, 40, 255);
+				draw::text(fb, extra, font::vera_7::info, 0, 28, 40, 40, 255);
 			}
 			else {
-				draw::text(fb, "UPD .. INIT", font::vera_7::info, 0, 21, 40, 40, 255);
+				draw::text(fb, "UPD .. INIT", font::vera_7::info, 0, 28, 40, 40, 255);
 			}
 			break;
 		default:
