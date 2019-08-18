@@ -1,16 +1,14 @@
 #include "stm32f2xx.h"
-#include "stm32f2xx_hal.h"
-#include "stm32f2xx_hal_flash.h"
-#include "stm32f2xx_hal_flash_ex.h"
 #include "common/bootcmd.h"
+#include "stm32f2xx_ll_system.h"
 #include <stdbool.h>
 #include "string.h"
 
 void jump_to_program();
 
 int main() {
-	HAL_Init();
 	bootcmd_init();
+	LL_FLASH_SetLatency(LL_FLASH_LATENCY_3);
 
 	if (bootcmd_get_cmd() == BOOTCMD_RUN) {
 		jump_to_program();
@@ -21,48 +19,59 @@ int main() {
 		while (1) {;}
 	}
 
-	// Alright, now we can read the BCMD to figure out what to do
+	// We are updating, unlock flash
+	FLASH->KEYR = FLASH_KEY1;
+	FLASH->KEYR = FLASH_KEY2;
 
-	// Step 1:
-	// (all happens in one go)
-	// Erase the flash
-	FLASH_EraseInitTypeDef erase_typedef = {0};
-	erase_typedef.TypeErase = TYPEERASE_SECTORS;
-	erase_typedef.Sector = FLASH_SECTOR_1;
-	erase_typedef.NbSectors = 8;
-	erase_typedef.VoltageRange = FLASH_VOLTAGE_RANGE_3;
+	uint8_t sector_count = 0;
 
-	uint32_t sector_error;
-
-	HAL_FLASH_Unlock();
-
-	if (HAL_FLASHEx_Erase(&erase_typedef, &sector_error) != HAL_OK) {
-		// oh no
-	}
-
-	// Step 3: Copy flash, rounding up to take full advantage.
-	
+	// Erase sectors
 	uint32_t size = bootcmd_update_size();
+	if (size > 0) sector_count++;
+	if (size > 16384) sector_count++;
+	if (size > 32768) sector_count++;
+	if (size > 49152) sector_count++;
+	if (size > 114688) sector_count++;
+	if (size > 245760) sector_count++;
+	if (size > 376832) sector_count++;
+
+	// set PSIZE
+	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+	FLASH->CR |= 2 << FLASH_CR_PSIZE_Pos;
+	
+	for (uint8_t i = 0; i < sector_count; ++i) {
+		CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+		FLASH->CR |= FLASH_CR_SER /* section erase */ | ((1 + i) << FLASH_CR_SNB_Pos);
+		FLASH->CR |= FLASH_CR_STRT;
+
+		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
+	}
+	CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+
+	// Sectors erased, program flash
+
 
 	if (size % 4 != 0) {
 		size += (4 - (size % 4)); // round to next 4
 	}
 	
 	for (uint32_t i = 0; i < size; i += 4) {
-		HAL_FLASH_Program(TYPEPROGRAM_WORD, 0x08004000 + i, *(uint32_t *)(0x08080000 + i));
+		FLASH->CR |= FLASH_CR_PG;
+		*(uint32_t *)(0x08004000 + i) = *(uint32_t *)(0x08080000 + i);
+
+		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
 	}
+
+	FLASH->CR |= FLASH_CR_LOCK;
 
 	if (memcmp((const void *)(0x08004000), (const void *)(0x08080000), bootcmd_update_size()) != 0) {
 		// UHOH
-		HAL_FLASH_Lock();
 		NVIC_SystemReset();
 	}
-	
 
 	// verify is ok, we can now erase the update partition and mark everything as hunkidory.
 	// this also means that a program can check a 
 	
-	HAL_FLASH_Lock();
 	bootcmd_service_update();
 
 	// the system is now updated, reset

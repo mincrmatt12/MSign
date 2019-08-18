@@ -1,6 +1,8 @@
 #include "upd.h"
 #include "config.h"
 #include <SdFat.h>
+#include "common/util.h"
+#include <eboot_command.h>
 
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
@@ -9,11 +11,9 @@
 #define USTATE_CURRENT_SENDING_STM 0x01
 #define USTATE_WAITING_FOR_FINISH 0x02
 #define USTATE_READY_TO_DO_ESP 0x03
-#define USTATE_FLASHING_ESP 0x04
 #define USTATE_JUST_DID_ESP 0x05
 
 #define USTATE_READY_FOR_WEB 0x10
-#define USTATE_EXTRACTING_WEB_AR 0x11
 
 #define USTATE_READY_FOR_CERT 0x20
 
@@ -46,7 +46,6 @@ none:
 compute:
 	switch (update_state) {
 		case USTATE_READY_FOR_WEB:
-		case USTATE_EXTRACTING_WEB_AR:
 			return upd::WEB_UI;
 		case USTATE_READY_FOR_CERT:
 			return upd::CERTIFICATE_FILE;
@@ -155,4 +154,291 @@ invalidformat:
 	sd.remove("webui.ar");
 	sd.chdir();
 	sd.rmdir("/upd");
+}
+
+void upd::update_cacerts() {
+	if (!sd.exists("/upd/cacert.ar")) {
+		Serial1.println(F("no new update file ca\n"));
+
+		sd.remove("/upd/state.txt");
+		return;
+	}
+
+	// literally remove some files
+	sd.remove("/ca/cacert.ar");
+	sd.remove("/ca/cacert.idx");
+	sd.rename("/upd/cacert.ar", "/ca/cacert.ar");
+
+	// done!
+	sd.remove("/upd/cacert.ar");
+	sd.remove("/upd/state.txt");
+
+	Serial1.println(F("done."));
+
+	return;
+}
+
+// routines for doing update
+void send_update_chunk(uint8_t * buffer, size_t length) {
+	if (length > 253) {
+		Serial1.println(F("invalid chunk length > 253"));
+	}
+
+	uint16_t chksum = util::compute_crc(buffer, length);
+
+	uint8_t send_buffer[length + 5];
+	send_buffer[0] = 0xa6;
+	send_buffer[1] = length + 2;
+	send_buffer[2] = 0x62;
+
+	memcpy(&send_buffer[3], &chksum, 2);
+	memcpy(&send_buffer[5], buffer, length);
+
+	Serial.write(send_buffer, length + 5);
+}
+
+uint16_t send_update_start(uint16_t checksum, uint32_t length) {
+	uint16_t chunk_count = (length / 253) + (length % 253 != 0);
+
+	uint8_t send_buffer[11] = {
+		0xa6,
+		0x08,
+		0x61,
+		0, 0, 0, 0, 0, 0, 0, 0
+	};
+
+	memcpy(&send_buffer[3], &checksum, 2);
+	memcpy(&send_buffer[5], &length, 4);
+	memcpy(&send_buffer[9], &chunk_count, 2);
+
+	Serial.write(send_buffer, sizeof(send_buffer));
+	return chunk_count;
+}
+
+void send_update_status(uint8_t status) {
+	uint8_t send_buffer[11] = {
+		0xa6,
+		0x08,
+		0x60,
+		status
+	};
+
+	Serial.write(send_buffer, sizeof(send_buffer));
+}
+
+bool retrieve_update_status(uint8_t& status_out) {
+	uint8_t recv_buffer[4];
+	if (Serial.available() >= 4) {
+		Serial.readBytes(recv_buffer, 4);
+		if (recv_buffer[0] == 0xa5 && recv_buffer[1] == 0x01 && recv_buffer[2] == 0x63) {
+			status_out = recv_buffer[3];
+			return true;
+		}
+	}
+	return false;
+}
+
+void set_update_state(uint8_t update_new_state) {
+	File state_F = sd.open("/upd/state.txt", O_WRITE | O_TRUNC);
+	state_F.print(update_new_state);
+	state_F.flush();
+	state_F.close();
+}
+
+
+// full system update
+
+void upd::update_system() {
+	// check the files are present
+	uint16_t crc_esp, crc_stm;
+	if (!sd.exists("/upd/stm.bin") || !sd.exists("/upd/esp.bin") || !sd.exists("/upd/chck.sum")) {
+		Serial1.println(F("missing files."));
+
+		sd.remove("/upd/state.txt");
+		return;
+	}
+
+	{
+		File csum_F = sd.open("/upd/chck.sum");
+		crc_esp = csum_F.parseInt();
+		crc_stm = csum_F.parseInt();
+		csum_F.close();
+	}
+
+	// check what to do based on the state
+	switch (update_state) {
+		case USTATE_CURRENT_SENDING_STM:
+			{
+				// send a reset code
+				send_update_status(0x10);
+
+				// reset update state:
+				set_update_state(USTATE_READY_TO_START);
+
+				// restart
+				ESP.restart();
+			}
+			break; // ?
+		case USTATE_READY_TO_START:
+			{
+				// wait for the incoming HANDSHAKE_INIT command
+				uint8_t buf[4];
+			try_again:
+				Serial.readBytes(buf, 3);
+
+				if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != 0x10) goto try_again;
+				buf[0] = 0xa6;
+				buf[2] = 0x13;
+
+				Serial.write(buf, 3);
+				Serial.readBytes(buf, 4);
+
+				if (buf[0] != 0xa5 || buf[1] != 0x01 || buf[2] != 0x63 || buf[3] != 0x10) goto try_again;
+
+				Serial1.println(F("Connected to STM32 for update."));
+
+				set_update_state(USTATE_CURRENT_SENDING_STM);  // mark current state
+
+				// tell to prepare for image
+				send_update_status(0x11); // preapre for image
+
+				// wait for command
+				uint8_t status;
+				while (!retrieve_update_status(status)) delay(5);
+
+				if (status != 0x12 /* ready for image */) {
+					Serial1.println(F("invalid command for readyimg"));
+					ESP.restart();
+				}
+
+				// image is ready, send the image command
+				
+				File stm_firmware = sd.open("/upd/stm.bin");
+				auto chunk = send_update_start(crc_stm, stm_firmware.size());
+				uint8_t current_chunk_buffer[253];
+				uint8_t current_chunk_size = 0;
+				Serial1.printf_P(PSTR("sending image to STM in %d chunks: "), chunk);
+				
+				while (true) {
+					while (!retrieve_update_status(status)) delay(1);
+
+					switch (status) {
+						case 0x12:
+							continue;
+						case 0x13:
+							{
+								Serial1.print('.');
+								--chunk;
+
+								if (chunk == 0) current_chunk_size = stm_firmware.size() - stm_firmware.position();
+								else 			current_chunk_size = 253;
+								memset(current_chunk_buffer, 0, 253);
+								stm_firmware.read(current_chunk_buffer, current_chunk_size);
+								break;
+							}
+						case 0x30:
+							{
+								Serial1.print('e');
+								break;
+							}
+						case 0x40:
+							{
+								Serial1.println(F("stm failed csum check, stopping update."));
+								sd.remove("/upd/state.txt");
+								ESP.restart();
+							}
+						case 0x20:
+							{
+								goto loopover;
+							}
+						default:
+							Serial1.printf_P(PSTR("unknown status code %02x\n"), status);
+							continue;
+					}
+					if (current_chunk_size == 0) continue;
+
+					// send the chunk
+					send_update_chunk(current_chunk_buffer, current_chunk_size);
+				}
+loopover:
+			Serial1.println(F("done.\nwaiting for finished update"));
+
+			while (!retrieve_update_status(status)) delay(50);
+
+			if (status != 0x21) {
+				Serial1.println(F("huh? ignoring invalid status."));
+			}
+
+			// setting update status accordingly and resetting
+			set_update_state(USTATE_READY_TO_DO_ESP);
+			ESP.restart();
+		}
+	case USTATE_READY_TO_DO_ESP:
+		{
+			// comes back here after a restart
+			Serial1.println(F("continuing update; flashing to ESP: "));
+
+			File esp_firmware = sd.open("/upd/esp.bin");
+			uintptr_t flash_addr_ptr = 0x300000;
+			uint8_t data_buffer[256];
+			bool has_finished = false;
+			int sectors = 0;
+			
+			// write the contents of esp.bin to flash at _FS_start, taking advantage of the _Helpfully_ allocated symbols :)
+			while (!has_finished) {
+				if (flash_addr_ptr % 4096 == 0) {
+					++sectors;
+					Serial1.print('e');
+					ESP.flashEraseSector(flash_addr_ptr / 4096);
+				}
+				Serial1.print('.');
+
+				memset(data_buffer, 0, 256);
+
+				if (esp_firmware.size() - esp_firmware.position() >= 256) {
+					esp_firmware.read(data_buffer, 256);
+				}
+				else {
+					esp_firmware.read(data_buffer, esp_firmware.size() - esp_firmware.position());
+					has_finished = true;
+				}
+
+				ESP.flashWrite(flash_addr_ptr, (uint32_t *)data_buffer, 256);
+				flash_addr_ptr += 256;
+			}
+
+			// THE FLASH... HAS.. BEEN WRITTEN
+			Serial1.println(F("ok."));
+
+			set_update_state(USTATE_JUST_DID_ESP);
+
+			// send eboot command
+			eboot_command ebcmd;
+			ebcmd.action = ACTION_COPY_RAW;
+			ebcmd.args[0] = 0x300000;
+			ebcmd.args[1] = 0x00000;
+			ebcmd.args[2] = sectors * 4096;
+			eboot_command_write(&ebcmd);
+
+			Serial1.println(F("eboot setup... HOLD ON TO YOUR BUTTS!"));
+			ESP.restart();
+		}
+	case USTATE_JUST_DID_ESP:
+		{
+			// update finished, returns here
+			Serial1.println(F("just did an update!"));
+
+			// clean up
+			sd.remove("/upd/state.txt");
+			sd.remove("/upd/stm.bin");
+			sd.remove("/upd/esp.bin");
+			sd.remove("/upd/chck.sum");
+
+			// send command
+			send_update_status(0x40);
+
+			// restart
+			ESP.restart();
+		}
+	}
 }

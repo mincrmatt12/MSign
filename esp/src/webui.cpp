@@ -3,6 +3,7 @@
 #include <SdFat.h>
 #include "config.h"
 #include "serial.h"
+#include "common/util.h"
 
 // routines for loading the sd card content
 extern SdFatSoftSpi<D6, D2, D5> sd;
@@ -20,7 +21,9 @@ namespace webui {
 	
 	// update params
 	bool package_ok = false;
+	int recieved_files = 0;
 	File writing_update;
+	uint16_t esp_crc = 0, stm_crc = 0;
 	
 	bool _doauth(bool tryagain=true) {
 		const char * user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
@@ -63,6 +66,9 @@ namespace webui {
 	void _notfound() {
 		if (!_doauth()) return;
 		auto uri = webserver.uri();
+		if (uri.length() > 2 && uri[0] == '/' && uri[1] == 'a' && uri[2] == '/') {
+			webserver.send(404, "text/plain", "no such api method");
+		}
 		if (uri == "/favicon.ico") webserver.send(404, "text/plain", "no ico");
 		else if (uri == "/page.js") _stream("page.js", "text/javascript;charset=utf-8", etags[0]);
 		else if (uri == "/page.css") _stream("page.css", "text/css;charset=utf-8", etags[1]);
@@ -124,6 +130,7 @@ namespace webui {
 						sd.remove("webui.ar");
 						sd.chdir();
 					}
+					return;
 				}
 				if (!package_ok) {
 					webserver.send(500, "text/plain", "invalid upload/aborted/something");
@@ -172,6 +179,82 @@ namespace webui {
 				case UPLOAD_FILE_WRITE:
 					{
 						writing_update.write(upload.buf, upload.currentSize);
+					}
+					break;
+			}
+		});
+		webserver.on("/a/updatefirm", HTTP_POST, [](){
+			if (!_doauth()) {
+				// make sure we delete the update files.
+				if (sd.chdir("/upd")) {
+					sd.remove("stm.bin");
+					sd.remove("esp.bin");
+					sd.remove("chck.sum");
+					sd.chdir();
+				}
+				return;
+			}
+
+			// verify we have the files
+			if (recieved_files != 2) {
+				webserver.send(400, FPSTR("text/plain"), FPSTR("invalid data"));
+				return;
+			}
+
+			// write out the checksum data
+			File f = sd.open("/upd/chck.sum", FILE_WRITE);
+			f.print(esp_crc);
+			f.print(' ');
+			f.print(stm_crc);
+			f.flush();
+			f.close();
+
+			f = sd.open("/upd/state.txt", FILE_WRITE);
+			f.print(0); // update UI
+			f.flush();
+			f.close();
+
+			webserver.send(200, "text/plain", "ok i'm going jeez");
+			delay(100);
+			serial::interface.reset();
+			// huh?
+			ESP.restart();
+			// HUH?
+			Serial1.println(F("aaaaaaaaaaaa"));
+		}, [](){
+			// file upload handler
+			auto& upload = webserver.upload();
+			bool is_stm = upload.name.equals("stm");
+
+			switch (upload.status) {
+				case UPLOAD_FILE_START: 
+					{
+						if (!sd.exists("/upd")) sd.mkdir("/upd");
+						sd.chdir("/upd");
+						writing_update = sd.open(is_stm ? "stm.bin" : "esp.bin", FILE_WRITE);
+						sd.chdir();
+
+						Serial1.println(F("writing update data"));
+						(is_stm ? stm_crc : esp_crc) = 0;
+					}
+					break;
+				case UPLOAD_FILE_END:
+					{
+						writing_update.flush();
+						writing_update.close();
+						++recieved_files;
+					}
+					break;
+				case UPLOAD_FILE_ABORTED:
+					{
+						writing_update.remove();
+						writing_update.close();
+					}
+					break;
+				case UPLOAD_FILE_WRITE:
+					{
+						writing_update.write(upload.buf, upload.currentSize);
+						(is_stm ? stm_crc : esp_crc) = util::compute_crc(upload.buf, upload.currentSize, (is_stm ? stm_crc : esp_crc));
 					}
 					break;
 			}

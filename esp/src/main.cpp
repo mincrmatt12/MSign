@@ -37,6 +37,10 @@ void setup() {
 		upd::update_website();
 		ESP.restart();
 	}
+	else if (reason == upd::FULL_SYSTEM) {
+		upd::update_system();
+		Serial1.println(F("inv"));
+	}
 
 	config::manager.load_from_sd();
 	wifi::init();

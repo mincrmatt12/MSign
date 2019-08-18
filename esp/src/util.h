@@ -1,5 +1,5 @@
-#ifndef MS_UTIL_H
-#define MS_UTIL_H
+#ifndef MSE_UTIL_H
+#define MSE_UTIL_H
 
 #include <string.h>
 #include <stdint.h>

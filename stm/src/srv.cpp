@@ -21,12 +21,15 @@ extern tasks::Timekeeper timekeeper;
 #define STATE_DMA_GOING 5
 
 #define USTATE_WAITING_FOR_READY 0
+#define USTATE_SEND_READY 20
 #define USTATE_ERASING_BEFORE_IMAGE 1
 #define USTATE_WAITING_FOR_PACKET 2
 #define USTATE_PACKET_WRITTEN 3
 #define USTATE_ERASING_BEFORE_PACKET 4
 #define USTATE_FAILED 10
 #define USTATE_PACKET_WRITE_FAIL_CSUM 11
+// not the dish soap
+#define USTATE_WAITING_FOR_FINISH 12
 
 // Updating routines
 
@@ -49,7 +52,7 @@ void begin_update(uint8_t &state) {
 	// Erase sector 8
 	
 	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SER_Pos);
+	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SNB_Pos);
 
 	// Actually erase
 	
@@ -59,7 +62,7 @@ void begin_update(uint8_t &state) {
 }
 
 void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased=false) {
-	if (!util::crc_valid(data, amt)) {
+	if (!util::crc_valid(data, amt + 2)) {
 		state = USTATE_PACKET_WRITE_FAIL_CSUM;
 		return;
 	}
@@ -71,7 +74,7 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 		// Erase the sector
 
 		CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-		FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SER_Pos);
+		FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SNB_Pos);
 
 		// Actually erase
 		
@@ -81,15 +84,20 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 
 		return;
 	}
-
-	// Otherwise, just program the data
-	update_package_data_counter += amt;
+	else if (already_erased) {
+		// we've just erased, so set the data counter to the amount in this new section
+		update_package_data_counter = (update_package_data_counter + amt) - 131072;
+	}
+	else {
+		// Otherwise, just program the data
+		update_package_data_counter += amt;
+	}
 
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
-	FLASH->CR |= FLASH_CR_PG;
 
 	while (amt--) {
-		(*(uint8_t *)(update_package_data_ptr)) = *(data++); // Program this byte
+		FLASH->CR |= FLASH_CR_PG;
+		(*(uint8_t *)(update_package_data_ptr++)) = *(data++); // Program this byte
 
 		// Wait for busy
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
@@ -128,14 +136,30 @@ void srv::Servicer::loop() {
 		switch (this->state) {
 			case STATE_UNINIT:
 				{
-					// Send out the HANDSHAKE_INIT command.
-					dma_out_buffer[0] = 0xa5;
-					dma_out_buffer[1] = 0x00;
-					dma_out_buffer[2] = 0x10;
-					send();
-					start_recv();
-					state = STATE_HANDSHAKE_RECV;
-					break;
+					// Check if the system has just updated
+					if (bootcmd_did_just_update()) {
+						// We did! Send out an update state finished
+						dma_out_buffer[0] = 0xa5;
+						dma_out_buffer[1] = 0x01;
+						dma_out_buffer[2] = 0x63;
+						dma_out_buffer[3] = 0x21;
+
+						update_state = USTATE_WAITING_FOR_FINISH;
+						send();
+						is_updating = true;
+						start_recv();
+						break;
+					}
+					else {
+						// Send out the HANDSHAKE_INIT command.
+						dma_out_buffer[0] = 0xa5;
+						dma_out_buffer[1] = 0x00;
+						dma_out_buffer[2] = 0x10;
+						send();
+						start_recv();
+						state = STATE_HANDSHAKE_RECV;
+						break;
+					}
 				}
 			case STATE_HANDSHAKE_RECV:
 				{
@@ -187,29 +211,31 @@ void srv::Servicer::loop() {
 			do_send_operation(pending_operation);
 		}
 
-		// authenticate last_time makes sense
-		if (timekeeper.current_time - last_comm > 200000) {
-			// the failsafe should have activated, otherwise we've gone madd
-			last_comm = timekeeper.current_time; // there was probably a time glitch
-			// shit happens
-			return;
-		}
-
-		if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
-			this->pending_operations[pending_count++] = 0x51000000;
-			sent_ping = true;
-		}
-		if ((timekeeper.current_time - last_comm) > 40000) {
-			// Reset.
-			if (timekeeper.current_time < last_comm) {
-				last_comm = timekeeper.current_time;
+		if (!is_updating) {
+			// authenticate last_time makes sense
+			if (timekeeper.current_time - last_comm > 200000) {
+				// the failsafe should have activated, otherwise we've gone madd
+				last_comm = timekeeper.current_time; // there was probably a time glitch
+				// shit happens
 				return;
 			}
-			NVIC_SystemReset();
-		}
 
-		if (!LL_DMA_IsEnabledStream(UART_DMA, UART_DMA_RX_Stream)) {
-			start_recv();
+			if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
+				this->pending_operations[pending_count++] = 0x51000000;
+				sent_ping = true;
+			}
+			if ((timekeeper.current_time - last_comm) > 40000) {
+				// Reset.
+				if (timekeeper.current_time < last_comm) {
+					last_comm = timekeeper.current_time;
+					return;
+				}
+				NVIC_SystemReset();
+			}
+
+			if (!LL_DMA_IsEnabledStream(UART_DMA, UART_DMA_RX_Stream)) {
+				start_recv();
+			}
 		}
 	}
 
@@ -219,20 +245,19 @@ void srv::Servicer::loop() {
 			case USTATE_ERASING_BEFORE_IMAGE:
 				{
 					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 						// Report readiness for bytes
 						this->update_state = USTATE_WAITING_FOR_PACKET;
 						this->pending_operations[pending_count++] = 0x60'0000'12;
-
-						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 					}
 					break;
 				}
 			case USTATE_ERASING_BEFORE_PACKET:
 				{
 					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 						this->update_state = USTATE_WAITING_FOR_PACKET;
 
-						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 						append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
 					}
 					break;
@@ -244,7 +269,7 @@ void srv::Servicer::loop() {
 						//
 						// Verify checksum
 						
-						if (util::compute_crc((uint8_t *)(0x0804'0000), this->update_total_size) != this->update_checksum) {
+						if (util::compute_crc((uint8_t *)(0x0808'0000), this->update_total_size) != this->update_checksum) {
 							this->update_state = USTATE_FAILED;
 							this->pending_operations[pending_count++] = 0x60'0000'40;
 
@@ -659,7 +684,7 @@ void srv::Servicer::process_command() {
 			{
 				// UPDATE_MSG_START
 				
-				this->update_chunks_remaining = *(uint16_t *)(dma_buffer + 10);
+				this->update_chunks_remaining = *(uint16_t *)(dma_buffer + 9);
 				this->update_total_size = *(uint32_t *)(dma_buffer + 5);
 				this->update_checksum = *(uint16_t *)(dma_buffer + 3);
 
@@ -670,9 +695,9 @@ void srv::Servicer::process_command() {
 			}
 		case 0x62:
 			{
-				this->update_pkg_size = (256 - 3);
-				memcpy(this->update_pkg_buffer, this->dma_buffer + 5, 251);  // copy data
-				memcpy(this->update_pkg_buffer + 251, this->dma_buffer + 3, 2); // copy crc
+				this->update_pkg_size = this->dma_buffer[1] - 2;
+				memcpy(this->update_pkg_buffer, this->dma_buffer + 5, this->update_pkg_size);  // copy data
+				memcpy(this->update_pkg_buffer + this->update_pkg_size, this->dma_buffer + 3, 2); // copy crc
 
 				append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size);
 				break;
@@ -698,6 +723,11 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 
 				// When BSY bit is 0 the loop will send us to the right state.
 				break;
+			}
+		case 0x40:
+			{
+				// update done!
+				NVIC_SystemReset();
 			}
 		default:
 			{
@@ -744,7 +774,6 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
-				LL_USART_ReceiveData8(ESP_USART); // try and get back in sync
 				start_recv();
 				return;
 			}
@@ -753,8 +782,6 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 		else {
 			process_command();
-			dma_buffer[0] = 0x00;
-
 			start_recv();
 		}
 	}
@@ -793,6 +820,8 @@ const char * srv::Servicer::update_status() {
 		case USTATE_WAITING_FOR_PACKET:
 			snprintf(update_status_buffer, 16, "UPD .. P%04d", update_chunks_remaining);
 			break;
+		case USTATE_WAITING_FOR_FINISH:
+			snprintf(update_status_buffer, 16, "UPD .. WESP");
 		default:
 			break;
 	}

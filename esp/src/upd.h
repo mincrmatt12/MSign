@@ -14,6 +14,7 @@ namespace upd {
 	
 	void update_cacerts();
 	void update_website();
+	void update_system();
 }
 
 #endif /* ifndef UPD_H */

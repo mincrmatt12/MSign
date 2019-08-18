@@ -50,7 +50,7 @@ bool    display_ready = false;
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	draw::fill(fb, 0, 0, 0);
-	draw::text(fb, "DISP .. OK", font::vera_7::info, 0, 7, 255, 255, 255);
+	draw::text(fb, "STM .. OK", font::vera_7::info, 0, 7, 255, 255, 255);
 	switch (stage) {
 		case 1:
 			draw::text(fb, "ESP .. WAIT", font::vera_7::info, 0, 14, 255, 0, 0);

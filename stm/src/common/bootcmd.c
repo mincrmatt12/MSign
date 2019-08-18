@@ -2,14 +2,20 @@
 #ifdef USE_FULL_LL_DRIVER
 #include "stm32f2xx_ll_rtc.h"
 #include "stm32f2xx_ll_pwr.h"
+#include "stm32f2xx_ll_rcc.h"
+#include "stm32f2xx_ll_bus.h"
 
 void bootcmd_init() {
+	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);
+	LL_RCC_EnableRTC(); // enable the RTC so we can play with it's goodies :)
 	LL_PWR_EnableBkUpAccess();
 	LL_RTC_DisableWriteProtection(RTC);
 }
 
 bool bootcmd_did_just_update() {
-	return LL_RTC_BAK_GetRegister(RTC, 1) != 0;
+	bool x = LL_RTC_BAK_GetRegister(RTC, 1) != 0;
+	LL_RTC_BAK_SetRegister(RTC, 1, 0x0);
+	return x;
 }
 
 bootcmd_t bootcmd_get_cmd() {
