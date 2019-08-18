@@ -71,6 +71,8 @@ void tasks::DispMan::setup(uint8_t i) {
 		case 2:
 			threedbg.init();
 			clockfg.init();
+		case 3:
+			calfix.init();
 			break;
 	}
 }
@@ -88,7 +90,9 @@ void tasks::DispMan::teardown(uint8_t i, bool call_deinit) {
 			if (call_deinit) clockfg.deinit();
 
 			task_list[1] = nullptr;
-
+			break;
+		case 3:
+			if (call_deinit) calfix.deinit();
 			break;
 	}
 }
@@ -104,6 +108,9 @@ void tasks::DispMan::activate(uint8_t i) {
 		case 2:
 			task_list[0] = &threedbg;
 			task_list[1] = &clockfg;
+			break;
+		case 3:
+			task_list[0] = &calfix;
 			break;
 	}
 }

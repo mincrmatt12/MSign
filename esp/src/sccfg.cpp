@@ -6,7 +6,7 @@
 #include <Arduino.h>
 
 namespace sccfg {
-	const uint8_t number_of_screens = 3;
+	const uint8_t number_of_screens = 4;
 
 	uint16_t force_enabled_mask = 0;
 	uint16_t force_disabled_mask = 0;
@@ -96,6 +96,7 @@ namespace sccfg {
 		create_events_for(0, config::SC_TTC);
 		create_events_for(1, config::SC_WEATHER);
 		create_events_for(2, config::SC_3D);
+		create_events_for(3, config::SC_CFIX);
 
 		if (parsed_event_count > 0)
 			event_idx %= parsed_event_count;
@@ -103,22 +104,25 @@ namespace sccfg {
 		times[0].idx_order = 0;
 		times[1].idx_order = 1;
 		times[2].idx_order = 2;
+		times[3].idx_order = 3;
 
 		last_enabled_mask = ~parsed_enabled_mask;
 
 		if (config::manager.get_value(config::SC_TIMES) != nullptr) {
-			int tTTC, tWEA, t3D;
+			int tTTC, tWEA, t3D, tCFIX = 12000;
 
-			sscanf(config::manager.get_value(config::SC_TIMES), "%d,%d,%d", &tTTC, &tWEA, &t3D);
+			sscanf(config::manager.get_value(config::SC_TIMES), "%d,%d,%d,%d", &tTTC, &tWEA, &t3D, &tCFIX);
 
 			times[0].millis_enabled = tTTC;
 			times[1].millis_enabled = tWEA;
 			times[2].millis_enabled = t3D;
+			times[3].millis_enabled = tCFIX;
 		}
 		else {
 			times[0].millis_enabled = 12000;
 			times[1].millis_enabled = 12000;
 			times[2].millis_enabled = 12000;
+			times[3].millis_enabled = 12000;
 		}
 
 		serial::interface.register_handler([](uint16_t data_id){

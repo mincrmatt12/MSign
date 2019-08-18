@@ -31,6 +31,7 @@ namespace config {
 		SC_WEATHER,
 		SC_3D,
 		SC_TIMES,
+		SC_CFIX,
 
 		// leave me
 		ENTRY_COUNT

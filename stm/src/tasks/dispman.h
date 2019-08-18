@@ -6,6 +6,7 @@
 #include "tasks/ttc.h"
 #include "tasks/weather.h"
 #include "tasks/threed.h"
+#include "tasks/calfix.h"
 
 namespace tasks {
 	struct DispMan : public sched::Task {
@@ -25,12 +26,13 @@ namespace tasks {
 		WeatherScreen weather;
 		ClockScreen clockfg;
 		threed::Renderer threedbg;
+		CalfixScreen calfix;
 
 		uint8_t on;
 		uint64_t last_screen_transition = 0;
-		const static uint8_t count = 3;
+		const static uint8_t count = 4;
 
-		uint64_t times_on[count] = {12000, 12000, 12000};
+		uint64_t times_on[count] = {12000, 12000, 12000, 12000};
 
 		bool data_ok = true;
 		uint16_t enabled_mask = (1 << count) - 1;

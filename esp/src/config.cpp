@@ -34,7 +34,8 @@ const char * config::entry_names[] = {
 	"scttc",
 	"scweather",
 	"sc3d",
-	"sctimes"
+	"sctimes",
+	"sccalfix"
 };
 
 

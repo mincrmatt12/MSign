@@ -4,7 +4,6 @@
 #include "rcc.h"
 #include "rng.h"
 #include "fonts/latob_15.h"
-#include "fonts/latob_12.h"
 #include "fonts/dejavu_10.h"
 #include "fonts/vera_7.h"
 #include "schedef.h"
