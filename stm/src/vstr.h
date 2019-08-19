@@ -33,7 +33,6 @@ namespace srv::vstr {
 					servicer.ack_slot(handle);
 					state = 2;
 					first_flag = true;
-					last_time = rtc_time;
 					return false;
 				case 2:
 					if (servicer.slot_dirty(handle, true)) {
@@ -47,14 +46,10 @@ namespace srv::vstr {
 							return true;
 						}
 
-						if (first_flag && vs.index != 0) {
-							servicer.ack_slot(handle);
-							return false;
-						}
-						first_flag = false;
-
 						if (vs.size - vs.index <= 14) {
 							size_t size = (vs.size - vs.index);
+							if (size > 14) size = 14;
+							if (vs.index + size > Len) return false;
 							state = 0;
 							memcpy((raw + vs.index), vs.data, size);
 							data = (T *)&raw;
@@ -64,11 +59,6 @@ namespace srv::vstr {
 						memcpy((raw + vs.index), vs.data, 14);
 						servicer.ack_slot(handle);
 						return false;
-					}
-					if (last_time - rtc_time > 50) {
-						last_time = rtc_time;
-						servicer.ack_slot(handle);
-						first_flag = true;
 					}
 					[[fallthrough]];
 				default:

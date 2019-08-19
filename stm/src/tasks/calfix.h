@@ -19,6 +19,7 @@ namespace tasks {
 		void draw_class(uint64_t clstime, const char * name, uint16_t room, uint16_t y_pos, uint8_t colors_idx);
 
 		uint8_t /* slot ids */ s_info, s_c1, s_c2, s_c3, s_c4, s_prdh1, s_prdh2;
+		bool ready = false;
 	};
 
 }
