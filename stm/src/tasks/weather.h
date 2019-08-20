@@ -18,7 +18,6 @@ namespace tasks {
 		
 		srv::vstr::VSWrapper s_status;
 		uint8_t s_info, s_icon;
-
 	};
 }
 
