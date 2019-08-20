@@ -71,6 +71,7 @@ void tasks::DispMan::setup(uint8_t i) {
 		case 2:
 			threedbg.init();
 			clockfg.init();
+			break;
 		case 3:
 			calfix.init();
 			break;
