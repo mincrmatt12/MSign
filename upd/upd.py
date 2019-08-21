@@ -6,7 +6,7 @@ import struct
 import time
 
 def usage():
-    print("Usage: upd {reset,download,upload} [file]")
+    print("Usage: upd {reset,download,upload} [args...]")
 
 if len(sys.argv) < 2:
     usage()
