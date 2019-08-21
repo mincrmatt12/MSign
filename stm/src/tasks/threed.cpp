@@ -115,7 +115,7 @@ namespace threed {
 		interp_progress += (rtc_time - last_update) * 2;
 		last_update = rtc_time;
 
-		if (interp_progress > 10000) {
+		if (interp_progress > 4500) {
 			interp_progress = 0;
 
 			camera_pos = camera_target;
@@ -134,8 +134,8 @@ namespace threed {
 			}
 		}
 
-		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 10000.0f);
-		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 10000.0f);
+		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
+		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
