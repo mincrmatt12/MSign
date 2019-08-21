@@ -16,27 +16,68 @@ extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
 
 bool tasks::CalfixScreen::init() {
-	return true; // TODO
+	// TODO: fix me
+	if (!(
+		servicer.open_slot(slots::CALFIX_INFO, true, this->s_info) &&
+		servicer.open_slot(slots::CALFIX_CLS1, true, this->s_c[0]) &&
+		servicer.open_slot(slots::CALFIX_CLS2, true, this->s_c[1]) &&
+		servicer.open_slot(slots::CALFIX_CLS3, true, this->s_c[2]) &&
+		servicer.open_slot(slots::CALFIX_CLS4, true, this->s_c[3]) &&
+		servicer.open_slot(slots::CALFIX_PRDH1, true, this->s_prd[0]) &&
+		servicer.open_slot(slots::CALFIX_PRDH2, true, this->s_prd[1])
+	)) {
+		return false;
+	}
+	return true;
 }
 
 bool tasks::CalfixScreen::deinit() {
-	return true; // TODO
+	// TODO: also fix me
+	if (!(
+		servicer.close_slot(this->s_info) &&
+		servicer.close_slot(this->s_c[0]) &&
+		servicer.close_slot(this->s_c[1]) &&
+		servicer.close_slot(this->s_c[2]) &&
+		servicer.close_slot(this->s_c[3]) &&
+		servicer.close_slot(this->s_prd[0]) &&
+		servicer.close_slot(this->s_prd[1])
+	)) {
+		return false;
+	}
+	ready = false;
+	return true;
 }
 
+const uint16_t pos_table[4] = {
+	11,
+	16,
+	22,
+	27
+};
+
 void tasks::CalfixScreen::loop() {
-	draw_header(1, false);
-	// test content to see how the screen might look
-	draw_class(0, "CHC2D3-02", 203, 11, 0);
-	draw_class(1040000, "ENG3U3-02", 203, 16, 1);
-	draw_class(1040000, "SPH3U3-01", 204, 22, 2);
-	draw_class(1040000, "MPM4U0-02", 204, 27, 3);
+	if (servicer.slot_dirty(this->s_info, true)) {
+		ready = true;
+	}
+
+	if (!ready) return;
+
+	const auto& header = servicer.slot<slots::CalfixInfo>(this->s_info);
+	if (!header.active) return;
+	draw_header(header.day, header.abnormal);
+	if (strlen((char *)servicer.slot<slots::ClassInfo>(this->s_c[0]).name) < 6) return;
+
+	for (int i = 0; i < 4; ++i) {
+		const auto& a = servicer.slot<slots::PeriodInfo>(this->s_prd[i / 2]);
+		draw_class((i % 2 == 0) ? a.ps1 : a.ps2, (char *)servicer.slot<slots::ClassInfo>(this->s_c[i]).name, servicer.slot<slots::ClassInfo>(this->s_c[i]).room, pos_table[i], i);
+	}
 }
 
 const uint8_t bg_color_table[4][3] = {
 	{2, 2, 5},
 	{1, 1, 2},
 	{1, 2, 1},
-	{2, 4, 2}
+	{2, 5, 2}
 };
 
 const uint8_t cls_fg_color_table[4][3] = {
@@ -78,7 +119,10 @@ void tasks::CalfixScreen::draw_header(uint8_t day, bool abnormal) {
 	uint16_t text_size = draw::text_size(textbuf, font::lato_bold_10::info);
 	int16_t pos_offset = 32 + std::round(5.5f * sinf((float)(timekeeper.current_time) / 1000.0f));
 
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_10::info, pos_offset - text_size / 2, 9, 244, 244, 244);
+	if (!abnormal)
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_10::info, pos_offset - text_size / 2, 9, 244, 244, 244);
+	else 
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_10::info, pos_offset - text_size / 2, 9, 244, 50, 50);
 	draw::rect(matrix.get_inactive_buffer(), 0, 10, 64, 11, 1, 1, 1);
 
 	// create the two other thingies
