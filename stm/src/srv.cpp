@@ -525,7 +525,7 @@ void srv::Servicer::start_recv() {
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
 
-void srv::Servicer::recv_full() {
+bool srv::Servicer::recv_full() {
 	state = STATE_DMA_GOING;
 	// setup a recieve similar to out_buffer
 
@@ -538,6 +538,7 @@ void srv::Servicer::recv_full() {
 
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
+	return false;
 }
 
 void srv::Servicer::do_send_operation(uint32_t operation) {
@@ -640,7 +641,7 @@ void srv::Servicer::process_command() {
 				// service a ACK_CLOSE_CONN.
 				uint8_t slot = dma_buffer[3];
 
-				this->slot_states[slot / 4] &= ~(uint8_t)(0b11 << ((slot % 4)*2)); // mark the slot as unopen and disconnected
+				this->slot_states[slot / 4] &= ~(0b11 << ((slot % 4)*2)); // mark the slot as unopen and disconnected
 			}
 			break;
 		case 0x40:
@@ -777,7 +778,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 				start_recv();
 				return;
 			}
-
+			
 			recv_full();
 		}
 		else {

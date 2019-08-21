@@ -71,7 +71,7 @@ namespace srv {
 
 		void send();
 		void start_recv();
-		void recv_full();
+		bool recv_full();
 		void cancel_recv();
 
 		void process_command();

@@ -145,6 +145,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				};
 
 				Serial.write(buf_reply, 4);
+				Serial.flush();
 			}
 			break;
 		case NEW_DATA:
