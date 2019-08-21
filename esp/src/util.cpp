@@ -22,7 +22,7 @@ struct HttpAdapter {
 
 struct HttpsAdapter {
 	typedef BearSSL::WiFiClientSecure Client;
-	static const int timeout = 8000;
+	static const int timeout = 3000;
 	BearSSL::CertStore cs;
 	bool inited = false;
 
