@@ -6,7 +6,8 @@ import struct
 import time
 
 def usage():
-    print("Usage: upd {reset,download,upload} [args...]")
+    print("Usage: upd {reset,download,upload} [file]")
+    print("Usage: upd {update} esp stm")
 
 if len(sys.argv) < 2:
     usage()
@@ -66,6 +67,26 @@ def upload():
             print("SD card write failed")
         else:
             print("Unknown error")
+
+
+def update():
+    if len(sys.argv) < 4:
+        usage()
+    else:
+        import requests
+        from getpass import getpass
+
+        username = raw_input("user: ")
+        password = getpass()
+
+        with open(sys.argv[2], 'rb') as esp:
+            with open(sys.argv[3], 'rb') as stm:
+                requests.post('http://msign.mm12.xyz/a/updatefirm', auth=requests.auth.HTTPDigestAuth(username, password), files={
+                    'stm': stm,
+                    'esp': esp
+                })
+        
+        print('did something')
 
 cc = {
     "reset": reset,
