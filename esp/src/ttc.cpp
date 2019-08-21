@@ -29,7 +29,6 @@ void ttc::loop() {
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
 			if (stopid != nullptr) {
-				memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
 				const char * dtag = config::manager.get_value((config::Entry)(config::DTAG1 + slot));
 				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + slot));
 				serial::interface.update_data(slots::TTC_NAME_1 + slot, (const uint8_t *)name, strlen(name));
@@ -159,6 +158,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 			state.epoch = 0;
 		}
 	});
+
+	memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
 
 	if (!parser.parse(std::move(cb))) {
 		Serial1.println(F("JSON fucked up."));
