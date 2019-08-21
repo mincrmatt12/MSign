@@ -42,6 +42,9 @@ namespace json {
 		Value(int64_t v) : type(INT), int_val(v) {}
 		Value(bool b) : type(BOOL), bool_val(b) {}
 		Value(const char * str) : type(STR), str_val(str) {}
+
+		inline bool is_number() const {return type == FLOAT || type == INT;}
+		inline float as_number() const {return type == FLOAT ? float_val : int_val;}
 	};
 
 	typedef std::function<void (PathNode **, uint8_t, const Value&)> JSONCallback;
