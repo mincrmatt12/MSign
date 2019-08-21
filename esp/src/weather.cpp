@@ -46,6 +46,8 @@ void weather::init() {
 	});
 }
 
+bool use_next_hour_summary = false;
+
 json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
 		// First, check if we're in the currently block.
 		
@@ -72,8 +74,22 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
-				Serial1.printf("summary = %s\n", v.str_val);
-				weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);
+				Serial1.printf("summary (minute) = %s\n", v.str_val);
+			}
+			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
+				if ( /* list of things that we should probably show an hourly summary for */
+					!strcmp(v.str_val, "rain") || !strcmp(v.str_val, "snow") || !strcmp(v.str_val, "sleet")) {
+					use_next_hour_summary = true;
+					Serial1.println("marking summary as hourly");
+				}
+			}
+		}
+		else if (stack_ptr == 3 && strcmp(stack[1]->name, "hourly") == 0) {
+			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR && !use_next_hour_summary) {
+				weather::buffer_size = strlen(v.str_val) + 1;
+				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
+				strcpy(weather::info_buffer, v.str_val);
+				Serial1.printf("summary (hour) = %s\n", v.str_val);
 			}
 		}
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
@@ -114,8 +130,10 @@ void weather::loop() {
 			return;
 		}
 
+		use_next_hour_summary = false;
 		w_parser.parse(std::move(cb));
 		util::stop_download();
+		weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);
 
 		time_since_last_update = now();
 
