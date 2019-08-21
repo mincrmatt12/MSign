@@ -231,8 +231,16 @@ add:
 }
 
 bool json::JSONParser::parse_array() {
-	top().array = true;
-	top().index = 0;
+	bool anon_array_required = top().array;
+	if (!anon_array_required) {
+		top().array = true;
+		top().index = 0;
+	}
+	else {
+		push();
+		top().array = true;
+		top().index = 0;
+	}
 
 	while (peek() != 0) {
 		next();
@@ -244,12 +252,18 @@ bool json::JSONParser::parse_array() {
 	}
 	 
 	next();
+
+	if (anon_array_required) {
+		pop();
+	}
+
 	return true;
 }
 
 bool json::JSONParser::parse_object() {
 	while (peek() != 0) {
 		next();
+		if (!advance_whitespace()) return false;
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
 		push(n);
