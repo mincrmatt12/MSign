@@ -102,7 +102,7 @@ int main() {
 			servicer.loop();
 			matrix.display();
 			show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
-			while (matrix.is_active()) {;}
+			while (matrix.is_active()) {servicer.loop();}
 			matrix.swap_buffers();
 		}
 
