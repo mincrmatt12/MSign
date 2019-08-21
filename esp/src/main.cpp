@@ -10,6 +10,7 @@
 #include "sccfg.h"
 #include "webui.h"
 #include "upd.h"
+#include "calfix.h"
 	
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -49,6 +50,7 @@ void setup() {
 	weather::init();
 	webui::init();
 	sccfg::init();
+	calfix::init();
 	serial::interface.ensure_handshake();
 }
 
@@ -61,6 +63,7 @@ void loop() {
 	weather::loop();
 	webui::loop();
 	sccfg::loop();
+	calfix::loop();
 	++i;
 	if (i % 800 == 0) Serial1.println(ESP.getFreeHeap());
 	delay(1);
