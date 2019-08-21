@@ -57,9 +57,9 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			// Current temp
 			// Icon (special: if it's partly-cloudy, just mark that)
 			
-			if (strcmp(stack[2]->name, "apparentTemperature") == 0 && v.type == json::Value::FLOAT) {
+			if (strcmp(stack[2]->name, "apparentTemperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
-				weather::info.ctemp = v.float_val;
+				weather::info.ctemp = v.as_number();
 				Serial1.printf("temp = %f\n", v.float_val);
 			}
 			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
@@ -93,15 +93,15 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			}
 		}
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
-			if (strcmp(stack[3]->name, "apparentTemperatureHigh") == 0 && v.type == json::Value::FLOAT) {
+			if (strcmp(stack[3]->name, "apparentTemperatureHigh") == 0 && v.is_number()) {
 				// Store the high apparent temperature
-				weather::info.htemp = v.float_val;
-				Serial1.printf("htemp = %f\n", v.float_val);
+				weather::info.htemp = v.as_number();
+				Serial1.printf("htemp = %f\n", v.as_number());
 			}
-			else if (strcmp(stack[3]->name, "apparentTemperatureLow") == 0 && v.type == json::Value::FLOAT) {
+			else if (strcmp(stack[3]->name, "apparentTemperatureLow") == 0 && v.is_number()) {
 				// Store the low apparent temperature
-				weather::info.ltemp = v.float_val;
-				Serial1.printf("ltemp = %f\n", v.float_val);
+				weather::info.ltemp = v.as_number();
+				Serial1.printf("ltemp = %f\n", v.as_number());
 			}
 		}
 });
@@ -115,7 +115,7 @@ void weather::loop() {
 		if (config::manager.get_value(config::WEATHER_KEY) == nullptr) return;
 
 		char url[128];
-		snprintf(url, 128, "/forecast/%s/%s,%s?exclude=hourly,alerts&units=ca", 
+		snprintf(url, 128, "/forecast/%s/%s,%s?exclude=alerts&units=ca", 
 				config::manager.get_value(config::WEATHER_KEY),
 				config::manager.get_value(config::WEATHER_LAT),
 				config::manager.get_value(config::WEATHER_LONG));
@@ -131,7 +131,9 @@ void weather::loop() {
 		}
 
 		use_next_hour_summary = false;
-		w_parser.parse(std::move(cb));
+		if (!w_parser.parse(std::move(cb))) {
+			Serial1.println("that's no good");
+		}
 		util::stop_download();
 		weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);
 
