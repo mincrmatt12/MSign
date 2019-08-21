@@ -63,7 +63,10 @@ void tasks::CalfixScreen::loop() {
 	if (!ready) return;
 
 	const auto& header = servicer.slot<slots::CalfixInfo>(this->s_info);
-	if (!header.active) return;
+	if (!header.active) {
+		show_noschool();
+		return;
+	}
 	draw_header(header.day, header.abnormal);
 	if (strlen((char *)servicer.slot<slots::ClassInfo>(this->s_c[0]).name) < 6) return;
 
@@ -71,6 +74,14 @@ void tasks::CalfixScreen::loop() {
 		const auto& a = servicer.slot<slots::PeriodInfo>(this->s_prd[i / 2]);
 		draw_class((i % 2 == 0) ? a.ps1 : a.ps2, (char *)servicer.slot<slots::ClassInfo>(this->s_c[i]).name, servicer.slot<slots::ClassInfo>(this->s_c[i]).room, pos_table[i], i);
 	}
+}
+
+void tasks::CalfixScreen::show_noschool() {
+	// bouncy boy
+	int16_t x_pos = 32 + std::round(6.5f * sinf((float)(timekeeper.current_time) / 1500.0f));
+	int16_t y_pos = 14 + std::round(3.5f * sinf((float)(timekeeper.current_time) / 500.0f));
+
+	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_10::info, x_pos, y_pos, 0, 0, 255);
 }
 
 const uint8_t bg_color_table[4][3] = {
