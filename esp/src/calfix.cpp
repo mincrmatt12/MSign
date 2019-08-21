@@ -15,27 +15,36 @@ namespace calfix {
 	uint64_t time_since_last_update = 0;
 
 	json::JSONParser c_parser([](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
-		if (stack_ptr == 4 && strncmp(stack[1]->name, "sched", 5) == 0 && stack[1]->name[5] == '0' + current_schedule) {
-			int period = stack[2]->index;
+			if (stack_ptr > 2)
+				Serial1.printf("sptr: %d, stack[1]: %s", stack_ptr, stack[1]->name);
+		if (stack_ptr == 3 && strncmp(stack[1]->name, "sched", 5) == 0 && stack[1]->name[5] == '0' + current_schedule) {
+			int period = stack[1]->index;
 			auto &prdh = (period < 2) ? prdh1 : prdh2;
-			if (stack[3]->index == 0)
-				(period % 2 == 0) ? prdh.ps1 : prdh.ps2 = v.int_val  * 60 * 60 * 1000;
-			else
-				(period % 2 == 0) ? prdh.ps1 : prdh.ps2 += v.int_val * 60 * 1000;
+			Serial1.printf("sched %d, %d; value = %d\n", period, (int)stack[2]->index, (int)v.int_val);
+			if (stack[2]->index == 0)
+				((period % 2 == 0) ? prdh.ps1 : prdh.ps2) = v.int_val  * 60 * 60 * 1000;
+			else if (stack[2]->index == 1)
+				((period % 2 == 0) ? prdh.ps1 : prdh.ps2) += v.int_val * 60 * 1000;
 		}
-		else if (stack_ptr == 4 && strncmp(stack[1]->name, "day", 3) == 0 && stack[1]->name[3] == '0' + current_day) {
-			int period = stack[2]->index;
-			auto pinf = (period > 0) ? ((period > 1) ? ((period == 2) ? p3 : p4) : p2) : p1;
-			if (strcmp(stack[3]->name, "name") == 0) strcpy((char *)pinf.name, v.str_val);
-			else if (strcmp(stack[3]->name, "loc") == 0) {
-				sscanf(v.str_val, "%hu", &pinf.room);
+		else if (stack_ptr == 3 && strncmp(stack[1]->name, "day", 3) == 0 && stack[1]->name[3] == '0' + current_day) {
+			int period = stack[1]->index;
+			auto& pinf = (period > 0) ? ((period > 1) ? ((period == 2) ? p3 : p4) : p2) : p1;
+			if (strcmp(stack[2]->name, "name") == 0) {
+				Serial1.printf("perd %d; name = %s\n", period, v.str_val);
+				strcpy((char *)pinf.name, v.str_val);
+			}
+			else if (strcmp(stack[2]->name, "loc") == 0) {
+				Serial1.printf("perd %d; room = %s\n", period, v.str_val);
+				int out_room;
+				sscanf(v.str_val, "%d", &out_room);
+				pinf.room = out_room;
 			}
 		}
 	});
 
 	void get_currentdata() {
 		int16_t status_code;
-		auto cb = util::download_with_callback("calfix.i.mm12.xyz", "/state.json", status_code); // leading _ indicates https
+		auto cb = util::download_with_callback("calfix.i.mm12.xyz", "/state.json", status_code); 
 
 		if (status_code < 200 || status_code >= 300) {
 			util::stop_download();
@@ -47,7 +56,9 @@ namespace calfix {
 		memset(&p3, 0, sizeof p3);
 		memset(&p4, 0, sizeof p4);
 
-		c_parser.parse(std::move(cb));
+		if (!c_parser.parse(std::move(cb))) {
+			Serial1.println(F("oops"));
+		}
 		util::stop_download();
 	}
 
@@ -133,6 +144,10 @@ namespace calfix {
 				serial::interface.update_data(slots::CALFIX_INFO, (uint8_t *)&calfix_info, sizeof calfix_info);
 				if (ran_today()) {
 					get_currentdata();
+
+					Serial1.println((char *)p1.name);
+					Serial1.println(p1.room);
+					Serial1.println((int)prdh1.ps1);
 
 					serial::interface.update_data(slots::CALFIX_CLS1, (uint8_t *)&p1, sizeof p1);
 					serial::interface.update_data(slots::CALFIX_CLS2, (uint8_t *)&p2, sizeof p2);
