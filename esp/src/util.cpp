@@ -22,7 +22,7 @@ struct HttpAdapter {
 
 struct HttpsAdapter {
 	typedef BearSSL::WiFiClientSecure Client;
-	static const int timeout = 1200;
+	static const int timeout = 8000;
 	BearSSL::CertStore cs;
 	bool inited = false;
 
@@ -127,7 +127,7 @@ struct Downloader {
 		cl.write(method);
 		cl.print(' ');
 		cl.write(path);
-		cl.write(" HTTP/1.0\r\n");
+		cl.write(" HTTP/1.1\r\n");
 
 		// send the host header
 		write_header("Host", host);
@@ -180,7 +180,7 @@ struct Downloader {
 
 		Serial1.println(F("dbgreq got h"));
 
-		cl.setTimeout(500);
+		cl.setTimeout(Adapter::timeout);
 
 		// alright, let's read till we hit the space
 		if (!cl.find(' ')) {
@@ -271,8 +271,9 @@ skip:
 			auto to_start = millis();
 			while (!cl.available()) {
 				delay(5);
-				if (millis() - to_start > (i >= response_size ? 60 : 900)) {
+				if (millis() - to_start > Adapter::timeout) {
 					cl.stop();
+					Serial1.println(F("tnu"));
 					return -1;
 				}
 			}
