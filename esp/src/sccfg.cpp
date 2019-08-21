@@ -4,6 +4,7 @@
 #include <string.h>
 #include "time.h"
 #include <Arduino.h>
+#include <Time.h>
 
 namespace sccfg {
 	const uint8_t number_of_screens = 4;
@@ -16,10 +17,10 @@ namespace sccfg {
 		uint8_t pos;
 		bool enable;
 		uint32_t timeat;
+		bool done_today;
 	} parsed_events[number_of_screens * 2 + 1];
 
 	uint16_t parsed_event_count = 0;
-	uint8_t  event_idx = 0;
 	uint8_t  send_idx = 0;
 
 	slots::ScCfgTime times[number_of_screens];
@@ -28,13 +29,16 @@ namespace sccfg {
 		return time::get_time() % 86400000;
 	}
 
-	void do_event(const Event& e) {
+	void do_event(Event& e) {
+		Serial1.printf_P(PSTR("time %d; en=%d\n"), e.timeat, e.enable);
 		if (e.enable) {
 			parsed_enabled_mask |= (1 << e.pos);
 		}
 		else {
 			parsed_enabled_mask &= ~(1 << e.pos);
 		}
+
+		e.done_today = true;
 	}
 
 	void append_event(Event e) {
@@ -42,12 +46,8 @@ namespace sccfg {
 			Serial1.println(F("too many onoff events"));
 			return;
 		}
-
+		
 		parsed_events[parsed_event_count++] = e;
-		if (e.timeat <= current_timeat()) {
-			do_event(e);
-			++event_idx;
-		}
 	}
 
 	void create_events_for(uint8_t pos, config::Entry entry) {
@@ -64,10 +64,12 @@ namespace sccfg {
 					return;
 				}
 				int tA, tB;
-				
+
+				parsed_enabled_mask &= ~(1 << pos);
+
 				sscanf(val, "%d,%d", &tA, &tB);
-				append_event({pos, true, static_cast<uint32_t>(tA)});
-				append_event({pos, false, static_cast<uint32_t>(tB)});
+				append_event({pos, true, static_cast<uint32_t>(tA), false});
+				append_event({pos, false, static_cast<uint32_t>(tB), false});
 			}
 		}
 	}
@@ -76,7 +78,6 @@ namespace sccfg {
 
 	void send_mask() {
 		uint16_t enabled_mask = (parsed_enabled_mask | force_enabled_mask) & ~force_disabled_mask;
-		Serial1.println(F("enabled send mask a"));
 		if (enabled_mask != last_enabled_mask) {
 			last_enabled_mask = enabled_mask;
 
@@ -88,8 +89,6 @@ namespace sccfg {
 
 			serial::interface.update_data(slots::SCCFG_INFO, (uint8_t *)&obj, sizeof(obj));
 		}
-
-		Serial1.println(F("enabled send mask huh?"));
 	}
 	
 	void init() {
@@ -97,9 +96,6 @@ namespace sccfg {
 		create_events_for(1, config::SC_WEATHER);
 		create_events_for(2, config::SC_3D);
 		create_events_for(3, config::SC_CFIX);
-
-		if (parsed_event_count > 0)
-			event_idx %= parsed_event_count;
 
 		times[0].idx_order = 0;
 		times[1].idx_order = 1;
@@ -146,14 +142,33 @@ namespace sccfg {
 		Serial1.println(F("c?"));
 	}
 
+	uint64_t last_run_time = 0;
+
 	void loop() {
 		if (parsed_event_count == 0) return;
-		while (parsed_events[event_idx].timeat <= current_timeat()) {
-			do_event(parsed_events[event_idx]);
-			
-			++event_idx;
-			event_idx %= parsed_event_count;
+		
+		if (last_run_time > current_timeat()) {
+			for (int i = 0; i < parsed_event_count; ++i) {
+				parsed_events[i].done_today = false;
+			}
 		}
+
+		if (last_run_time == 0 && now() < 100) return;
+		if (last_run_time == 0) {
+			for (int i = 0; i < parsed_event_count; ++i) {
+				if (parsed_events[i].timeat <= current_timeat()) do_event(parsed_events[i]);
+			}
+		}
+
+		last_run_time = current_timeat();
+
+		for (int i = 0; i < parsed_event_count; ++i) {
+			if (!parsed_events[i].done_today && parsed_events[i].timeat <= last_run_time) {
+				do_event(parsed_events[i]);
+			}
+		}
+
+		send_mask();
 	}
 
 }
