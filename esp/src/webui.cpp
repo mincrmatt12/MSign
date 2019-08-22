@@ -39,10 +39,10 @@ namespace webui {
 	}
 
 	void _stream(const char * f, const char * mt, const char * etag) {
-		if (webserver.hasHeader(FPSTR("If-None-Match"))) {
-			if (webserver.header(FPSTR("If-None-Match")).indexOf(etag) >= 0) {
-				webserver.sendHeader(FPSTR("Cache-Control"), FPSTR("max-age=0, must-revalidate"));
-				webserver.sendHeader(FPSTR("Etag"), etag);
+		if (webserver.hasHeader(F("If-None-Match"))) {
+			if (webserver.header(F("If-None-Match")).indexOf(etag) >= 0) {
+				webserver.sendHeader(F("Cache-Control"), F("max-age=0, must-revalidate"));
+				webserver.sendHeader(F("Etag"), etag);
 				webserver.send(304);
 			}
 		}
@@ -51,13 +51,13 @@ namespace webui {
 		File fl = sd.open(f, FILE_READ);
 		if (!fl.isOpen()) {
 			sd.chdir();
-			webserver.send(404, "text/plain", FPSTR("file missing on sd"));
+			webserver.send(404, "text/plain", F("file missing on sd"));
 		}
 		else {
 			sd.chdir();
 
-			webserver.sendHeader(FPSTR("Cache-Control"), FPSTR("max-age=0, must-revalidate"));
-			webserver.sendHeader(FPSTR("Etag"), etag);
+			webserver.sendHeader(F("Cache-Control"), F("max-age=0, must-revalidate"));
+			webserver.sendHeader(F("Etag"), etag);
 			webserver.streamFile(fl, mt);
 			fl.close();
 		}
@@ -104,8 +104,8 @@ namespace webui {
 				if (!_doauth()) return;
 
 				// check if we got the body
-				if (!webserver.hasArg(FPSTR("plain"))) {
-					webserver.send(400, "text/plain", FPSTR("send the new config"));
+				if (!webserver.hasArg(F("plain"))) {
+					webserver.send(400, "text/plain", F("send the new config"));
 					return;
 				}
 
@@ -197,7 +197,8 @@ namespace webui {
 
 			// verify we have the files
 			if (recieved_files != 2) {
-				webserver.send(400, FPSTR("text/plain"), FPSTR("invalid data"));
+				webserver.send(400, F("text/plain"), F("invalid data"));
+				recieved_files = 0;
 				return;
 			}
 
