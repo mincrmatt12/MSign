@@ -41,7 +41,7 @@ class GlobalPane extends React.Component {
 
 			<Form.Group controlId="cuser_ctrl">
 				<Form.Label>config login user</Form.Label>
-				<FormControl placeholder='admin' type='config panel username' value={this.props.configState.configuser} onChange={(e) => {this.upload('configuser', e.target.value);}} />
+				<FormControl placeholder='admin' type='text' value={this.props.configState.configuser} onChange={(e) => {this.upload('configuser', e.target.value);}} />
 			</Form.Group>
 			<Form.Group controlId="psk_ctrl">
 				<Form.Label>config login password</Form.Label>
