@@ -51,7 +51,7 @@ void setup() {
 	webui::init();
 	sccfg::init();
 	calfix::init();
-	serial::interface.ensure_handshake();
+	while (!serial::interface.ensure_handshake()) {yield();} // change to this interface
 }
 
 int i = 0;

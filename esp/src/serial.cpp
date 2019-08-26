@@ -16,24 +16,32 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 	return ~0;
 }
 
-void serial::SerialInterface::ensure_handshake() {
+bool serial::SerialInterface::ensure_handshake() {
 	// wait for the incoming HANDSHAKE_INIT command
 	uint8_t buf[3];
-	Serial1.println("B");
-try_again:
-	Serial.readBytes(buf, 3);
-	Serial1.println("A");
-
-	if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_INIT) goto try_again;
-	buf[0] = 0xa6;
-	buf[2] = serial::HANDSHAKE_RESP;
-
-	Serial.write(buf, 3);
+	if (Serial.available() < 3) {return false;}
 	Serial.readBytes(buf, 3);
 
-	if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_OK) goto try_again;
+	if (!init_state) {
+		if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_INIT) {
+			return false;
+		}
+		buf[0] = 0xa6;
+		buf[2] = serial::HANDSHAKE_RESP;
 
-	Serial1.println(F("Connected to STM32"));
+		Serial.write(buf, 3);
+		init_state = true;
+		return false;
+	}
+	else {
+		if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_OK) {
+			init_state = false;
+			return false;
+		}
+
+		Serial1.println(F("Connected to STM32"));
+		return true;
+	}
 }
 
 uint32_t last_pong_at = 0;

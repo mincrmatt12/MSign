@@ -30,7 +30,7 @@ namespace serial {
 	uint16_t search_for(uint16_t val, uint16_t array[64]);
 
 	struct SerialInterface {
-		void ensure_handshake();
+		bool ensure_handshake();
 		void loop();
 
 		// Sends data to any slot with this data id, immediately -- can block.
@@ -59,6 +59,8 @@ namespace serial {
 		uint8_t pending_command = 0;
 		uint8_t number_of_handlers = 0;
 		uint8_t number_of_o_handlers = 0;
+
+		bool init_state = false;
 	};
 
 	extern SerialInterface interface;
