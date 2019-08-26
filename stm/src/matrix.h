@@ -17,7 +17,6 @@ namespace led {
 		struct FrameBuffer {
 			FrameBuffer() {
 				memset(data, 0x0, sizeof(data));
-				byte_stream[(Width*2)] = 0x00;
 			}
 
 			void prepare_stream(uint16_t i, uint8_t pos) {

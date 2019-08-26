@@ -1,4 +1,6 @@
 #include "bootcmd.h"
+
+// really just present here to check for STM and i couldn't be bothered to add a define
 #ifdef USE_FULL_LL_DRIVER
 #include "stm32f2xx_ll_rtc.h"
 #include "stm32f2xx_ll_pwr.h"
@@ -35,4 +37,27 @@ void bootcmd_service_update() {
 	LL_RTC_BAK_SetRegister(RTC, 0, BOOTCMD_RUN);
 	LL_RTC_BAK_SetRegister(RTC, 1, 0xfece);
 }
+#else
+// mock interface
+void bootcmd_init() {
+}
+
+bool bootcmd_did_just_update() {
+	return false;
+}
+
+bootcmd_t bootcmd_get_cmd() {
+	return 0;
+}
+
+uint32_t bootcmd_update_size() {
+	return 0;
+}
+
+void bootcmd_request_update(uint32_t size) {
+}
+
+void bootcmd_service_update() {
+}
 #endif
+

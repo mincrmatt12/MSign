@@ -2,9 +2,6 @@
 
 #include "srv.h"
 #include "common/slots.h"
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_system.h"
-#include "stm32f2xx_ll_tim.h"
 
 extern srv::Servicer servicer;
 
