@@ -1,13 +1,27 @@
-From a258a8d11d044bb773839bd779aeded69f46d017 Mon Sep 17 00:00:00 2001
+From a712f905f41878d739b8ce05282b62f01d1933fa Mon Sep 17 00:00:00 2001
 From: mincrmatt12 <mincrmatt12@users.noreply.github.com>
 Date: Mon, 26 Aug 2019 00:47:39 -0400
 Subject: [PATCH] m2 ultra patch leet
 
 ---
+ tests/host/Makefile               |  2 +-
  tests/host/common/Arduino.cpp     |  9 +++++++--
  tests/host/common/ArduinoMain.cpp | 21 +++++++++++++++------
- 2 files changed, 22 insertions(+), 8 deletions(-)
+ 3 files changed, 23 insertions(+), 9 deletions(-)
 
+diff --git a/tests/host/Makefile b/tests/host/Makefile
+index 3768c11b..6a8c0d05 100644
+--- a/tests/host/Makefile
++++ b/tests/host/Makefile
+@@ -307,7 +307,7 @@ ssl:							# download source and build BearSSL
+ 	cd ../../tools/sdk/ssl && make native$(N32)
+ 
+ ULIBPATHS = $(shell echo $(ULIBDIRS) | sed 's,:, ,g')
+-USERLIBDIRS = $(shell test -z "$(ULIBPATHS)" || for d in $(ULIBPATHS); do for dd in $$d $$d/src; do test -d $$dd && { echo -I$$dd; echo "userlib: using directory '$$dd'" 1>&2; } done; done)
++USERLIBDIRS = $(shell test -z "$(ULIBPATHS)" || for d in $(ULIBPATHS); do for dd in $$d $$d/src; do test -d $$dd && echo -I$$dd; done; done)
+ USERLIBSRCS = $(shell test -z "$(ULIBPATHS)" || for d in $(ULIBPATHS); do for ss in $$d/*.cpp $$d/src/*.cpp; do test -r $$ss && echo $$ss; done; done)
+ INC_PATHS += $(USERLIBDIRS)
+ INC_PATHS += -I$(INODIR)/..
 diff --git a/tests/host/common/Arduino.cpp b/tests/host/common/Arduino.cpp
 index 5192028e..1eaf8c92 100644
 --- a/tests/host/common/Arduino.cpp
