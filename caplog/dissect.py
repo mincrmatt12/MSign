@@ -2,6 +2,8 @@
 import os
 import binascii
 import sys
+import slotlib
+import textwrap
 # dissects capture logs and outputs a list of packets
 datastream = []
 prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
@@ -57,24 +59,41 @@ pnames = {
     0x63: "UPDATE_STATUS"
 }
 
-def open_conn(dat):
-    if not dat[0]:
-        print(": CONT id={:02x} as {:04x}".format(dat[1], (dat[2] + (dat[3] << 8))))
-    else:
-        print(": POLL id={:02x} as {:04x}".format(dat[1], (dat[2] + (dat[3] << 8))))
+header_width = 5 + 2 + 2 + 2 + 2 + 20 + 2
+connection_data = {
+    
+}
 
+def open_conn(dat):
+    connection_data[dat[1]] = dat[2] + (dat[3] << 8)
+    if not dat[0]:
+        print(": continuous {:02x} as {:04x} (i.e. {})".format(dat[1], connection_data[dat[1]], slotlib.slot_types[connection_data[dat[1]]][0]))
+    else:
+        print(": polled {:02x} as {:04x} (i.e. {})".format(dat[1], connection_data[dat[1]], slotlib.slot_types[connection_data[dat[1]]][0]))
+
+def close_conn(dat):
+    print(": {:02x}, was {:04x} (i.e. {})".format(dat[0], connection_data[dat[0]], slotlib.slot_types[connection_data[dat[0]]][0]))
+    del connection_data[dat[0]]
 
 def slot_data(dat):
     data = bytes(dat[1:])
-    try:
-        asc = data.decode('ascii')
-    except:
-        asc = 'unk'
-    
-    print(": {:02x} is {} ({})".format(dat[0], binascii.hexlify(data).decode('ascii'), asc))
+    sid = dat[0]
+    if sid not in connection_data:
+        try:
+            asc = data.decode('ascii')
+        except:
+            asc = 'unk'
+        
+        print(": {:02x} is {} ({})".format(sid, binascii.hexlify(data).decode('ascii'), asc))
+    else:
+        print(": {:02x} ({:04x}, i.e. {}) is:".format(sid, connection_data[sid], slotlib.slot_types[connection_data[sid]][0]))
+
+        st = slotlib.slot_types[connection_data[sid]][1]
+        print(textwrap.indent(st.get_formatted(st.parse(data)), ' ' * (header_width + 2) + '└'))
 
 phandle = {
         0x20: open_conn,
+        0x21: close_conn,
         0x40: slot_data
 }
 
@@ -93,7 +112,7 @@ while ptr < len(datastream):
     if header[1] == 0x00:
         print()
         continue
-    if header[1] == 0x01:
+    if header[1] == 0x01 and header[2] not in phandle:
         v = read(1)[0]
         print(": {:02x}".format(v))
     else:
