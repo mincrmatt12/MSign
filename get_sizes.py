@@ -1,6 +1,6 @@
 import os
 
-fs = os.popen("{} stm/.pioenvs/nucleo_f207zg/firmware.elf esp/.pioenvs/nodemcuv2/firmware.elf".format(os.path.expanduser("~/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-size"))).read().split("\n")[1:]
+fs = os.popen("{} stm/.pioenvs/msign_board/firmware.elf esp/.pioenvs/msign_board/firmware.elf".format(os.path.expanduser("~/.platformio/packages/toolchain-gccarmnoneeabi/bin/arm-none-eabi-size"))).read().split("\n")[1:]
 
 sections = [[int(x) for x in y.split("\t")[:3]] for y in fs[:-1]]
 
