@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-namespace time {
+namespace signtime {
 	void init();
 	void start();
 	void stop();

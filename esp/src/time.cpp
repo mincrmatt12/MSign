@@ -13,7 +13,7 @@ Timezone torontoTZ(usEDT, usEST);
 
 bool active = false;
 
-void time::init() {
+void signtime::init() {
 	serial::interface.register_handler([](uint16_t data_id, uint8_t * buffer, uint8_t & length) {
 			if (data_id == slots::TIME_OF_DAY && active) {
 				uint64_t current_time = get_time();
@@ -31,7 +31,7 @@ void time::init() {
 	});
 }
 
-void time::start() {
+void signtime::start() {
 	const char * time_server = config::manager.get_value(config::TIME_ZONE_SERVER, "pool.ntp.org");
 	NTP.onNTPSyncEvent([](NTPSyncEvent_t e){active=true;});
 	NTP.begin(time_server);
@@ -39,18 +39,18 @@ void time::start() {
 	Serial1.println(time_server);
 }
 
-void time::stop() {
+void signtime::stop() {
 	NTP.stop();
 	active = false;
 }
 
-uint64_t time::get_time() {
+uint64_t signtime::get_time() {
 	return static_cast<uint64_t>(torontoTZ.toLocal(now())) * 1000;
 }
 
-uint64_t time::to_local(uint64_t utc){
+uint64_t signtime::to_local(uint64_t utc){
 	return (torontoTZ.toLocal(utc));
 }
-uint64_t time::millis_to_local(uint64_t js_utc){
+uint64_t signtime::millis_to_local(uint64_t js_utc){
 	return (js_utc % 1000) + to_local(js_utc / 1000) * 1000;
 }

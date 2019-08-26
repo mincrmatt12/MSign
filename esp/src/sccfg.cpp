@@ -26,7 +26,7 @@ namespace sccfg {
 	slots::ScCfgTime times[number_of_screens];
 
 	uint32_t current_timeat() {
-		return time::get_time() % 86400000;
+		return signtime::get_time() % 86400000;
 	}
 
 	void do_event(Event& e) {

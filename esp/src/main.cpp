@@ -45,7 +45,7 @@ void setup() {
 
 	config::manager.load_from_sd();
 	wifi::init();
-	time::init();
+	signtime::init();
 	ttc::init();
 	weather::init();
 	webui::init();

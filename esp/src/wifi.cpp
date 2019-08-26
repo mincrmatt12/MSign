@@ -26,14 +26,14 @@ void wifi::init() {
 			// inform the stm
 			wifi_available = true;
 			serial::interface.update_data(slots::WIFI_STATUS, reinterpret_cast<uint8_t *>(&wifi_available), 1);
-			time::start();
+			signtime::start();
 	});
 
 	discon = WiFi.onStationModeDisconnected([](const WiFiEventStationModeDisconnected &e){
 			// inform the stm
 			wifi_available = false;
 			serial::interface.update_data(slots::WIFI_STATUS, reinterpret_cast<uint8_t *>(&wifi_available), 1);
-			time::stop();
+			signtime::stop();
 	});
 
 	// start up wifi with parameters loaded

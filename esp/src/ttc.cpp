@@ -13,7 +13,7 @@
 slots::TTCInfo ttc::info;
 slots::TTCTime ttc::times[3];
 
-uint64_t       ttc::time_since_last_update = 0;
+uint64_t ttc::time_since_last_update = 0;
 
 void ttc::init() {
 	memset(ttc::times, 0, sizeof(ttc::times));
@@ -128,7 +128,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				}
 			}
 			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
-				state.epoch = time::millis_to_local(atoll(v.str_val));
+				state.epoch = signtime::millis_to_local(atoll(v.str_val));
 			}
 		}
 		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {

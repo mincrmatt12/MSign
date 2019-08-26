@@ -1,5 +1,5 @@
-#include "HardwareSerial.h"
 #include "serial.h"
+#include "HardwareSerial.h"
 #include "Esp.h"
 #include <Time.h>
 
@@ -19,8 +19,10 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 void serial::SerialInterface::ensure_handshake() {
 	// wait for the incoming HANDSHAKE_INIT command
 	uint8_t buf[3];
+	Serial1.println("B");
 try_again:
 	Serial.readBytes(buf, 3);
+	Serial1.println("A");
 
 	if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_INIT) goto try_again;
 	buf[0] = 0xa6;

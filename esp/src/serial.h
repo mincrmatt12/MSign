@@ -2,6 +2,7 @@
 #define SERIAL_H
 
 #include <stdint.h>
+#include <Arduino.h>
 
 namespace serial { 
 
