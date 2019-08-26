@@ -26,7 +26,7 @@ if sys.argv[1] in prefixes("logicexport"):
             datastream.append(v)
 elif sys.argv[1] in prefixes("simlog"):
     with open(sys.argv[2], 'rb') as f:
-        datastream = [ord(x) for x in f.read()]
+        datastream = [x for x in f.read()]
 else:
     print("usage: {} [logicexport,simlog] <in>")
     exit(1)
@@ -58,10 +58,10 @@ pnames = {
 }
 
 def open_conn(dat):
-    if dat[0]:
-        print(": C {:02x} as {:04x}".format(dat[1], (dat[2] + dat[3] << 16)))
+    if not dat[0]:
+        print(": CONT id={:02x} as {:04x}".format(dat[1], (dat[2] + (dat[3] << 8))))
     else:
-        print(": P {:02x} as {:04x}".format(dat[1], (dat[2] + dat[3] << 16)))
+        print(": POLL id={:02x} as {:04x}".format(dat[1], (dat[2] + (dat[3] << 8))))
 
 
 def slot_data(dat):
@@ -76,9 +76,6 @@ def slot_data(dat):
 phandle = {
         0x20: open_conn,
         0x40: slot_data
-}
-
-known_slots = {
 }
 
 while ptr < len(datastream):
@@ -98,18 +95,9 @@ while ptr < len(datastream):
         continue
     if header[1] == 0x01:
         v = read(1)[0]
-        if header[2] == 0x30:
-            known_slots[v] = True
-        else:
-            known_slots[v] = False
-
         print(": {:02x}".format(v))
     else:
         if header[2] in phandle:
             phandle[header[2]](read(header[1]))
         else:
             print("? " + binascii.hexlify(bytes(read(header[1]))))
-
-for i in range(256):
-    if i in known_slots and known_slots[i]:
-        print("slot {:02x} was still open".format(i))
