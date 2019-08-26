@@ -101,10 +101,17 @@ set(ARDUINO_ESP_LIBS "${ARDUINO_ESP_LIB_PATH}/Time" "${ARDUINO_ESP_LIB_PATH}/Tim
 list(JOIN ARDUINO_ESP_LIBS ":" ARDUINO_ESP_LIBS_CMD)
 
 # b) create external generation for the fullcore and bearssl static libs
+# note: we check for makefiles so we can do proper parallelism
+if ("${CMAKE_GENERATOR}" STREQUAL "Unix Makefiles")
+	set(ARDUINO_MAKE_COMMAND "$(MAKE)")
+else()
+	set(ARDUINO_MAKE_COMMAND "make")
+endif()
+
 add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
 	COMMAND ${CMAKE_COMMAND} -E env
 		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		$(MAKE) bin/fullcore.a
+		${ARDUINO_MAKE_COMMAND} bin/fullcore.a
 	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
 	COMMENT "Building ESP core library..."
 )
@@ -112,7 +119,7 @@ add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
 add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tools/sdk/ssl/bearssl/build/libbearssl.a"
 	COMMAND ${CMAKE_COMMAND} -E env
 		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		$(MAKE) ssl
+		${ARDUINO_MAKE_COMMAND} ssl
 	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
 	COMMENT "Building BEARSSL library..."
 )
@@ -178,3 +185,10 @@ add_executable(espsim ${TOTAL_ESP_SRCS})
 target_link_libraries(espsim esp_fullcore)
 target_include_directories(espsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/espsrc)
 add_dependencies(espsim copy_esp_src)
+
+# d) add target to run clean
+
+add_custom_target(clean_arduino
+	COMMAND ${ARDUINO_MAKE_COMMAND} clean
+	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
+)
