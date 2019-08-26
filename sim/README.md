@@ -34,7 +34,19 @@ $ # terminal 2
 $ ./espsim <stoe >etos
 ```
 
-You can also use tee if you want to record the messages, possibly to be looked at with `caplog`.
+You can also use more magic if you want to record the messages, possibly to be looked at with `caplog`, or combined with the logging utilities below:
+
+```
+$ # terminal 1
+$ ./stmsim <etos 2>stoe 2> >(logtime.py stoelog.txt)
+
+----
+
+$ # terminal 2
+$ ./espsim <stoe >etos > >(logtime.py etoslog.txt)
+```
+
+(`>(something)` becomes a file descriptor, `> >(something)` redirects that normally)
 
 ## Structure
 
@@ -44,3 +56,7 @@ The two binaries communicate over standard file streams.
 `espsim` sends data to `stmsim` over `stdout` and receives over `stdin`, sending debug data to `stderr`. To allow for terminal coloring, `stmsim` sends over `stderr`, but still receives on `stdin`.
 
 The only file the fake ESP currently reads is the `config.txt`, placed in the working directory and with exactly identical contents to what it would be on the real sign.
+
+## Logging
+
+There are two programs provided here, `logtime.py` and `mergelog.py`, which create a logfile with extra bytes for the time and merge two of those logs into a normal log respectively.

@@ -4,19 +4,23 @@
 #include <stdint.h>
 
 namespace slots {
+	// The comments here are important, as they get parsed by the dissector.
+	// They _must_ be in the format
+	// <type>; [optionalparameter] (stuff)
+	// or
+	// ''
+	// to indicate the same as previous
+	// the structs with flags must be in the form uint<>_t something_bla, enum SomethingBla
 	enum DataID : uint16_t {
 		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
 		TIME_STATUS = 0x02,			// BOOL; 0 - waiting for NTP, 1 - NTP in sync
 
-		UPDATE_STATE = 0x1a01,		// UINT8_T; enum - see below
-		UPDATE_PCENT_DOWN = 0x1a02, // UINT8_t; percent downloaded of the update package 
-
 		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; polled
 		REQUEST_SCREEN = 0x11, 		// UINT8_T; screen ID to request, sent very infrequently
-		VIRTUAL_BUTTONMAP = 0x12, 	// UINT8_t; bitmap, override of the data on GPIOA for the buttons
+		VIRTUAL_BUTTONMAP = 0x12, 	// UINT8_T; bitmap, override of the data on GPIOA for the buttons
 
 		TTC_INFO = 0x20,			// STRUCT; TTCInfo
-		TTC_NAME_1 = 0x21,			// VSTR; name of bus/tram in slot 1; polled
+		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
 		TTC_NAME_3 = 0x23,			// ''
 		TTC_TIME_1 = 0x24,			// STRUCT; TTCTime - time of next two buses
@@ -25,7 +29,7 @@ namespace slots {
 
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
-		WEATHER_STATUS = 0x45,		// VSTR; current summary; polled
+		WEATHER_STATUS = 0x45,		// STRUCT; VStr - current summary; polled
 
 		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
 		CALFIX_CLS1 = 0x51,			// STRUCT; ClassInfo, name and room
@@ -35,7 +39,7 @@ namespace slots {
 		CALFIX_PRDH1 = 0x55, 		// STRUCT; PeriodInfo, start time for period 1 & 2
 		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
 
-		MODEL_INFO = 0x0900, 		// UINT16_t; number of triangles in the model
+		MODEL_INFO = 0x0900, 		// UINT16_T; number of triangles in the model
 		MODEL_XYZ1 = 0x0901, 		// STRUCT; Vec3; position of point 1; requested per triangle
 		MODEL_XYZ2 = 0x0902, 		// ''
 		MODEL_XYZ3 = 0x0903, 		// ''
@@ -60,7 +64,7 @@ namespace slots {
 		uint16_t flags;
 		uint8_t nameLen[3];
 
-		enum Flag : uint16_t {
+		enum Flags : uint16_t {
 			ALERT_0 = 1,
 			ALERT_1 = 2,  // there is an alert
 			ALERT_2 = 4,
@@ -121,6 +125,12 @@ namespace slots {
 		uint8_t idx_order;
 	};
 
+	struct Vec3 {
+		float x;
+		float y;
+		float z;
+	};
+
 #pragma pack (pop)
 
 #define SLOT_CHECK_DEF(sn)	static_assert(sizeof(sn) <= 16, #sn " too large")
@@ -134,6 +144,7 @@ namespace slots {
 	SLOT_CHECK_DEF(PeriodInfo);
 	SLOT_CHECK_DEF(ScCfgInfo);
 	SLOT_CHECK_DEF(ScCfgTime);
+	SLOT_CHECK_DEF(Vec3);
 
 	enum struct UpdateStatusCode : uint8_t {
 		NO_UPDATE = 0x00,
