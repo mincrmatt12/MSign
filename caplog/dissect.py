@@ -1,21 +1,35 @@
+#!/usr/bin/env python3
 import os
 import binascii
+import sys
 # dissects capture logs and outputs a list of packets
 datastream = []
+prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
 
-with open('capturelog.txt') as f:
-    f.readline()
-    flag = False
+if len(sys.argv) < 3:
+    print("usage: {} [logicexport,simlog] <in>")
+    exit(1)
 
-    for i in f.readlines():
-        i = i.rstrip('\n')
-        row = i.split(',')
+if sys.argv[1] in prefixes("logicexport"):
+    with open(sys.argv[2]) as f:
+        f.readline()
+        flag = False
 
-        v = int(row[1][2:], base=16)
-        if not flag and v not in (0xa6, 0xa5):
-            continue
-        flag = True
-        datastream.append(v)
+        for i in f.readlines():
+            i = i.rstrip('\n')
+            row = i.split(',')
+
+            v = int(row[1][2:], base=16)
+            if not flag and v not in (0xa6, 0xa5):
+                continue
+            flag = True
+            datastream.append(v)
+elif sys.argv[1] in prefixes("simlog"):
+    with open(sys.argv[2], 'rb') as f:
+        datastream = [ord(x) for x in f.read()]
+else:
+    print("usage: {} [logicexport,simlog] <in>")
+    exit(1)
 
 ptr = 0
 def read(x):
