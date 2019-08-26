@@ -42,12 +42,15 @@ void setup() {
 	webui::init();
 	sccfg::init();
 	calfix::init();
-	serial::interface.ensure_handshake();
 }
 
-int i = 0;
+bool i = false;
 
 void loop() {
+	if (!i) {
+		i = serial::interface.ensure_handshake();
+		return;
+	}
 	serial::interface.loop();
 	ttc::loop();
 	wifi::loop();

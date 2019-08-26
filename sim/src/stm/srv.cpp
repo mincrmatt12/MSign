@@ -7,6 +7,9 @@
 #include "pins.h"
 #include <cstdlib>
 #include <stdio.h>
+#include <iostream>
+#include <sys/ioctl.h>
+#include <termios.h>
 
 extern tasks::Timekeeper timekeeper;
 
@@ -34,6 +37,9 @@ uint32_t update_package_data_ptr;
 uint32_t update_package_data_counter = 0;
 uint8_t update_package_sector_counter = 5;
 
+uint32_t faux_dma_counter = 0;
+uint8_t * faux_dma_ptr = 0;
+
 void begin_update(uint8_t &state) {
 	state = USTATE_FAILED;
 }
@@ -52,6 +58,20 @@ bool srv::Servicer::done() {
 }
 
 void srv::Servicer::loop() {
+	// handle fauxdma:tm:
+	if (!(faux_dma_ptr == 0 || faux_dma_counter == 0)) {
+		int bytes_waiting;
+		ioctl(0, FIONREAD, &bytes_waiting);
+		while (bytes_waiting--) {
+			if (faux_dma_ptr == 0) break;
+			*faux_dma_ptr++ = getchar();
+			if (!--faux_dma_counter) {
+				faux_dma_ptr = 0;
+				dma_finish(true);
+			}
+		}
+	}
+
 	if (this->state < STATE_DMA_WAIT_SIZE) {
 		if (last_comm > 10000) {
 			// invalid state error -- attempt going back to the main loop
@@ -270,24 +290,30 @@ void srv::Servicer::init() {
 	name[3] = 'c';
 
 	// Setup fake UART with pipes
+	termios term;
+    tcgetattr(0, &term);
+    term.c_lflag &= ~(ICANON | ECHO); // Disable echo as well
+    tcsetattr(0, TCSANOW, &term);
 }
 
 void srv::Servicer::send() {
 	// Send whatever is in the dma_out_buffer
-	if (is_sending) return;
-	is_sending = true;
-
-	// TODO write command out
+	std::cerr.write((char *)dma_out_buffer, dma_out_buffer[1] + 3);
+	is_sending = false;
 }
 
 void srv::Servicer::start_recv() {
 	state = STATE_DMA_WAIT_SIZE;
-	// TODO setup a receieve of 3 bytes
+	
+	faux_dma_ptr = dma_buffer;
+	faux_dma_counter = 3;
 }
 
 bool srv::Servicer::recv_full() {
 	state = STATE_DMA_GOING;
-	// TODO setup a recieve similar to out_buffer
+
+	faux_dma_ptr = dma_buffer + 3;
+	faux_dma_counter = dma_buffer[1];
 
 	return false;
 }

@@ -25,7 +25,6 @@ extern "C" void DMA2_Stream7_IRQHandler() {
 }                                                             
                                                               
 extern "C" void SysTick_Handler() {                           
-    timekeeper.systick_handler();                             
 }                                                             
                                                               
 

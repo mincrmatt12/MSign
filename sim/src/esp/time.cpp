@@ -20,9 +20,6 @@ void signtime::init() {
 				if (current_time < 10000000) {
 					return false;
 				}
-				if (timeStatus() != timeSet) {
-					return false;
-				}
 				memcpy(buffer, &current_time, 8);
 				length = 8;
 				return true;

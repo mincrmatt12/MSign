@@ -104,7 +104,7 @@ list(JOIN ARDUINO_ESP_LIBS ":" ARDUINO_ESP_LIBS_CMD)
 add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
 	COMMAND ${CMAKE_COMMAND} -E env
 		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		make bin/fullcore.a
+		$(MAKE) bin/fullcore.a
 	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
 	COMMENT "Building ESP core library..."
 )
@@ -112,7 +112,7 @@ add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
 add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tools/sdk/ssl/bearssl/build/libbearssl.a"
 	COMMAND ${CMAKE_COMMAND} -E env
 		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		make ssl
+		$(MAKE) ssl
 	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
 	COMMENT "Building BEARSSL library..."
 )

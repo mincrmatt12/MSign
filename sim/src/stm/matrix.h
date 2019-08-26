@@ -118,7 +118,7 @@ namespace led {
 			volatile bool is_active() {                                                  
 				using namespace std::chrono;
 
-				return duration_cast<milliseconds>(system_clock::now().time_since_epoch()) - started_at > (1000ms / 60);                                                            
+				return (duration_cast<milliseconds>(system_clock::now().time_since_epoch()) - started_at) < (1000ms / 30);                                                            
 			}                                                                            
 
 		private:                                                                         

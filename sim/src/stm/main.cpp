@@ -14,6 +14,9 @@
 #include "tasks/dispman.h"
 #include <stdlib.h>
 #include <cmath>
+#include <iostream>
+#include <time.h>
+#include <sys/time.h>
 
 #define SKIP_THRESH 5
 
@@ -77,6 +80,8 @@ int main() {
 	rng::init();
 	matrix.init();
 
+	std::cout.tie(0);
+
 	servicer.init();
 	task_list[3] = &servicer;
 	task_list[4] = &dispman;
@@ -134,11 +139,25 @@ int main() {
 
 	dispman.init();
 
+	auto to_millis = [](const timeval& x){return (x.tv_sec * 1000 + x.tv_usec / 1000);};
+
+	timeval last_systick;
+	gettimeofday(&last_systick, NULL);
+
 	// Main loop of software
 	while (true) {
+
 		matrix.display();
 		// ... scheduler loop ...
 		while (matrix.is_active()) {
+			//simulator time
+			timeval current_time;
+			gettimeofday(&current_time, NULL);
+			for (int i = 0; i < (to_millis(current_time) - to_millis(last_systick)); ++i) {
+				timekeeper.systick_handler();                             
+			}
+			last_systick = current_time;
+
 			// Are we done?
 			if (task_index >= 8) {
 				if (display_ready) continue;
@@ -195,6 +214,7 @@ run_it:
 			matrix.swap_buffers(); 
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
 			display_ready = false;
+			task_index = 0;
 		}
 	}
 }
