@@ -1,0 +1,107 @@
+From a258a8d11d044bb773839bd779aeded69f46d017 Mon Sep 17 00:00:00 2001
+From: mincrmatt12 <mincrmatt12@users.noreply.github.com>
+Date: Mon, 26 Aug 2019 00:47:39 -0400
+Subject: [PATCH] m2 ultra patch leet
+
+---
+ tests/host/common/Arduino.cpp     |  9 +++++++--
+ tests/host/common/ArduinoMain.cpp | 21 +++++++++++++++------
+ 2 files changed, 22 insertions(+), 8 deletions(-)
+
+diff --git a/tests/host/common/Arduino.cpp b/tests/host/common/Arduino.cpp
+index 5192028e..1eaf8c92 100644
+--- a/tests/host/common/Arduino.cpp
++++ b/tests/host/common/Arduino.cpp
+@@ -18,18 +18,23 @@
+ 
+ #include <unistd.h>
+ 
++// ugly hack to do time offset from time
++extern timeval ard_prog_start_val;
++
+ extern "C" unsigned long millis()
+ {
+     timeval time;
+     gettimeofday(&time, NULL);
+-    return (time.tv_sec * 1000) + (time.tv_usec / 1000);
++    return ((time.tv_sec * 1000) + (time.tv_usec / 1000)) - 
++		((ard_prog_start_val.tv_sec * 1000) + (ard_prog_start_val.tv_usec / 1000));
+ }
+ 
+ extern "C" unsigned long micros()
+ {
+     timeval time;
+     gettimeofday(&time, NULL);
+-    return (time.tv_sec * 1000000) + time.tv_usec;
++    return ((time.tv_sec * 1000000) + time.tv_usec) -
++		((ard_prog_start_val.tv_sec * 1000000) + ard_prog_start_val.tv_usec);
+ }
+ 
+ 
+diff --git a/tests/host/common/ArduinoMain.cpp b/tests/host/common/ArduinoMain.cpp
+index 7fdf4b22..3682a41a 100644
+--- a/tests/host/common/ArduinoMain.cpp
++++ b/tests/host/common/ArduinoMain.cpp
+@@ -38,6 +38,8 @@
+ #include <termios.h>
+ #include <stdarg.h>
+ #include <stdio.h>
++#include <time.h>
++#include <sys/ioctl.h>
+ 
+ #define MOCK_PORT_SHIFTER 9000
+ 
+@@ -49,6 +51,7 @@ bool ignore_sigint = false;
+ bool restore_tty = false;
+ bool mockdebug = false;
+ int mock_port_shifter = MOCK_PORT_SHIFTER;
++timeval ard_prog_start_val;
+ 
+ #define STDIN STDIN_FILENO
+ 
+@@ -109,16 +112,19 @@ static int mock_stop_uart(void)
+ 	return (0);
+ }
+ 
+-static uint8_t mock_read_uart(void)
++static int16_t mock_read_uart(void)
+ {
+ 	uint8_t ch = 0;
+-	return (read(STDIN, &ch, 1) == 1) ? ch : 0;
++	int br;
++	ioctl(STDIN, FIONREAD, &br);
++	if (!br) return -1;
++	return (read(STDIN, &ch, 1) == 1) ? ch : -1;
+ }
+ 
+ void help (const char* argv0, int exitcode)
+ {
+ 	printf(
+-		"%s - compiled with esp8266/arduino emulator\n"
++		"%s - compiled with esp8266/arduino emulator as hacked by mm12\n"
+ 		"options:\n"
+ 		"	-h\n"
+ 		"	-i <interface> - use this interface for IP address\n"
+@@ -254,13 +260,16 @@ int main (int argc, char* const argv [])
+ 	// install exit handler in case Esp.restart() is called
+ 	atexit(cleanup);
+ 
++	// do the thing
++	gettimeofday(&ard_prog_start_val, NULL);
++
+ 	setup();
+ 	while (!user_exit)
+ 	{
+-		uint8_t data = mock_read_uart();
++		int16_t data = mock_read_uart();
+ 
+-		if (data)
+-			uart_new_data(UART0, data);
++		if (data != -1)
++			uart_new_data(UART0, (uint8_t)data);
+ 		if (!fast)
+ 			usleep(1000); // not 100% cpu, ~1000 loops per second
+ 		loop();
+-- 
+2.17.1
+
