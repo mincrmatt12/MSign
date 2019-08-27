@@ -78,8 +78,8 @@ void tasks::CalfixScreen::loop() {
 
 void tasks::CalfixScreen::show_noschool() {
 	// bouncy boy
-	int16_t x_pos = 8 + std::round(6.5f * sinf((float)(timekeeper.current_time) / 1500.0f));
-	int16_t y_pos = 20 + std::round(3.5f * sinf((float)(timekeeper.current_time) / 500.0f));
+	int16_t x_pos = 9 + std::round(7.0f * sinf((float)(timekeeper.current_time) / 1300.0f));
+	int16_t y_pos = 21 + std::round(3.7f * sinf((float)(timekeeper.current_time) / 400.0f));
 
 	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_10::info, x_pos, y_pos, 0, 0, 255);
 }
