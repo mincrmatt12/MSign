@@ -72,7 +72,7 @@ def open_conn(dat):
         print(": polled {:02x} as {:04x} (i.e. {})".format(dat[1], connection_data[dat[1]], slotlib.slot_types[connection_data[dat[1]]][0]))
 
 def close_conn(dat):
-    print(": {:02x}, was {:04x} (i.e. {})".format(dat[0], connection_data[dat[0]], slotlib.slot_types[connection_data[dat[0]]][0]))
+    print(": {:02x} (was {:04x}, i.e. {})".format(dat[0], connection_data[dat[0]], slotlib.slot_types[connection_data[dat[0]]][0]))
     del connection_data[dat[0]]
 
 def slot_data(dat):
@@ -86,7 +86,7 @@ def slot_data(dat):
         
         print(": {:02x} is {} ({})".format(sid, binascii.hexlify(data).decode('ascii'), asc))
     else:
-        print(": {:02x} ({:04x}, i.e. {}) is:".format(sid, connection_data[sid], slotlib.slot_types[connection_data[sid]][0]))
+        print(": {:02x} (data {:04x}, i.e. {}) is:".format(sid, connection_data[sid], slotlib.slot_types[connection_data[sid]][0]))
 
         st = slotlib.slot_types[connection_data[sid]][1]
         print(textwrap.indent(st.get_formatted(st.parse(data)), ' ' * (header_width + 2) + '└'))
