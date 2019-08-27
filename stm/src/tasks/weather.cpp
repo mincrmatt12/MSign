@@ -250,7 +250,7 @@ void tasks::WeatherScreen::loop() {
 			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
 		}
 		else {
-			uint16_t t_pos = (uint16_t)(timekeeper.current_time / 40);
+			uint16_t t_pos = (uint16_t)(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)));
 			t_pos %= (text_size * 2) + 1;
 			t_pos =  ((text_size * 2) + 1) - t_pos;
 			t_pos -= text_size;
