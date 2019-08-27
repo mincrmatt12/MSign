@@ -44,6 +44,7 @@ void setup() {
 	}
 
 	config::manager.load_from_sd();
+	while (!serial::interface.ensure_handshake()) {delay(1);}
 	wifi::init();
 	signtime::init();
 	ttc::init();
@@ -51,7 +52,6 @@ void setup() {
 	webui::init();
 	sccfg::init();
 	calfix::init();
-	while (!serial::interface.ensure_handshake()) {yield();} // change to this interface
 }
 
 int i = 0;

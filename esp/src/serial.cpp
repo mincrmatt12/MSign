@@ -21,6 +21,10 @@ bool serial::SerialInterface::ensure_handshake() {
 	uint8_t buf[3];
 	if (Serial.available() < 3) {return false;}
 	Serial.readBytes(buf, 3);
+	if (buf[0] != 0xa5 && buf[1] == 0xa5) {
+		Serial.read();
+		return false;
+	}
 
 	if (!init_state) {
 		if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != serial::HANDSHAKE_INIT) {

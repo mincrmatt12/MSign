@@ -102,8 +102,6 @@ namespace sccfg {
 		times[2].idx_order = 2;
 		times[3].idx_order = 3;
 
-		last_enabled_mask = ~parsed_enabled_mask;
-
 		if (config::manager.get_value(config::SC_TIMES) != nullptr) {
 			int tTTC, tWEA, t3D, tCFIX = 12000;
 
@@ -155,9 +153,24 @@ namespace sccfg {
 
 		if (last_run_time == 0 && now() < 100) return;
 		if (last_run_time == 0) {
+			Serial1.println(F("initing sc"));
+			uint64_t last_timeat_d = 0;
 			for (int i = 0; i < parsed_event_count; ++i) {
-				if (parsed_events[i].timeat <= current_timeat()) do_event(parsed_events[i]);
+				uint64_t min_value_sofar = 8.64e7 + 1;
+				int k = 0;
+				for (int j = 0; j < parsed_event_count; ++j) {
+					if (parsed_events[j].timeat <= last_timeat_d) continue;
+					if (parsed_events[j].timeat < min_value_sofar) {
+						k = j;
+						min_value_sofar = parsed_events[j].timeat;
+					}
+				}
+				last_timeat_d = min_value_sofar;
+				if (parsed_events[k].timeat <= current_timeat()) do_event(parsed_events[k]);
 			}
+
+			last_enabled_mask = ~parsed_enabled_mask;
+			send_mask();
 		}
 
 		last_run_time = current_timeat();
