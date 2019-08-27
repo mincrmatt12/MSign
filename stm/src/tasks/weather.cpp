@@ -260,7 +260,7 @@ void tasks::WeatherScreen::loop() {
 
 	draw::rect(matrix.get_inactive_buffer(), 0, 0, 22, 20, 0, 0, 0);
 
-	uint16_t y = (uint16_t)(5.0f * sinf((float)(timekeeper.current_time) / 1000.0f)) - 1;
+	int16_t y = (int16_t)(std::round(3.0f * sinf((float)(timekeeper.current_time) / 700.0f) + 1));
 
 	const char * icon = (const char*)servicer.slot(s_icon);
 
