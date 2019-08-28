@@ -1,7 +1,7 @@
 #include "ttc.h"
 #include "timekeeper.h"
 #include "fonts/tahoma_9.h"
-#include "fonts/vera_7.h"
+#include "fonts/lcdpixel_6.h"
 #include "srv.h"
 #include "common/slots.h"
 #include "rng.h"
@@ -92,7 +92,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 					(int)((time1 - rtc_time) / 60000),
 					(int)((time2 - rtc_time) / 60000)
 		);
-		if (draw::text_size(time_str, font::vera_7::info) > 20) {
+		if (draw::text_size(time_str, font::lcdpixel_6::info) > 20) {
 			if (time1 - rtc_time < 60000) {
 				snprintf(time_str, 64, "%ds",
 						(int)((time1 - rtc_time) / 1000)
@@ -143,7 +143,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 	else if (alert) {
 		draw::rect(matrix.get_inactive_buffer(), 62, y - 7, 64, y + 1, 230, 230, 20);
 	}
-	draw::text(matrix.get_inactive_buffer(), time_str, font::vera_7::info, 44, y-1, 255, 255, 255);
+	draw::text(matrix.get_inactive_buffer(), time_str, font::lcdpixel_6::info, 45, y-1, 255, 255, 255);
 	draw::rect(matrix.get_inactive_buffer(), 0, y, 64, y + 1, 1, 1, 1);
 
 	return true;

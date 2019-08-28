@@ -3,7 +3,7 @@
 #include "tasks/timekeeper.h"
 #include "common/slots.h"
 #include "fonts/latob_10.h"
-#include "fonts/vera_7.h"
+#include "fonts/lcdpixel_6.h"
 #include "fonts/vera_8.h"
 #include <time.h>
 
@@ -103,7 +103,7 @@ void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_
 	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 5, bg_color_table[cl][0], bg_color_table[cl][1], bg_color_table[cl][2]);
 	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 5, 64, y_pos + 6, 30, 30, 30);
 
-	draw::text(matrix.get_inactive_buffer(), cname, font::vera_7::info, 0, y_pos + 5, cls_fg_color_table[cl][0], cls_fg_color_table[cl][1], cls_fg_color_table[cl][2]);
+	draw::text(matrix.get_inactive_buffer(), cname, font::lcdpixel_6::info, 0, y_pos + 5, cls_fg_color_table[cl][0], cls_fg_color_table[cl][1], cls_fg_color_table[cl][2]);
 
 	char textbuf[7] = {0};
 
@@ -118,9 +118,9 @@ void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_
 		snprintf(textbuf, 7, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 	}
 
-	uint16_t length = draw::text_size(textbuf, font::vera_7::info);
+	uint16_t length = draw::text_size(textbuf, font::lcdpixel_6::info);
 	draw::rect(matrix.get_inactive_buffer(), 64 - length - 1, y_pos, 64, y_pos + 5, 0, 0, 0);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_7::info, 64 - length - 1, y_pos + 5, 255, 255, 255);
+	draw::text(matrix.get_inactive_buffer(), textbuf, font::lcdpixel_6::info, 64 - length, y_pos + 5, 255, 255, 255);
 }
 
 void tasks::CalfixScreen::draw_header(uint8_t day, bool abnormal) {
