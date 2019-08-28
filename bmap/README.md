@@ -21,3 +21,9 @@ lmnopqrstuv
 # bmap
 
 Essentially just the bitmap converter in fnter -- takes a png, searches for areas without transparency and maps them.
+
+# testfnt
+
+Small program to interact with the fonts from fnter
+When configuring tell it the font to use with `-DTESTFNT_FONT_FILE=/some/font/file -DTESTFNT_FONT_SIZE=12`.
+

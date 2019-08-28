@@ -65,11 +65,11 @@ def get_character_as_bool_array(c):
 def get_metrics(c):
     global face
 
-    face.load_char(c, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_TARGET_MONO)
+    face.load_char(c, freetype.FT_LOAD_TARGET_MONO)
     return [
-            int(math.floor(face.glyph.metrics.horiAdvance / 64)),
-            int(math.ceil(face.glyph.metrics.horiBearingX / 64)),
-            int(round_away_from_zero(face.glyph.metrics.horiBearingY / 64))
+            int(face.glyph.metrics.horiAdvance / 64.0),
+            int(face.glyph.metrics.horiBearingX / 64.0),
+            int(face.glyph.metrics.horiBearingY / 64.0)
     ]
 
 def round_away_from_zero(x):
