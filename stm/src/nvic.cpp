@@ -8,6 +8,8 @@
 #include "srv.h"
 #include "tasks/timekeeper.h"
 #include "matrix.h"
+#include "draw.h"
+#include "fonts/lcdpixel_6.h"
 
 
 extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
@@ -69,9 +71,26 @@ extern "C" void SysTick_Handler() {
 	timekeeper.systick_handler();
 }
 
+// hard fault handler renderer...
+
+namespace {
+	void draw_hardfault_screen(int total_loop, int remain_loop) {
+		draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
+		draw::text(matrix.get_inactive_buffer(), "MSign crashed!", font::lcdpixel_6::info, 0, 6, 255, 0, 0);
+		draw::text(matrix.get_inactive_buffer(), "rebooting in:", font::lcdpixel_6::info, 0, 12, 128, 128, 128);
+
+		draw::rect(matrix.get_inactive_buffer(), 0, 24, (remain_loop - total_loop) / ((total_loop + 32) / 64), 32, 100, 100, 255);
+	}
+}
+
 extern "C" void HardFault_Handler() {
 	// there was a hardfault... delay for a while so i know
-	for (int i = 0; i < F_CPU; ++i) {
-		asm volatile ("nop"); // wait 3 seconds
+	for (int i = 0; i < 64; ++i) {
+		while (matrix.is_active()) {;}
+		draw_hardfault_screen(64, i);
+		matrix.swap_buffers();
+		matrix.display();
 	}
+
+	NVIC_SystemReset();
 }
