@@ -19,7 +19,7 @@ add_custom_command(OUTPUT ${FONT_FILE_PATH}.h ${FONT_FILE_PATH}.cpp
 	COMMAND ${CMAKE_CURRENT_LIST_DIR}/../fnter.py ${TESTFNT_FONT_FILE} ${TESTFNT_FONT_SIZE} > ${FONT_FILE_PATH}.cpp
 	COMMAND ${CMAKE_CURRENT_LIST_DIR}/../fnter.py ${TESTFNT_FONT_FILE} h${TESTFNT_FONT_SIZE} > ${FONT_FILE_PATH}.h
 	DEPENDS ${TESTFNT_FONT_FILE} ${CMAKE_CURRENT_LIST_DIR}/../fnter.py
-	COMMENT Generating font headers...
+	COMMENT "Generating font data...."
 )
 
 add_custom_target(generate_font_data DEPENDS ${FONT_FILE_PATH}.h ${FONT_FILE_PATH}.cpp)
