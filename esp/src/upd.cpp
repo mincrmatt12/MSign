@@ -80,6 +80,10 @@ failure:
 	sd.remove("page.css");
 	sd.remove("page.js");
 
+	if (sd.exists("etag.txt")) {
+		sd.remove("etag.txt");
+	}
+
 	yield();
 
 	sd.chdir();

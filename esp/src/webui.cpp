@@ -76,14 +76,32 @@ namespace webui {
 	}
 
 	void init() {
-		// generate a random etag
-		{
+		// check if an etag file exists on disk (deleted during updates)
+		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
-			snprintf(etag_buffer, 16, "\"E%9ldjs\"", secureRandom(ESP.getCycleCount() + ESP.getChipId() + ESP.getVcc()));
+			auto etag_num = secureRandom(ESP.getCycleCount() + ESP.getChipId() + ESP.getVcc());
+			snprintf(etag_buffer, 16, "\"E%9ldjs\"", etag_num);
 			etags[0] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, "\"E%9ldcs\"", secureRandom(ESP.getCycleCount() + ESP.getChipId() + ESP.getVcc()));
+			snprintf(etag_buffer, 16, "\"E%9ldcs\"", etag_num);
 			etags[1] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, "\"E%9ldht\"", secureRandom(ESP.getCycleCount() + ESP.getChipId() + ESP.getVcc()));
+			snprintf(etag_buffer, 16, "\"E%9ldht\"", etag_num);
+			etags[2] = strdup(etag_buffer);
+
+			File fl = sd.open("/web/etag.txt", O_CREAT | O_TRUNC | O_WRITE);
+			fl.print(etag_num);
+			fl.close();
+		}
+		else {
+			File fl = sd.open("/web/etag.txt", FILE_READ);
+			char etag_buffer[16] = {0};
+			auto etag_num = fl.parseInt();
+			fl.close();
+
+			snprintf(etag_buffer, 16, "\"E%9ldjs\"", etag_num);
+			etags[0] = strdup(etag_buffer);
+			snprintf(etag_buffer, 16, "\"E%9ldcs\"", etag_num);
+			etags[1] = strdup(etag_buffer);
+			snprintf(etag_buffer, 16, "\"E%9ldht\"", etag_num);
 			etags[2] = strdup(etag_buffer);
 		}
 
