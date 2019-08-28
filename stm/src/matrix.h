@@ -153,7 +153,7 @@ namespace led {
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 33;
+				tim_init.Prescaler  = 29;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
@@ -280,7 +280,7 @@ namespace led {
 				if (delaying) while (1) {;}
 				// set the counter
 				delaying = true;
-				delay_counter = ticks + 3;
+				delay_counter = (ticks + 2) << 1;
 				// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
 				LL_TIM_SetAutoReload(TIM9, ticks);
 				LL_TIM_SetCounter(TIM9, 0);
