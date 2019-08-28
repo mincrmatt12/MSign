@@ -775,6 +775,9 @@ void srv::Servicer::dma_finish(bool incoming) {
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
+				if (dma_buffer[1] == 0xa6) {
+					LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
+				}
 				start_recv();
 				return;
 			}
