@@ -168,11 +168,15 @@ namespace threed {
 		int16_t cy = round(((c.y + 1) / 2) * 32);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
-		avg = std::min(std::pow(avg * 1.05, 1.52f), 0.97);
+		avg = std::min(std::pow(avg * 1.05, 1.52f), 0.95);
 
 		uint8_t cr = (float)t.r * (1 - avg);
 		uint8_t cg = (float)t.g * (1 - avg);
 		uint8_t cb = (float)t.b * (1 - avg);
+
+		cr = gamma_cvt_table[cr];
+		cg = gamma_cvt_table[cg];
+		cb = gamma_cvt_table[cb];
 
 		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
 			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);
