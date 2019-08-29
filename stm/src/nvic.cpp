@@ -20,19 +20,19 @@ void nvic::init() {
 	SCB->VTOR = 0x4000; // set vector table relocation to 0x4000 since that's where our image starts.
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
-	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5, 0));
+	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
 	NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
-	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4, 0));
+	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
 	NVIC_EnableIRQ(NVIC_SRV_TX_IRQ_NAME);
 
-	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6, 0));
+	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(NVIC_SRV_RX_IRQ_NAME);
 
-	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2, 0));
+	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
 	NVIC_EnableIRQ(SysTick_IRQn);
 }
 
@@ -85,6 +85,7 @@ namespace {
 
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
 	// there was a hardfault... delay for a while so i know
+	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 	for (int i = 0; i < 64; ++i) {
 		while (matrix.is_active()) {;}
 		draw_hardfault_screen(64, i);
@@ -93,6 +94,7 @@ namespace {
 		matrix.display();
 	}
 
+	__set_BASEPRI(0U);
 	NVIC_SystemReset();
 }
 
