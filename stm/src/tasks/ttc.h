@@ -22,6 +22,7 @@ namespace tasks {
 		bool ready;
 
 		uint8_t bus_type = 1;
+		uint8_t bus_state = 0;
 	};
 }
 

@@ -61,10 +61,29 @@ void tasks::TTCScreen::draw_bus() {
 	if (pos == 108) {
 		bus_type = rng::get() % 3;
 		bus_type += 1;
+		bus_state = ((rng::get() % 128) == 0);
+		if (bus_state) {
+			bus_state = (rng::get() % 2) + 1;
+		}
 	}
 
-	for (uint8_t i = 0; i < bus_type; ++i)
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
+	switch (bus_state) {
+		case 0:
+			for (uint8_t i = 0; i < bus_type; ++i)
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
+		case 1:
+		case 2:
+			{
+				// bus disco mode (state 2 == bus racing)
+				if (bus_state == 2) {
+					pos = (pos * (pos  / 2)) % 154;
+				}
+
+				for (uint8_t i = 0; i < bus_type; ++i)
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::get() % 256, rng::get() % 256, rng::get() % 256, true);
+			}
+	}
+
 }
 
 bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time1, uint64_t time2, bool alert, bool delay) {
