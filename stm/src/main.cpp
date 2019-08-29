@@ -114,7 +114,7 @@ int main() {
 	show_test_pattern(2, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
 
-	uint16_t finalize_counter = 120;
+	uint16_t finalize_counter = 100;
 	while (finalize_counter--) {
 		if (finalize_counter < 50) {
 			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);

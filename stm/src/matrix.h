@@ -153,7 +153,7 @@ namespace led {
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 29;
+				tim_init.Prescaler  = 32;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
@@ -201,6 +201,7 @@ namespace led {
 			void dma_finish() {
 				// blast is finished, stop dma + timer output
 				LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
+				LL_TIM_DisableCounter(TIM1);
 				LL_TIM_DisableDMAReq_UPDATE(TIM1);
 				// check show
 				if (show) do_next();
@@ -280,7 +281,7 @@ namespace led {
 				if (delaying) while (1) {;}
 				// set the counter
 				delaying = true;
-				delay_counter = (ticks + 2) << 1;
+				delay_counter = (ticks + 2);
 				// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
 				LL_TIM_SetAutoReload(TIM9, ticks);
 				LL_TIM_SetCounter(TIM9, 0);
@@ -300,19 +301,30 @@ namespace led {
 				strobe = true;
 				show = false;
 				strobe = false;
-				uint8_t drawn_pos = pos;
+				const static uint16_t draw_ticks_table[] = {
+					3,
+					6,
+					12,
+					24,
+					48,
+					96,
+					192,
+					384,
+					768
+				};
+				uint8_t drawn_pos = draw_ticks_table[pos];
 				++pos;
 				if (pos < 8) {
 					// Start the waiting.
 					oe = false;
-					wait(1 << drawn_pos);		
+					wait(drawn_pos);		
 					// Send off the next row
 					blast_row();
 					return;
 				}
 				else if (++row < FB::stb_lines) {
 					oe = false;
-					wait(1 << drawn_pos);		
+					wait(drawn_pos);		
 					// Set back to first bit
 					pos = 0;
 					// Blast and wait
@@ -324,7 +336,7 @@ namespace led {
 					// Just wait, but force it to run us again.
 					show = true;
 					oe = false;
-					wait(1 << drawn_pos);
+					wait(drawn_pos);
 				}
 			}
 		};
