@@ -175,6 +175,8 @@ bool tasks::TTCScreen::init() {
 	)) {
 		return false;
 	}
+	bus_type = 1;
+	bus_state = 0;
 	return true;
 }
 
