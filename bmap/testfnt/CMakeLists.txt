@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.7)
 project(testfnt)
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE Debug)
 
 set(TESTFNT_FONT_FILE "" CACHE FILEPATH "path to font file")
 set(TESTFNT_FONT_SIZE "" CACHE STRING "font size in pixels")

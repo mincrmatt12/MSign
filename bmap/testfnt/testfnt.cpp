@@ -15,7 +15,7 @@ struct FrameBuffer {
 	}
 
 	void show() {                                                                                                                                                             
-		std::cout << "\e[;H\e[?25l";                                                                                                                                                 
+		std::cout << "\e[?25l";                                                                                                                                                 
 		for (size_t y = 0; y < Height; ++y) {                                                                                                                                 
 			for (size_t x = 0; x < Width; ++x) {                                                                                                                              
 				std::cout << "\x1b[48;2;" << std::to_string(_remap(_r(x, y))) << ";" << std::to_string(_remap(_g(x, y))) << ";" << std::to_string(_remap(_b(x, y))) << "m  "; 
@@ -105,12 +105,12 @@ void bitmap(FB &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8
 
 int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size) {
 	uint32_t start = 0, end = size;
-	uint16_t needle = ((uint16_t)a + ((uint16_t)b << 8));
+	uint16_t needle = (((uint16_t)a << 8) + (uint16_t)b);
 	while (start != end) {
 		uint32_t head = (start + end) / 2;
-		uint16_t current = (uint16_t)(*(kern + head*3)) + (((uint16_t)(*(kern + head*3 + 1))) << 8);
+		uint16_t current = ((uint16_t)(kern[head*3]) << 8) + (uint16_t)(kern[head*3 + 1]);
 		if (current == needle) {
-			return *(kern + head*3 + 2);
+			return kern[head*3 + 2];
 		}
 		else {
 			if (start - end == 1 || end - start == 1) {
@@ -147,12 +147,14 @@ uint16_t text(FB &fb, const uint8_t *text, const void * const font[], uint16_t x
 			continue;
 		}
 		if (c_prev != 0 && kern_table_size != 0 && kern_on) {
-			pen += search_kern_table(c_prev, c, kern, kern_table_size);
+			auto offset = search_kern_table(c_prev, c, kern, kern_table_size);
+			std::cout << c_prev << c << "of: " << offset << std::endl;
+			pen += offset;
 		}
 		c_prev = c;
 		if (data[c] == nullptr) continue; // invalid character
-		bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), r, g, b);
-		pen += *(metrics + (c * 6) + 3);
+		bitmap(fb, data[c], metrics[(c*6) + 0], metrics[(c*6) + 1], metrics[(c*6) + 2], pen + metrics[(c*6) + 4], y - metrics[(c*6) + 5], r, g, b);
+		pen += metrics[(c*6) + 3];
 	}
 	return pen;
 }
@@ -162,6 +164,9 @@ int main(int argc, char ** argv) {
 
 	FrameBuffer<128, 64> fb;
 	text(fb, (const uint8_t *)to_draw, genfont::info, 0, 20, 255, 255, 255);
+	std::cout << std::endl;
+	std::cout << std::endl;
+
 	fb.show();
 
 	std::cout << std::endl;
