@@ -204,6 +204,78 @@ namespace webui {
 		webserver.on("/a/fheap", HTTP_GET, [](){
 			webserver.send(200, "text/plain", String(ESP.getFreeHeap(), 10));
 		});
+		webserver.on("/a/updatestm", HTTP_POST, [](){
+			if (!_doauth()) {
+				// make sure we delete the update files.
+				if (sd.chdir("/upd")) {
+					sd.remove("stm.bin");
+					sd.remove("chck.sum");
+					sd.chdir();
+				}
+				return;
+			}
+
+			// verify we have the files
+			if (recieved_files != 1) {
+				webserver.send(400, F("text/plain"), F("invalid data"));
+				recieved_files = 0;
+				return;
+			}
+
+			// write out the checksum data
+			File f = sd.open("/upd/chck.sum", FILE_WRITE);
+			f.print(0);
+			f.print(' ');
+			f.print(stm_crc);
+			f.flush();
+			f.close();
+
+			f = sd.open("/upd/state.txt", FILE_WRITE);
+			f.print(0); // update SYS
+			f.flush();
+			f.close();
+
+			webserver.send(200, "text/plain", "ok i'm going jeez");
+			delay(100);
+			serial::interface.reset();
+			ESP.restart();
+		}, [](){
+			// file upload handler
+			auto& upload = webserver.upload();
+
+			switch (upload.status) {
+				case UPLOAD_FILE_START: 
+					{
+						if (!sd.exists("/upd")) sd.mkdir("/upd");
+						sd.chdir("/upd");
+						writing_update = sd.open("stm.bin", O_CREAT | O_WRITE | O_TRUNC);
+						sd.chdir();
+
+						Serial1.println(F("writing update upd1"));
+						stm_crc = 0;
+					}
+					break;
+				case UPLOAD_FILE_END:
+					{
+						writing_update.flush();
+						writing_update.close();
+						recieved_files = 1;
+					}
+					break;
+				case UPLOAD_FILE_ABORTED:
+					{
+						writing_update.remove();
+						writing_update.close();
+					}
+					break;
+				case UPLOAD_FILE_WRITE:
+					{
+						writing_update.write(upload.buf, upload.currentSize);
+						stm_crc = util::compute_crc(upload.buf, upload.currentSize, stm_crc);
+					}
+					break;
+			}
+		});
 		webserver.on("/a/updatefirm", HTTP_POST, [](){
 			if (!_doauth()) {
 				// make sure we delete the update files.

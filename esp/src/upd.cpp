@@ -255,7 +255,7 @@ void set_update_state(uint8_t update_new_state) {
 void upd::update_system() {
 	// check the files are present
 	uint16_t crc_esp, crc_stm;
-	if (!sd.exists("/upd/stm.bin") || !sd.exists("/upd/esp.bin") || !sd.exists("/upd/chck.sum")) {
+	if (!sd.exists("/upd/stm.bin") || !sd.exists("/upd/chck.sum")) {
 		Serial1.println(F("missing files."));
 
 		sd.remove("/upd/state.txt");
@@ -374,7 +374,12 @@ loopover:
 			}
 
 			// setting update status accordingly and resetting
-			set_update_state(USTATE_READY_TO_DO_ESP);
+			if (sd.exists("/upd/esp.bin")) {
+				set_update_state(USTATE_READY_TO_DO_ESP);
+			}
+			else {
+				set_update_state(USTATE_JUST_DID_ESP);
+			}
 			ESP.restart();
 		}
 	case USTATE_READY_TO_DO_ESP:
@@ -435,8 +440,8 @@ loopover:
 			// clean up
 			sd.remove("/upd/state.txt");
 			sd.remove("/upd/stm.bin");
-			sd.remove("/upd/esp.bin");
 			sd.remove("/upd/chck.sum");
+			sd.remove("/upd/esp.bin");
 
 			// send command
 			send_update_status(0x40);

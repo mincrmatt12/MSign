@@ -34,18 +34,36 @@ class UpdatePane extends React.Component {
 
 		let file_in = new FormData(e.target);
 
-		fetch('/a/updatefirm', {
-			method: 'POST',
-			body: file_in
-		}).then((resp) => {
-			if (resp.ok) {
-				alert("update sent. check sign for progress");
-				window.close();
-			}
-			else {
-				alert("update not sent.");
-			}
-		});
+		if (file_in.has("esp")) {
+			fetch('/a/updatefirm', {
+				method: 'POST',
+				body: file_in
+			}).then((resp) => {
+				if (resp.ok) {
+					alert("update sent. check sign for progress");
+					window.close();
+				}
+				else {
+					alert("update not sent.");
+				}
+			});
+		}
+		else {
+			fetch('/a/updatestm', {
+				method: 'POST',
+				body: file_in
+			}).then((resp) => {
+				if (resp.ok) {
+					alert("updating stm only.");
+					window.close();
+				}
+				else {
+					alert("update not sent.");
+				}
+			});
+		}
+
+		alert("sending update...");
 	}
 
 	render() {
@@ -78,7 +96,7 @@ class UpdatePane extends React.Component {
 
 						<Form.Group controlId="update_esp">
 							<Form.Label>esp firmware</Form.Label>
-							<Form.Control name="esp" required type="file" accept=".bin" />
+							<Form.Control name="esp" type="file" accept=".bin" />
 						</Form.Group>
 					</Col>
 
