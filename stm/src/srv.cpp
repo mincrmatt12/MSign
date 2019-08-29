@@ -10,6 +10,7 @@
 #include "common/bootcmd.h"
 #include "common/util.h"
 #include "pins.h"
+#include "nvic.h"
 
 extern tasks::Timekeeper timekeeper;
 
@@ -224,17 +225,18 @@ void srv::Servicer::loop() {
 				this->pending_operations[pending_count++] = 0x51000000;
 				sent_ping = true;
 			}
-			if ((timekeeper.current_time - last_comm) > 40000) {
+			if ((timekeeper.current_time - last_comm) > 30000) {
 				// Reset.
 				if (timekeeper.current_time < last_comm) {
 					last_comm = timekeeper.current_time;
 					return;
 				}
-				NVIC_SystemReset();
+
+				nvic::show_error_screen("ESPTimeout");
 			}
 
 			if (!LL_DMA_IsEnabledStream(UART_DMA, UART_DMA_RX_Stream)) {
-				start_recv();
+				nvic::show_error_screen("NoRXDma");
 			}
 		}
 	}
@@ -740,25 +742,19 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 
 void srv::Servicer::dma_finish(bool incoming) {
 	if (incoming) {
+		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 		// check for error
 		if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
 			NVIC_SRV_RXE_CLRF(UART_DMA);
-			LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 
-			// do some handling:
-			if (LL_USART_IsActiveFlag_ORE(ESP_USART)) {
-				LL_USART_ReceiveData8(ESP_USART);
-			}
-			if (LL_USART_IsActiveFlag_FE(ESP_USART)) LL_USART_ClearFlag_FE(ESP_USART);
-			if (LL_USART_IsActiveFlag_NE(ESP_USART)) LL_USART_ClearFlag_NE(ESP_USART);
+			// this is a deceptive command, clearing flags is done by reading SR and DR, which this function does.
+			// it also "reads" a byte off of the serial port but eh.
+			LL_USART_ClearFlag_ORE(ESP_USART);
 
 			start_recv();
 			return;
 		}
 
-		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
-		last_comm = timekeeper.current_time;
-		sent_ping = false;
 		// first, check if we need to handle the handshake command
 		if (state == STATE_HANDSHAKE_RECV) {
 			if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x11) {
@@ -770,23 +766,24 @@ void srv::Servicer::dma_finish(bool incoming) {
 				return;
 			}
 			else {
-				NVIC_SystemReset();
+				nvic::show_error_screen("InvShake");
 			}
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
-				if (dma_buffer[1] == 0xa6) {
-					LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
-				}
+				LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
 				start_recv();
 				return;
 			}
 			
 			recv_full();
+			last_comm = timekeeper.current_time;
 		}
 		else {
 			process_command();
 			start_recv();
+			last_comm = timekeeper.current_time;
+			sent_ping = false;
 		}
 	}
 	else {

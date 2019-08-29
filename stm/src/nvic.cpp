@@ -83,14 +83,19 @@ namespace {
 	}
 }
 
-extern "C" void HardFault_Handler() {
+[[noreturn]] void nvic::show_error_screen(const char * errcode) {
 	// there was a hardfault... delay for a while so i know
 	for (int i = 0; i < 64; ++i) {
 		while (matrix.is_active()) {;}
 		draw_hardfault_screen(64, i);
+		draw::text(matrix.get_inactive_buffer(), errcode, font::lcdpixel_6::info, 0, 20, 255, 128, 0);
 		matrix.swap_buffers();
 		matrix.display();
 	}
 
 	NVIC_SystemReset();
+}
+
+extern "C" void HardFault_Handler() {
+	nvic::show_error_screen("HardFault");
 }
