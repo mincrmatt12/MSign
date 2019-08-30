@@ -4,6 +4,8 @@
 #include "stm32f2xx_ll_rng.h"
 #include "stm32f2xx_ll_bus.h"
 
+#include <cmath>
+
 void rng::init() {
 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_RNG);
 
@@ -20,4 +22,8 @@ uint32_t rng::get() {
 	}
 
 	return LL_RNG_ReadRandData32(RNG);
+}
+
+uint8_t rng::getclr() {
+	return std::pow((get() % 256) / 256.0, 2.4) * 256;
 }
