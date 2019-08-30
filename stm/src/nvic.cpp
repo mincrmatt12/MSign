@@ -35,6 +35,12 @@ void nvic::init() {
 	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
 	NVIC_EnableIRQ(SysTick_IRQn);
 
+	NVIC_SetPriority(UsageFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_EnableIRQ(UsageFault_IRQn);
+
+	NVIC_SetPriority(BusFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_EnableIRQ(BusFault_IRQn);
+
 	__set_BASEPRI(0U);
 }
 
@@ -76,25 +82,40 @@ extern "C" void SysTick_Handler() {
 // hard fault handler renderer...
 
 namespace {
-	void draw_hardfault_screen(int total_loop, int remain_loop) {
+	void draw_hardfault_screen(int remain_loop) {
 		draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
-		draw::text(matrix.get_inactive_buffer(), "MSign crashed!", font::lcdpixel_6::info, 0, 6, 255, 0, 0);
+		draw::text(matrix.get_inactive_buffer(), "MSign crashed!", font::lcdpixel_6::info, 0, 6, 255, 1, 1);
 		draw::text(matrix.get_inactive_buffer(), "rebooting in:", font::lcdpixel_6::info, 0, 12, 128, 128, 128);
 
-		draw::rect(matrix.get_inactive_buffer(), 0, 24, (remain_loop - total_loop) / ((total_loop + 32) / 64), 32, 100, 100, 255);
+		draw::rect(matrix.get_inactive_buffer(), 0, 24, remain_loop / 2, 32, 100, 100, 255);
 	}
 }
 
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
+	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 	// there was a hardfault... delay for a while so i know
 	while (matrix.is_active()) {;}
-	for (int j = 0; j < 64; ++j) {
-		matrix.display();
-		draw_hardfault_screen(64, j);
+	for (int j = 0; j < 128; ++j) {
+		draw_hardfault_screen(j);
 		draw::text(matrix.get_inactive_buffer(), errcode, font::lcdpixel_6::info, 0, 20, 255, 128, 0);
-		while (matrix.is_active()) {;}
 		matrix.swap_buffers();
+		matrix.display();
+		while (matrix.is_active()) {;}
+		matrix.display();
+		while (matrix.is_active()) {;}
+		matrix.display();
+		while (matrix.is_active()) {;}
+		matrix.display();
+		while (matrix.is_active()) {;}
 	}
 
 	NVIC_SystemReset();
+	while(1) {;}
+}
+
+extern "C" void UsageFault_Handler() {
+	nvic::show_error_screen("UsageFault");
+}
+extern "C" void BusFault_Handler() {
+	nvic::show_error_screen("BusFault");
 }
