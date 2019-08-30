@@ -174,7 +174,7 @@ bool tasks::TTCScreen::init() {
 		return false;
 	}
 	bus_type = 1;
-	bus_state = ((rng::get() % 32) == 0);
+	bus_state = ((rng::get() % 10) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
