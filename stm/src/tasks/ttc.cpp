@@ -61,16 +61,13 @@ void tasks::TTCScreen::draw_bus() {
 	if (pos == 108) {
 		bus_type = rng::get() % 3;
 		bus_type += 1;
-		bus_state = ((rng::get() % 128) == 0);
-		if (bus_state) {
-			bus_state = (rng::get() % 2) + 1;
-		}
 	}
 
 	switch (bus_state) {
 		case 0:
 			for (uint8_t i = 0; i < bus_type; ++i)
 				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
+			break;
 		case 1:
 		case 2:
 			{
@@ -80,8 +77,9 @@ void tasks::TTCScreen::draw_bus() {
 				}
 
 				for (uint8_t i = 0; i < bus_type; ++i)
-					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::get() % 256, rng::get() % 256, rng::get() % 256, true);
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
 			}
+			break;
 	}
 
 }
@@ -176,7 +174,10 @@ bool tasks::TTCScreen::init() {
 		return false;
 	}
 	bus_type = 1;
-	bus_state = 0;
+	bus_state = ((rng::get() % 32) == 0);
+	if (bus_state) {
+		bus_state = (rng::get() % 2) + 1;
+	}
 	return true;
 }
 

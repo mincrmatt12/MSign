@@ -441,7 +441,10 @@ loopover:
 			sd.remove("/upd/state.txt");
 			sd.remove("/upd/stm.bin");
 			sd.remove("/upd/chck.sum");
-			sd.remove("/upd/esp.bin");
+			if (sd.exists("/upd/esp.bin"))
+				sd.remove("/upd/esp.bin");
+
+			delay(1000);
 
 			// send command
 			send_update_status(0x40);

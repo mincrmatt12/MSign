@@ -766,7 +766,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 				return;
 			}
 			else {
-				NVIC_SystemReset();
+				nvic::show_error_screen("InvShake");
 			}
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
