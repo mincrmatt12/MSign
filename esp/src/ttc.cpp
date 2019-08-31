@@ -111,6 +111,9 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					// mark as delayed
 					state.layover = true;
 				}
+				else {
+					state.layover = false;
+				}
 			}
 			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 			{

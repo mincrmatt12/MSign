@@ -214,7 +214,7 @@ add:
 					break;
 				case 'u':
 					// the sign has no support for unicode anyways, so we just ignore it
-					next(); next();
+					next(); next(); next();
 					break;
 				default:
 					append(peek());
