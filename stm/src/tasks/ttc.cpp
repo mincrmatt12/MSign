@@ -72,11 +72,11 @@ void tasks::TTCScreen::draw_bus() {
 		case 2:
 			{
 				// bus disco mode (state 2 == bus racing)
-				if (bus_state == 2) {
-					pos = (pos * (pos  / 2)) % 154;
-				}
+				uint16_t speed = 50 - ((timekeeper.current_time % 100) / 4);
+				speed += 4;
+				pos = ((timekeeper.current_time / (bus_state == 2 ? speed : 70)) % (154 + (bus_state - 1) * 50)) - 45;
 
-				for (uint8_t i = 0; i < bus_type; ++i)
+				for (uint8_t i = 0; i < bus_type + (bus_state == 2 ? 2 : 0); ++i)
 					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
 			}
 			break;
@@ -161,7 +161,6 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 }
 
 bool tasks::TTCScreen::init() {
-	// TODO: fix me
 	if (!(
 		servicer.open_slot(slots::TTC_INFO, true, this->s_info) &&
 		servicer.open_slot(slots::TTC_NAME_1, true, this->s_n[0]) &&
@@ -174,7 +173,7 @@ bool tasks::TTCScreen::init() {
 		return false;
 	}
 	bus_type = 1;
-	bus_state = ((rng::get() % 10) == 0);
+	bus_state = ((rng::get() % 15) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
@@ -182,7 +181,6 @@ bool tasks::TTCScreen::init() {
 }
 
 bool tasks::TTCScreen::deinit() {
-	// TODO: also fix me
 	if (!(
 		servicer.close_slot(this->s_info) &&
 		servicer.close_slot(this->s_n[0]) &&

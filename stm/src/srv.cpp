@@ -503,7 +503,6 @@ void srv::Servicer::send() {
 
 	LL_DMA_DisableIT_HT(UART_DMA, UART_DMA_TX_Stream);
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_TX_Stream);
-	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_TX_Stream);
 	
 	LL_USART_Enable(ESP_USART);
 	LL_USART_ClearFlag_TC(ESP_USART);
@@ -524,6 +523,10 @@ void srv::Servicer::start_recv() {
 	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, 3);
 
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
+	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_RX_Stream);
+
+	LL_USART_ClearFlag_RXNE(ESP_USART);
+	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
 
@@ -539,6 +542,10 @@ bool srv::Servicer::recv_full() {
 	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, dma_buffer[1]);
 
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
+	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_RX_Stream);
+
+	LL_USART_ClearFlag_RXNE(ESP_USART);
+	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 	return false;
 }
@@ -742,10 +749,10 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 
 void srv::Servicer::dma_finish(bool incoming) {
 	if (incoming) {
-		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 		// check for error
 		if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
 			NVIC_SRV_RXE_CLRF(UART_DMA);
+			LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 
 			// this is a deceptive command, clearing flags is done by reading SR and DR, which this function does.
 			// it also "reads" a byte off of the serial port but eh.
@@ -754,6 +761,8 @@ void srv::Servicer::dma_finish(bool incoming) {
 			start_recv();
 			return;
 		}
+
+		LL_DMA_DisableStream(UART_DMA, UART_DMA_RX_Stream);
 
 		// first, check if we need to handle the handshake command
 		if (state == STATE_HANDSHAKE_RECV) {

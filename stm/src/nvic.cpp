@@ -63,7 +63,7 @@ extern "C" void NVIC_SRV_RX_IRQ_HANDLER() {
 		NVIC_SRV_RX_CLRF(UART_DMA);
 		servicer.dma_finish(true);
 	}
-	if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
+	else if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
 		servicer.dma_finish(true);
 	}
 }
