@@ -71,10 +71,11 @@ void tasks::TTCScreen::draw_bus() {
 		case 1:
 		case 2:
 			{
-				// bus disco mode (state 2 == bus racing)
-				uint16_t speed = 50 - ((timekeeper.current_time % 100) / 4);
-				speed += 4;
-				pos = ((timekeeper.current_time / (bus_state == 2 ? speed : 70)) % (154 + (bus_state - 1) * 50)) - 45;
+				if (bus_state == 2) {
+					pos += 45;
+					pos = (pos + pos) % 154;
+					pos -= 45;
+				}
 
 				for (uint8_t i = 0; i < bus_type + (bus_state == 2 ? 2 : 0); ++i)
 					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
@@ -173,7 +174,7 @@ bool tasks::TTCScreen::init() {
 		return false;
 	}
 	bus_type = 1;
-	bus_state = ((rng::get() % 15) == 0);
+	bus_state = ((rng::get() % 30) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
