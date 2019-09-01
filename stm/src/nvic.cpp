@@ -66,6 +66,9 @@ extern "C" void NVIC_SRV_RX_IRQ_HANDLER() {
 	else if (NVIC_SRV_RXE_ACTV(UART_DMA)) {
 		servicer.dma_finish(true);
 	}
+	else {
+		show_error_screen("RxNoHandle");
+	}
 }
 
 extern "C" void NVIC_SRV_TX_IRQ_HANDLER() {
