@@ -67,7 +67,7 @@ extern "C" void NVIC_SRV_RX_IRQ_HANDLER() {
 		servicer.dma_finish(true);
 	}
 	else {
-		show_error_screen("RxNoHandle");
+		nvic::show_error_screen("RxNoHandle");
 	}
 }
 
