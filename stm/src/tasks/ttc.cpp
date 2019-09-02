@@ -73,7 +73,7 @@ void tasks::TTCScreen::draw_bus() {
 			{
 				if (bus_state == 2) {
 					pos += 45;
-					pos = (pos + pos) % 154;
+					pos = (pos * pos) % 154;
 					pos -= 45;
 				}
 
