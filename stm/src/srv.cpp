@@ -234,10 +234,6 @@ void srv::Servicer::loop() {
 
 				nvic::show_error_screen("ESPTimeout");
 			}
-
-			if (!LL_DMA_IsEnabledStream(UART_DMA, UART_DMA_RX_Stream)) {
-				nvic::show_error_screen("NoRXDma");
-			}
 		}
 	}
 
