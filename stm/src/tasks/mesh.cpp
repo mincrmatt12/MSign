@@ -1,8 +1,9 @@
 // count = 206
 #include "threed.h"
 
+void threed::init_default_mesh() {
 
-bool threed::Renderer::init() {
+tri_count = 206;
 
 tris[0] = {
     { -0.218, 0.12, -0.402 },
@@ -2062,11 +2063,4 @@ tris[205] = {
     76,
     163
 };
-
-name[0] = '3';
-name[1] = 'd';
-name[2] = 'r';
-name[3] = 'd';
-
-return true;
 }

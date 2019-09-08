@@ -4,7 +4,6 @@
 #include <cmath>
 
 namespace threed {
-
 	struct Vec3 {
 		float x, y, z;
 
@@ -140,7 +139,6 @@ namespace threed {
 		void update_matricies();
 
 		int current_tri = 0;
-		Tri tris[206];
 
 		Mat4 perpview;
 		Vec3 camera_pos, camera_target;
@@ -221,4 +219,9 @@ namespace threed {
 			}
 		}
 	};
+
+	extern Tri tris[384];
+	extern size_t tri_count;
+
+	void init_default_mesh();
 }

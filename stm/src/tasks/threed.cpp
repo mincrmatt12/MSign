@@ -6,6 +6,8 @@ extern matrix_type matrix;
 extern uint64_t rtc_time;
 
 namespace threed {
+	size_t tri_count = 0;
+	Tri tris[384];
 
 	float Vec3::length() const {
 		return sqrtf(
@@ -99,11 +101,11 @@ namespace threed {
 	}
 
 	bool Renderer::done() {
-		return current_tri == 206;
+		return current_tri == tri_count;
 	}
 
 	void Renderer::loop() {
-		if (current_tri == 206) current_tri = 0;
+		if (current_tri == tri_count) current_tri = 0;
 		if (current_tri == 0) {
 			update_matricies();
 		}
@@ -181,5 +183,14 @@ namespace threed {
 		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
 			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, cr, cg, cb);
 	}
+	
+	bool Renderer::init() {
+		if (tri_count == 0) init_default_mesh();
+		name[0] = '3';
+		name[1] = 'd';
+		name[2] = 'r';
+		name[3] = 'd';
 
+		return true;
+	}
 }
