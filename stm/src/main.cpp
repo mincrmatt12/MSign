@@ -114,7 +114,7 @@ int main() {
 	show_test_pattern(2, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
 
-	uint16_t finalize_counter = 100;
+	uint16_t finalize_counter = 60;
 	while (finalize_counter--) {
 		if (finalize_counter < 50) {
 			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);
@@ -126,8 +126,6 @@ int main() {
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 255);
 		}
 		matrix.swap_buffers();
-		matrix.display();
-		while (matrix.is_active()) {;}
 		matrix.display();
 		while (matrix.is_active()) {;}
 		matrix.display();
@@ -195,7 +193,7 @@ run_it:
 
 		if (display_ready) {
 			matrix.swap_buffers(); 
-			draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
+			matrix.get_inactive_buffer().clear();
 			display_ready = false;
 		}
 	}

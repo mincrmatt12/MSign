@@ -1,10 +1,11 @@
 #include "nvic.h"                                             
                                                               
+#include "draw.h"
 #include "srv.h"                                              
 #include "tasks/timekeeper.h"                                 
 #include "matrix.h"                                           
                                                               
-extern led::Matrix<led::FrameBuffer<64, 32>> matrix;          
+extern matrix_type matrix;          
 extern srv::Servicer servicer;                                
 extern tasks::Timekeeper timekeeper;                          
                                                               

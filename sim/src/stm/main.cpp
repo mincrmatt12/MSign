@@ -20,7 +20,7 @@
 
 #define SKIP_THRESH 5
 
-led::Matrix<led::FrameBuffer<64, 32>> matrix;
+matrix_type matrix;
 
 srv::Servicer servicer;
 uint64_t rtc_time;

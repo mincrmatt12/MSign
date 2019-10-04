@@ -65,6 +65,7 @@ namespace led {
 			uint8_t * byte_stream;
 
 			static constexpr uint16_t width = Width;
+			static constexpr uint16_t effective_width = Width;
 			static constexpr uint16_t height = Height;
 			static constexpr uint16_t stb_lines = Height / 2;
 
@@ -95,6 +96,7 @@ namespace led {
 
 	template<typename FB>                                                                
 		struct Matrix {                                                                  
+			typedef FB framebuffer_type;
 
 			Matrix() : fb0(), fb1() {                                                    
 			}                                                                            

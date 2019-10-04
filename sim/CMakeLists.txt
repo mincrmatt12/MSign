@@ -84,6 +84,7 @@ endforeach()
 # ----- section two: compile stm -----
 add_executable(stmsim ${TOTAL_STM_SRCS})
 target_include_directories(stmsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/stmsrc)
+target_compile_options(stmsim PRIVATE -DSIM)
 add_dependencies(stmsim copy_stm_src)
 
 # ----- section three: setup ESP build -----

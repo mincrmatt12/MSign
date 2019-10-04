@@ -169,7 +169,7 @@ void srv::Servicer::loop() {
 					asm volatile ("nop");
 					asm volatile ("nop");
 					asm volatile ("nop");
-					if (retry_counter == 300) {
+					if (retry_counter == 100) {
 						NVIC_SystemReset();
 					}
 				}
