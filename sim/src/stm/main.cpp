@@ -131,10 +131,6 @@ int main() {
 		matrix.swap_buffers();
 		matrix.display();
 		while (matrix.is_active()) {;}
-		matrix.display();
-		while (matrix.is_active()) {;}
-		matrix.display();
-		while (matrix.is_active()) {;} // render a few frames so the test patters are actually visible
 	}
 
 	dispman.init();

@@ -16,6 +16,10 @@ namespace led {
 				memset(data, 0x0, sizeof(data));
 			}
 
+			void clear() {
+				memset(data, 0x0, sizeof(data));
+			}
+
 			void show() {                                                                                                                                                             
 				std::cout << "\e[;H\e[?25l";                                                                                                                                                 
 				for (size_t y = 0; y < Height; ++y) {                                                                                                                                 
@@ -69,7 +73,7 @@ namespace led {
 			static constexpr uint16_t height = Height;
 			static constexpr uint16_t stb_lines = Height / 2;
 
-			private:
+		private:
 			uint8_t data[Width*Height*3];
 
 			inline uint8_t & _r(uint16_t x, uint16_t y) {
