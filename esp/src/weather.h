@@ -13,6 +13,9 @@ namespace weather {
 	extern uint8_t echo_index;
 	extern char icon[16];
 	extern uint64_t time_since_last_update;
+
+	extern float temp_over_day[24];
+	extern slots::WeatherStateArrayCode state_data[24];
 }
 
 #endif

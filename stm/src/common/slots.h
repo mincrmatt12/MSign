@@ -33,6 +33,9 @@ namespace slots {
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRUCT; VStr - current summary; polled
+		WEATHER_ARRAY1 = 0x46,      // STRING; list of ENUMS for the state per-hour
+		WEATHER_ARRAY2 = 0x47,      // '' 
+		WEATHER_TEMP_GRAPH = 0x41,  // STRUCT; VStr - temp data as floats
 
 		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
 		CALFIX_CLS1 = 0x51,			// STRUCT; ClassInfo, name and room
@@ -86,7 +89,7 @@ namespace slots {
 		float ctemp;
 		float ltemp;
 		float htemp;
-		uint8_t status_size; // deprecated
+		float crtemp;
 	};
 
 	struct VStr {
@@ -149,15 +152,24 @@ namespace slots {
 	SLOT_CHECK_DEF(ScCfgTime);
 	SLOT_CHECK_DEF(Vec3);
 
-	enum struct UpdateStatusCode : uint8_t {
-		NO_UPDATE = 0x00,
-		DOWNLOADING_UPDATE = 0x01,  // downloading update, check percentage in other slot
-		PREPARING_UPDATE = 0x02,	// preparing to update, writing files to the SD card, verifying CRCs
-		ABOUT_TO_UPDATE = 0x03, 	// going to reset the STM soon, show a final warning
-		// error flags, cleared after a bit
-		UPDATE_DOWNLOAD_FAILED = 0x10, // download interrupted
-		UPDATE_PREPARE_FAILED = 0x11, // update preparation failed
+	enum WeatherStateArrayCode : uint8_t {
+		UNK = 0,
+
+		CLEAR = 0x10,
+		PARTLY_CLOUDY,
+		MOSTLY_CLOUDY,
+		OVERCAST,
+
+		DRIZZLE = 0x20,
+		LIGHT_RAIN,
+		RAIN,
+		HEAVY_RAIN,
+
+		SNOW = 0x30,
+		HEAVY_SNOW
 	};
+
+
 }
 
 #endif
