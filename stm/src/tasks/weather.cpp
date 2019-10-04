@@ -189,7 +189,10 @@ bool tasks::WeatherScreen::init() {
 	if (!(
 		servicer.open_slot(slots::WEATHER_INFO, true, this->s_info) &&
 		servicer.open_slot(slots::WEATHER_ICON, true, this->s_icon) &&
-		s_status.open(slots::WEATHER_STATUS)
+		servicer.open_slot(slots::WEATHER_ARRAY1, true, this->s_state[0]) &&
+		servicer.open_slot(slots::WEATHER_ARRAY2, true, this->s_state[1]) &&
+		s_status.open(slots::WEATHER_STATUS) &&
+		s_tempgraph.open(slots::WEATHER_TEMP_GRAPH)
 	)) {
 		return false;
 	}
@@ -198,20 +201,26 @@ bool tasks::WeatherScreen::init() {
 
 bool tasks::WeatherScreen::deinit() {
 	// TODO: fix me
+	s_status.close();
+	s_tempgraph.close();
 	if (!(
 		servicer.close_slot(s_info) &&
-		servicer.close_slot(s_icon) 
+		servicer.close_slot(s_icon) &&
+		servicer.close_slot(s_state[0]) &&
+		servicer.close_slot(s_state[1])
 	)) {
 		return false;
 	}
-	s_status.close();
 	return true;
 }
 
 void tasks::WeatherScreen::loop() {
 	s_status.update();
-
-	if (servicer.slot_dirty(s_info, true)) s_status.renew();
+	s_tempgraph.update();
+	if (servicer.slot_dirty(s_info, true)) {
+		s_status.renew();
+		s_tempgraph.renew();
+	}
 	
 	char disp_buf[16];
 	float ctemp = servicer.slot<slots::WeatherInfo>(s_info).ctemp;
@@ -246,7 +255,7 @@ void tasks::WeatherScreen::loop() {
 
 	if (s_status.data) {
 		text_size = draw::text_size(s_status.data, font::tahoma_9::info);
-		if (text_size < 64) {
+		if (text_size < 128) {
 			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
 		}
 		else {
@@ -254,13 +263,13 @@ void tasks::WeatherScreen::loop() {
 			t_pos %= (text_size * 2) + 1;
 			t_pos =  ((text_size * 2) + 1) - t_pos;
 			t_pos -= text_size;
-			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, t_pos, 29, 240, 240, 240);
+			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, t_pos, 60, 240, 240, 240);
 		}
 	}
 
 	draw::rect(matrix.get_inactive_buffer(), 0, 0, 22, 20, 0, 0, 0);
 
-	int16_t y = (int16_t)(std::round(3.0f * sinf((float)(timekeeper.current_time) / 700.0f) + 1));
+	int16_t y = (int16_t)(std::round(4.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 5));
 
 	const char * icon = (const char*)servicer.slot(s_icon);
 
