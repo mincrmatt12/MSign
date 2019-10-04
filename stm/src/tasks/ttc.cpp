@@ -65,7 +65,7 @@ void tasks::TTCScreen::loop() {
 
 void tasks::TTCScreen::draw_bus() {
 	uint16_t pos = ((timekeeper.current_time / 70) % 228) - 45;
-	if (pos == 227) {
+	if (pos == 227 - 45) {
 		bus_type = rng::get() % 3;
 		bus_type += 1;
 	}
@@ -129,7 +129,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		write_pos[i] = position + 2;
 		char buf[16] = {0};
-		snprintf(buf, 16, "%2llum", (times[i] - rtc_time) / 60'000);
+		snprintf(buf, 16, "%llum", (times[i] - rtc_time) / 60'000);
 
 		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
 	}
@@ -145,7 +145,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		snprintf(buf, 16, "%2llum", (times[i] - rtc_time) / 60'000);
+		snprintf(buf, 16, "%llum", (times[i] - rtc_time) / 60'000);
 
 		if (minutes < 5) {
 			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 255, 255);
@@ -178,7 +178,8 @@ bool tasks::TTCScreen::init() {
 	)) {
 		return false;
 	}
-	bus_type = 1;
+	bus_type = rng::get() % 3;
+	bus_type += 1;
 	bus_state = ((rng::get() % 30) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
