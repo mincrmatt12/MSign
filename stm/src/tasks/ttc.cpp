@@ -129,6 +129,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		write_pos[i] = position + 2;
 		char buf[16] = {0};
+		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
 		snprintf(buf, 16, "%dm", (int)minutes);
 
 		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
