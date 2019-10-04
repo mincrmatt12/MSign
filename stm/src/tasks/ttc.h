@@ -13,10 +13,11 @@ namespace tasks {
 		bool done() override {return true;}
 	private:
 		void draw_bus();
-		bool draw_slot(uint16_t y, const uint8_t * name, uint64_t time1, uint64_t time2, bool alert, bool delay);
+		bool draw_slot(uint16_t y, const uint8_t * name, uint64_t times[4], bool alert, bool delay);
 
 		uint8_t s_info = 0xff;
 		uint8_t s_t[3] = {0xff};
+		uint8_t s_tb[3] = {0xff};
 		uint8_t s_n[3] = {0xff};
 
 		bool ready;

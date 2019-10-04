@@ -26,13 +26,13 @@ extern srv::Servicer servicer;
 
 void tasks::TTCScreen::loop() {
 	draw_bus();
-	draw::rect(matrix.get_inactive_buffer(), 0, 8, 64, 9, 1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 0, 8, 128, 9, 1, 1, 1);
 
 	// Alright, now we have to work out what to show
 	const slots::TTCInfo& info = servicer.slot<slots::TTCInfo>(s_info);
 	if (servicer.slot_dirty(s_info, true)) ready = true;
 
-	uint32_t y = 16;
+	uint32_t y = 9;
 
 	uint8_t name[17] = {0};
 
@@ -46,19 +46,26 @@ void tasks::TTCScreen::loop() {
 			if (info.flags & (slots::TTCInfo::EXIST_0 << slot)) {
 				memset(name, 0, 17);
 				memcpy(name, servicer.slot(s_n[slot]), info.nameLen[slot]);
-				if (
-					draw_slot(y, name, servicer.slot<slots::TTCTime>(s_t[slot]).tA, servicer.slot<slots::TTCTime>(s_t[slot]).tB,
+
+				uint64_t times[4] = {
+					servicer.slot<slots::TTCTime>(s_t[slot]).tA, servicer.slot<slots::TTCTime>(s_t[slot]).tB,
+					servicer.slot<slots::TTCTime>(s_tb[slot]).tA, servicer.slot<slots::TTCTime>(s_tb[slot]).tB
+				};
+
+				if (draw_slot(y, name, times, 
 						info.flags & (slots::TTCInfo::ALERT_0 << slot),
-						info.flags & (slots::TTCInfo::DELAY_0 << slot))
-				) y += 8;		
+						info.flags & (slots::TTCInfo::DELAY_0 << slot)
+				)) {
+					y += 18;
+				}
 			}
 		}
 	}
 }
 
 void tasks::TTCScreen::draw_bus() {
-	uint16_t pos = ((timekeeper.current_time / 80) % 154) - 45;
-	if (pos == 108) {
+	uint16_t pos = ((timekeeper.current_time / 70) % 228) - 45;
+	if (pos == 227) {
 		bus_type = rng::get() % 3;
 		bus_type += 1;
 	}
@@ -66,33 +73,33 @@ void tasks::TTCScreen::draw_bus() {
 	switch (bus_state) {
 		case 0:
 			for (uint8_t i = 0; i < bus_type; ++i)
-				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, 230, 230, 230, true);
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, 230, 230, 230, true);
 			break;
 		case 1:
 		case 2:
 			{
 				if (bus_state == 2) {
 					pos += 45;
-					pos = (pos * pos) % 154;
+					pos = (pos * pos) % 228;
 					pos -= 45;
 				}
 
 				for (uint8_t i = 0; i < bus_type + (bus_state == 2 ? 2 : 0); ++i)
-					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 15), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
 			}
 			break;
 	}
 
 }
 
-bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time1, uint64_t time2, bool alert, bool delay) {
+bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t times[4], bool alert, bool delay) {
 	if (!name) return false;
 	uint32_t t_pos = ((timekeeper.current_time / 50));
 	uint16_t size = draw::text_size(name, font::tahoma_9::info);
 
 	// If the size doesn't need scrolling, don't scroll it.
-	if (size < 43) {
-		t_pos = 0;
+	if (size < 128) {
+		t_pos = 1;
 	}
 	else {
 		// otherwise make it scroll from the right
@@ -101,62 +108,57 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 		t_pos -= size;
 	}
 
-	// Construct the time string.
-	uint64_t next_bus = 0;
-	char     time_str[64];
-	if (time1 > rtc_time && time2 > rtc_time) {
-		next_bus = time1;
-		snprintf(time_str, 64, "%d,%dm",
-					(int)((time1 - rtc_time) / 60000),
-					(int)((time2 - rtc_time) / 60000)
-		);
-		if (draw::text_size(time_str, font::lcdpixel_6::info) > 20) {
-			if (time1 - rtc_time < 60000) {
-				snprintf(time_str, 64, "%ds",
-						(int)((time1 - rtc_time) / 1000)
-				);
-			}
-			else {
-				snprintf(time_str, 64, "%dm",
-						(int)((time1 - rtc_time) / 60000)
-				);
-			}
+	int16_t write_pos[4] = {-1};
+	int16_t min_pos = 0;
+
+	for (int i = 0; i < 4; ++i) {
+		if (rtc_time > times[i]) break;
+		
+		// Scale is 8 pixels per minute
+		uint64_t position = (times[i] - rtc_time) / 15000;
+
+		if (position > 128) {
+			if (min_pos != 0) break;
+			write_pos[0] = 0;
+			break;
+		}
+
+		if (position < min_pos) {
+			position = min_pos;
+		}
+
+		write_pos[i] = position + 2;
+		char buf[16] = {0};
+		snprintf(buf, 16, "%lum", (times[i] - rtc_time) / 60*1000);
+
+		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
+	}
+
+	if (write_pos[0] < 0) return false;
+
+	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255, 255, 255);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 1, 1, 1);
+
+	for (int i = 0; i < 4; ++i) {
+		if (write_pos[i] < 0) break;
+		if (times[i] < rtc_time) break;
+
+		char buf[16] = {0};
+		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
+		snprintf(buf, 16, "%lum", (times[i] - rtc_time) / 60'000);
+
+		if (minutes < 5) {
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 255, 255);
+		}
+		else if (minutes < 13) {
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 100, 255, 100);
+		}
+		else {
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 70,  70);
 		}
 	}
-	else if (time1 > rtc_time) {
-		next_bus = time1;
-		snprintf(time_str, 64, "%dm",
-				(int)((time1 - rtc_time) / 60000)
-		);
-	}
-	else if (time2 > rtc_time) {
-		next_bus = time2;
-		snprintf(time_str, 64, "%dm",
-				(int)((time2 - rtc_time) / 60000)
-		);
-	}
-	else {
-		return false;
-	}
 
-	// Get the color of the text, green means > 1m < 5m, red means delay/alert / >10m, white if normal but close
-	if (alert || (next_bus - rtc_time) > 600000) {
-		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y, 255, 20, 20);
-	}
-	else if ((next_bus - rtc_time) > 120000 && (next_bus - rtc_time) < 450000) {
-		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y, 40, 255, 40);
-	}
-	else {
-		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y, 240, 240, 240);
-	}
-
-	draw::rect(matrix.get_inactive_buffer(), 44, y - 7, 64, y+1, 3, 3, 3);
-	if (alert) {
-		draw::rect(matrix.get_inactive_buffer(), 45, y + 1, 64, y, 230, 230, 20);
-		draw::rect(matrix.get_inactive_buffer(), 45, y - 7, 64, y - 8, 230, 230, 20);
-	}
-	draw::text(matrix.get_inactive_buffer(), time_str, font::lcdpixel_6::info, 45, y-1, 255, 255, 255);
-	draw::rect(matrix.get_inactive_buffer(), 0, y, 64, y + 1, 1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 3, 3, 3);
 
 	return true;
 }
@@ -169,7 +171,10 @@ bool tasks::TTCScreen::init() {
 		servicer.open_slot(slots::TTC_NAME_3, true, this->s_n[2]) &&
 		servicer.open_slot(slots::TTC_TIME_1, true, this->s_t[0]) &&
 		servicer.open_slot(slots::TTC_TIME_2, true, this->s_t[1]) &&
-		servicer.open_slot(slots::TTC_TIME_3, true, this->s_t[2])
+		servicer.open_slot(slots::TTC_TIME_3, true, this->s_t[2]) &&
+		servicer.open_slot(slots::TTC_TIME_1B, true, this->s_tb[0]) &&
+		servicer.open_slot(slots::TTC_TIME_2B, true, this->s_tb[1]) &&
+		servicer.open_slot(slots::TTC_TIME_3B, true, this->s_tb[2]) 
 	)) {
 		return false;
 	}
@@ -189,7 +194,10 @@ bool tasks::TTCScreen::deinit() {
 		servicer.close_slot(this->s_n[2]) &&
 		servicer.close_slot(this->s_t[0]) &&
 		servicer.close_slot(this->s_t[1]) &&
-		servicer.close_slot(this->s_t[2])
+		servicer.close_slot(this->s_t[2]) &&
+		servicer.close_slot(this->s_tb[0]) &&
+		servicer.close_slot(this->s_tb[1]) &&
+		servicer.close_slot(this->s_tb[2])
 	)) {
 		return false;
 	}
