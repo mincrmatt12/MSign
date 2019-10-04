@@ -104,7 +104,6 @@ namespace {
 		matrix.swap_buffers();
 		matrix.display();
 		while (matrix.is_active()) {;}
-		matrix.display();
 	}
 
 	NVIC_SystemReset();

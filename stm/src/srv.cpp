@@ -169,7 +169,7 @@ void srv::Servicer::loop() {
 					asm volatile ("nop");
 					asm volatile ("nop");
 					asm volatile ("nop");
-					if (retry_counter == 100) {
+					if (retry_counter == 60) {
 						NVIC_SystemReset();
 					}
 				}
@@ -771,7 +771,7 @@ void srv::Servicer::dma_finish(bool incoming) {
 				return;
 			}
 			else {
-				nvic::show_error_screen("InvShake");
+				NVIC_SystemReset();
 			}
 		}
 		else if (state == STATE_DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
