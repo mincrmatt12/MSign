@@ -4,7 +4,7 @@
 #include <string.h>
 #include "time.h"
 #include <Arduino.h>
-#include <Time.h>
+#include <TimeLib.h>
 
 namespace sccfg {
 	const uint8_t number_of_screens = 4;

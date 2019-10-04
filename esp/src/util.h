@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <HardwareSerial.h>
 #include <functional>
+#include <TimeLib.h>
 
 namespace util {
 
