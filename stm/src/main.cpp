@@ -48,7 +48,7 @@ bool    display_ready = false;
 
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
-	draw::fill(fb, 0, 0, 0);
+	fb.clear();
 	draw::text(fb, "MSIGN V3.0", font::lcdpixel_6::info, 0, 7, 0, 255, 0);
 	draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 14, 255, 255, 255);
 	switch (stage) {
@@ -116,16 +116,18 @@ int main() {
 
 	uint16_t finalize_counter = 60;
 	while (finalize_counter--) {
-		if (finalize_counter < 50) {
+		if (finalize_counter == 50) {
 			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);
+			matrix.swap_buffers();
 		}
-		if (finalize_counter < 34) {
+		if (finalize_counter == 34) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 255, 0);
+			matrix.swap_buffers();
 		}
-		if (finalize_counter < 18) {
+		if (finalize_counter == 18) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 255);
+			matrix.swap_buffers();
 		}
-		matrix.swap_buffers();
 		matrix.display();
 		while (matrix.is_active()) {;}
 		matrix.display();
