@@ -2,8 +2,9 @@
 #include "srv.h"
 #include "tasks/timekeeper.h"
 #include "common/slots.h"
-#include "fonts/latob_10.h"
+#include "fonts/latob_15.h"
 #include "fonts/lcdpixel_6.h"
+#include "fonts/tahoma_9.h"
 #include "fonts/vera_8.h"
 #include <time.h>
 
@@ -49,11 +50,35 @@ bool tasks::CalfixScreen::deinit() {
 }
 
 const uint16_t pos_table[4] = {
-	11,
 	16,
-	22,
-	27
+	25,
+	37,
+	46
 };
+
+void tasks::CalfixScreen::draw_dayp(uint16_t start, uint16_t end, uint16_t lpos, char indicator, uint64_t ps, uint64_t pe) {
+	char buf[2] = {indicator, 0};
+	uint64_t daytime = rtc_time % (24 * 60 * 60 * 1000);
+	if (daytime >= ps) {
+		if (daytime < pe) {
+			float offset = end - start;
+			float diff =   pe - ps;
+
+			uint16_t bpos = ((daytime - ps) / diff) * offset;
+			bpos += start;
+
+			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 80, 80, 80);
+			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100, 255, 100);
+		}
+		else {
+			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 80, 80, 80);
+			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 255, 255, 255);
+		}
+	}
+	else {
+		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 255, 50, 50);
+	}
+}
 
 void tasks::CalfixScreen::loop() {
 	if (servicer.slot_dirty(this->s_info, true)) {
@@ -74,6 +99,19 @@ void tasks::CalfixScreen::loop() {
 		const auto& a = servicer.slot<slots::PeriodInfo>(this->s_prd[i / 2]);
 		draw_class((i % 2 == 0) ? a.ps1 : a.ps2, (char *)servicer.slot<slots::ClassInfo>(this->s_c[i]).name, servicer.slot<slots::ClassInfo>(this->s_c[i]).room, pos_table[i], i);
 	}
+
+	const auto& ps23 = servicer.slot<slots::PeriodInfo>(this->s_prd[1]);
+	const auto& ps01 = servicer.slot<slots::PeriodInfo>(this->s_prd[0]);
+
+	uint64_t clslength = ps23.ps2 - ps23.ps1 - 5 * 60 * 1000;
+	uint64_t clstlength = clslength + 5 * 60 * 1000;
+	if (ps01.ps2 + clslength + 5 * 60 * 1000 != ps23.ps1) {
+		draw_dayp(0, 24, 10, '1', ps01.ps1, ps01.ps1 + clstlength);
+		draw_dayp(24, 48, 34, '2', ps01.ps2, ps01.ps2 + clslength);
+		draw_dayp(48, 72, 58, 'L', ps01.ps2 + clslength, ps23.ps1);
+		draw_dayp(72, 94, 82, '3', ps23.ps1, ps23.ps1 + clstlength);
+		draw_dayp(94, 128, 108, '4', ps23.ps2, ps23.ps2 + clslength);
+	}
 }
 
 void tasks::CalfixScreen::show_noschool() {
@@ -81,68 +119,62 @@ void tasks::CalfixScreen::show_noschool() {
 	int16_t x_pos = 9 + std::round(7.0f * sinf((float)(timekeeper.current_time) / 1300.0f));
 	int16_t y_pos = 21 + std::round(3.7f * sinf((float)(timekeeper.current_time) / 400.0f));
 
-	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_10::info, x_pos, y_pos, 0, 0, 255);
+	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_15::info, x_pos, y_pos, 0, 0, 255);
 }
 
 const uint8_t bg_color_table[4][3] = {
-	{2, 2, 5},
+	{2, 2, 4},
 	{1, 1, 2},
 	{1, 2, 1},
-	{2, 5, 2}
+	{2, 4, 2}
 };
 
 const uint8_t cls_fg_color_table[4][3] = {
-	{255, 140, 1},
-	{200, 190, 100},
-	{50, 60, 255},
+	{255, 180, 1},
+	{200, 200, 100},
+	{50,  120, 255},
 	{255, 255, 255}
 };
 
 void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_t room, uint16_t y_pos, uint8_t cl) {
 	if (!cname) return;
-	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 5, bg_color_table[cl][0], bg_color_table[cl][1], bg_color_table[cl][2]);
-	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 5, 64, y_pos + 6, 30, 30, 30);
+	
+	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 9, bg_color_table[cl][0], bg_color_table[cl][1], bg_color_table[cl][2]);
+	draw::text(matrix.get_inactive_buffer(), cname, font::tahoma_9::info, 1, y_pos + 8, cls_fg_color_table[cl][0], cls_fg_color_table[cl][1], cls_fg_color_table[cl][2]);
 
-	draw::text(matrix.get_inactive_buffer(), cname, font::lcdpixel_6::info, 0, y_pos + 5, cls_fg_color_table[cl][0], cls_fg_color_table[cl][1], cls_fg_color_table[cl][2]);
+	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 1, bg_color_table[cl][0] + 1, bg_color_table[cl][1] + 1, bg_color_table[cl][2] + 1);
+	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 8, 128, y_pos + 9, bg_color_table[cl][0] + 1, bg_color_table[cl][1] + 1, bg_color_table[cl][2] + 1);
 
-	char textbuf[7] = {0};
+	char text_buffer[32] = {0};
+	struct tm timedat;
+	time_t instant = clstm / 1000;
+	gmtime_r(&instant, &timedat);
+	snprintf(text_buffer, 32, "rm %03d / %02d:%02d", room, timedat.tm_hour, timedat.tm_min);
 
-	if (rtc_time % 8000 > 5000) {
-		snprintf(textbuf, 7, "rm%03d", room);
-	}
-	else {
-		struct tm timedat;
-		time_t now = clstm / 1000;
-		gmtime_r(&now, &timedat);
-
-		snprintf(textbuf, 7, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
-	}
-
-	uint16_t length = draw::text_size(textbuf, font::lcdpixel_6::info);
-	draw::rect(matrix.get_inactive_buffer(), 64 - length - 1, y_pos, 64, y_pos + 5, 0, 0, 0);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::lcdpixel_6::info, 64 - length, y_pos + 5, 255, 255, 255);
+	uint16_t text_size = draw::text_size(text_buffer, font::lcdpixel_6::info);
+	draw::text(matrix.get_inactive_buffer(), text_buffer, font::lcdpixel_6::info, 128 - text_size - 1, y_pos + 7, 255, 255, 255);
 }
 
 void tasks::CalfixScreen::draw_header(uint8_t day, bool abnormal) {
 	char textbuf[7];
 
 	snprintf(textbuf, 7, "Day %1d", day);
-	uint16_t text_size = draw::text_size(textbuf, font::lato_bold_10::info);
-	int16_t pos_offset = 32 + std::round(5.5f * sinf((float)(timekeeper.current_time) / 1000.0f));
+	uint16_t text_size = draw::text_size(textbuf, font::lato_bold_15::info);
+	int16_t pos_offset = 64 + std::round(7.5f * sinf((float)(timekeeper.current_time) / 1000.0f));
 
 	if (!abnormal)
-		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_10::info, pos_offset - text_size / 2, 9, 244, 244, 244);
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244, 244, 244);
 	else 
-		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_10::info, pos_offset - text_size / 2, 9, 244, 50, 50);
-	draw::rect(matrix.get_inactive_buffer(), 0, 10, 64, 11, 1, 1, 1);
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244, 50, 50);
+	draw::rect(matrix.get_inactive_buffer(), 0, 15, 128, 16, 1, 1, 1);
 
 	// create the two other thingies
 	uint8_t pd = day == 1 ? 4 : day - 1;
 	snprintf(textbuf, 7, "<%1d", pd);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 0, 8, 100, 100, 100);
+	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 0, 10, 100, 100, 100);
 
 	pd = day == 4 ? 1 : day + 1;
 	snprintf(textbuf, 7, "%1d>", pd);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 64 - draw::text_size(textbuf, font::vera_8::info) - 1, 8, 100, 100, 100);
+	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 128 - draw::text_size(textbuf, font::vera_8::info) - 1, 10, 100, 100, 100);
 
 }
