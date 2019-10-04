@@ -96,38 +96,38 @@ namespace led {
 				}
 			}
 
-			uint8_t & r(uint16_t x, uint16_t y) {
+			inline uint8_t & r(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_r(data, x, y);
 				}
 				return junk;
 			}
-			uint8_t & g(uint16_t x, uint16_t y) {
+			inline uint8_t & g(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_g(data, x, y);
 				}
 				return junk;
 			}
-			uint8_t & b(uint16_t x, uint16_t y) {
+			inline uint8_t & b(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_b(data, x, y);
 				}
 				return junk;
 			}
 
-			const uint8_t & r(uint16_t x, uint16_t y) const {
+			inline const uint8_t & r(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 					return Storage::_r(data, x, y);
 				}
 				return junk;
 			}
-			const uint8_t & g(uint16_t x, uint16_t y) const {
+			inline const uint8_t & g(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 ;					return Storage::_g(data, x, y);
 				}
 				return junk;
 			}
-			const uint8_t & b(uint16_t x, uint16_t y) const {
+			inline const uint8_t & b(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 					return Storage::_b(data, x, y);
 				}
@@ -205,7 +205,7 @@ namespace led {
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 30;
+				tim_init.Prescaler  = 29;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
