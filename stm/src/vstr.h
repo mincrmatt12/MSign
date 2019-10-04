@@ -11,7 +11,7 @@ extern uint64_t rtc_time;
 namespace srv::vstr {
 	// VStr's can contain any kind of data, the template is what to cast the pointer buffer to.
 	
-	const inline uint8_t buf_blocks = 32;
+	const inline uint8_t buf_blocks = 64;
 	const inline size_t buf_block_size = 64;
 	extern uint8_t buf_data[buf_blocks * buf_block_size];
 	extern bool buf_usage[buf_blocks];
@@ -58,7 +58,7 @@ repeat:
 		inline static void close(uint8_t *) {}
 	};
 
-	template<typename T, typename Allocator=VSBlock<128>>
+	template<typename T, typename Allocator=VSBlock<96>>
 	struct BasicVSWrapper {
 		const T* data = nullptr;  // can be null
 		const static size_t length = Allocator::length;
@@ -135,7 +135,7 @@ repeat:
 	}; 
 
 	using VSWrapper = BasicVSWrapper<char>;
-	template<typename T, size_t Len=128>
+	template<typename T, size_t Len=96>
 	using SizeVSWrapper = BasicVSWrapper<T, VSBlock<Len>>;
 }
 
