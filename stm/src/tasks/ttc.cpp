@@ -129,7 +129,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		write_pos[i] = position + 2;
 		char buf[16] = {0};
-		snprintf(buf, 16, "%llum", (times[i] - rtc_time) / 60'000);
+		snprintf(buf, 16, "%dm", (int)minutes);
 
 		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
 	}
@@ -145,7 +145,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		snprintf(buf, 16, "%llum", (times[i] - rtc_time) / 60'000);
+		snprintf(buf, 16, "%dm", (int)minutes);
 
 		if (minutes < 5) {
 			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 255, 255);
