@@ -164,21 +164,21 @@ namespace led {
 
 		inline static uint8_t & _r(uint8_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
-				return data[x*3 + (y - 32)*256*3];
+				return data[x*3 + (y & 0x1f)*256*3];
 			else
 				return data[(255 - x)*3 + (31 - y)*256*3];
 		}
 
 		inline static uint8_t & _g(uint8_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
-				return data[x*3 + (y - 32)*256*3 + 1];
+				return data[x*3 + (y & 0x1f)*256*3 + 1];
 			else
 				return data[(255 - x)*3 + (31 - y)*256*3 + 1];
 		}
 
 		inline static uint8_t & _b(uint8_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
-				return data[x*3 + (y - 32)*256*3 + 2];
+				return data[x*3 + (y & 0x1f)*256*3 + 2];
 			else
 				return data[(255 - x)*3 + (31 - y)*256*3 + 2];
 		}
@@ -200,12 +200,12 @@ namespace led {
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
 
-				tim_init.Prescaler  = 0; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
+				tim_init.Prescaler  = 7; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 29;
+				tim_init.Prescaler  = 31;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
