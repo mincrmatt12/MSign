@@ -11,7 +11,7 @@ namespace ttc {
 	void on_open(uint16_t data_id);
 
 	extern slots::TTCInfo info;
-	extern slots::TTCTime times[3];
+	extern slots::TTCTime times[6];
 
 	extern uint64_t time_since_last_update;
 }

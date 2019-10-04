@@ -11,7 +11,7 @@
 #include "util.h"
 
 slots::TTCInfo ttc::info;
-slots::TTCTime ttc::times[3];
+slots::TTCTime ttc::times[6];
 
 uint64_t ttc::time_since_last_update = 0;
 
@@ -54,6 +54,11 @@ void ttc::on_open(uint16_t data_id) {
 		case slots::TTC_TIME_2:
 		case slots::TTC_TIME_3:
 			serial::interface.update_data(data_id, (const uint8_t *)(&times[data_id - slots::TTC_TIME_1]), sizeof(slots::TTCTime));
+			break;
+		case slots::TTC_TIME_1B:
+		case slots::TTC_TIME_2B:
+		case slots::TTC_TIME_3B:
+			serial::interface.update_data(data_id, (const uint8_t *)(&times[3 + data_id - slots::TTC_TIME_1B]), sizeof(slots::TTCTime));
 			break;
 		case slots::TTC_NAME_1:
 		case slots::TTC_NAME_2:
@@ -138,20 +143,38 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 			if (state.tag && state.e2 < 2) {
 				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
-					ttc::times[slot].tB = ttc::times[slot].tB;
+					ttc::times[slot+3].tB = ttc::times[slot+3].tA;
+					ttc::times[slot+3].tA = ttc::times[slot].tB;
+					ttc::times[slot].tB = ttc::times[slot].tA;
 					ttc::times[slot].tA = state.epoch;
 					if (state.layover) {
 						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
 					}
 				}
 				else if (state.epoch < ttc::times[slot].tB || ttc::times[slot].tB == 0) {
+					ttc::times[slot+3].tB = ttc::times[slot+3].tA;
+					ttc::times[slot+3].tA = ttc::times[slot].tB;
 					ttc::times[slot].tB = state.epoch;
+					if (state.layover) {
+						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+					}
+				}
+				else if (state.epoch < ttc::times[slot+3].tA || ttc::times[slot+3].tA == 0) {
+					ttc::times[slot+3].tB = ttc::times[slot+3].tA;
+					ttc::times[slot+3].tA = state.epoch;
+					if (state.layover) {
+						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+					}
+				}
+				else if (state.epoch < ttc::times[slot+3].tB || ttc::times[slot+3].tB == 0) {
+					ttc::times[slot+3].tB = state.epoch;
 					if (state.layover) {
 						ttc::info.flags |= (slots::TTCInfo::DELAY_0 << slot);
 					}
 				}
 
 				on_open(slots::TTC_TIME_1 + slot);
+				on_open(slots::TTC_TIME_1B + slot);
 
 				Serial1.print(F("Adding ttc entry in slot "));
 				Serial1.print(slot);
@@ -163,6 +186,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	});
 
 	memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
+	memset(&ttc::times[slot+3], 0, sizeof(ttc::times[0]));
 
 	if (!parser.parse(std::move(cb))) {
 		Serial1.println(F("JSON fucked up."));

@@ -26,6 +26,9 @@ namespace slots {
 		TTC_TIME_1 = 0x24,			// STRUCT; TTCTime - time of next two buses
 		TTC_TIME_2 = 0x25,			// ''
 		TTC_TIME_3 = 0x26,			// ''
+		TTC_TIME_1B = 0x27,			// STRUCT; TTCTime - time of next two buses after previous (3 and 4)
+		TTC_TIME_2B = 0x28,			// ''
+		TTC_TIME_3B = 0x29,			// ''
 
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
@@ -75,7 +78,7 @@ namespace slots {
 
 			DELAY_0 = 64,
 			DELAY_1 = 128, // the slot is reported as delayed
-			DELAY_2 = 256
+			DELAY_2 = 256,
 		};
 	};
 
