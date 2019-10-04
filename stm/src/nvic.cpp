@@ -32,7 +32,7 @@ void nvic::init() {
 	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(NVIC_SRV_RX_IRQ_NAME);
 
-	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
+	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(SysTick_IRQn);
 
 	NVIC_SetPriority(UsageFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
