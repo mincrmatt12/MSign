@@ -13,7 +13,7 @@ namespace srv::vstr {
 	
 	const inline uint8_t buf_blocks = 32;
 	const inline size_t buf_block_size = 64;
-	extern uint8_t buf_data[buf_blocks][buf_block_size];
+	extern uint8_t buf_data[buf_blocks * buf_block_size];
 	extern bool buf_usage[buf_blocks];
 
 	template<size_t Len>
@@ -22,17 +22,17 @@ namespace srv::vstr {
 		const static int num_segments = (Len / buf_block_size) + (Len % buf_block_size != 0);
 
 		inline static uint8_t * open() {
-			for (int i = 0; i < buf_blocks; ++i) {
-				if (buf_usage[i]) continue;
-				int j = i;
-				for (;i < j + num_segments; ++i) {
-					if (buf_usage[i]) goto repeatloop;
+			for (int i = 0; i < (int)buf_blocks; ++i) {
+				for (int j = i; j < i + num_segments; ++j) {
+					if (buf_usage[j]) goto repeat;
 				}
-				for (i = j; i < j + num_segments; ++i) {
-					buf_usage[i] = true;
+				
+				for (int j = i; j < i + num_segments; ++j) {
+					buf_usage[j] = true;
 				}
-				return static_cast<uint8_t *>(&buf_data[j][0]);
-			repeatloop:
+
+				return &buf_data[i * buf_block_size];
+repeat:
 				;
 			}
 
@@ -40,8 +40,8 @@ namespace srv::vstr {
 		}
 
 		inline static void close(uint8_t * exist) {
-			int j = ((exist - buf_data[0]) / buf_block_size);
-			for (int i = j; i < j + num_segments; ++j) {
+			int j = ((exist - (uint8_t * )&buf_data) / buf_block_size);
+			for (int i = j; i < j + num_segments; ++i) {
 				buf_usage[i] = false;
 			}
 		}
@@ -65,6 +65,7 @@ namespace srv::vstr {
 
 		bool is_updating() {return state > 0;}
 		bool open(uint16_t sid) {
+			data = nullptr;
 			if (servicer.open_slot(sid, false, handle)) {
 				state = 1;
 				return true;
@@ -76,9 +77,9 @@ namespace srv::vstr {
 				case 0:
 					return true;
 				case 1:
+					if (!servicer.slot_connected(handle)) return false;
 					raw = Allocator::open();
 					memset(raw, 0, length);
-					if (!servicer.slot_connected(handle)) return false;
 					servicer.ack_slot(handle);
 					state = 2;
 					return false;
@@ -99,7 +100,7 @@ namespace srv::vstr {
 							if (vs.index + size > length) return false;
 							state = 0;
 							memcpy((raw + vs.index), vs.data, size);
-							data = (T *)&raw;
+							data = (T *)raw;
 							return true;
 						}
 
@@ -113,6 +114,9 @@ namespace srv::vstr {
 			}
 		}
 		void renew() {
+			if (raw != nullptr) {
+				Allocator::close(raw);
+			}
 			if (is_updating()) return;
 			state = 1;
 			data = nullptr;
@@ -121,6 +125,7 @@ namespace srv::vstr {
 			servicer.close_slot(handle);
 			data = nullptr;
 			Allocator::close(raw);
+			raw = nullptr;
 			state = 0;
 		}
 

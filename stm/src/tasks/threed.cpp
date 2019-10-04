@@ -141,8 +141,8 @@ namespace threed {
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
-		for (uint16_t x = 0; x < 64; ++x) {
-			for (uint16_t y = 0; y < 32; ++y) {
+		for (uint16_t x = 0; x < matrix_type::framebuffer_type::width; ++x) {
+			for (uint16_t y = 0; y < matrix_type::framebuffer_type::height; ++y) {
 				z_buf[x][y] = 500.0f;
 			}
 		}
@@ -161,13 +161,13 @@ namespace threed {
 		b.y = -b.y;
 		c.y = -c.y;
 
-		int16_t ax = round(((a.x + 1) / 2) * 64);
-		int16_t bx = round(((b.x + 1) / 2) * 64);
-		int16_t cx = round(((c.x + 1) / 2) * 64);
+		int16_t ax = round(((a.x + 1) / 2) * matrix_type::framebuffer_type::width);
+		int16_t bx = round(((b.x + 1) / 2) * matrix_type::framebuffer_type::width);
+		int16_t cx = round(((c.x + 1) / 2) * matrix_type::framebuffer_type::width);
 
-	    int16_t ay = round(((a.y + 1) / 2) * 32);
-		int16_t by = round(((b.y + 1) / 2) * 32);
-		int16_t cy = round(((c.y + 1) / 2) * 32);
+	    int16_t ay = round(((a.y + 1) / 2) * matrix_type::framebuffer_type::height);
+		int16_t by = round(((b.y + 1) / 2) * matrix_type::framebuffer_type::height);
+		int16_t cy = round(((c.y + 1) / 2) * matrix_type::framebuffer_type::height);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
 		avg = std::min(std::pow(avg * 1.05, 1.52f), 0.95);

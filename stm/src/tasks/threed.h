@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include "../draw.h"
 #include "schedef.h"
 #include <string.h>
 #include <cmath>
@@ -146,10 +147,10 @@ namespace threed {
 		uint16_t interp_progress = 20000;
 		uint64_t last_update;
 
-		float z_buf[64][32];
+		float z_buf[matrix_type::framebuffer_type::width][matrix_type::framebuffer_type::height];
 
-		template<typename FB>
-		void line_impl_low(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		
+		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int yi = 1;
@@ -176,8 +177,8 @@ namespace threed {
 			}
 		}
 
-		template<typename FB>
-		void line_impl_high(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		
+		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int xi = 1;
@@ -203,8 +204,8 @@ namespace threed {
 			}
 		}
 
-		template<typename FB>
-		void line(FB &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		
+		void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
 			if (abs(y1 - y0) < abs(x1 - x0)) {
 				if (x0 > x1)
 					line_impl_low(fb, x1, y1, x0, y0, d2, d1, r, g, b);

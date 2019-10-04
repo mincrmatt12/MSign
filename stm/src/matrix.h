@@ -13,23 +13,41 @@
 
 namespace led {
 
-	template<uint16_t Width, uint16_t Height>
+	template<uint16_t Width>
+	struct BasicFrameBufferStorage {
+		static const uint_fast16_t EffectiveWidth = Width;
+
+		inline static uint8_t & _r(uint8_t * data, uint16_t x, uint16_t y) {
+			return data[x*3 + y*Width*3 + 0];
+		}
+
+		inline static uint8_t & _g(uint8_t * data, uint16_t x, uint16_t y) {
+			return data[x*3 + y*Width*3 + 1];
+		}
+
+		inline static uint8_t & _b(uint8_t * data, uint16_t x, uint16_t y) {
+			return data[x*3 + y*Width*3 + 2];
+		}
+	};
+
+	template<uint16_t Width, uint16_t Height, typename Storage=BasicFrameBufferStorage<Width>>
 		struct FrameBuffer {
 			FrameBuffer() {
 				memset(data, 0x0, sizeof(data));
 			}
 
-			void prepare_stream(uint16_t i, uint8_t pos) {
+			void prepare_stream(uint16_t i, uint8_t pos, uint16_t offset, uint16_t amt, uint16_t bs_offset) {
 				// ARM assembler is fairly interesting 
 				// we can have nearly any instruction execute conditionally
 				// and the and operation will set flags if it ends with an S...
 
-				uint8_t * lo = &_r(0, i);
-				uint8_t * hi = &_r(0, i|stb_lines);
-				uint8_t * bs = &byte_stream[0];
+				
+				uint8_t * lo = &data[offset*3 + i*Storage::EffectiveWidth*3];
+				uint8_t * hi = &data[offset*3 + (i|stb_lines)*Storage::EffectiveWidth*3];
+				uint8_t * bs = &byte_stream[bs_offset];
 				uint_fast8_t mask = (1 << pos);
 
-				for (uint_fast16_t j = 0; j < Width; ++j) {
+				for (uint_fast16_t j = 0; j < amt; ++j) {
 					asm volatile (
 						"ldrb r2, [%[Lo]], #1\n\t" // First, we load the value at _lo_ to r2, which we'll write at the end
 						"tst r2, %[Mask]\n\t" // Do a clobber-less and
@@ -75,34 +93,40 @@ namespace led {
 			}
 
 			uint8_t & r(uint16_t x, uint16_t y) {
-				if (on_screen(x, y))
-					return _r(x, y);
+				if (on_screen(x, y)) {
+					return Storage::_r(data, x, y);
+				}
 				return junk;
 			}
 			uint8_t & g(uint16_t x, uint16_t y) {
-				if (on_screen(x, y))
-					return _g(x, y);
+				if (on_screen(x, y)) {
+					return Storage::_g(data, x, y);
+				}
 				return junk;
 			}
 			uint8_t & b(uint16_t x, uint16_t y) {
-				if (on_screen(x, y))
-					return _b(x, y);
+				if (on_screen(x, y)) {
+					return Storage::_b(data, x, y);
+				}
 				return junk;
 			}
 
 			const uint8_t & r(uint16_t x, uint16_t y) const {
-				if (on_screen(x, y))
-					return _r(x, y);
+				if (on_screen(x, y)) {
+					return Storage::_r(data, x, y);
+				}
 				return junk;
 			}
 			const uint8_t & g(uint16_t x, uint16_t y) const {
-				if (on_screen(x, y))
-					return _g(x, y);
+				if (on_screen(x, y)) {
+;					return Storage::_g(data, x, y);
+				}
 				return junk;
 			}
 			const uint8_t & b(uint16_t x, uint16_t y) const {
-				if (on_screen(x, y))
-					return _b(x, y);
+				if (on_screen(x, y)) {
+					return Storage::_b(data, x, y);
+				}
 				return junk;
 			}
 
@@ -113,29 +137,53 @@ namespace led {
 			uint8_t * byte_stream;
 
 			static constexpr uint16_t width = Width;
+			static constexpr uint16_t effective_width = Storage::EffectiveWidth;
 			static constexpr uint16_t height = Height;
-			static constexpr uint16_t stb_lines = Height / 2;
+			static constexpr uint16_t stb_lines = 16;
 
-		private:
+		protected:
 			uint8_t data[Width*Height*3];
-
-			inline uint8_t & _r(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 0];
-			}
-
-			inline uint8_t & _g(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 1];
-			}
-
-			inline uint8_t & _b(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 2];
-			}
 
 			uint8_t junk; // used as failsafe for read/write out of bounds
 		};
 
+	struct FourPanelSnake {
+		//6<------------------------
+		//5<------------------------
+		//4<------------------------
+		//1------------------------>
+		//2------------------------>
+		//3------------------------>
+		
+		const static uint16_t EffectiveWidth = 256;
+
+
+		inline static uint8_t & _r(uint8_t * data, uint16_t x, uint16_t y) {
+			if (y > 31) 
+				return data[x*3 + (y - 32)*256*3];
+			else
+				return data[(255 - x)*3 + (31 - y)*256*3];
+		}
+
+		inline static uint8_t & _g(uint8_t * data, uint16_t x, uint16_t y) {
+			if (y > 31) 
+				return data[x*3 + (y - 32)*256*3 + 1];
+			else
+				return data[(255 - x)*3 + (31 - y)*256*3 + 1];
+		}
+
+		inline static uint8_t & _b(uint8_t * data, uint16_t x, uint16_t y) {
+			if (y > 31) 
+				return data[x*3 + (y - 32)*256*3 + 2];
+			else
+				return data[(255 - x)*3 + (31 - y)*256*3 + 2];
+		}
+	};
+
 	template<typename FB>
 		struct Matrix {
+			typedef FB framebuffer_type;
+
 			Matrix() : fb0(), fb1() {
 				fb0.byte_stream = this->dma_buffer;
 				fb1.byte_stream = this->dma_buffer;
@@ -148,12 +196,12 @@ namespace led {
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
 
-				tim_init.Prescaler  = 7; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
-				tim_init.Autoreload = 2;
+				tim_init.Prescaler  = 2; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
+				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 29;
+				tim_init.Prescaler  = 25;
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
 				LL_TIM_Init(TIM9, &tim_init);
@@ -186,7 +234,7 @@ namespace led {
 				// blank the thing
 				oe = true; // active high
 				// start the whole procedure
-				blast_row();
+				blast_row_start();
 			}
 
 			void swap_buffers() {
@@ -198,14 +246,19 @@ namespace led {
 			const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}
 			volatile bool is_active() {return this->blasting;}
 
-			void dma_finish() {
-				// blast is finished, stop dma + timer output
-				LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
-				LL_TIM_DisableCounter(TIM1);
-				LL_TIM_DisableDMAReq_UPDATE(TIM1);
-				// check show
-				if (show) do_next();
-				else show = true;
+			void dma_finish(bool is_finish) {
+				if (dma_index == final_index) {
+					// blast is finished, stop dma + timer output
+					LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
+					LL_TIM_DisableCounter(TIM1);
+					LL_TIM_DisableDMAReq_UPDATE(TIM1);
+					// check show
+					if (show) do_next();
+					else show = true;
+				}
+				else {
+					blast_row_continue(!is_finish);
+				}
 			}
 
 			void tim_elapsed() {
@@ -231,7 +284,9 @@ namespace led {
 			volatile bool blasting = false;
 			uint8_t pos = 0;
 			uint16_t row = 0;
-			uint8_t dma_buffer[(FB::width * 2) + 3];
+			uint8_t dma_buffer[128 + 3] = {0};
+			uint16_t dma_index = 0;
+			constexpr static uint16_t final_index = (FB::effective_width / 32) - 1;
 
 			// impl for the wait system
 			uint16_t delay_counter = 0;
@@ -248,12 +303,12 @@ namespace led {
 
 			FB& _get_active_buffer() {return active_buffer ? fb0 : fb1;}
 
-			void blast_row() {
+			void blast_row_start() {
 				// Setup le dma
 				LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
 				LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 				LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_VERYHIGH);
-				LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_NORMAL);
+				LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_CIRCULAR);
 				LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_PERIPH_NOINCREMENT);
 				LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MEMORY_INCREMENT);
 				LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_5, LL_DMA_PDATAALIGN_BYTE);
@@ -262,21 +317,30 @@ namespace led {
 				LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_5);
 				LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_5, (uint32_t)dma_buffer, (uint32_t)(&SIGN_DATA_Port->ODR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
 
-				LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_5, (FB::width * 2) + 1);
+				LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_5, (128) + 1);
 
 				// make sure the active buffer is ready
-				_get_active_buffer().prepare_stream(row, pos);
+				_get_active_buffer().prepare_stream(row, pos, 0, 32, 0);
 
-				LL_DMA_DisableIT_HT(DMA2, LL_DMA_STREAM_5);
+				LL_DMA_EnableIT_HT(DMA2, LL_DMA_STREAM_5);
 				LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_5);
-				LL_DMA_EnableIT_TE(DMA2, LL_DMA_STREAM_5);
+				LL_DMA_DisableIT_TE(DMA2, LL_DMA_STREAM_5);
 				LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_5);
 
 				// blasting is a-go
 				LL_TIM_EnableDMAReq_UPDATE(TIM1);
 				LL_TIM_SetCounter(TIM1, 0);
 				LL_TIM_EnableCounter(TIM1);
+
+				_get_active_buffer().prepare_stream(row, pos, 32, 32, 64);
+				dma_index = 1;
 			}
+
+			void blast_row_continue(bool half) {
+				++dma_index;
+				_get_active_buffer().prepare_stream(row, pos, dma_index * 32, 32, half ? 0 : 64);
+			}
+
 			void wait(uint16_t ticks) {
 				if (delaying) while (1) {;}
 				// set the counter
@@ -302,15 +366,15 @@ namespace led {
 				show = false;
 				strobe = false;
 				const static uint16_t draw_ticks_table[] = {
-					3,
-					6,
-					12,
-					24,
-					48,
-					96,
-					192,
-					384,
-					768
+					1,
+					2,
+					4,
+					8,
+					16,
+					32,
+					64,
+					128,
+					256
 				};
 				uint8_t drawn_pos = draw_ticks_table[pos];
 				++pos;
@@ -319,7 +383,7 @@ namespace led {
 					oe = false;
 					wait(drawn_pos);		
 					// Send off the next row
-					blast_row();
+					blast_row_start();
 					return;
 				}
 				else if (++row < FB::stb_lines) {
@@ -328,7 +392,7 @@ namespace led {
 					// Set back to first bit
 					pos = 0;
 					// Blast and wait
-					blast_row();
+					blast_row_start();
 					return;
 				}
 				else {

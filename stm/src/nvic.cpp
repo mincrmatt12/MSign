@@ -12,7 +12,7 @@
 #include "fonts/lcdpixel_6.h"
 
 
-extern led::Matrix<led::FrameBuffer<64, 32>> matrix;
+extern matrix_type matrix;
 extern srv::Servicer servicer;
 extern tasks::Timekeeper timekeeper;
 
@@ -47,7 +47,11 @@ void nvic::init() {
 extern "C" void DMA2_Stream5_IRQHandler() {
 	if (LL_DMA_IsActiveFlag_TC5(DMA2)) {
 		LL_DMA_ClearFlag_TC5(DMA2);
-		matrix.dma_finish();
+		matrix.dma_finish(true);
+	}
+	else if (LL_DMA_IsActiveFlag_HT5(DMA2)) {
+		LL_DMA_ClearFlag_HT5(DMA2);
+		matrix.dma_finish(false);
 	}
 }
 
