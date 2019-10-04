@@ -32,7 +32,7 @@ namespace threed {
 		return this->x * other.x + this->y * other.y + this->z * other.z;
 	}
 
-    Mat4 Mat4::translate(const Vec3 & by) {
+	Mat4 Mat4::translate(const Vec3 & by) {
 		return {1, 0, 0, by.x,
 				0, 1, 0, by.y,
 		        0, 0, 1, by.z,
@@ -165,12 +165,12 @@ namespace threed {
 		int16_t bx = round(((b.x + 1) / 2) * matrix_type::framebuffer_type::width);
 		int16_t cx = round(((c.x + 1) / 2) * matrix_type::framebuffer_type::width);
 
-	    int16_t ay = round(((a.y + 1) / 2) * matrix_type::framebuffer_type::height);
+		int16_t ay = round(((a.y + 1) / 2) * matrix_type::framebuffer_type::height);
 		int16_t by = round(((b.y + 1) / 2) * matrix_type::framebuffer_type::height);
 		int16_t cy = round(((c.y + 1) / 2) * matrix_type::framebuffer_type::height);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
-		avg = std::min(std::pow(avg * 1.05, 1.52f), 0.95);
+		avg = std::min(std::pow(avg * 1.05, 1.48f), 0.95);
 
 		uint8_t cr = (float)t.r * (1 - (avg - 0.01));
 		uint8_t cg = (float)t.g * (1 - (avg + 0.02));
