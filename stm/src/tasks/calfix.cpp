@@ -67,11 +67,11 @@ void tasks::CalfixScreen::draw_dayp(uint16_t start, uint16_t end, uint16_t lpos,
 			uint16_t bpos = ((daytime - ps) / diff) * offset;
 			bpos += start;
 
-			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 80, 80, 80);
+			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 24, 35, 24);
 			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100, 255, 100);
 		}
 		else {
-			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 80, 80, 80);
+			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 24, 24, 24);
 			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 255, 255, 255);
 		}
 	}
@@ -85,32 +85,58 @@ void tasks::CalfixScreen::loop() {
 		ready = true;
 	}
 
-	if (!ready) return;
+	if (progress == 3) progress = 0;
+
+	if (!ready) {
+		progress = 5;
+		return;
+	}
 
 	const auto& header = servicer.slot<slots::CalfixInfo>(this->s_info);
 	if (!header.active) {
 		show_noschool();
+		progress = 5;
 		return;
 	}
-	draw_header(header.day, header.abnormal);
-	if (strlen((char *)servicer.slot<slots::ClassInfo>(this->s_c[0]).name) < 6) return;
 
-	for (int i = 0; i < 4; ++i) {
-		const auto& a = servicer.slot<slots::PeriodInfo>(this->s_prd[i / 2]);
-		draw_class((i % 2 == 0) ? a.ps1 : a.ps2, (char *)servicer.slot<slots::ClassInfo>(this->s_c[i]).name, servicer.slot<slots::ClassInfo>(this->s_c[i]).room, pos_table[i], i);
+	if (strlen((char *)servicer.slot<slots::ClassInfo>(this->s_c[0]).name) < 6) {
+		progress = 5;
+		return;
 	}
 
-	const auto& ps23 = servicer.slot<slots::PeriodInfo>(this->s_prd[1]);
-	const auto& ps01 = servicer.slot<slots::PeriodInfo>(this->s_prd[0]);
+	switch (progress) {
+	case 0:
+		draw_header(header.day, header.abnormal);
+		progress = 1;
+		return;
+	case 1:
+	case 2:
+		for (int i = (progress == 1 ? 0 : 2); i < (progress == 1 ? 2 : 4); ++i) {
+			const auto& a = servicer.slot<slots::PeriodInfo>(this->s_prd[i / 2]);
+			draw_class((i % 2 == 0) ? a.ps1 : a.ps2, (char *)servicer.slot<slots::ClassInfo>(this->s_c[i]).name, servicer.slot<slots::ClassInfo>(this->s_c[i]).room, pos_table[i], i);
+		}
+		++progress;
+		return;
+	case 3:
+	case 4:
+		const auto& ps23 = servicer.slot<slots::PeriodInfo>(this->s_prd[1]);
+		const auto& ps01 = servicer.slot<slots::PeriodInfo>(this->s_prd[0]);
 
-	uint64_t clslength = ps23.ps2 - ps23.ps1 - 5 * 60 * 1000;
-	uint64_t clstlength = clslength + 5 * 60 * 1000;
-	if (ps01.ps2 + clslength + 5 * 60 * 1000 != ps23.ps1) {
-		draw_dayp(0, 24, 10, '1', ps01.ps1, ps01.ps1 + clstlength);
-		draw_dayp(24, 48, 34, '2', ps01.ps2, ps01.ps2 + clslength);
-		draw_dayp(48, 72, 58, 'L', ps01.ps2 + clslength, ps23.ps1);
-		draw_dayp(72, 94, 82, '3', ps23.ps1, ps23.ps1 + clstlength);
-		draw_dayp(94, 128, 108, '4', ps23.ps2, ps23.ps2 + clslength);
+		uint64_t clslength = ps23.ps2 - ps23.ps1 - 5 * 60 * 1000;
+		uint64_t clstlength = clslength + 5 * 60 * 1000;
+		if (ps01.ps2 + clslength + 5 * 60 * 1000 != ps23.ps1) {
+			if (progress == 3) {
+				draw_dayp(0, 24, 10, '1', ps01.ps1, ps01.ps1 + clstlength);
+				draw_dayp(24, 48, 34, '2', ps01.ps2, ps01.ps2 + clslength);
+				draw_dayp(48, 72, 58, 'L', ps01.ps2 + clslength, ps23.ps1);
+			}
+			else {
+				draw_dayp(72, 94, 82, '3', ps23.ps1, ps23.ps1 + clstlength);
+				draw_dayp(94, 128, 108, '4', ps23.ps2, ps23.ps2 + clslength);
+			}
+		}
+		++progress;
+		return;
 	}
 }
 

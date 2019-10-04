@@ -11,7 +11,7 @@ namespace tasks {
 		bool deinit() override;
 
 		void loop() override;
-		bool done() override {return true;}
+		bool done() override {return progress == 5;}
 	private:
 		void show_noschool();
 
@@ -21,6 +21,8 @@ namespace tasks {
 
 		uint8_t /* slot ids */ s_info, s_c[4], s_prd[2];
 		bool ready = false;
+
+		uint8_t progress = 0;
 	};
 
 }
