@@ -2,7 +2,7 @@
 #include "rng.h"
 #include <time.h>
 
-#include "fonts/tahoma_9.h"
+#include "fonts/dejavu_12.h"
 #include "draw.h"
 
 extern uint64_t rtc_time;
@@ -29,7 +29,6 @@ void tasks::ClockScreen::loop() {
 
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 
-	uint16_t width = draw::text_size(buf, font::tahoma_9::info);
-	//draw::rect(matrix.get_inactive_buffer(), (32 - box_width / 2), 10, (32 + box_width / 2 + 1), 22, 0, 0, 0);
-	draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 32 - (width / 2), 7, 240, 240, 240);
+	uint16_t width = draw::text_size(buf, font::dejavusans_12::info);
+	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 64 - (width / 2), 11, 240, 240, 240);
 }
