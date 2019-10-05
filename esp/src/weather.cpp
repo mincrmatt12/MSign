@@ -14,8 +14,8 @@ char * weather::info_buffer;
 uint8_t weather::buffer_size;
 char weather::icon[16];
 uint64_t weather::time_since_last_update = 0;
-float temp_over_day[24];
-slots::WeatherStateArrayCode state_data[24];
+float weather::temp_over_day[24];
+slots::WeatherStateArrayCode weather::state_data[24];
 
 serial::VStrSender weather_vss, weather_temp_vss;
 
@@ -47,6 +47,12 @@ void weather::init() {
 				break;
 			case slots::WEATHER_INFO:
 				serial::interface.update_data(slots::WEATHER_INFO, (uint8_t *)&weather::info, sizeof(weather::info));
+				break;
+			case slots::WEATHER_ARRAY1:
+				serial::interface.update_data(slots::WEATHER_ARRAY1, (uint8_t *)weather::state_data, 16);
+				break;
+			case slots::WEATHER_ARRAY2:
+				serial::interface.update_data(slots::WEATHER_ARRAY2, 16 + (uint8_t *)weather::state_data, 8);
 				break;
 			default:
 				break;
@@ -131,7 +137,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			}
 			else if (strcmp(stack[3]->name, "cloudCover") == 0 && v.is_number()) {
 				// Part 2a: is the thing a cloud?
-				if ((weather::state_data[stack[2]->index] & 0xf0) == slots::WeatherStateArrayCode::CLEAR && weather::state_data[stack[2]->index] != slots::WeatherStateArrayCode::CLEAR) {
+				if (((uint8_t)weather::state_data[stack[2]->index] & 0xf0) == (uint8_t)slots::WeatherStateArrayCode::CLEAR && weather::state_data[stack[2]->index] != slots::WeatherStateArrayCode::CLEAR) {
 					if (v.as_number() < 0.5) {
 						weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::PARTLY_CLOUDY;
 					}
@@ -145,7 +151,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			}
 			else if (strcmp(stack[3]->name, "precipIntensity") ==0 && v.is_number()) {
 				// Part 2b: check precip type from icon
-				if ((weather::state_data[stack[2]->index] & 0xf0) == slots::WeatherStateArrayCode::DRIZZLE) {
+				if (((uint8_t)weather::state_data[stack[2]->index] & 0xf0) == (uint8_t)slots::WeatherStateArrayCode::DRIZZLE) {
 					if (v.as_number() < 0.4) {
 						weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::DRIZZLE;
 					}
@@ -159,7 +165,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 						weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::HEAVY_RAIN;
 					}
 				}
-				else if ((weather::state_data[stack[2]->index] & 0xf0) == slots::WeatherStateArrayCode::SNOW) {
+				else if (((uint8_t)weather::state_data[stack[2]->index] & 0xf0) == (uint8_t)slots::WeatherStateArrayCode::SNOW) {
 					if (v.as_number() < 3) {
 						weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::SNOW;
 					}
