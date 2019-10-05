@@ -214,14 +214,7 @@ bool tasks::WeatherScreen::deinit() {
 	return true;
 }
 
-void tasks::WeatherScreen::loop() {
-	s_status.update();
-	s_tempgraph.update();
-	if (servicer.slot_dirty(s_info, true)) {
-		s_status.renew();
-		s_tempgraph.renew();
-	}
-	
+void tasks::WeatherScreen::draw_currentstats() {
 	char disp_buf[16];
 	float ctemp = servicer.slot<slots::WeatherInfo>(s_info).ctemp;
 	snprintf(disp_buf, 16, "%.01f", ctemp);
@@ -252,22 +245,6 @@ void tasks::WeatherScreen::loop() {
 	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(s_info).htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
 	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 63 - text_size, 20, 127, 127, 127);
-
-	if (s_status.data) {
-		text_size = draw::text_size(s_status.data, font::tahoma_9::info);
-		if (text_size < 128) {
-			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
-		}
-		else {
-			uint16_t t_pos = (uint16_t)(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)));
-			t_pos %= (text_size * 2) + 1;
-			t_pos =  ((text_size * 2) + 1) - t_pos;
-			t_pos -= text_size;
-			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, t_pos, 60, 240, 240, 240);
-		}
-	}
-
-	draw::rect(matrix.get_inactive_buffer(), 0, 0, 22, 20, 0, 0, 0);
 
 	int16_t y = (int16_t)(std::round(4.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 5));
 
@@ -302,4 +279,91 @@ void tasks::WeatherScreen::loop() {
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 79, 79, 79);
 		}
 	}
+}
+
+void tasks::WeatherScreen::draw_status() {
+	if (s_status.data) {
+		uint16_t text_size = draw::text_size(s_status.data, font::tahoma_9::info);
+		if (text_size < 128) {
+			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
+		}
+		else {
+			uint16_t t_pos = (uint16_t)(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)));
+			t_pos %= (text_size * 2) + 1;
+			t_pos =  ((text_size * 2) + 1) - t_pos;
+			t_pos -= text_size;
+			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, t_pos, 61, 240, 240, 240);
+		}
+	}
+}
+
+void tasks::WeatherScreen::draw_hourlybar_header() {
+	// bar starts at x = 4, ends at x = 124, every 5 steps = 1 thing
+	// bar takes 13 px vertically, starts at y = 53
+	
+	int first = (rtc_time % (24*60*60*1000)) / 60*60*1000;
+
+	for (int i = 0; i < 24 / 4; ++i) {
+		int hour = (first + i * 4) % 24;
+		char buf[3] = {0};
+		snprintf(buf, 3, "%2d", hour);
+
+		// todo  make this a gradient
+		draw::text(matrix.get_inactive_buffer(), buf, 4 + i * 20, 38, 255, 255, 255);
+	}
+}
+
+void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
+	int start = 4 + hour * 20;
+	int end =   9 + hour * 20;
+}
+
+void tasks::WeatherScreen::loop() {
+	s_status.update();
+	s_tempgraph.update();
+	if (servicer.slot_dirty(s_info, true)) {
+		s_status.renew();
+		s_tempgraph.renew();
+	}
+	
+	if (done()) progress = 0;
+	switch (progress) {
+		case 0:
+			draw_currentstats();
+			break;
+		case 1:
+			draw_status();
+			break;
+		case 2:
+			draw_hourlybar_header();
+			break;
+		case 3:
+		case 4:
+		case 5:
+		case 6:
+		case 7:
+		case 8:
+		case 9:
+		case 10:
+		case 11:
+		case 12:
+		case 13:
+		case 14:
+		case 15:
+		case 16:
+		case 17:
+		case 18:
+		case 19:
+		case 20:
+		case 21:
+		case 22:
+		case 23:
+		case 24:
+		case 25:
+		case 26:
+			draw_hourlybar(progress - 3);
+			break;
+	}
+
+	++progress;
 }

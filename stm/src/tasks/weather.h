@@ -11,7 +11,7 @@ namespace tasks {
 		bool init() override;
 		bool deinit() override;
 
-		bool done() override {return true;}
+		bool done() override {return progress == 27;}
 		void loop() override;
 
 	private:
@@ -23,6 +23,7 @@ namespace tasks {
 		srv::vstr::VSWrapper s_status;
 		srv::vstr::SizeVSWrapper<float, 192> s_tempgraph;
 		uint8_t s_info, s_icon, s_state[2];
+		uint8_t progress = 0;
 	};
 }
 
