@@ -291,7 +291,7 @@ void tasks::WeatherScreen::draw_status() {
 	if (s_status.data) {
 		uint16_t text_size = draw::text_size(s_status.data, font::tahoma_9::info);
 		if (text_size < 128) {
-			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 32 - text_size / 2, 29, 240, 240, 240);
+			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 64 - text_size / 2, 61, 240, 240, 240);
 		}
 		else {
 			uint16_t t_pos = (uint16_t)(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)));
