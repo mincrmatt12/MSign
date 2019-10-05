@@ -118,8 +118,6 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 		int16_t position = static_cast<int16_t>((times[i] - rtc_time) / 7500);
 
 		if (position > 128) {
-			if (min_pos != 0) break;
-			write_pos[0] = 0;
 			break;
 		}
 
