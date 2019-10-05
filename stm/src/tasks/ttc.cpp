@@ -144,6 +144,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
+		if (minutes > 15) break;
 		snprintf(buf, 16, "%dm", (int)minutes);
 
 		if (minutes < 5) {
