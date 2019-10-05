@@ -5,6 +5,7 @@
 #include "fonts/latob_15.h"
 #include "fonts/dejavu_10.h"
 #include "fonts/tahoma_9.h"
+#include "fonts/lcdpixel_6.h"
 
 #include "draw.h"
 
@@ -301,7 +302,7 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 	// bar starts at x = 4, ends at x = 124, every 5 steps = 1 thing
 	// bar takes 13 px vertically, starts at y = 53
 	
-	int first = (rtc_time % (24*60*60*1000)) / 60*60*1000;
+	int first = static_cast<int>((rtc_time % (24*60*60*1000)) / 60*60*1000llu) + 4;
 
 	for (int i = 0; i < 24 / 4; ++i) {
 		int hour = (first + i * 4) % 24;
@@ -309,13 +310,65 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 		snprintf(buf, 3, "%2d", hour);
 
 		// todo  make this a gradient
-		draw::text(matrix.get_inactive_buffer(), buf, 4 + i * 20, 38, 255, 255, 255);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 37, 255, 255, 255);
 	}
+	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 1, 1, 1);
 }
 
 void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
-	int start = 4 + hour * 20;
-	int end =   9 + hour * 20;
+	int start = 4 + hour * 5;
+	int end =   9 + hour * 5;
+
+	uint8_t r = 127, g = 127, b = 127;
+    slots::WeatherStateArrayCode code = hour < 16 ? (slots::WeatherStateArrayCode)servicer.slot(s_state[0])[hour] :
+		 		                                    (slots::WeatherStateArrayCode)servicer.slot(s_state[1])[hour - 16];
+
+	switch (code) {
+		case slots::WeatherStateArrayCode::CLEAR:
+			if (hour > 7 && hour < 18) {
+				r = 210;
+				g = 200;
+				b = 0;
+			}
+			else {
+				r = g = b = 0;
+			}
+			break;
+		
+		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
+			r = g = b = 100; break;
+		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
+			r = g = b = 40; break;
+		case slots::WeatherStateArrayCode::OVERCAST:
+			r = g = b = 10; break;
+
+		case slots::WeatherStateArrayCode::SNOW:
+			r = g = b = 200; break;
+		case slots::WeatherStateArrayCode::HEAVY_SNOW:
+			r = g = b = 255; break;
+
+		case slots::WeatherStateArrayCode::DRIZZLE:
+			r = g = 30;
+			b = 70;
+			break;
+		case slots::WeatherStateArrayCode::LIGHT_RAIN:
+			r = g = 40;
+			b = 120;
+			break;
+		case slots::WeatherStateArrayCode::RAIN:
+			r = g = 65;
+			b = 200;
+			break;
+		case slots::WeatherStateArrayCode::HEAVY_RAIN:
+			r = g = 60;
+			b = 255;
+			break;
+		default:
+			break;
+	}
+
+	draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b);
 }
 
 void tasks::WeatherScreen::loop() {
