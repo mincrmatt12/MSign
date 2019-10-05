@@ -8,6 +8,7 @@
 #include "fonts/lcdpixel_6.h"
 
 #include "draw.h"
+#include <time.h>
 
 #include <cmath>
 extern uint64_t rtc_time;
@@ -302,7 +303,10 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 	// bar starts at x = 4, ends at x = 124, every 5 steps = 1 thing
 	// bar takes 13 px vertically, starts at y = 53
 	
-	int first = static_cast<int>((rtc_time % (24*60*60*1000)) / 60*60*1000llu) + 4;
+	struct tm timedat;
+	time_t now = rtc_time / 1000;
+	gmtime_r(&now, &timedat);
+	int first = timedat.tm_hour;
 
 	for (int i = 0; i < 24 / 4; ++i) {
 		int hour = (first + i * 4) % 24;
