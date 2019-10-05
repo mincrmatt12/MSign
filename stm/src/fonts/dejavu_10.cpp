@@ -890,6 +890,26 @@ const uint8_t data_126[] = {
 	152,   // #  ## 
 };
 
+const uint8_t data_253[] = {
+	112,   //  ### 
+	168,   // # # #
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+};
+
+const uint8_t data_254[] = {
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+	32,    //   #  
+	168,   // # # #
+	112,   //  ### 
+};
+
 }
 const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bearingY
 	{0, 0, 0, 0, 0, 0}, // no char here
@@ -1145,8 +1165,8 @@ const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bea
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
-	{0, 0, 0, 0, 0, 0}, // no char here
-	{0, 0, 0, 0, 0, 0}, // no char here
+	{5, 7, 1, 6, 1, 7}, // down arrow  
+	{5, 7, 1, 6, 1, 7}, // up arrow  
 	{0, 0, 0, 0, 0, 0}, // no char here
 };
 const uint8_t * const data[] = {
@@ -1403,8 +1423,8 @@ const uint8_t * const data[] = {
 	nullptr,
 	nullptr,
 	nullptr,
-	nullptr,
-	nullptr,
+	data_253,
+	data_254,
 	nullptr,
 };
 // kerning table has 20 entries

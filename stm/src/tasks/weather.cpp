@@ -225,10 +225,10 @@ void tasks::WeatherScreen::draw_currentstats() {
 
 	text_size = draw::text_size(disp_buf, font::lato_bold_15::info);
 
-	if (ctemp > 0.0 && ctemp < 16.0) {
+	if (ctemp > 10.0 && ctemp < 16.0) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 240, 240, 240);
 	}
-	else if (ctemp < 0.0 && ctemp > -10.0) {
+	else if (ctemp < 10.0 && ctemp > -10.0) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100, 100, 240);
 	}
 	else if (ctemp >= 16.0 && ctemp < 30.0) {
@@ -241,14 +241,18 @@ void tasks::WeatherScreen::draw_currentstats() {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 40, 40, 255);
 	}
 
-	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(s_info).ltemp);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 22, 20, 127, 127, 127);
+	snprintf(disp_buf, 16, "\xfe %.0f", servicer.slot<slots::WeatherInfo>(s_info).ltemp);
+	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 20, 30, 127, 127, 127);
 
-	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(s_info).htemp);
+	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(s_info).htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 63 - text_size, 20, 127, 127, 127);
+	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 63 - text_size, 30, 127, 127, 127);
 
-	int16_t y = (int16_t)(std::round(4.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 5));
+	snprintf(disp_buf, 16, "%.01f", servicer.slot<slots::WeatherInfo>(s_info).crtemp);
+	text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
+	draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127, 127, 127);
+
+	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 1));
 
 	const char * icon = (const char*)servicer.slot(s_icon);
 
