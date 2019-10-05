@@ -318,7 +318,7 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 		snprintf(buf, 3, "%2d", hour);
 
 		// todo  make this a gradient
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 37, 255, 255, 255);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255, 255, 255);
 	}
 	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 1, 1, 1);
 	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 1, 1, 1);
@@ -379,6 +379,94 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b);
 }
 
+void tasks::WeatherScreen::draw_graphaxes() {
+	if (!s_tempgraph.data) return;
+	// graph axes on pos 79 x, 24 y
+	
+	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   1, 1, 1);
+
+	float min_ = 10000, max_ = -10000;
+	for (uint8_t i = 0; i < 24; ++i) {
+		min_ = std::min(min_, s_tempgraph.data[i]);
+		max_ = std::max(max_, s_tempgraph.data[i]);
+	}
+	
+	auto tickmark = [](int16_t x, int16_t y, float v){
+		matrix.get_inactive_buffer().r(x, y) = matrix.get_inactive_buffer().g(x, y) =
+		matrix.get_inactive_buffer().b(x, y) = 1;
+
+		char buf[4] = {0};
+		snprintf(buf, 4, "%.0f", v);
+
+		if (x == 78) {
+			int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
+			x -= sz - 1;
+			y += 1;
+		}
+		else {
+			y += 6;
+		}
+
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 20, 20, 20);
+	};
+
+	float diff = max_ - min_;
+
+	tickmark(78, 23, min_);
+	tickmark(78, 17, min_ + diff*0.2);
+	tickmark(78, 11, min_ + diff*0.5);
+	tickmark(78, 5,  min_ + diff*0.75);
+
+	struct tm timedat;
+	time_t now = rtc_time / 1000;
+	gmtime_r(&now, &timedat);
+	int first = timedat.tm_hour;
+
+	tickmark(80, 25, first);
+	tickmark(93, 25, (first + 6) % 24);
+	tickmark(104, 25, (first + 12) % 24);
+	tickmark(119, 25, (first + 18) % 24);
+}
+
+void tasks::WeatherScreen::draw_graph(uint8_t hour) {
+	if (!s_tempgraph.data) return;
+
+	float min_ = 10000, max_ = -10000;
+	for (uint8_t i = 0; i < 24; ++i) {
+		min_ = std::min(min_, s_tempgraph.data[i]);
+		max_ = std::max(max_, s_tempgraph.data[i]);
+	}
+
+	int16_t begin = hour * 2 + 80;
+	int16_t end   = begin + 2;
+
+	float diff = 23.0 / (max_ - min_);
+
+	int16_t y0 = (s_tempgraph.data[hour] - min_) * diff;
+	int16_t y1 = (s_tempgraph.data[hour + 1] - min_) * diff;
+	y0 = 23 - y0;
+	y1 = 23 - y1;
+	if (hour == 23) y1 = y0;
+
+	float ctemp = s_tempgraph.data[hour];
+	if (ctemp >= 10.0 && ctemp < 16.0) {
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255, 255, 255);
+	}
+	else if (ctemp > -10.0 && ctemp < 10.0) {
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 100, 100, 240);
+	}
+	else if (ctemp >= 16.0 && ctemp < 30.0) {
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 50, 240, 50);
+	}
+	else if (ctemp > 30.0) {
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 250, 30, 30);
+	}
+	else {
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 40, 40, 255);
+	}
+}
+
 void tasks::WeatherScreen::loop() {
 	s_status.update();
 	s_tempgraph.update();
@@ -423,6 +511,15 @@ void tasks::WeatherScreen::loop() {
 		case 25:
 		case 26:
 			draw_hourlybar(progress - 3);
+			break;
+		case 27:
+			draw_graphaxes();
+			break;
+		default:
+			draw_graph((progress - 28) * 4);
+			draw_graph((progress - 28) * 4 + 1);
+			draw_graph((progress - 28) * 4 + 2);
+			draw_graph((progress - 28) * 4 + 3);
 			break;
 	}
 

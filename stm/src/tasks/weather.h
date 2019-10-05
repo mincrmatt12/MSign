@@ -11,7 +11,7 @@ namespace tasks {
 		bool init() override;
 		bool deinit() override;
 
-		bool done() override {return progress == 27;}
+		bool done() override {return progress == 34;}
 		void loop() override;
 
 	private:
@@ -19,6 +19,8 @@ namespace tasks {
 		void draw_hourlybar_header();
 		void draw_hourlybar(uint8_t hour);
 		void draw_status();
+		void draw_graphaxes();
+		void draw_graph(uint8_t hour);
 		
 		srv::vstr::VSWrapper s_status;
 		srv::vstr::SizeVSWrapper<float, 192> s_tempgraph;
