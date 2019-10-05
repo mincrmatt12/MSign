@@ -383,8 +383,8 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	if (!s_tempgraph.data) return;
 	// graph axes on pos 79 x, 24 y
 	
-	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 1, 1, 1);
-	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 4, 4, 4);
+	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   4, 4, 4);
 
 	float min_ = 10000, max_ = -10000;
 	for (uint8_t i = 0; i < 24; ++i) {
@@ -393,8 +393,9 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	}
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().r(x, y) = matrix.get_inactive_buffer().g(x, y) =
-		matrix.get_inactive_buffer().b(x, y) = 1;
+		matrix.get_inactive_buffer().r(x, y) = 4;
+		matrix.get_inactive_buffer().g(x, y) = 4;
+		matrix.get_inactive_buffer().b(x, y) = 4;
 
 		char buf[4] = {0};
 		snprintf(buf, 4, "%.0f", v);
@@ -408,7 +409,7 @@ void tasks::WeatherScreen::draw_graphaxes() {
 			y += 6;
 		}
 
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 20, 20, 20);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 50, 50, 50);
 	};
 
 	float diff = max_ - min_;
