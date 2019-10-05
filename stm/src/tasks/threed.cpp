@@ -1,9 +1,12 @@
 #include "rng.h"
 #include "threed.h"
 #include "draw.h"
+#include "srv.h"
+#include "common/slots.h"
 
 extern matrix_type matrix;
 extern uint64_t rtc_time;
+extern srv::Servicer servicer;
 
 namespace threed {
 	size_t tri_count = 0;
@@ -105,6 +108,31 @@ namespace threed {
 	}
 
 	void Renderer::loop() {
+		// Check if there's a new model ready
+		if (servicer.slot_dirty(s_info, true)) {
+			const uint16_t& v = servicer.slot<uint16_t>(s_info);
+			if (v != 0) {
+				tri_count = 0;
+				servicer.ack_slot(s_rgb);
+			}
+		}
+
+		if (servicer.slot_dirty(s_rgb, true)) {
+			tris[tri_count] = Tri{
+				.p1 = servicer.slot<slots::Vec3>(s_p1),
+				.p2 = servicer.slot<slots::Vec3>(s_p2),
+				.p3 = servicer.slot<slots::Vec3>(s_p3),
+				.r = (uint8_t)servicer.slot<slots::Vec3>(s_rgb).x,
+				.g = (uint8_t)servicer.slot<slots::Vec3>(s_rgb).y,
+				.b = (uint8_t)servicer.slot<slots::Vec3>(s_rgb).z
+			};
+
+			++tri_count;
+			if (tri_count != servicer.slot<uint16_t>(s_info)) {
+				servicer.ack_slot(s_rgb);
+			}
+		}
+
 		if (current_tri == tri_count) current_tri = 0;
 		if (current_tri == 0) {
 			update_matricies();
@@ -123,16 +151,30 @@ namespace threed {
 			camera_pos = camera_target;
 			camera_look = camera_look_target;
 
-			camera_target = Vec3{
-				((float)(rng::get() % 2000) / 1000.0f) - 1.0f,
-				(float)(rng::get() % 1000) / 1000.0f,
-				(float)(rng::get() % 1000) / 1000.0f
-			};
-			if (rng::get() % 2 == 0) {
-				camera_look_target = Vec3{0, 0, 0};
+			if (servicer.slot<uint16_t>(s_info) == 0) {
+				camera_target = Vec3{
+					rng::getrange(-1.0f, 1.0f),
+					rng::getrange(0, 1.0f),
+					rng::getrange(0, 1.0f)
+				};
+				if (rng::get() % 2 == 0) {
+					camera_look_target = Vec3{0, 0, 0};
+				}
+				else {
+					camera_look_target = Vec3{-0.5, 0.1, 0};
+				}
 			}
 			else {
-				camera_look_target = Vec3{-0.5, 0.1, 0};
+				camera_target = Vec3{
+					rng::getrange(servicer.slot<slots::Vec3>(s_cip).x, servicer.slot<slots::Vec3>(s_cxp).x),
+					rng::getrange(servicer.slot<slots::Vec3>(s_cip).y, servicer.slot<slots::Vec3>(s_cxp).y),
+					rng::getrange(servicer.slot<slots::Vec3>(s_cip).z, servicer.slot<slots::Vec3>(s_cxp).z)
+				};
+
+				int x = 0;
+				for (;x < 3; ++x) {if (std::isnan(servicer.slot<slots::Vec3>(s_cf[x]).x)) break;}
+
+				camera_look_target = servicer.slot<slots::Vec3>(s_cf[rng::get() % x]);
 			}
 		}
 
@@ -185,11 +227,41 @@ namespace threed {
 	}
 	
 	bool Renderer::init() {
-		if (tri_count == 0) init_default_mesh();
 		name[0] = '3';
 		name[1] = 'd';
 		name[2] = 'r';
 		name[3] = 'd';
+
+		if (tri_count == 0) init_default_mesh();
+
+		if (s_info == 0xff) servicer.open_slot(slots::MODEL_INFO, true, s_info, true);
+		servicer.open_slot(slots::MODEL_CAM_FOCUS1, true, s_cf[0]);
+		servicer.open_slot(slots::MODEL_CAM_FOCUS2, true, s_cf[1]);
+		servicer.open_slot(slots::MODEL_CAM_FOCUS3, true, s_cf[2]);
+
+		servicer.open_slot(slots::MODEL_CAM_MINPOS, true, s_cip);
+		servicer.open_slot(slots::MODEL_CAM_MAXPOS, true, s_cxp);
+
+		servicer.open_slot(slots::MODEL_RGB, false, s_rgb);
+		servicer.open_slot(slots::MODEL_XYZ1, true, s_p1);
+		servicer.open_slot(slots::MODEL_XYZ2, true, s_p2);
+		servicer.open_slot(slots::MODEL_XYZ3, true, s_p3);
+
+		return true;
+	}
+
+	bool Renderer::deinit() {
+		servicer.close_slot(s_cf[0]);
+		servicer.close_slot(s_cf[1]);
+		servicer.close_slot(s_cf[2]);
+
+		servicer.close_slot(s_cip);
+		servicer.close_slot(s_cxp);
+
+		servicer.close_slot(s_rgb);
+		servicer.close_slot(s_p1);
+		servicer.close_slot(s_p2);
+		servicer.close_slot(s_p3);
 
 		return true;
 	}

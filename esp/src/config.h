@@ -33,6 +33,12 @@ namespace config {
 		SC_TIMES,
 		SC_CFIX,
 
+		MODEL_NAMES,
+		MODEL_FOCUSES,
+		MODEL_MINPOSES,
+		MODEL_MAXPOSES,
+		MODEL_ENABLE,
+
 		// leave me
 		ENTRY_COUNT
 	};

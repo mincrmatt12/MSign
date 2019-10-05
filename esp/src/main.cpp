@@ -11,6 +11,7 @@
 #include "webui.h"
 #include "upd.h"
 #include "calfix.h"
+#include "modelserve.h"
 	
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -52,9 +53,8 @@ void setup() {
 	webui::init();
 	sccfg::init();
 	calfix::init();
+	modelserve::init();
 }
-
-int i = 0;
 
 void loop() {
 	serial::interface.loop();
@@ -64,7 +64,6 @@ void loop() {
 	webui::loop();
 	sccfg::loop();
 	calfix::loop();
-	++i;
-	if (i % 800 == 0) Serial1.println(ESP.getFreeHeap());
+	modelserve::loop();
 	delay(1);
 }

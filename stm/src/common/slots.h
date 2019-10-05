@@ -52,10 +52,9 @@ namespace slots {
 		MODEL_RGB  = 0x0904, 		// '', color of triangle
 		MODEL_CAM_MINPOS  = 0x9005, // STRUCT; Vec3; minimum position of the camera 
 		MODEL_CAM_MAXPOS  = 0x9006, // ''; maximum position of the camera 
-		MODEL_CAM_FOCUS   = 0x9007, // ''; lookat point of camera
-		MODEL_CAM_POS_OVR = 0x9010, // ''; overriden position of camera       |
-		MODEL_CAM_TGT_OVR = 0x9011, // ''; overriden lookat point of camera   |> if these three options are all zero use random camera
-		MODEL_CAM_UP_OVR  = 0x9012, // ''; overriden up vector of camera      |
+		MODEL_CAM_FOCUS1  = 0x9007, // ''; lookat point of camera
+		MODEL_CAM_FOCUS2  = 0x9008, // ''; '' 2
+		MODEL_CAM_FOCUS3  = 0x9009, // ''; '' 3
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT; ScCfgTime, how long to enable a certain screen; polled (inited to zero when SCCFG_INFO is updated, circular)

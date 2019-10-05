@@ -35,7 +35,13 @@ const char * config::entry_names[] = {
 	"scweather",
 	"sc3d",
 	"sctimes",
-	"sccalfix"
+	"sccalfix",
+
+	"modelnames",
+	"modelfocuses",
+	"modelminposes",
+	"modelmaxposes",
+	"modelenable"
 };
 
 
@@ -128,14 +134,12 @@ void config::ConfigManager::load_from_sd() {
 	}
 
 	config.close();
-
-	// Hope the SD card gets freed
 }
 
 void config::ConfigManager::add_entry(Entry e, const char * value) {
 	uint8_t length = strlen(value) + 1;
 	if (this->ptr + length >= this->size) {
-		this->size += length * 2;
+		this->size += length + 128;
 		this->data = (char *)realloc(this->data, this->size);
 	}
 

@@ -3,6 +3,7 @@
 #include "schedef.h"
 #include <string.h>
 #include <cmath>
+#include "common/slots.h"
 
 namespace threed {
 	struct Vec3 {
@@ -11,6 +12,7 @@ namespace threed {
 		Vec3()                          : x(0), y(0), z(0) {}
 		Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
 		Vec3(float a)                   : x(a), y(a), z(a) {}
+		Vec3(const slots::Vec3& v)      : x(v.x), y(v.y), z(v.z) {}
 
 		float length() const;
 		Vec3 normalize() const;
@@ -61,6 +63,7 @@ namespace threed {
 		Vec4() : x(0), y(0), z(0), w(0) {}
 		Vec4(const Vec3 & a, float w) : x(a.x), y(a.y), z(a.z), w(w) {}
 		Vec4(float a, float b, float c, float d) : x(a), y(b), z(c), w(d) {}
+		Vec4(slots::Vec3 & a) : x(a.x), y(a.y), z(a.z), w(1.0) {}
 
 		operator Vec3() const {return Vec3(x, y, z);}
 
@@ -132,6 +135,7 @@ namespace threed {
 
 	struct Renderer : public sched::Task, public sched::Screen {
 		bool init() override;
+		bool deinit() override;
 
 		void loop() override;
 		bool done() override;
@@ -147,8 +151,9 @@ namespace threed {
 		uint16_t interp_progress = 20000;
 		uint64_t last_update;
 
-		float z_buf[matrix_type::framebuffer_type::width][matrix_type::framebuffer_type::height];
+		uint8_t s_info = 0xff, s_rgb, s_p1, s_p2, s_p3, s_cf[3], s_cip, s_cxp;
 
+		float z_buf[matrix_type::framebuffer_type::width][matrix_type::framebuffer_type::height];
 		
 		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
 			int dx = x1 - x0;
