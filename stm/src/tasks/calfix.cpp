@@ -85,7 +85,7 @@ void tasks::CalfixScreen::loop() {
 		ready = true;
 	}
 
-	if (progress == 3) progress = 0;
+	if (progress == 5) progress = 0;
 
 	if (!ready) {
 		progress = 5;
