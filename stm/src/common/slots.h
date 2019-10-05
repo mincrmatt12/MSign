@@ -152,7 +152,7 @@ namespace slots {
 	SLOT_CHECK_DEF(ScCfgTime);
 	SLOT_CHECK_DEF(Vec3);
 
-	enum WeatherStateArrayCode : uint8_t {
+	enum struct WeatherStateArrayCode : uint8_t {
 		UNK = 0,
 
 		CLEAR = 0x10,
