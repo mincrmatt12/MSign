@@ -315,7 +315,7 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 	for (int i = 0; i < 24 / 4; ++i) {
 		int hour = (first + i * 4) % 24;
 		char buf[3] = {0};
-		snprintf(buf, 3, "%2d", hour);
+		snprintf(buf, 3, "%02d", hour);
 
 		// todo  make this a gradient
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255, 255, 255);
