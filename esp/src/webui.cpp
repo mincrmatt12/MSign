@@ -209,6 +209,7 @@ namespace webui {
 				// make sure we delete the update files.
 				if (sd.chdir("/upd")) {
 					sd.remove("stm.bin");
+					sd.remove("esp.bin");
 					sd.remove("chck.sum");
 					sd.chdir();
 				}
