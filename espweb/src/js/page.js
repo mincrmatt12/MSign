@@ -137,6 +137,48 @@ class App extends React.Component {
 								   this.state.sccfg.calfix.duration.toString() + "\n";
 		}
 
+		// 3d
+		if (this.state.model.names[0] || this.state.model.names[1])
+			result += "modelnames=" + this.state.model.names[0] + "," + this.state.model.names[1] + "\n";
+		if (this.state.model.focuses.some((x) => x.some((y) => !Number.isNaN(y)))) {
+			let values = [...Array(18).keys()].map((x) => NaN);
+
+			for (let i0 = 0; i0 < 2; ++i0) {
+				for (let i1 in this.state.model.focuses[i0]) {
+					values[i0 * 9 + i1 * 3 + 0] = this.state.model.focuses[i0][i1][0];
+					values[i0 * 9 + i1 * 3 + 1] = this.state.model.focuses[i0][i1][1];
+					values[i0 * 9 + i1 * 3 + 2] = this.state.model.focuses[i0][i1][2];
+				}
+			}
+
+			result += "modelfocuses=" + values.map((x) => x.toString()).join(",") + "\n";
+		}
+		if (this.state.model.minposes.some((y) => !Number.isNaN(y))) {
+			let values = [...Array(6).keys()].map((x) => NaN);
+
+			for (let i1 in this.state.model.minposes) {
+				values[i1 * 3 + 0] = this.state.model.minposes[i1][0];
+				values[i1 * 3 + 1] = this.state.model.minposes[i1][1];
+				values[i1 * 3 + 2] = this.state.model.minposes[i1][2];
+			}
+
+			result += "modelminposes=" + values.map((x) => x.toString()).join(",") + "\n";
+		}
+		if (this.state.model.maxposes.some((y) => !Number.isNaN(y))) {
+			let values = [...Array(6).keys()].map((x) => NaN);
+
+			for (let i1 in this.state.model.maxposes) {
+				values[i1 * 3 + 0] = this.state.model.maxposes[i1][0];
+				values[i1 * 3 + 1] = this.state.model.maxposes[i1][1];
+				values[i1 * 3 + 2] = this.state.model.maxposes[i1][2];
+			}
+
+			result += "modelmaxposes=" + values.map((x) => x.toString()).join(",") + "\n";
+		}
+		if (this.state.model.enabled != [false, false, true]) {
+			result += "modelenable=" + this.state.model.enabled.map((x) => x ? "1" : "0").join(",") + "\n";
+		}
+
 		return result;
 	}
 
@@ -246,7 +288,7 @@ class App extends React.Component {
 						this.setState((s, _) => {
 							let values = value.split(",").map((x) => Number.parseFloat(x));
 							
-							s.model.maxposes = [values.slice(0, 3), values.slice(3)];
+							s.model[key == 'modelmaxposes' ? 'maxposes' : 'minposes'] = [values.slice(0, 3), values.slice(3)];
 							return s;
 						});
 						break;

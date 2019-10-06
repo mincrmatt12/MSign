@@ -95,7 +95,7 @@ class ModelRenderer extends React.Component {
 		const material = new THREE.MeshBasicMaterial({
 			wireframe: true,
 			vertexColors: THREE.FaceColors,
-			wireframeLinewidth: 2.8,
+			wireframeLinewidth: 3.5,
 		});
 
 		this.mesh = new THREE.Mesh(geometry, material);
@@ -124,19 +124,91 @@ class ModelRenderer extends React.Component {
 	}
 }
 
+class ModelPropertiesRenderer extends ModelRenderer {
+	generateScene(ab) {
+		super.generateScene(ab);
+
+		const cambox_geom = new THREE.BoxGeometry(1, 1, 1);
+		const cambox_mat = new THREE.MeshBasicMaterial({
+			color: new THREE.Color(1, 0.2, 0.2),
+			transparent: true,
+			opacity: 0.5,
+			wireframe: true
+		});
+		this.cambox = new THREE.Mesh(cambox_geom, cambox_mat);
+
+		const focpoint_geom = new THREE.SphereGeometry(0.025);
+		const focpoint_mat = new THREE.MeshBasicMaterial({
+			color: new THREE.Color(1, 1, 1),
+		});
+
+		this.focpoints = [new THREE.Mesh(focpoint_geom, focpoint_mat),
+			new THREE.Mesh(focpoint_geom, focpoint_mat),
+			new THREE.Mesh(focpoint_geom, focpoint_mat)
+		];
+
+		this.mesh.add(this.cambox);
+		for (let i of this.focpoints) {
+			this.mesh.add(i);
+		}
+
+		this.computeTransforms();
+	}
+
+	computeTransforms() {
+		// setup positions of focpoints
+		
+		let i = 0;
+		for (;i < this.props.focuses.length; ++i) {
+			if (this.props.focuses[i].some(Number.isNaN)) break;
+			this.focpoints[i].position.set(...this.props.focuses[i]);
+			this.focpoints[i].position.setX(-this.focpoints[i].position.x);
+			this.focpoints[i].visible = true;
+		}
+		for (; i < 3; ++i) {
+			this.focpoints[i].visible = false;
+		}
+
+		if (this.props.minpos.some(Number.isNaN) || this.props.maxpos.some(Number.isNaN)) {
+			this.cambox.visible = false;
+			return;
+		}
+		this.cambox.visible = true;
+		
+		// compute size of box
+		const minpos = new THREE.Vector3(...this.props.minpos);
+		const maxpos = new THREE.Vector3(...this.props.maxpos);
+		let mx = minpos.x
+		minpos.setX(-maxpos.x);
+		maxpos.setX(-mx);
+
+		const size = maxpos.clone().sub(minpos);
+		const pos  = minpos.add(size.clone().divideScalar(2));
+
+		this.cambox.position.copy(pos);
+		this.cambox.scale.copy(size);
+	}
+
+	startAnimationLoop = () => {
+		this.computeTransforms();
+		this.renderer.render(this.scene, this.camera);
+		this.requestID = window.requestAnimationFrame(this.startAnimationLoop);
+	}
+};
+
 function ThreeComponentEdit(props) {
 	return (
 		<Form>
 			{props.label}
 			<Form.Row>
 				<Col>
-					<Form.Control type="number" step={props.step} value={props.x} onChange={(e) => props.onChange(e.target.value, props.y, props.z)}/>
+					<Form.Control type="number" step={props.step} defaultValue={props.x} onChange={(e) => props.onChange([Number.parseFloat(e.target.value), props.y, props.z])}/>
 				</Col>
 				<Col>
-					<Form.Control type="number" step={props.step} value={props.y} onChange={(e) => props.onChange(props.x, e.target.value, props.z)}/>
+					<Form.Control type="number" step={props.step} defaultValue={props.y} onChange={(e) => props.onChange([props.x, Number.parseFloat(e.target.value), props.z])}/>
 				</Col>
 				<Col>
-					<Form.Control type="number" step={props.step} value={props.z} onChange={(e) => props.onChange(props.x, props.y, e.target.value)}/>
+					<Form.Control type="number" step={props.step} defaultValue={props.z} onChange={(e) => props.onChange([props.x, props.y, Number.parseFloat(e.target.value)])}/>
 				</Col>
 			</Form.Row>
 		</Form>
@@ -207,7 +279,7 @@ class ModelPane extends React.Component {
 
 	uploadFocus(i0, i1, v) {
 		let v_s = this.props['configState'];
-		v_s.focuses[i0][i1] = val;
+		v_s.focuses[i0][i1] = v;
 		this.props['updateState'](v_s);
 	}
 
@@ -233,6 +305,7 @@ class ModelPane extends React.Component {
 		}).then((resp) => {
 			if (resp.ok) {
 				alert("sent model, reboot to see it onscreen");
+				this.refreshPresence();
 			}
 			else {
 				alert("failed to upload");
@@ -307,14 +380,17 @@ class ModelPane extends React.Component {
 						<Form.Control type="text" value={this.props.configState.names[ae]} placeholder="<none>" onChange={(e) => this.uploadInner("names", ae, e.target.value)} />
 					</Form.Group>
 				</Form>
-				<ThreeComponentEdit label="camera minpos" onChange={(v) => this.uploadInner("minposes", ae, v)} />
-				<ThreeComponentEdit label="camera maxpos" onChange={(v) => this.uploadInner("maxposes", ae, v)} />
+				<ThreeComponentEdit key={10 + ae} label="camera minpos" onChange={(v) => this.uploadInner("minposes", ae, v)}
+					x={this.props.configState.minposes[ae][0]} y={this.props.configState.minposes[ae][1]} z={this.props.configState.minposes[ae][2]}/>
+				<ThreeComponentEdit key={20 + ae} label="camera maxpos" onChange={(v) => this.uploadInner("maxposes", ae, v)} 
+					x={this.props.configState.maxposes[ae][0]} y={this.props.configState.maxposes[ae][1]} z={this.props.configState.maxposes[ae][2]}/>
 				<hr className="hr-gray" />
 				<p>focus points</p>
 				{[...this.props.configState.focuses[ae].keys()].map((x) => (
 					<Row key={x}>
 						<Col sm="11" xs="10">
-							<ThreeComponentEdit onChange={(v) => {this.uploadFocus(ae, x, v);}} />
+							<ThreeComponentEdit key={x*10 + 30 + ae} onChange={(v) => {this.uploadFocus(ae, x, v);}}
+								x={this.props.configState.focuses[ae][x][0]} y={this.props.configState.focuses[ae][x][1]} z={this.props.configState.focuses[ae][x][2]}/>
 						</Col>
 						<Col sm="1" xs="2" className="pl-0">
 							<Button variant="danger" disabled={this.props.configState.focuses[ae].length <= 1} onClick={() => this.removeFocus(ae, x)} className="w-100">X</Button>
@@ -325,7 +401,7 @@ class ModelPane extends React.Component {
 				<Button variant="success" disabled={this.props.configState.focuses[ae].length == 3} onClick={() => this.addFocus(ae)}>add focus</Button>
 				<hr className="hr-gray" />
 				{this.state.dwModel != ae ? null : 
-						(<ModelRenderer modelBuffer={this.state.model} />)
+						(<ModelPropertiesRenderer focuses={this.props.configState.focuses[ae]} maxpos={this.props.configState.maxposes[ae]} minpos={this.props.configState.minposes[ae]} modelBuffer={this.state.model} />)
 				}</div>)}
 
 			<hr className="hr-gray" />
