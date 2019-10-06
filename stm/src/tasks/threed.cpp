@@ -1,4 +1,4 @@
-#include "rng.h"
+minpos#include "rng.h"
 #include "threed.h"
 #include "draw.h"
 #include "srv.h"
@@ -114,6 +114,10 @@ namespace threed {
 			if (v != 0) {
 				tri_count = 0;
 				servicer.ack_slot(s_rgb);
+			}
+			else {
+				tri_count = 0;
+				init_default_mesh();
 			}
 		}
 
