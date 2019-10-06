@@ -21,6 +21,7 @@ import WeatherPane from "./pane/weather"
 import ApiPane from "./pane/apikeys"
 import ScCfgPane from "./pane/sc"
 import UpdatePane from "./pane/upd"
+import ModelPane from "./pane/model"
 
 class App extends React.Component {
 	constructor(props) {
@@ -69,6 +70,14 @@ class App extends React.Component {
 				weather: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 				model: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 				calfix: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
+			},
+
+			model: {
+				names: ["", ""],
+				focuses: [[], []],
+				minposes: [[NaN, NaN, NaN], [NaN, NaN, NaN]],
+				maxposes: [[NaN, NaN, NaN], [NaN, NaN, NaN]],
+				enabled: [false, false, true]
 			}
 		}
 	}
@@ -204,6 +213,47 @@ class App extends React.Component {
 							s.sccfg.weather.duration = values[1];
 							s.sccfg.model.duration = values[2];
 							s.sccfg.calfix.duration = values[3];
+
+							return s;
+						});
+						break;
+					case 'modelnames':
+						this.setState((s, _) => {
+							s.model.names = value.split(",");
+
+							return s;
+						});
+						break;
+					case 'modelfocuses':
+						this.setState((s, _) => {
+							let values = value.split(",").map((x) => Number.parseFloat(x));
+							let focuses = [[], []];
+							let values_split = [values.slice(0, 9), values.slice(9)];
+
+							for (let i = 0; i < 3; ++i) {
+								if (!Number.isNaN(values_split[0][i*3]))
+									focuses[0].push([values_split[0][i*3], values_split[0][i*3+1], values_split[0][i*3+2]]);
+								if (!Number.isNaN(values_split[1][i*3]))
+									focuses[1].push([values_split[1][i*3], values_split[1][i*3+1], values_split[1][i*3+2]]);
+							}
+
+							s.model.focuses = focuses;
+							return s;
+						});
+						break;
+					case 'modelminposes':
+					case 'modelmaxposes':
+						this.setState((s, _) => {
+							let values = value.split(",").map((x) => Number.parseFloat(x));
+							
+							s.model.maxposes = [values.slice(0, 3), values.slice(3)];
+							return s;
+						});
+						break;
+					case 'modelenable':
+						this.setState((s, _) => {
+							s.model.enabled = value.split(",").map((x) => Number.parseInt(x) == 1);
+							return s;
 						});
 						break;
 				}
@@ -287,6 +337,9 @@ class App extends React.Component {
 									<LinkContainer to="/sccfg">
 										<Nav.Link>sccfg</Nav.Link>
 									</LinkContainer>
+									<LinkContainer to="/model">
+										<Nav.Link>model</Nav.Link>
+									</LinkContainer>
 									<LinkContainer to="/upd">
 										<Nav.Link>sysupdate</Nav.Link>
 									</LinkContainer>
@@ -311,8 +364,9 @@ class App extends React.Component {
 								<Route path="/sccfg"      render={(props) => {
 									return <ScCfgPane   configState={this.state.sccfg  } updateState={this.createUpdateFunc('sccfg')} />
 								}} />
-
-
+								<Route path="/model"      render={(props) => {
+									return <ModelPane   configState={this.state.model  } updateState={this.createUpdateFunc('model')} />
+								}} />
 								<Route path="/upd" component={UpdatePane} />
 							</div>}
 						</Col>
