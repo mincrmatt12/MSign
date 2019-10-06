@@ -83,7 +83,7 @@ module.exports = (env, options) => {
 				"Access-Control-Allow-Headers": "X-Requested-With, content-type, Authorization",
 				"Access-Control-Allow-Origin": "*"
 			},
-			historyApiFallback: {index: 'page.html'}
+			historyApiFallback: {index: '/page.html'}
 		}
 
 	} else {
