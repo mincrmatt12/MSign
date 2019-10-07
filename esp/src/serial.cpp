@@ -121,12 +121,18 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				// open conn
 				if (size < 4) goto size_error;
 
+				uint16_t slot_type = *(uint16_t *)(buf + 2);
 				if (buf[0] == 0x00) {
-					slots_continuous[buf[1]] = *(uint16_t *)(buf + 2);
+					uint16_t pos = search_for(slot_type, slots_continuous);
+					if (pos != 0xFFFF) {
+						Serial1.println(F("invalid value in slots_continuous"));
+						slots_continuous[pos] = 0x00;
+					}
+					slots_continuous[buf[1]] = slot_type;
 				}
 				else {
 					// else cont.
-					slots_polled[buf[1]] = *(uint16_t *)(buf + 2);
+					slots_polled[buf[1]] = slot_type;
 				}
 
 				uint8_t buf_reply[4] = {

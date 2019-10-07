@@ -123,7 +123,6 @@ namespace threed {
 		}
 
 		if (servicer.slot_dirty(s_rgb, true)) {
-			last_new_data = rtc_time;
 			tris[tri_count] = Tri{
 				.p1 = servicer.slot<slots::Vec3>(s_p1),
 				.p2 = servicer.slot<slots::Vec3>(s_p2),
@@ -138,9 +137,6 @@ namespace threed {
 			if (tri_count != servicer.slot<uint16_t>(s_info)) {
 				servicer.ack_slot(s_rgb);
 			}
-		}
-		else if (tri_count != servicer.slot<uint16_t>(s_info) && rtc_time - last_new_data > 250) {
-			servicer.ack_slot(s_rgb);
 		}
 
 		if (current_tri >= tri_count) current_tri = 0;

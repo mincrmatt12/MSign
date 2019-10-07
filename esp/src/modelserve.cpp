@@ -198,7 +198,7 @@ namespace modelserve {
 
 				// update index
 				++index;
-				if (index % 16 == 0 && index != tricount[modelidx]) load_next_index_data();
+				if (index % 16 == 0 && index < tricount[modelidx]) load_next_index_data();
 
 				return true;
 			}

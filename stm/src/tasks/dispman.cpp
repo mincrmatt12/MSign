@@ -81,19 +81,19 @@ void tasks::DispMan::setup(uint8_t i) {
 void tasks::DispMan::teardown(uint8_t i, bool call_deinit) {
 	switch (i) {
 		case 0:
-			if (call_deinit) ttc.deinit();
+			ttc.deinit();
 			break;
 		case 1:
-			if (call_deinit) weather.deinit();
+			weather.deinit();
 			break;
 		case 2:
-			if (call_deinit) threedbg.deinit();
-			if (call_deinit) clockfg.deinit();
+			threedbg.deinit();
+			clockfg.deinit();
 
 			task_list[1] = nullptr;
 			break;
 		case 3:
-			if (call_deinit) calfix.deinit();
+			calfix.deinit();
 			break;
 	}
 }
