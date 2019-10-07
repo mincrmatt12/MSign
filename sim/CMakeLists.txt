@@ -179,6 +179,7 @@ target_compile_options(esp_fullcore INTERFACE
 	-DNONOSDK221=1
 	-DDEBUG_ESP_PORT=Serial1
 	-Wimplicit-fallthrough=2
+	-fno-rtti
 )
 
 # c) add target for ESP build
