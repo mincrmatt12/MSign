@@ -25,11 +25,11 @@ struct SdFile : public Stream {
 
 	}
 	SdFile(const char * name, int mode) {
-		std::ios::openmode m;
+		std::ios::openmode m = std::ios::in;
 		this->fst.reset(new std::fstream());
 		this->_name = name;
 
-		if (mode & O_READ) m |= std::ios::in;
+		if (mode & O_READ == 0) m &= ~std::ios::in;
 		if (mode & O_WRITE) m |= std::ios::out;
 		if (mode & O_TRUNC) m |= std::ios::trunc;
 		if (name[0] == '/') {
