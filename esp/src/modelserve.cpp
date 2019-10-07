@@ -1,9 +1,11 @@
 #include "modelserve.h"
+#include <Arduino.h>
 #include <TimeLib.h>
 #include <SdFat.h>
 #include "config.h"
 #include "serial.h"
 #include "common/slots.h"
+#include <cmath>
 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -26,7 +28,7 @@ namespace modelserve {
 	void load_next_index_data() {
 		if (tricount[modelidx] == 0) return;
 
-		size_t remaining_triangles = min(tricount[modelidx] - index, 16);
+		size_t remaining_triangles = std::min(tricount[modelidx] - index, 16);
 		size_t bytes_required = remaining_triangles * sizeof(slots::Vec3);
 		size_t offset         = 2 + (sizeof(slots::Vec3) * 4) * index;
 

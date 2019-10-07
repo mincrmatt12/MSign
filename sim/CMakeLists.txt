@@ -179,10 +179,12 @@ target_compile_options(esp_fullcore INTERFACE
 	-DNONOSDK221=1
 	-DDEBUG_ESP_PORT=Serial1
 	-Wimplicit-fallthrough=2
+	-fno-rtti
 )
 
 # c) add target for ESP build
 add_executable(espsim ${TOTAL_ESP_SRCS})
+target_compile_options(espsim PRIVATE -DSIM)
 target_link_libraries(espsim esp_fullcore)
 target_include_directories(espsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/espsrc)
 add_dependencies(espsim copy_esp_src)

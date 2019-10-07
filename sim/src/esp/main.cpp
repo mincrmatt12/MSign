@@ -10,6 +10,10 @@
 #include "webui.h"
 #include "upd.h"
 #include "calfix.h"
+#include "modelserve.h"
+#include "SdFat.h"
+
+SdFatSoftSpi<D6, D2, D5> sd;
 
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
@@ -39,9 +43,9 @@ void setup() {
 	signtime::init();
 	ttc::init();
 	weather::init();
-	webui::init();
 	sccfg::init();
 	calfix::init();
+	modelserve::init();
 }
 
 bool i = false;
@@ -55,8 +59,8 @@ void loop() {
 	ttc::loop();
 	wifi::loop();
 	weather::loop();
-	webui::loop();
 	sccfg::loop();
 	calfix::loop();
+	modelserve::loop();
 	delay(1);
 }
