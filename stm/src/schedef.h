@@ -18,9 +18,14 @@ namespace sched {
 	using TaskPtr = Task *;
 
 	struct Screen {
+		// Setup the screen
 		virtual bool init() {return true;}
 
+		// Teardown the screen resources (VStrs, Slots)
 		virtual bool deinit() {return true;}
+
+		// Should we ignore all sense and leave this screen on? (i.e. are you loading data or something)
+		virtual bool leaveon() {return false;}
 	};
 
 }

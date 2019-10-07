@@ -4,6 +4,14 @@
 extern tasks::Timekeeper timekeeper;
 extern sched::TaskPtr task_list[8];
 
+bool ok_to_change() {
+	for (int i = 0; i < 3; ++i) {
+		if (!task_list[i]) continue;
+		if (((sched::Screen *)(task_list[i]))->leaveon()) return false;
+	}
+	return true;
+}
+
 void tasks::DispMan::init() {
 	setup(0);
 	activate(0);
@@ -14,7 +22,7 @@ void tasks::DispMan::init() {
 void tasks::DispMan::loop() {
 	communicate();
 
-	if (data_ok && timekeeper.current_time - this->last_screen_transition > times_on[this->on]) {
+	if (data_ok && ok_to_change() && timekeeper.current_time - this->last_screen_transition > times_on[this->on]) {
 		teardown(this->on);
 		this->on = next(this->on);
 		activate(this->on);
