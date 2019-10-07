@@ -4,6 +4,7 @@ import binascii
 import sys
 import slotlib
 import textwrap
+import struct
 # dissects capture logs and outputs a list of packets
 datastream = []
 prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
@@ -89,7 +90,10 @@ def slot_data(dat):
         print(": {:02x} (data {:04x}, i.e. {}) is:".format(sid, connection_data[sid], slotlib.slot_types[connection_data[sid]][0]))
 
         st = slotlib.slot_types[connection_data[sid]][1]
-        print(textwrap.indent(st.get_formatted(st.parse(data)), ' ' * (header_width + 2) + '└'))
+        try:
+            print(textwrap.indent(st.get_formatted(st.parse(data)), ' ' * (header_width + 2) + '└'))
+        except struct.error:
+            print(' ' * (header_width + 2) + "<error while decoding {}>".format(binascii.hexlify(data).decode('ascii')))
 
 phandle = {
         0x20: open_conn,
