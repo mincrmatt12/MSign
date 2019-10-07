@@ -15,10 +15,6 @@
 
 SdFatSoftSpi<D6, D2, D5> sd;
 
-uint16_t EspClass::getVcc() {
-	return rand();
-}
-
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
 	Serial1.begin(115200, SERIAL_8N1);
@@ -47,7 +43,6 @@ void setup() {
 	signtime::init();
 	ttc::init();
 	weather::init();
-	webui::init();
 	sccfg::init();
 	calfix::init();
 	modelserve::init();
@@ -64,7 +59,6 @@ void loop() {
 	ttc::loop();
 	wifi::loop();
 	weather::loop();
-	webui::loop();
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();

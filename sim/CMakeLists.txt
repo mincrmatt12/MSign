@@ -184,6 +184,7 @@ target_compile_options(esp_fullcore INTERFACE
 
 # c) add target for ESP build
 add_executable(espsim ${TOTAL_ESP_SRCS})
+target_compile_options(espsim PRIVATE -DSIM)
 target_link_libraries(espsim esp_fullcore)
 target_include_directories(espsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/espsrc)
 add_dependencies(espsim copy_esp_src)

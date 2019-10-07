@@ -17,7 +17,7 @@
 #define File SdFile
 
 static inline uint32_t secureRandom(uint32_t x) {
-	return rand();
+	return x;
 }
 
 struct SdFile : public Stream {
@@ -137,7 +137,7 @@ struct SdFatSoftSpi {
 	}
 
 	SdFile open(const char * name, int mode=FILE_READ) {
-		if (_chdir.size() == 0) {
+		if (_chdir.size() == 0 || name[0] == '/') {
 			return SdFile(name, mode);
 		}
 		if (_chdir[_chdir.size() - 1] == '/') {
