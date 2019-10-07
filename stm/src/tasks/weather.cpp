@@ -425,9 +425,9 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	int first = timedat.tm_hour;
 
 	tickmark(80, 25, first);
-	tickmark(93, 25, (first + 6) % 24);
+	tickmark(92, 25, (first + 6) % 24);
 	tickmark(104, 25, (first + 12) % 24);
-	tickmark(119, 25, (first + 18) % 24);
+	tickmark(116, 25, (first + 18) % 24);
 }
 
 void tasks::WeatherScreen::draw_graph(uint8_t hour) {
