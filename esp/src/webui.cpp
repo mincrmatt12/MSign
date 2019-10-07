@@ -354,6 +354,73 @@ namespace webui {
 					break;
 			}
 		});
+		webserver.on("/a/model.bin", HTTP_GET, [](){
+				if (!_doauth()) return;
+				if (!sd.exists("/model.bin")){
+					webserver.send(404);
+					return;
+				}
+				// stream the config file
+				File fl = sd.open("model.bin", FILE_READ);
+				webserver.streamFile(fl, "application/octet-stream");
+				fl.close();
+		});
+		webserver.on("/a/model1.bin", HTTP_GET, [](){
+				if (!_doauth()) return;
+				if (!sd.exists("/model1.bin")){
+					webserver.send(404);
+					return;
+				}
+				// stream the config file
+				File fl = sd.open("model1.bin", FILE_READ);
+				webserver.streamFile(fl, "application/octet-stream");
+				fl.close();
+		});
+		webserver.on("/a/mpres.json", HTTP_GET, [](){
+				if (!_doauth()) return;
+				bool m0 = sd.exists("/model.bin");
+				bool m1 = sd.exists("/model1.bin");
+
+				char buf[34] = {0};
+				snprintf_P(buf, 34, PSTR("{\"m0\":%s,\"m1\":%s}"), m0 ? "true" : "false", m1 ? "true" : "false");
+
+				webserver.send(200, "application/json", buf);
+		});
+		webserver.on("/a/newmodel", HTTP_POST, [](){
+			// when the model is recieved literally do nothing.
+			// no auth check because screw that crap
+			
+			webserver.send(204);
+		}, [](){
+			// upload data:
+			auto& upload = webserver.upload();
+
+			switch (upload.status) {
+				case UPLOAD_FILE_START:
+					{
+						writing_update = sd.open(upload.name == "model" ? "/model.bin" : "/model1.bin", FILE_WRITE);
+					}
+					break;
+				case UPLOAD_FILE_END:
+					{
+						writing_update.flush();
+						writing_update.close();
+						++recieved_files;
+					}
+					break;
+				case UPLOAD_FILE_ABORTED:
+					{
+						writing_update.remove();
+						writing_update.close();
+					}
+					break;
+				case UPLOAD_FILE_WRITE:
+					{
+						writing_update.write(upload.buf, upload.currentSize);
+					}
+					break;
+			}
+		});
 
 		webserver.begin();
 	}

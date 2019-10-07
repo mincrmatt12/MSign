@@ -1,4 +1,4 @@
-minpos#include "rng.h"
+#include "rng.h"
 #include "threed.h"
 #include "draw.h"
 #include "srv.h"
@@ -104,7 +104,7 @@ namespace threed {
 	}
 
 	bool Renderer::done() {
-		return current_tri == tri_count;
+		return current_tri >= tri_count;
 	}
 
 	void Renderer::loop() {
@@ -118,10 +118,12 @@ namespace threed {
 			else {
 				tri_count = 0;
 				init_default_mesh();
+				servicer.slot_dirty(s_rgb, true);
 			}
 		}
 
 		if (servicer.slot_dirty(s_rgb, true)) {
+			last_new_data = rtc_time;
 			tris[tri_count] = Tri{
 				.p1 = servicer.slot<slots::Vec3>(s_p1),
 				.p2 = servicer.slot<slots::Vec3>(s_p2),
@@ -132,12 +134,16 @@ namespace threed {
 			};
 
 			++tri_count;
+			current_tri = 0;
 			if (tri_count != servicer.slot<uint16_t>(s_info)) {
 				servicer.ack_slot(s_rgb);
 			}
 		}
+		else if (tri_count != servicer.slot<uint16_t>(s_info) && rtc_time - last_new_data > 250) {
+			servicer.ack_slot(s_rgb);
+		}
 
-		if (current_tri == tri_count) current_tri = 0;
+		if (current_tri >= tri_count) current_tri = 0;
 		if (current_tri == 0) {
 			update_matricies();
 		}

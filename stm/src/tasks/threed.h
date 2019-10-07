@@ -149,7 +149,7 @@ namespace threed {
 		Vec3 camera_pos, camera_target;
 		Vec3 camera_look, camera_look_target;
 		uint16_t interp_progress = 20000;
-		uint64_t last_update;
+		uint64_t last_update, last_new_data;
 
 		uint8_t s_info = 0xff, s_rgb, s_p1, s_p2, s_p3, s_cf[3], s_cip, s_cxp;
 
