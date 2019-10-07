@@ -367,7 +367,7 @@ class ModelPane extends React.Component {
 				<ModelPaneListEntry name={this.props.configState.names[1]} selected={ae == 1} modelPresent={this.state.presence[1]} enabled={this.props.configState.enabled[1]} 
 					onClick={() => this.setState({activeEntry: 1})} 
 					onChangeState={(v) => this.uploadInner('enabled', 1, v)}
-					onChangeModel={() => this.uploadNewModel(0)}
+					onChangeModel={() => this.uploadNewModel(1)}
 				/>
 				<ModelPaneListEntry name="builtin" modelPresent={true} builtin={true} enabled={this.props.configState.enabled[2]} 
 					onChangeState={(v) => this.uploadInner('enabled', 2, v)} />

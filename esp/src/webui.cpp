@@ -398,7 +398,7 @@ namespace webui {
 			switch (upload.status) {
 				case UPLOAD_FILE_START:
 					{
-						writing_update = sd.open(upload.name == "model" ? "/model.bin" : "/model1.bin", FILE_WRITE);
+						writing_update = sd.open((upload.name == "model") ? "/model.bin" : "/model1.bin", O_WRITE | O_CREAT | O_TRUNC);
 					}
 					break;
 				case UPLOAD_FILE_END:
