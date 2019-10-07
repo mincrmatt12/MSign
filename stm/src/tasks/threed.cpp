@@ -116,9 +116,7 @@ namespace threed {
 				servicer.ack_slot(s_rgb);
 			}
 			else {
-				tri_count = 0;
 				init_default_mesh();
-				servicer.slot_dirty(s_rgb, true);
 			}
 		}
 

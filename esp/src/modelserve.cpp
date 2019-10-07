@@ -20,7 +20,7 @@ namespace modelserve {
 
 	const char * modelpaths[] = {
 		"/model.bin",
-		"/model2.bin"
+		"/model1.bin"
 	};
 
 	void load_next_index_data() {
