@@ -139,6 +139,7 @@ namespace threed {
 
 		void loop() override;
 		bool done() override;
+		bool leaveon() override;
 	private:
 		void draw_triangle(const Tri& t);
 		void update_matricies();

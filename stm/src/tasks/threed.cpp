@@ -269,4 +269,9 @@ namespace threed {
 
 		return true;
 	}
+
+	bool Renderer::leaveon() {
+		if (servicer.slot<uint16_t>(s_info) == 0) return false;
+		return servicer.slot<uint16_t>(s_info) != tri_count;
+	}
 }

@@ -114,6 +114,10 @@ namespace modelserve {
 			index = 0;
 			load_next_index_data();
 
+			Serial1.println(F("d1"));
+			Serial1.println(tricount[0]);
+			Serial1.println(tricount[1]);
+
 			// Send model parameters to device
 			serial::interface.update_data(slots::MODEL_INFO, (uint8_t *)&tricount[i], sizeof(uint16_t));
 			send_model_parameters(config::MODEL_FOCUSES);
@@ -168,7 +172,8 @@ namespace modelserve {
 		serial::interface.register_handler([](uint16_t slot_id){
 			switch (slot_id) {
 				case slots::MODEL_INFO:
-					serial::interface.update_data(slot_id, (uint8_t *)&tricount[modelidx], sizeof(uint16_t));
+					last_switch_time = 0;
+					modelidx = 0;
 					return;
 				case slots::MODEL_CAM_FOCUS1:
 				case slots::MODEL_CAM_FOCUS2:
@@ -197,6 +202,7 @@ namespace modelserve {
 
 				// send rgb data
 				memcpy(buffer, &rgb[index % 16], sizeof(slots::Vec3));
+				size = sizeof(slots::Vec3);
 
 				// update index
 				++index;
@@ -222,7 +228,7 @@ namespace modelserve {
 		for (int i = 0; i < 3; ++i) {
 			++modelidx;
 			modelidx %= 3;
-			if (modelspresent[i]) break;
+			if (modelspresent[modelidx]) break;
 		}
 
 		if (modelidx == last_idx) return;
