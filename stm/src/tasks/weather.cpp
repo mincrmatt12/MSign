@@ -263,7 +263,7 @@ void tasks::WeatherScreen::draw_currentstats() {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::snow, 20, 20, 3, 1, y, 255, 255, 255);
 	}
 	else if (strcmp(icon, "clear-day") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::clear_day, 20, 20, 3, 1, y, 252, 252, 17);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::clear_day, 20, 20, 3, 1, y, 210, 200, 0);
 	}
 	else if (strcmp(icon, "clear-night") == 0) {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::night, 20, 20, 3, 1, y, 79, 78, 79);
