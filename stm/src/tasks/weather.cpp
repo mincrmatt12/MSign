@@ -331,6 +331,11 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	uint8_t r = 127, g = 127, b = 127;
     slots::WeatherStateArrayCode code = hour < 16 ? (slots::WeatherStateArrayCode)servicer.slot(s_state[0])[hour] :
 		 		                                    (slots::WeatherStateArrayCode)servicer.slot(s_state[1])[hour - 16];
+	
+	struct tm timedat;
+	time_t now = rtc_time / 1000;
+	gmtime_r(&now, &timedat);
+	hour = (timedat.tm_hour + hour) % 24;
 
 	switch (code) {
 		case slots::WeatherStateArrayCode::CLEAR:
