@@ -110,12 +110,19 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 	int16_t write_pos[4] = {-1};
 	int16_t min_pos = 0;
+	int64_t scale_v = 8;
+
+	for (int i = 0; i < 4; ++i) {
+		if (times[i] < rtc_time) continue;
+		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
+		if (minutes > 15 && minutes < 32) scale_v = 4;
+	}
 
 	for (int i = 0; i < 4; ++i) {
 		if (rtc_time > times[i]) break;
 		
 		// Scale is 8 pixels per minute
-		int16_t position = static_cast<int16_t>((times[i] - rtc_time) / 7500);
+		int16_t position = static_cast<int16_t>((times[i] - rtc_time) / (60'000 / scale_v));
 
 		if (position > 128) {
 			break;
@@ -144,7 +151,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		if (minutes > 15) break;
+		if (minutes > 31) break;
 		snprintf(buf, 16, "%dm", (int)minutes);
 
 		if (minutes < 5) {
