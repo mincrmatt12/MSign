@@ -127,6 +127,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				while (test_str != NULL) {
 					Serial1.println(test_str);
 					Serial1.println(v.str_val);
+					Serial1.println(parent.is_array() ? parent.index : -1);
 					if (strcmp(test_str, v.str_val) == 0) {
 						state.tag = true; break;
 					}
@@ -140,7 +141,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 			}
 		}
 		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
-			if (state.tag && state.e2 < 2) {
+			if (state.tag && state.e2 < 4) {
 				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
 					ttc::times[slot+3].tB = ttc::times[slot+3].tA;
