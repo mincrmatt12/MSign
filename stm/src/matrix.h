@@ -76,7 +76,7 @@ namespace led {
 						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
 						: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
 						: "0"(lo), "1"(hi), "2"(bs)
-						: "r2", "r9", "cc", "r10"
+						: "r2", "r3", "cc", "r10"
 					);
 				}
 			}
