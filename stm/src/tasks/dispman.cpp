@@ -14,7 +14,9 @@ void tasks::DispMan::init() {
 void tasks::DispMan::loop() {
 	communicate();
 
-	if (data_ok && !(this->on == 2 && this->threedbg.leaveon()) && timekeeper.current_time - this->last_screen_transition > times_on[this->on]) {
+	bool extend = (this->on == 2 && this->threedbg.leaveon());
+
+	if (data_ok && timekeeper.current_time - this->last_screen_transition > (times_on[this->on] * (extend ? 3 : 1))) {
 		teardown(this->on);
 		this->on = next(this->on);
 		activate(this->on);

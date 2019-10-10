@@ -45,53 +45,38 @@ namespace led {
 				// we can have nearly any instruction execute conditionally
 				// and the and operation will set flags if it ends with an S...
 
-				
-				uint8_t * lo = &data[i*Storage::EffectiveWidth*3];
-				uint8_t * hi = &data[(i|stb_lines)*Storage::EffectiveWidth*3];
+				uint8_t * lo = (uint8_t *)(((uint32_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 32 + 0x22000000 + pos*4);
+				uint8_t * hi = lo + stb_lines*Storage::EffectiveWidth*3*32;
 				uint8_t * bs = &byte_stream[0];
-				uint_fast8_t mask = (1 << pos);
 
 				for (uint_fast16_t j = 0; j < Storage::EffectiveWidth; ++j) {
 					asm volatile (
-						"ldrb r2, [%[Lo]], #1\n\t" // First, we load the value at _lo_ to r2, which we'll write at the end
-						"tst r2, %[Mask]\n\t" // Do a clobber-less and
-						"ite eq\n\t"  			// thumb requires explicit checks on the flags
-						"moveq r2, #0\n\t"    // If the result is zero, set to 0
-						"movne r2, #1\n\t"    // Otherwise, set to 1
-						// different pattern for the rest of them
-						"ldrb r10, [%[Lo]], #1\n\t" // Load the g value to r10
-						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
-						"it ne\n\t"
-						"orrne r2, r2, #2\n\t" // if result is nonzero or with 2
-						// this continues for the b bit
-						"ldrb r10, [%[Lo]], #1\n\t" // Load the g value to r10
-						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
-						"it ne\n\t"
-						"orrne r2, r2, #4\n\t" // if result is nonzero or with 4
-						// now, we switch to the Hi byte
-						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
-						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
-						"it ne\n\t"
-						"orrne r2, r2, #8\n\t" // if result is nonzero or with 8
-						// this continues for the g bit
-						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
-						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
-						"it ne\n\t"
-						"orrne r2, r2, #16\n\t" // if result is nonzero or with 16
-						// this continues for the b bit
-						"ldrb r10, [%[Hi]], #1\n\t" // Load the g value to r10
-						"tst r10, %[Mask]\n\t"      // Again, set flags for r10 & mask
-						"it ne\n\t"
-						"orrne r2, r2, #32\n\t" // if result is nonzero or with 32
+						// start by loading the bit value at lo into r2
+						"ldrb r2, [%[Lo]], #32\n\t"  // increment by 32 each time to advance a byte
+						// load the next byte
+						"ldrb r10, [%[Lo]], #32\n\t"
+						// or them together
+						"orr r2, r2, r10, lsl #1\n\t"
+						// repeat for B byte
+						"ldrb r10, [%[Lo]], #32\n\t"
+						"orr r2, r2, r10, lsl #2\n\t" // now shift by 2 since it's in bit position 2
+						// do the entire thing but in r3 to save an or
+						"ldrb r3, [%[Hi]], #32\n\t"
+						"ldrb r10, [%[Hi]], #32\n\t"
+						"orr r3, r3, r10, lsl #1\n\t"
+						"ldrb r10, [%[Hi]], #32\n\t"
+						"orr r3, r3, r10, lsl #2\n\t"
+						// move r3 into r2
+						"orr r2, r2, r3, lsl #3\n\t"
 						// now, r2 contains the value for bs
 						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
-						// the next byte requires or 16
-						"orr r2, r2, #64\n\t" // set the clock line
+						// set the clock line
+						"orr r2, r2, #64\n\t"
 						// store the byte
 						"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
 						: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
-						: "0"(lo), "1"(hi), "2"(bs), [Mask]"r"(mask)
-						: "r2", "cc", "r10"
+						: "0"(lo), "1"(hi), "2"(bs)
+						: "r2", "r9", "cc", "r10"
 					);
 				}
 			}

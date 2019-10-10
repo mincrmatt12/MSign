@@ -252,7 +252,7 @@ void tasks::WeatherScreen::draw_currentstats() {
 	text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
 	draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127, 127, 127);
 
-	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 1));
+	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 3));
 
 	const char * icon = (const char*)servicer.slot(s_icon);
 
