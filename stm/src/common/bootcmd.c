@@ -35,7 +35,7 @@ void bootcmd_request_update(uint32_t size) {
 
 void bootcmd_service_update() {
 	LL_RTC_BAK_SetRegister(RTC, 0, BOOTCMD_RUN);
-	LL_RTC_BAK_SetRegister(RTC, 1, 0xfece);
+	LL_RTC_BAK_SetRegister(RTC, 1, 0xfece5);
 }
 #else
 // mock interface
