@@ -6,6 +6,16 @@
 #include <type_traits>
 
 namespace srv {
+	// Implements a stupid 
+	struct ConIO {
+		void write(const char *buf, std::size_t length);
+
+		std::size_t remaining();
+		void read(char *buf, std::size_t length);
+	private:
+		char buf[1024]; // 1K buffer
+		char *start = buf, *end = buf;
+	};
 
 	// Talks to the ESP8266
 	//
@@ -90,6 +100,10 @@ namespace srv {
 		uint32_t update_total_size;
 		uint16_t update_checksum;
 		uint16_t update_chunks_remaining;
+
+		// ConIO: console stuff
+		ConIO debug_in, debug_out;
+		ConIO log_out;
 	};
 
 }

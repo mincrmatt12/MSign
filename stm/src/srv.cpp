@@ -11,6 +11,7 @@
 #include "common/util.h"
 #include "pins.h"
 #include "nvic.h"
+#include <algorithm>
 
 extern tasks::Timekeeper timekeeper;
 
@@ -833,4 +834,37 @@ const char * srv::Servicer::update_status() {
 	}
 
 	return update_status_buffer;
+}
+
+// ConIO interface
+
+size_t srv::ConIO::remaining() {
+	if (start <= end) return end - start;
+	else return (&buf[1024] - start) + (end - &buf[0]);
+}
+
+void srv::ConIO::write(const char * ibuf, size_t length) {
+	if (remaining() + length > 1024) return;
+
+	memcpy(end, ibuf, std::min((ptrdiff_t)length, &buf[1024] - end));
+	if (length > &buf[1024] - end) {
+		memcpy(buf, ibuf + (&buf[1024] - end), length - (&buf[1024] - end));
+		end = &buf[length - (&buf[1024] - end)];
+	}
+	else {
+		end += length;
+	}
+}
+
+void srv::ConIO::read(char * obuf, size_t length) {
+	if (length > remaining()) return;
+
+	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[1024] - start));
+	if (length > &buf[1024] - start) {
+		memcpy(obuf + (&buf[1024] - start), buf, length - (&buf[1024] - start));
+		start = &buf[length - (&buf[1024] - start)];
+	}
+	else {
+		start += length;
+	}
 }
