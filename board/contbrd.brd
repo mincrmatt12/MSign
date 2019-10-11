@@ -3,7 +3,7 @@
 <eagle version="9.4.1">
 <drawing>
 <settings>
-<setting alwaysvectorfont="no"/>
+<setting alwaysvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
 <grid distance="12.5" unitdist="mil" unit="mil" style="lines" multiple="1" display="no" altdistance="5" altunitdist="mil" altunit="mil"/>
@@ -2656,12 +2656,12 @@ design rules under a new name.</description>
 <attribute name="SPICEPREFIX" value="R" x="65.151" y="59.563" size="1.778" layer="27" display="off"/>
 <attribute name="VALUE" x="63.5254" y="59.0804" size="0.9906" layer="27" ratio="10"/>
 </element>
-<element name="JP1" library="connector" package="DM3AT-SF-PEJM5" value="DM3AT-SF-PEJM5" x="80.264" y="19.3675" smashed="yes">
-<attribute name="DESCRIPTION" value="CONN MICRO SD CARD PUSH-PUSH R/A" x="80.264" y="19.3675" size="1.27" layer="27" display="off"/>
-<attribute name="DIGIKEY" value="HR1964CT-ND" x="80.264" y="19.3675" size="1.27" layer="27" display="off"/>
-<attribute name="MANUFACTURER" value="Hirose Electric Co Ltd" x="80.264" y="19.3675" size="1.27" layer="27" display="off"/>
-<attribute name="MPN" value="DM3AT-SF-PEJM5" x="80.264" y="19.3675" size="1.27" layer="27" display="off"/>
-<attribute name="NAME" x="73.0825" y="19.877" size="1.016" layer="25" ratio="12" align="bottom-center"/>
+<element name="JP1" library="connector" package="DM3AT-SF-PEJM5" value="DM3AT-SF-PEJM5" x="80.264" y="17.78" smashed="yes">
+<attribute name="DESCRIPTION" value="CONN MICRO SD CARD PUSH-PUSH R/A" x="80.264" y="17.78" size="1.27" layer="27" display="off"/>
+<attribute name="DIGIKEY" value="HR1964CT-ND" x="80.264" y="17.78" size="1.27" layer="27" display="off"/>
+<attribute name="MANUFACTURER" value="Hirose Electric Co Ltd" x="80.264" y="17.78" size="1.27" layer="27" display="off"/>
+<attribute name="MPN" value="DM3AT-SF-PEJM5" x="80.264" y="17.78" size="1.27" layer="27" display="off"/>
+<attribute name="NAME" x="73.0825" y="18.2895" size="1.016" layer="25" ratio="12" align="bottom-center"/>
 </element>
 <element name="J2" library="SparkFun-Connectors" package="SCREWTERMINAL-5MM-2" value="" x="21.971" y="6.35" smashed="yes">
 <attribute name="NAME" x="15.9385" y="3.81" size="1.27" layer="25" ratio="20"/>
@@ -3074,9 +3074,10 @@ design rules under a new name.</description>
 <wire x1="41.5925" y1="51.435" x2="42.545" y2="51.435" width="0.1524" layer="1"/>
 <wire x1="42.545" y1="51.435" x2="42.605" y2="51.375" width="0.1524" layer="1"/>
 <wire x1="42.605" y1="51.375" x2="42.605" y2="50.835" width="0.1524" layer="1"/>
-<wire x1="92.075" y1="17.5895" x2="81.153" y2="17.5895" width="0.254" layer="1"/>
-<wire x1="81.153" y1="17.5895" x2="80.164" y2="18.5785" width="0.254" layer="1"/>
-<wire x1="80.164" y1="18.5785" x2="80.164" y2="19.2675" width="0.254" layer="1"/>
+<wire x1="92.075" y1="17.5895" x2="90.17" y2="15.6845" width="0.254" layer="1"/>
+<wire x1="90.17" y1="15.6845" x2="80.8355" y2="15.6845" width="0.254" layer="1"/>
+<wire x1="80.164" y1="17.68" x2="80.164" y2="16.356" width="0.254" layer="1"/>
+<wire x1="80.8355" y1="15.6845" x2="80.164" y2="16.356" width="0.254" layer="1"/>
 <contactref element="JP4" pad="1"/>
 <via x="66.04" y="44.7675" extent="1-16" drill="0.35"/>
 <via x="66.04" y="47.625" extent="1-16" drill="0.35"/>
@@ -3175,7 +3176,7 @@ design rules under a new name.</description>
 </signal>
 <signal name="SCLK">
 <contactref element="JP1" pad="5"/>
-<wire x1="79.064" y1="19.2675" x2="79.064" y2="19.8977125" width="0.1524" layer="1"/>
+<wire x1="79.064" y1="17.68" x2="79.064" y2="19.8977125" width="0.1524" layer="1"/>
 <wire x1="79.064" y1="19.8977125" x2="74.9739" y2="23.9878125" width="0.1524" layer="1"/>
 <wire x1="74.9739" y1="23.9878125" x2="74.9739" y2="28.2136" width="0.1524" layer="1"/>
 <wire x1="73.9648" y1="29.2227" x2="73.9648" y2="32.3834875" width="0.1524" layer="1"/>
@@ -3189,7 +3190,7 @@ design rules under a new name.</description>
 <via x="84.455" y="36.5125" extent="1-16" drill="0.35"/>
 <via x="81.28" y="22.5425" extent="1-16" drill="0.35"/>
 <wire x1="81.28" y1="22.5425" x2="81.264" y2="22.5265" width="0.1524" layer="1"/>
-<wire x1="81.264" y1="22.5265" x2="81.264" y2="19.2675" width="0.1524" layer="1"/>
+<wire x1="81.264" y1="22.5265" x2="81.264" y2="17.68" width="0.1524" layer="1"/>
 <wire x1="84.455" y1="36.5125" x2="84.455" y2="25.7175" width="0.1524" layer="16"/>
 <wire x1="84.455" y1="25.7175" x2="81.28" y2="22.5425" width="0.1524" layer="16"/>
 <contactref element="IC5" pad="19"/>
@@ -3198,7 +3199,7 @@ design rules under a new name.</description>
 </signal>
 <signal name="MISO">
 <contactref element="JP1" pad="7"/>
-<wire x1="76.864" y1="19.2675" x2="76.864" y2="19.7582875" width="0.1524" layer="1"/>
+<wire x1="76.864" y1="17.68" x2="76.864" y2="19.7582875" width="0.1524" layer="1"/>
 <wire x1="76.864" y1="19.7582875" x2="73.025" y2="23.5972875" width="0.1524" layer="1"/>
 <contactref element="IC5" pad="6"/>
 <wire x1="73.025" y1="23.5972875" x2="73.025" y2="30.775" width="0.1524" layer="1"/>
@@ -3209,7 +3210,7 @@ design rules under a new name.</description>
 <via x="84.455" y="38.4175" extent="1-16" drill="0.35"/>
 <via x="82.423" y="24.892" extent="1-16" drill="0.35"/>
 <wire x1="82.423" y1="24.892" x2="82.364" y2="24.833" width="0.1524" layer="1"/>
-<wire x1="82.364" y1="24.833" x2="82.364" y2="19.2675" width="0.1524" layer="1"/>
+<wire x1="82.364" y1="24.833" x2="82.364" y2="17.68" width="0.1524" layer="1"/>
 <wire x1="83.8482" y1="26.3172" x2="83.8482" y2="38.1282" width="0.1524" layer="16"/>
 <wire x1="83.8482" y1="38.1282" x2="84.1375" y2="38.4175" width="0.1524" layer="16"/>
 <wire x1="84.1375" y1="38.4175" x2="84.455" y2="38.4175" width="0.1524" layer="16"/>
