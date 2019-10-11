@@ -50,26 +50,16 @@ message(STATUS "Creating copy targets")
 # c) create copy targets
 add_custom_target(copy_stm_src)
 add_custom_command(TARGET copy_stm_src PRE_BUILD
-	COMMENT "Copying original stm sources" 
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_CURRENT_LIST_DIR}/../stm/src/ ${CMAKE_CURRENT_BINARY_DIR}/stmsrc
-)
-add_custom_command(TARGET copy_stm_src PRE_BUILD
-	COMMENT "Copying overridden stm sources" 
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_CURRENT_LIST_DIR}/src/stm/ ${CMAKE_CURRENT_BINARY_DIR}/stmsrc
+	COMMENT "Copying stm sources" 
+	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
+	${CMAKE_CURRENT_LIST_DIR}/../stm/src ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
 )
 
 add_custom_target(copy_esp_src)
 add_custom_command(TARGET copy_esp_src PRE_BUILD
-	COMMENT "Copying original esp sources" 
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_CURRENT_LIST_DIR}/../esp/src/ ${CMAKE_CURRENT_BINARY_DIR}/espsrc
-)
-add_custom_command(TARGET copy_esp_src PRE_BUILD
-	COMMENT "Copying overridden esp sources"
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_CURRENT_LIST_DIR}/src/esp/ ${CMAKE_CURRENT_BINARY_DIR}/espsrc
+	COMMENT "Copying esp sources" 
+	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
+	${CMAKE_CURRENT_LIST_DIR}/../esp/src ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
 )
 
 # mark the files as generated

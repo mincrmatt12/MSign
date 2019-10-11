@@ -2,3 +2,5 @@ cmake-build-*
 build/
 compile_commands.json
 *.gdb_history
+cmake/*
+!cmake/copy.py
