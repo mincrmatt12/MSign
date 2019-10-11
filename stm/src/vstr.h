@@ -80,6 +80,7 @@ repeat:
 					if (!servicer.slot_connected(handle)) return false;
 					raw = Allocator::open();
 					memset(raw, 0, length);
+					servicer.slot_dirty(handle, true);
 					servicer.ack_slot(handle);
 					state = 2;
 					return false;
@@ -87,18 +88,11 @@ repeat:
 				case 3:
 					if (servicer.slot_dirty(handle, true)) {
 						const auto& vs = servicer.slot<slots::VStr>(handle); // make sure we copy this in case there's some voodoo
-						if (state == 2 && vs.index != 0) {
+						if (vs.index != 0 && state == 2) {
 							servicer.ack_slot(handle);
-							break;
+							return false;
 						}
 						else state = 3;
-						if (vs.index > vs.size) return false;
-
-						if (vs.size >= length) {
-							state = 0; // too large error
-							data = nullptr;
-							return true;
-						}
 
 						if (vs.size - vs.index <= 14) {
 							size_t size = (vs.size - vs.index);
@@ -130,7 +124,8 @@ repeat:
 		void close() {
 			servicer.close_slot(handle);
 			data = nullptr;
-			Allocator::close(raw);
+			if (raw)
+				Allocator::close(raw);
 			raw = nullptr;
 			state = 0;
 		}
