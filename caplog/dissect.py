@@ -8,6 +8,7 @@ import struct
 # dissects capture logs and outputs a list of packets
 datastream = []
 prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
+realtime = False
 
 if len(sys.argv) < 3:
     print("usage: {} [logicexport,simlog] <in>")
@@ -30,15 +31,32 @@ if sys.argv[1] in prefixes("logicexport"):
 elif sys.argv[1] in prefixes("simlog"):
     with open(sys.argv[2], 'rb') as f:
         datastream = [x for x in f.read()]
+elif sys.argv[1] in prefixes("realtime"):
+    realtime = True
 else:
-    print("usage: {} [logicexport,simlog] <in>")
+    print("usage: {} [logicexport,simlog,realtime] <in>")
     exit(1)
 
 ptr = 0
-def read(x):
-    global ptr
-    ptr += x
-    return datastream[ptr-x:ptr]
+if not realtime:
+    def read(x):
+        global ptr
+        ptr += x
+        return datastream[ptr-x:ptr]
+else:
+    files = [open(x, 'rb') for x in sys.argv[2:]]
+    import select
+    
+    def read(x):
+        if len(datastream) >= x:
+            return [datastream.pop(0) for y in range(x)]
+        else:
+            while len(datastream) < x:
+                (ok, _, _) = select.select(files, [], [])
+                for f in ok:
+                    datastream.extend([y for y in os.read(f.fileno(), 128)])
+            return read(x)
+
 
 pnames = {
     0x10: "HANDSHAKE_INIT",
@@ -101,7 +119,7 @@ phandle = {
         0x40: slot_data
 }
 
-while ptr < len(datastream):
+while (ptr < len(datastream)) if not realtime else True:
     header = read(3)
 
     if header[0] == 0xa6:
