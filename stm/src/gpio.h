@@ -1,5 +1,5 @@
 #ifndef GPIO_H
-#define GPIO_h
+#define GPIO_H
 
 #include "stm32f2xx.h"
 #include "stm32f2xx_ll_gpio.h"
