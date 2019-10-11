@@ -236,6 +236,36 @@ void srv::Servicer::loop() {
 				nvic::show_error_screen("ESPTimeout");
 			}
 		}
+
+		// send out console information
+		if (debug_out.remaining() && !this->pending_count && !is_sending) {
+			char buf[128];
+			uint8_t amt = std::min(debug_out.remaining(), (size_t)128);
+			debug_out.read(buf, amt);
+
+			this->dma_out_buffer[0] = 0xa5;
+			this->dma_out_buffer[1] = amt + 1;
+			this->dma_out_buffer[2] = 0x70;
+			this->dma_out_buffer[3] = 0x02;
+
+			memcpy(&dma_out_buffer[4], buf, amt);
+
+			send();
+		}
+		else if (log_out.remaining() && !this->pending_count && !is_sending) {
+			char buf[128];
+			uint8_t amt = std::min(log_out.remaining(), (size_t)128);
+			debug_out.read(buf, amt);
+
+			this->dma_out_buffer[0] = 0xa5;
+			this->dma_out_buffer[1] = amt + 1;
+			this->dma_out_buffer[2] = 0x70;
+			this->dma_out_buffer[3] = 0x10;
+
+			memcpy(&dma_out_buffer[4], buf, amt);
+
+			send();
+		}
 	}
 
 	// Update ASYNC logic
@@ -709,6 +739,15 @@ void srv::Servicer::process_command() {
 				append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size);
 				break;
 			}
+		case 0x70:
+			{
+				// CONSOLE_MESSAGE
+				
+				if (this->dma_buffer[3] != 0x01) break; // if console is not the dinput
+				
+				debug_in.write((char *)this->dma_buffer + 4, this->dma_buffer[1] - 1);
+				break;
+			}
 		default:
 			break;
 		// TODO: notif
@@ -868,3 +907,6 @@ void srv::ConIO::read(char * obuf, size_t length) {
 		start += length;
 	}
 }
+
+srv::ConIO debug_in, debug_out;
+srv::ConIO log_out;

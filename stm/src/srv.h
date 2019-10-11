@@ -17,6 +17,10 @@ namespace srv {
 		char *start = buf, *end = buf;
 	};
 
+	// ConIO: console stuff
+	extern ConIO debug_in, debug_out;
+	extern ConIO log_out;            
+
 	// Talks to the ESP8266
 	//
 	// Uses up to 256 16-byte "data slots", which can be set to contain any 16-byte stream identifier.
@@ -100,10 +104,6 @@ namespace srv {
 		uint32_t update_total_size;
 		uint16_t update_checksum;
 		uint16_t update_chunks_remaining;
-
-		// ConIO: console stuff
-		ConIO debug_in, debug_out;
-		ConIO log_out;
 	};
 
 }
