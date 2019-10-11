@@ -201,9 +201,6 @@ namespace webui {
 					break;
 			}
 		});
-		webserver.on("/a/fheap", HTTP_GET, [](){
-			webserver.send(200, "text/plain", String(ESP.getFreeHeap(), 10));
-		});
 		webserver.on("/a/updatestm", HTTP_POST, [](){
 			if (!_doauth()) {
 				// make sure we delete the update files.
