@@ -80,6 +80,7 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 | `UPDATE_IMG_DATA` | `0x61` |
 | `UPDATE_IMG_START` | `0x62` |
 | `UPDATE_STATUS` | `0x63` |
+| `CONSOLE_MSG` | `0x70` |
 
 
 ### Handshake
@@ -111,7 +112,7 @@ Closing a slot is done with the `CLOSE_CONN` command, whose payload is a single 
 Both of these commands get replies from the ESP, called `ACK_OPEN_CONN` and `ACK_CLOSE_CONN` respectively.
 These two commands both have the same payload data, containing the slot ID that was opened or closed.
 
-##### Getting data
+#### Getting data
 
 Continuous slots will periodically send the `SLOT_DATA` command from the ESP.
 Polled slots MUST send the `NEW_DATA` command from the STM, containing the slot ID to update as its payload.
@@ -126,6 +127,27 @@ The `SLOT_DATA` command's format is as follows.
 ```
 
 It is the only variable-length packet currently in the protocol. Data past the end of the payload but before the 16-byte cutoff should be interpreted as zero.
+
+### Consoles
+
+A console is a unidirectional stream of characters. There are three consoles on the MSign:
+
+| ID | Usage |
+| --- | ---------|
+| `0x01` | The debug console input; as accessed through the web interface for commands starting with `"stm"` |
+| `0x02` | The debug console output; relayed back to the web interface, hooked to `stderr` |
+| `0x10` | `printf` output; logs, hooked to `stdout` |
+
+The protocol uses one message for these:
+
+```
+| 0x01 | <data> |
+  |      |
+  |		 - character data for the remainder of the message
+  -------- the console ID
+```
+
+It can be sent from either device.
 
 ### Other commands
 
