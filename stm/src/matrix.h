@@ -108,7 +108,7 @@ namespace led {
 			}
 			inline const uint8_t & g(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
-;					return Storage::_g(data, x, y);
+					return Storage::_g(data, x, y);
 				}
 				return junk;
 			}
