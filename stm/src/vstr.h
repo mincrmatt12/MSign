@@ -84,8 +84,14 @@ repeat:
 					state = 2;
 					return false;
 				case 2:
+				case 3:
 					if (servicer.slot_dirty(handle, true)) {
 						const auto& vs = servicer.slot<slots::VStr>(handle); // make sure we copy this in case there's some voodoo
+						if (state == 2 && vs.index != 0) {
+							servicer.ack_slot(handle);
+							break;
+						}
+						else state = 3;
 						if (vs.index > vs.size) return false;
 
 						if (vs.size >= length) {
