@@ -22,6 +22,7 @@ import ApiPane from "./pane/apikeys"
 import ScCfgPane from "./pane/sc"
 import UpdatePane from "./pane/upd"
 import ModelPane from "./pane/model"
+import {ConsolePane, LogPane} from "./pane/terminals"
 
 class App extends React.Component {
 	constructor(props) {
@@ -385,6 +386,12 @@ class App extends React.Component {
 									<LinkContainer to="/upd">
 										<Nav.Link>sysupdate</Nav.Link>
 									</LinkContainer>
+									<LinkContainer to="/log">
+										<Nav.Link>logs</Nav.Link>
+									</LinkContainer>
+									<LinkContainer to="/debug">
+										<Nav.Link>debug</Nav.Link>
+									</LinkContainer>
 								</Nav>
 							</Card>
 						</Col>
@@ -410,6 +417,8 @@ class App extends React.Component {
 									return <ModelPane   configState={this.state.model  } updateState={this.createUpdateFunc('model')} />
 								}} />
 								<Route path="/upd" component={UpdatePane} />
+								<Route path="/debug" component={ConsolePane} />
+								<Route path="/log" component={LogPane} />
 							</div>}
 						</Col>
 					</Row>

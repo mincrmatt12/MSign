@@ -13,3 +13,18 @@
 .force-enabled {
 	pointer-events: all;
 }
+
+// Terminal stuff
+
+.terminal {
+	height: 80vh;
+	overflow: scroll;
+	background-color: theme-color("light");
+	padding: 0.2em;
+}
+
+.terminal-text {
+	margin-top: 0;
+	margin-bottom: 0;
+	margin-left: 0.5em;
+}
