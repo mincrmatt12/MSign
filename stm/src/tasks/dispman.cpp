@@ -9,6 +9,11 @@ void tasks::DispMan::init() {
 	activate(0);
 	setup(1);
 	this->on = 0;
+
+	name[0] = 'd';
+	name[1] = 's';
+	name[2] = 'p';
+	name[2] = 'n';
 }
 
 void tasks::DispMan::loop() {

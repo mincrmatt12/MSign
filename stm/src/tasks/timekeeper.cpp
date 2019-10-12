@@ -23,6 +23,11 @@ void tasks::Timekeeper::loop() {
 		if (servicer.open_slot(slots::TIME_OF_DAY, false, this->time_slot, true)) {
 			last_run_time += 1;
 		}
+
+		name[0] = 't';
+		name[1] = 'i';
+		name[2] = 'm';
+		name[3] = 'e';
 	}
 	else if (last_run_time == 1) {
 		if (servicer.slot_connected(this->time_slot)) {

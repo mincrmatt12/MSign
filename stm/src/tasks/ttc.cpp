@@ -185,6 +185,10 @@ bool tasks::TTCScreen::init() {
 	)) {
 		return false;
 	}
+	name[0] = 't';
+	name[1] = 't';
+	name[2] = 'c';
+	name[3] = ' ';
 	bus_type = rng::get() % 3;
 	bus_type += 1;
 	bus_state = ((rng::get() % 30) == 0);

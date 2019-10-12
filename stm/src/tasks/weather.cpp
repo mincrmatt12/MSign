@@ -198,6 +198,10 @@ bool tasks::WeatherScreen::init() {
 	)) {
 		return false;
 	}
+	name[0] = 'w';
+	name[1] = 't';
+	name[2] = 'h';
+	name[3] = 'r';
 	return true;
 }
 
