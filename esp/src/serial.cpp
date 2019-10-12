@@ -72,6 +72,8 @@ void serial::SerialInterface::loop() {
 		}
 		else if (buf[0] != 0xa5) {
 			Log.println(F("STM32 is drunk; sent invalid header."));
+			Serial.read();
+			Serial1.printf("%02x %02x %02x\n", buf[0], buf[1], buf[2]);
 		}
 		else if (buf[1] != 0x00) {
 			pending_command = buf[2];
@@ -87,7 +89,7 @@ void serial::SerialInterface::loop() {
 		uint8_t buf_reply[3] = {
 			0xa6,
 			0x00,
-			PING
+			PONG
 		};
 
 		Serial.write(buf_reply, 3);
