@@ -1,3 +1,4 @@
 esp.csv
 stm.csv
 capturelog*.txt
+*.gdb_history
