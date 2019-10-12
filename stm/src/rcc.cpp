@@ -5,6 +5,11 @@
 #include "stm32f2xx_ll_bus.h"
 #include "rcc.h"
 
+extern "C" {
+	extern void (*__init_array_start [])(void);
+	extern void (*__init_array_end [])(void);
+}
+
 void rcc::init() {
 	LL_FLASH_SetLatency(LL_FLASH_LATENCY_3);
 	LL_RCC_HSI_Enable();
@@ -38,4 +43,11 @@ void rcc::init() {
 	LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
 	LL_SetSystemCoreClock(120000000);
 	LL_SYSTICK_EnableIT();
+
+	// Initialize the cpp runtime
+
+	int cpp_size = &(__init_array_end[0]) - &(__init_array_start[0]);
+	for (int cpp_count = 0; cpp_count < cpp_size; ++cpp_count) {
+		__init_array_start[cpp_count]();
+	} 
 }
