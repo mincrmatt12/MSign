@@ -434,23 +434,13 @@ size_t util::LogClass::write(uint8_t c) {
 }
 
 void util::LogClass::update_logs() {
-	if (_remainBuf() < 250) return;
-	File f;
-	if (bytes_sent_to_log > MAX_LOG_FILE_SIZE) {
-		f = sd.open("/log.txt", O_CREAT | O_TRUNC | O_WRITE);
-		bytes_sent_to_log = 0;
+	if (!hook) return;
+	if (_remainBuf() < 50) return;
+	uint8_t buf[50];
+	while (_remainBuf() >= 50) {
+		_grab(buf, 50);
+		if (hook) hook(buf, 50);
 	}
-	else {
-		f = sd.open("/log.txt", O_CREAT | O_APPEND | O_WRITE);
-	}
-	uint8_t buf[200];
-	while (_remainBuf() >= 200) {
-		_grab(buf, 200);
-		f.write(buf, 200);
-		if (hook) hook(buf, 200);
-		f.flush();
-	}
-	f.close();
 }
 
 size_t util::LogClass::_remainBuf() {
