@@ -80,8 +80,8 @@ int main() {
 	nvic::init();
 	rng::init();
 	matrix.init();
-
 	servicer.init();
+
 	task_list[3] = &servicer;
 	task_list[4] = &dispman;
 	task_list[5] = &timekeeper;
