@@ -455,14 +455,13 @@ void util::LogClass::update_logs() {
 
 size_t util::LogClass::_remainBuf() {
 	if (start <= end) return end - start;
-	else return (&buf[1024] - start) + (end - &buf[0]);
+	else return (&buf[2048] - start) + (end - &buf[0]);
 }
 
 void util::LogClass::_put(uint8_t c) {
-	if (_remainBuf() == 1024) return;
+	if (_remainBuf() == 2048) return;
 
-
-	if (end == &buf[1024]) end = buf;
+	if (end == &buf[2048]) end = buf;
 	else ++end;
 
 	*end = c;
@@ -471,10 +470,10 @@ void util::LogClass::_put(uint8_t c) {
 void util::LogClass::_grab(uint8_t * obuf, size_t length) {
 	if (length > _remainBuf()) return;
 
-	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[1024] - start));
-	if (length > &buf[1024] - start) {
-		memcpy(obuf + (&buf[1024] - start), buf, length - (&buf[1024] - start));
-		start = &buf[length - (&buf[1024] - start)];
+	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[2048] - start));
+	if (length > &buf[2048] - start) {
+		memcpy(obuf + (&buf[2048] - start), buf, length - (&buf[2048] - start));
+		start = &buf[length - (&buf[2048] - start)];
 	}
 	else {
 		start += length;

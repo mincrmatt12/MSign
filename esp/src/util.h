@@ -46,7 +46,7 @@ namespace util {
 		void _put(uint8_t v);
 		void _grab(uint8_t * obuf, size_t length);
 
-		uint8_t buf[1024];
+		uint8_t buf[2048];
 		uint8_t *start = buf, *end = buf;
 
 		size_t bytes_sent_to_log = 0;
