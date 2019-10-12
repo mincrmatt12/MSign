@@ -910,3 +910,14 @@ void srv::ConIO::read(char * obuf, size_t length) {
 
 srv::ConIO debug_in, debug_out;
 srv::ConIO log_out;
+
+#ifndef STM
+
+// override _write
+
+int _write(int file, char* ptr, int len) {
+	if (file == 0) log_out.write(ptr, len);
+	else           debug_out.write(ptr, len);
+}
+
+#endif
