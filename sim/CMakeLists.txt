@@ -19,11 +19,11 @@ file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/espsrc)
 message(STATUS "Generating source trees...")
 
 # b) glob for files
-file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.c*)
-file(GLOB_RECURSE STM_SRCS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.c*)
+file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.[ch]*)
+file(GLOB_RECURSE STM_SRCS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
 
-file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.c*)
-file(GLOB_RECURSE ESP_SRCS ${CMAKE_CURRENT_LIST_DIR}/../esp/src/*.c*)
+file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.[ch]*)
+file(GLOB_RECURSE ESP_SRCS ${CMAKE_CURRENT_LIST_DIR}/../esp/src/*.[ch]*)
 
 # now, create a new list, called TOTAL_STM_SRCS, from the original list
 set(TOTAL_STM_SRCS ${STM_SRCS})
@@ -73,7 +73,8 @@ endforeach()
 
 # ----- section two: compile stm -----
 add_executable(stmsim ${TOTAL_STM_SRCS})
-target_include_directories(stmsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/stmsrc)
+file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
+target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
 target_compile_options(stmsim PRIVATE -DSIM)
 add_dependencies(stmsim copy_stm_src)
 
@@ -176,7 +177,7 @@ target_compile_options(esp_fullcore INTERFACE
 add_executable(espsim ${TOTAL_ESP_SRCS})
 target_compile_options(espsim PRIVATE -DSIM)
 target_link_libraries(espsim esp_fullcore)
-target_include_directories(espsim PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/espsrc)
+target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc)
 add_dependencies(espsim copy_esp_src)
 
 # d) add target to run clean
