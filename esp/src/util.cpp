@@ -431,15 +431,16 @@ size_t util::LogClass::write(uint8_t c) {
 
 	// Buffer to SD card
 	_put(c);
+	update_logs(256);
 }
 
-void util::LogClass::update_logs() {
+void util::LogClass::update_logs(int threshold) {
 	if (!hook) return;
-	if (_remainBuf() < 50) return;
-	uint8_t buf[50];
-	while (_remainBuf() >= 50) {
-		_grab(buf, 50);
-		if (hook) hook(buf, 50);
+	if (_remainBuf() < threshold) return;
+	uint8_t buf[threshold];
+	while (_remainBuf() >= threshold) {
+		_grab(buf, threshold);
+		if (hook) hook(buf, threshold);
 	}
 }
 

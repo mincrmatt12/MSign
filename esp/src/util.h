@@ -36,7 +36,7 @@ namespace util {
 
 	struct LogClass : Print {
 		size_t write(uint8_t c) override;
-		void update_logs();
+		void update_logs(int threshold=32);
 		
 		bool quiet_mode = false;
 		std::function<void (uint8_t *, size_t)> hook;
