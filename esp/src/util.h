@@ -39,7 +39,7 @@ namespace util {
 		void update_logs();
 		
 		bool quiet_mode = false;
-		std::function<void (uint8_t)> hook;
+		std::function<void (uint8_t *, size_t)> hook;
 	private:
 		size_t _remainBuf();
 

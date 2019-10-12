@@ -428,7 +428,6 @@ util::LogClass Log;
 
 size_t util::LogClass::write(uint8_t c) {
 	if (!quiet_mode) Serial1.write(c);
-	if (hook) hook(c);
 
 	// Buffer to SD card
 	_put(c);
@@ -448,6 +447,7 @@ void util::LogClass::update_logs() {
 	while (_remainBuf() >= 200) {
 		_grab(buf, 200);
 		f.write(buf, 200);
+		if (hook) hook(buf, 200);
 		f.flush();
 	}
 	f.close();

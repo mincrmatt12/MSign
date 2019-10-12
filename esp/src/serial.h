@@ -30,9 +30,13 @@ namespace serial {
 	// returns ~0 on fail.
 	uint16_t search_for(uint16_t val, uint16_t array[64]);
 
+	// debug command
+	void slotstats(const char * args, char *&buffer, const char *end);
+
 	struct SerialInterface {
 		bool ensure_handshake();
 		void loop();
+		void register_debug_commands();
 
 		// Sends data to any slot with this data id, immediately -- can block.
 		void update_data(uint16_t data_id, const uint8_t * buffer, uint8_t length);
@@ -52,6 +56,8 @@ namespace serial {
 		void send_data_to(uint8_t slot_id, const uint8_t * buffer, uint8_t length);
 		void update_polled_data(uint8_t slot_id);
 		void update_open_handlers(uint8_t data_id);
+
+		friend void ::serial::slotstats(const char * args, char *&buffer, const char *end);
 
 		uint16_t slots_continuous[256];
 		uint16_t slots_polled[256];

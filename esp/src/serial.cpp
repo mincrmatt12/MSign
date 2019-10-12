@@ -3,6 +3,7 @@
 #include "Esp.h"
 #include <TimeLib.h>
 #include "util.h"
+#include "debug.h"
 
 serial::SerialInterface serial::interface;
 
@@ -202,7 +203,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 						Log.println(F("invalid command for msg"));
 						break;
 					case 0x02:
-						Log.println(F("debug console not implemented yet."));
+						debug::send_msg((char *)buf + 1, size - 1);
 						break;
 					case 0x10:
 						Log.print(F("(stm): "));
@@ -296,4 +297,25 @@ void serial::SerialInterface::send_console_data(const uint8_t * buf, size_t leng
 
 	Serial.write(obuf, 4);
 	Serial.write(buf, length);
+}
+
+void serial::SerialInterface::register_debug_commands() {
+	debug::add_command("slotstats", slotstats);
+}
+
+void serial::slotstats(const char *args, char *&buffer, const char *end) {
+	buffer += sprintf_P(buffer, PSTR("---- continuous ----\n"));
+	for (int i = 0; i < 256; ++i) {
+		if (serial::interface.slots_continuous[i]) {
+			buffer += sprintf_P(buffer, PSTR("%02x ---> %04x\n"), i, serial::interface.slots_continuous[i]);
+			if (buffer + 10 > end) return;
+		}
+	}
+	buffer += sprintf_P(buffer, PSTR("---- polled ----\n"));
+	for (int i = 0; i < 256; ++i) {
+		if (serial::interface.slots_polled[i]) {
+			buffer += sprintf_P(buffer, PSTR("%02x ---> %04x\n"), i, serial::interface.slots_polled[i]);
+			if (buffer + 10 > end) return;
+		}
+	}
 }
