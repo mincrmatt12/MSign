@@ -112,8 +112,6 @@ int main() {
 		// Servicer will eventually reset the STM.
 	}
 
-	puts("Connected to ESP. This is the debug stream.");
-
 	show_test_pattern(2, matrix.get_inactive_buffer());
 	matrix.swap_buffers();
 	show_test_pattern(2, matrix.get_inactive_buffer());
