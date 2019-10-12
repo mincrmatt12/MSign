@@ -18,7 +18,8 @@ namespace serial {
 		SLOT_DATA = 0x40,
 		RESET = 0x50,
 		PING,
-		PONG
+		PONG,
+		CONSOLE_MSG = 0x70
 	};
 
 	// returns true if new data was added to the buffer and length

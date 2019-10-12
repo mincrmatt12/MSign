@@ -86,7 +86,7 @@ void serial::SerialInterface::loop() {
 		uint8_t buf_reply[3] = {
 			0xa6,
 			0x00,
-			PONG
+			PING
 		};
 
 		Serial.write(buf_reply, 3);
@@ -195,6 +195,22 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				last_pong_at = now();
 			}
 			break;
+		case CONSOLE_MSG:
+			{
+				switch (buf[0]) {
+					case 0x01:
+						Log.println(F("invalid command for msg"));
+						break;
+					case 0x02:
+						Log.println(F("debug console not implemented yet."));
+						break;
+					case 0x10:
+						Log.print(F("(stm): "));
+						Log.Print::write(buf + 1, size - 1);
+						break;
+				}
+			}
+			break;
 		default:
 			{
 				Log.print(F("Got an invalid command or command that should only come from us.\n"));
@@ -266,4 +282,18 @@ void serial::SerialInterface::update_open_handlers(uint8_t slot_id) {
 		Log.printf("calling open handler at %p, \n", o_handlers[i]);
 		o_handlers[i](data_id);
 	}
+}
+
+void serial::SerialInterface::send_console_data(const uint8_t * buf, size_t length) {
+	if (length > 253) return;
+
+	uint8_t obuf[4] = {
+		0xa6,
+		static_cast<uint8_t>(length + 1),
+		0x70,
+		0x01
+	};
+
+	Serial.write(obuf, 4);
+	Serial.write(buf, length);
 }
