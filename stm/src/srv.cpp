@@ -12,6 +12,7 @@
 #include "pins.h"
 #include "nvic.h"
 #include <algorithm>
+#include <unistd.h>
 
 extern tasks::Timekeeper timekeeper;
 
@@ -238,9 +239,9 @@ void srv::Servicer::loop() {
 		}
 
 		// send out console information
-		if (false && debug_out.remaining() && !this->pending_count && !is_sending) {
-			char buf[128];
-			uint8_t amt = std::min(debug_out.remaining(), (size_t)128);
+		if (debug_out.remaining() && !this->pending_count && !is_sending) {
+			char buf[64];
+			uint8_t amt = std::min(debug_out.remaining(), (size_t)64);
 			debug_out.read(buf, amt);
 
 			this->dma_out_buffer[0] = 0xa5;
@@ -252,10 +253,10 @@ void srv::Servicer::loop() {
 
 			send();
 		}
-		else if (false && log_out.remaining() && !this->pending_count && !is_sending) {
-			char buf[128];
-			uint8_t amt = std::min(log_out.remaining(), (size_t)128);
-			debug_out.read(buf, amt);
+		else if (log_out.remaining() && !this->pending_count && !is_sending) {
+			char buf[64];
+			uint8_t amt = std::min(log_out.remaining(), (size_t)64);
+			log_out.read(buf, amt);
 
 			this->dma_out_buffer[0] = 0xa5;
 			this->dma_out_buffer[1] = amt + 1;
@@ -915,9 +916,9 @@ srv::ConIO log_out;
 
 // override _write
 
-int _write(int file, char* ptr, int len) {
-	if (file == 0) log_out.write(ptr, len);
-	else           debug_out.write(ptr, len);
+extern "C" int _write(int file, char* ptr, int len) {
+	if (file == STDOUT_FILENO) log_out.write(ptr, len);
+	else                       debug_out.write(ptr, len);
 }
 
 #endif
