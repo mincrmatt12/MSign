@@ -36,6 +36,7 @@ namespace util {
 
 	struct LogClass : Print {
 		size_t write(uint8_t c) override;
+		size_t write(const uint8_t *c, size_t amt) override;
 		void update_logs(int threshold=32);
 		
 		bool quiet_mode = false;

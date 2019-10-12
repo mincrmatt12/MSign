@@ -431,7 +431,22 @@ size_t util::LogClass::write(uint8_t c) {
 
 	// Buffer to SD card
 	_put(c);
-	update_logs(256);
+	update_logs(1024);
+
+	return 1;
+}
+
+size_t util::LogClass::write(const uint8_t *buf, size_t amt) {
+	if (!quiet_mode) Serial1.write(buf, amt);
+
+	size_t a = amt;
+	while (a--) {
+		_put(*buf++);
+	}
+
+	update_logs(1024);
+
+	return a;
 }
 
 void util::LogClass::update_logs(int threshold) {

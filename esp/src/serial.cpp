@@ -209,7 +209,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 						break;
 					case 0x10:
 						Log.print(F("(stm): "));
-						Log.Print::write(buf + 1, size - 1);
+						Log.write(buf + 1, size - 1);
 						break;
 				}
 			}
