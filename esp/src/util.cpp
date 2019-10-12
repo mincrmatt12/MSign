@@ -461,10 +461,11 @@ size_t util::LogClass::_remainBuf() {
 void util::LogClass::_put(uint8_t c) {
 	if (_remainBuf() == 1024) return;
 
-	*end = c;
 
-	if (end == &buf[1024]) end = buf + 1;
+	if (end == &buf[1024]) end = buf;
 	else ++end;
+
+	*end = c;
 }
 
 void util::LogClass::_grab(uint8_t * obuf, size_t length) {

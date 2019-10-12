@@ -18,8 +18,6 @@ namespace srv {
 	};
 
 	// ConIO: console stuff
-	extern ConIO debug_in, debug_out;
-	extern ConIO log_out;            
 
 	// Talks to the ESP8266
 	//
@@ -107,5 +105,9 @@ namespace srv {
 	};
 
 }
+
+extern srv::ConIO debug_in, debug_out;
+extern srv::ConIO log_out;            
+
 
 #endif

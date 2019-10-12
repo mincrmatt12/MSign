@@ -238,7 +238,7 @@ void srv::Servicer::loop() {
 		}
 
 		// send out console information
-		if (debug_out.remaining() && !this->pending_count && !is_sending) {
+		if (false && debug_out.remaining() && !this->pending_count && !is_sending) {
 			char buf[128];
 			uint8_t amt = std::min(debug_out.remaining(), (size_t)128);
 			debug_out.read(buf, amt);
@@ -252,7 +252,7 @@ void srv::Servicer::loop() {
 
 			send();
 		}
-		else if (log_out.remaining() && !this->pending_count && !is_sending) {
+		else if (false && log_out.remaining() && !this->pending_count && !is_sending) {
 			char buf[128];
 			uint8_t amt = std::min(log_out.remaining(), (size_t)128);
 			debug_out.read(buf, amt);

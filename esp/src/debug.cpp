@@ -65,15 +65,14 @@ namespace debug {
 						int cmd = match_command((char *)paycopy, value);
 
 						if (cmd == -1) {
-							wss.sendTXT(num, "Invalid command.");
+							wss.sendTXT(num, "Invalid command.\n");
 						}
 						else {
 							char *block = (char *)malloc(allocation_sizes[cmd]);
-							block[0] = 0;
 							char *block_begin = block;
 							command_handlers[cmd](value, block, block + allocation_sizes[cmd]);
 							if (block != block_begin) wss.sendTXT(num, block_begin, block - block_begin);
-							free(block);
+							free(block_begin);
 						}
 
 						free(paycopy);
@@ -91,7 +90,7 @@ namespace debug {
 
 		// commands
 		add_command("fheap", [](const char *args, char *&begin, const char *){
-			begin += sprintf_P(begin, PSTR("free heap: %d"), ESP.getFreeHeap());
+			begin += sprintf(begin, "free heap: %d\n", ESP.getFreeHeap());
 		}, 32);
 		add_command("quiet", [](const char *args, char *&begin, const char *){
 			if (args[1] == 'e') Log.quiet_mode = true;
@@ -100,7 +99,7 @@ namespace debug {
 		add_command("stm", [](const char *args, char *&begin, const char*){
 			if (args[0] == ' ') ++args;
 
-			serial::interface.send_console_data((uint8_t *)args, strlen(args));
+			serial::interface.send_console_data((const uint8_t *)args, strlen(args));
 		}, 8);
 	}
 
@@ -115,7 +114,7 @@ namespace debug {
 		++num_of_commands;
 	}
 	
-	void send_msg(char *buf, size_t amt) {
+	void send_msg(char *buf, int amt) {
 		if (connected != -1 && is_log == 2) {
 			wss.sendTXT(connected, buf, amt);
 		}

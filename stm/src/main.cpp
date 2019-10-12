@@ -14,6 +14,7 @@
 
 #include "draw.h"
 #include "tasks/dispman.h"
+#include "tasks/debug.h"
 #include <stdlib.h>
 #include <cmath>
 #include <stdio.h>
@@ -26,7 +27,7 @@ srv::Servicer servicer;
 uint64_t rtc_time;
 
 tasks::Timekeeper timekeeper{rtc_time};
-
+tasks::DebugConsole console;
 tasks::DispMan dispman;
 
 // Scheduler parameters
@@ -84,6 +85,7 @@ int main() {
 	task_list[3] = &servicer;
 	task_list[4] = &dispman;
 	task_list[5] = &timekeeper;
+	task_list[6] = &console;
 
 	show_test_pattern(0, matrix.get_inactive_buffer());
 	matrix.swap_buffers();

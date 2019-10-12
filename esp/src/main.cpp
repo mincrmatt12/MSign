@@ -13,6 +13,7 @@
 #include "calfix.h"
 #include "modelserve.h"
 #include "util.h"
+#include "debug.h"
 	
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -48,6 +49,8 @@ void setup() {
 	config::manager.load_from_sd();
 	while (!serial::interface.ensure_handshake()) {delay(1);}
 	wifi::init();
+	debug::init();
+	serial::interface.register_debug_commands();
 	signtime::init();
 	ttc::init();
 	weather::init();
@@ -63,9 +66,11 @@ void loop() {
 	wifi::loop();
 	weather::loop();
 	webui::loop();
+	Log.update_logs();
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();
+	debug::loop();
 	Log.update_logs();
 	delay(1);
 }
