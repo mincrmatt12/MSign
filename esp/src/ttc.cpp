@@ -44,8 +44,8 @@ void ttc::loop() {
 }
 
 void ttc::on_open(uint16_t data_id) {
-	Serial1.println("onopen: ");
-	Serial1.println(data_id);
+	Log.println("onopen: ");
+	Log.println(data_id);
 	switch (data_id) {
 		case slots::TTC_INFO:
 			serial::interface.update_data(slots::TTC_INFO, (const uint8_t *)&info, sizeof(info));
@@ -76,7 +76,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	char url[80];
 	snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
-	Serial1.println(url);
+	Log.println(url);
 	int16_t status_code;
 	auto cb = util::download_with_callback("webservices.nextbus.com", url, status_code);
 
@@ -125,9 +125,9 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				strcpy(dirtag, dtag);
 				char *test_str = strtok(dirtag, ",");
 				while (test_str != NULL) {
-					Serial1.println(test_str);
-					Serial1.println(v.str_val);
-					Serial1.println(parent.is_array() ? parent.index : -1);
+					Log.println(test_str);
+					Log.println(v.str_val);
+					Log.println(parent.is_array() ? parent.index : -1);
 					if (strcmp(test_str, v.str_val) == 0) {
 						state.tag = true; break;
 					}
@@ -177,8 +177,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 				on_open(slots::TTC_TIME_1 + slot);
 				on_open(slots::TTC_TIME_1B + slot);
 
-				Serial1.print(F("Adding ttc entry in slot "));
-				Serial1.print(slot);
+				Log.print(F("Adding ttc entry in slot "));
+				Log.print(slot);
 			}
 			state.tag = false;
 			state.layover = false;
@@ -190,7 +190,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	memset(&ttc::times[slot+3], 0, sizeof(ttc::times[0]));
 
 	if (!parser.parse(std::move(cb))) {
-		Serial1.println(F("JSON fucked up."));
+		Log.println(F("JSON fucked up."));
 	} // parse while calling our function.
 
 	util::stop_download();

@@ -2,6 +2,7 @@
 #include "serial.h"
 #include "config.h"
 #include "common/slots.h"
+#include "util.h"
 
 #include <TimeLib.h>
 #include <NtpClientLib.h>
@@ -35,8 +36,8 @@ void signtime::start() {
 	const char * time_server = config::manager.get_value(config::TIME_ZONE_SERVER, "pool.ntp.org");
 	NTP.onNTPSyncEvent([](NTPSyncEvent_t e){active=true;});
 	NTP.begin(time_server);
-	Serial1.print("Starting timeserver with ");
-	Serial1.println(time_server);
+	Log.print("Starting timeserver with ");
+	Log.println(time_server);
 }
 
 void signtime::stop() {

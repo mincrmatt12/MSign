@@ -1,4 +1,5 @@
 #include "modelserve.h"
+#include "util.h"
 #include <Arduino.h>
 #include <TimeLib.h>
 #include <SdFat.h>
@@ -32,8 +33,8 @@ namespace modelserve {
 		size_t bytes_required = remaining_triangles * sizeof(slots::Vec3);
 		size_t offset         = 2 + (sizeof(slots::Vec3) * 4) * index;
 
-		Serial1.println("A:");
-		Serial1.println(bytes_required);
+		Log.println("A:");
+		Log.println(bytes_required);
 	
 		p1 = (slots::Vec3 *)realloc(p1, bytes_required);	
 		p2 = (slots::Vec3 *)realloc(p2, bytes_required);	
@@ -60,16 +61,16 @@ namespace modelserve {
 		char * token = strtok(temp, ",");
 		int j = i;
 		for (;i > 0;--i) token = strtok(nullptr, ",");
-		Serial1.printf("v: %s, i: %d, t: %s\n", v, j, token);
+		Log.printf("v: %s, i: %d, t: %s\n", v, j, token);
 		if (token == nullptr) return std::numeric_limits<float>::quiet_NaN();
 		float r = atof(token);
-		Serial1.println(r);
+		Log.println(r);
 		free(temp);
 		return r;
 	}
 
 	void send_model_parameters(config::Entry e) {
-		Serial1.printf("smp: %02x, idx = %d\n", e, modelidx);
+		Log.printf("smp: %02x, idx = %d\n", e, modelidx);
 		if (modelidx == 2) return;
 		slots::Vec3 v;
 		const char * c;
@@ -114,9 +115,9 @@ namespace modelserve {
 			index = 0;
 			load_next_index_data();
 
-			Serial1.println(F("d1"));
-			Serial1.println(tricount[0]);
-			Serial1.println(tricount[1]);
+			Log.println(F("d1"));
+			Log.println(tricount[0]);
+			Log.println(tricount[1]);
 
 			// Send model parameters to device
 			serial::interface.update_data(slots::MODEL_INFO, (uint8_t *)&tricount[i], sizeof(uint16_t));
@@ -132,7 +133,7 @@ namespace modelserve {
 
 	bool init_modeldat(int i) {
 		if (!sd.exists(modelpaths[i])) {
-			Serial1.println(F("No model.bin on disk"));
+			Log.println(F("No model.bin on disk"));
 			tricount[i] = 0;
 			modelspresent[i] = false;
 
@@ -145,7 +146,7 @@ namespace modelserve {
 			f.close();
 		}
 
-		Serial1.printf_P(PSTR("Got %d triangles.\n"), tricount[i]);
+		Log.printf_P(PSTR("Got %d triangles.\n"), tricount[i]);
 		modelspresent[i] = true;
 
 		return true;
@@ -157,17 +158,17 @@ namespace modelserve {
 
 		// check present data
 		char * temp = strdup(config::manager.get_value(config::MODEL_ENABLE, "0,0,1"));
-		Serial1.println(temp);
+		Log.println(temp);
 		char * token = temp;
 		for (int i = 0; i < 3; ++i) {
 			token = strtok(i == 0 ? temp : NULL, ",");
-			Serial1.println(token);
+			Log.println(token);
 			if (*token == '0') modelspresent[i] = false;
 		}
 		free(temp);
 
 		modelidx = 2;
-		Serial1.println(F("loaded model data."));
+		Log.println(F("loaded model data."));
 
 		serial::interface.register_handler([](uint16_t slot_id){
 			switch (slot_id) {
@@ -224,7 +225,7 @@ namespace modelserve {
 		}
 		else if ((now() - last_switch_time) < 90) return;
 		last_switch_time = now();
-		Serial1.println("here2");
+		Log.println("here2");
 
 		int last_idx = modelidx;
 
@@ -236,7 +237,7 @@ namespace modelserve {
 
 		if (modelidx == last_idx) return;
 
-		Serial1.println("here3");
+		Log.println("here3");
 		init_load_model(modelidx);
 	}
 }

@@ -4,6 +4,7 @@
 #include "config.h"
 #include "serial.h"
 #include "common/util.h"
+#include "util.h"
 
 // routines for loading the sd card content
 extern SdFatSoftSpi<D6, D2, D5> sd;
@@ -177,7 +178,7 @@ namespace webui {
 						writing_update = sd.open("webui.ar", FILE_WRITE);
 						sd.chdir();
 
-						Serial1.println(F("writing data from update to webui.ar"));
+						Log.println(F("writing data from update to webui.ar"));
 					}
 					break;
 				case UPLOAD_FILE_END:
@@ -249,7 +250,7 @@ namespace webui {
 						writing_update = sd.open("stm.bin", O_CREAT | O_WRITE | O_TRUNC);
 						sd.chdir();
 
-						Serial1.println(F("writing update upd1"));
+						Log.println(F("writing update upd1"));
 						stm_crc = 0;
 					}
 					break;
@@ -312,7 +313,7 @@ namespace webui {
 			// huh?
 			ESP.restart();
 			// HUH?
-			Serial1.println(F("aaaaaaaaaaaa"));
+			Log.println(F("aaaaaaaaaaaa"));
 		}, [](){
 			// file upload handler
 			auto& upload = webserver.upload();
@@ -326,7 +327,7 @@ namespace webui {
 						writing_update = sd.open(is_stm ? "stm.bin" : "esp.bin", O_CREAT | O_WRITE | O_TRUNC);
 						sd.chdir();
 
-						Serial1.println(F("writing update data"));
+						Log.println(F("writing update data"));
 						(is_stm ? stm_crc : esp_crc) = 0;
 					}
 					break;

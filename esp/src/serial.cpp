@@ -2,6 +2,7 @@
 #include "HardwareSerial.h"
 #include "Esp.h"
 #include <TimeLib.h>
+#include "util.h"
 
 serial::SerialInterface serial::interface;
 
@@ -11,7 +12,7 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 		if (array[256-offset-1] == val) return 256-offset-1;
 	}
 
-	Serial1.printf("Failed search %d\n", val);
+	Log.printf("Failed search %d\n", val);
 
 	return ~0;
 }
@@ -43,7 +44,7 @@ bool serial::SerialInterface::ensure_handshake() {
 			return false;
 		}
 
-		Serial1.println(F("Connected to STM32"));
+		Log.println(F("Connected to STM32"));
 		return true;
 	}
 }
@@ -65,11 +66,11 @@ void serial::SerialInterface::loop() {
 		uint8_t buf[3];
 		Serial.readBytes(buf, 3);
 		if (buf[0] == 0xa6) {
-			Serial1.println(F("STM32 is having an identity crisis, it thinks it's an ESP8266"));
+			Log.println(F("STM32 is having an identity crisis, it thinks it's an ESP8266"));
 			Serial.read(); // borks everything a bit more, but it'll eventually grab enough bytes to fix things.
 		}
 		else if (buf[0] != 0xa5) {
-			Serial1.println(F("STM32 is drunk; sent invalid header."));
+			Log.println(F("STM32 is drunk; sent invalid header."));
 		}
 		else if (buf[1] != 0x00) {
 			pending_command = buf[2];
@@ -89,7 +90,7 @@ void serial::SerialInterface::loop() {
 		};
 
 		Serial.write(buf_reply, 3);
-		Serial1.println(F("PONGov"));
+		Log.println(F("PONGov"));
 	}
 }
 
@@ -110,7 +111,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 		case HANDSHAKE_RESP:
 		case HANDSHAKE_OK:
 			{
-				Serial1.println(F("Encountered handshake commands in main loop."));
+				Log.println(F("Encountered handshake commands in main loop."));
 				
 				// Reset target, then reset us.
 				reset();
@@ -125,7 +126,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				if (buf[0] == 0x00) {
 					uint16_t pos = search_for(slot_type, slots_continuous);
 					if (pos != 0xFFFF) {
-						Serial1.println(F("invalid value in slots_continuous"));
+						Log.println(F("invalid value in slots_continuous"));
 						slots_continuous[pos] = 0x00;
 					}
 					slots_continuous[buf[1]] = slot_type;
@@ -177,7 +178,7 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 			break;
 		case RESET:
 			{
-				Serial1.println(F("[wall] The system is going down for RESET now!"));
+				Log.println(F("[wall] The system is going down for RESET now!"));
 				ESP.restart();
 			}
 			break;
@@ -190,20 +191,20 @@ void serial::SerialInterface::handle_command(serial::Command cmd, uint8_t size, 
 				};
 
 				Serial.write(buf_reply, 3);
-				Serial1.println(F("PONG"));
+				Log.println(F("PONG"));
 				last_pong_at = now();
 			}
 			break;
 		default:
 			{
-				Serial1.print(F("Got an invalid command or command that should only come from us.\n"));
+				Log.print(F("Got an invalid command or command that should only come from us.\n"));
 			}
 	}
 
 	return;
 
 size_error:
-	Serial1.printf("Size error on cmd %02x", cmd);
+	Log.printf("Size error on cmd %02x", cmd);
 	return;
 }
 
@@ -235,7 +236,7 @@ ok:
 
 void serial::SerialInterface::register_handler(const QueryHandler handler) {
 	if (number_of_handlers == 8) {
-		Serial1.println(F("Too many query handlers...\n"));
+		Log.println(F("Too many query handlers...\n"));
 		return;
 	}
 	handlers[number_of_handlers++] = handler;
@@ -243,7 +244,7 @@ void serial::SerialInterface::register_handler(const QueryHandler handler) {
 
 void serial::SerialInterface::register_handler(const OpenHandler handler) {
 	if (number_of_o_handlers == 8) {
-		Serial1.println(F("Too many query handlers...\n"));
+		Log.println(F("Too many query handlers...\n"));
 		return;
 	}
 	o_handlers[number_of_o_handlers++] = handler;
@@ -262,7 +263,7 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 void serial::SerialInterface::update_open_handlers(uint8_t slot_id) {
 	uint16_t data_id = this->slots_continuous[slot_id];
 	for (uint8_t i = 0; i < number_of_o_handlers; ++i) {
-		Serial1.printf("calling open handler at %p, \n", o_handlers[i]);
+		Log.printf("calling open handler at %p, \n", o_handlers[i]);
 		o_handlers[i](data_id);
 	}
 }

@@ -5,6 +5,7 @@
 #include "time.h"
 #include <Arduino.h>
 #include <TimeLib.h>
+#include "util.h"
 
 namespace sccfg {
 	const uint8_t number_of_screens = 4;
@@ -30,7 +31,7 @@ namespace sccfg {
 	}
 
 	void do_event(Event& e) {
-		Serial1.printf_P(PSTR("time %d; en=%d\n"), e.timeat, e.enable);
+		Log.printf_P(PSTR("time %d; en=%d\n"), e.timeat, e.enable);
 		if (e.enable) {
 			parsed_enabled_mask |= (1 << e.pos);
 		}
@@ -43,7 +44,7 @@ namespace sccfg {
 
 	void append_event(Event e) {
 		if (parsed_event_count > number_of_screens * 2) {
-			Serial1.println(F("too many onoff events"));
+			Log.println(F("too many onoff events"));
 			return;
 		}
 		
@@ -60,7 +61,7 @@ namespace sccfg {
 			}
 			else {
 				if (strchr(val, ',') == nullptr) {
-					Serial1.println(F("invalid format for entry"));
+					Log.println(F("invalid format for entry"));
 					return;
 				}
 				int tA, tB;
@@ -85,7 +86,7 @@ namespace sccfg {
 			obj.display_on = true;
 			obj.enabled_mask = last_enabled_mask;
 
-			Serial1.printf("enabled data: %d\n", last_enabled_mask);
+			Log.printf("enabled data: %d\n", last_enabled_mask);
 
 			serial::interface.update_data(slots::SCCFG_INFO, (uint8_t *)&obj, sizeof(obj));
 		}
@@ -127,7 +128,7 @@ namespace sccfg {
 
 		serial::interface.register_handler([](uint16_t data_id, uint8_t * buffer, uint8_t & length){
 				if (data_id == slots::SCCFG_TIMING) {
-					Serial1.printf("sending scc %d\n", send_idx);
+					Log.printf("sending scc %d\n", send_idx);
 
 					memcpy(buffer, &times[send_idx++], sizeof(times[0]));				
 					send_idx %= number_of_screens;
@@ -137,7 +138,7 @@ namespace sccfg {
 				}
 				return false;
 		});
-		Serial1.println(F("c?"));
+		Log.println(F("c?"));
 	}
 
 	uint64_t last_run_time = 0;
@@ -153,7 +154,7 @@ namespace sccfg {
 
 		if (last_run_time == 0 && now() < 100) return;
 		if (last_run_time == 0) {
-			Serial1.println(F("initing sc"));
+			Log.println(F("initing sc"));
 			uint64_t last_timeat_d = 0;
 			for (int i = 0; i < parsed_event_count; ++i) {
 				uint64_t min_value_sofar = 8.64e7 + 1;

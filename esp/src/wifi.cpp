@@ -1,5 +1,6 @@
 #include "wifi.h"
 
+#include "util.h"
 #include "time.h"
 #include "common/slots.h"
 #include "config.h"
@@ -16,7 +17,7 @@ bool client_ok = false;
 bool wifi_available = false;
 
 void wifi::prepare() {
-	Serial1.println("Discon.");
+	Log.println("Discon.");
 }
 
 void wifi::init() {
@@ -51,18 +52,18 @@ bool wifi::available() {
 }
 
 void dump_config() {
-	Serial1.println(F("ctrl: dump config"));
+	Log.println(F("ctrl: dump config"));
 	
 	for (uint8_t e = 0; e < config::ENTRY_COUNT; ++e) {
 		const char * value;
 		if ((value = config::manager.get_value((config::Entry)e)) != nullptr) {
-			Serial1.print(config::entry_names[e]);
+			Log.print(config::entry_names[e]);
 			ctrl_client.print(config::entry_names[e]);
-			Serial1.print('=');
+			Log.print('=');
 			ctrl_client.print('=');
-			Serial1.print(value);
+			Log.print(value);
 			ctrl_client.print(value);
-			Serial1.println();
+			Log.println();
 			ctrl_client.print('\n');
 		}
 	}
@@ -71,7 +72,7 @@ void dump_config() {
 }
 
 void update_config() {
-	Serial1.println(F("ctrl: update config start"));
+	Log.println(F("ctrl: update config start"));
 
 	uint32_t payload_size;
 	
@@ -87,7 +88,7 @@ void update_config() {
 		return;
 	}
 
-	Serial1.printf("ctrl: downloading conf %d\n", payload_size);
+	Log.printf("ctrl: downloading conf %d\n", payload_size);
 
 	char * pos = buf;
 	uint32_t a = 0;
@@ -95,7 +96,7 @@ void update_config() {
 	while (a < payload_size) {
 		if (ctrl_client.available()) {
 			*pos++ = ctrl_client.read();
-			Serial1.write(*(pos - 1));
+			Log.write(*(pos - 1));
 			++a;
 		}
 		else {
@@ -108,7 +109,7 @@ void update_config() {
 		return;
 	}
 
-	Serial1.println(F("ctrl: update complete"));
+	Log.println(F("ctrl: update complete"));
 
 	ctrl_client.write((uint8_t)0);
 
@@ -128,7 +129,7 @@ void wifi::loop() {
 			int command = ctrl_client.read();
 			switch (command) {
 				case 0x10:
-					Serial1.println(F("ctrl: reset"));
+					Log.println(F("ctrl: reset"));
 					serial::interface.reset();
 					break;
 				case 0x20:
@@ -139,7 +140,7 @@ void wifi::loop() {
 					break;
 				case 0x40:
 					{
-						Serial1.println(F("Starting update!"));
+						Log.println(F("Starting update!"));
 					}
 				default:
 					break;
@@ -156,7 +157,7 @@ void wifi::loop() {
 			ctrl_client.read(buf, 2);
 			if (buf[0] == 'M' && buf[1] == 'n') {
 				client_ok = true;
-				Serial1.println(F("ctrl: connected"));
+				Log.println(F("ctrl: connected"));
 			}
 			else {
 				ctrl_client.stop();

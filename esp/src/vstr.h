@@ -18,7 +18,7 @@ namespace serial {
 			data = dat;
 			this->data_size = data_size;
 			this->echo_index = 0;
-			Serial1.println(F("vstr reset"));
+			Log.println(F("vstr reset"));
 		}
 
 		void operator()(uint8_t * buffer, uint8_t & length) {
@@ -39,7 +39,7 @@ namespace serial {
 				echo_index = 0;
 			}
 
-			Serial1.printf("vstr: %d %d\n", vsw.index, vsw.size);
+			Log.printf("vstr: %d %d\n", vsw.index, vsw.size);
 
 			memcpy(buffer, &vsw, 16);
 			length = 16;

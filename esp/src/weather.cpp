@@ -74,18 +74,18 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			if (strcmp(stack[2]->name, "apparentTemperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.ctemp = v.as_number();
-				Serial1.printf("temp = %f\n", v.float_val);
+				Log.printf("temp = %f\n", v.float_val);
 			}
 			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
 				memset(weather::icon, 0, 16);
 				strcpy(weather::icon, v.str_val);
 
-				Serial1.printf("wicon = %s\n", weather::icon);
+				Log.printf("wicon = %s\n", weather::icon);
 			}
 			else if (strcmp(stack[2]->name, "temperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.crtemp = v.as_number();
-				Serial1.printf("rtemp = %f\n", v.float_val);
+				Log.printf("rtemp = %f\n", v.float_val);
 			}
 		}
 		else if (stack_ptr == 3 && strcmp(stack[1]->name, "minutely") == 0) {
@@ -93,13 +93,13 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
-				Serial1.printf("summary (minute) = %s\n", v.str_val);
+				Log.printf("summary (minute) = %s\n", v.str_val);
 			}
 			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
 				if ( /* list of things that we should probably show an hourly summary for */
 					!strcmp(v.str_val, "rain") || !strcmp(v.str_val, "snow") || !strcmp(v.str_val, "sleet")) {
 					use_next_hour_summary = true;
-					Serial1.println("marking summary as hourly");
+					Log.println("marking summary as hourly");
 				}
 			}
 		}
@@ -108,7 +108,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
-				Serial1.printf("summary (hour) = %s\n", v.str_val);
+				Log.printf("summary (hour) = %s\n", v.str_val);
 			}
 		}
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "hourly") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() &&
@@ -179,12 +179,12 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 			if (strcmp(stack[3]->name, "apparentTemperatureHigh") == 0 && v.is_number()) {
 				// Store the high apparent temperature
 				weather::info.htemp = v.as_number();
-				Serial1.printf("htemp = %f\n", v.as_number());
+				Log.printf("htemp = %f\n", v.as_number());
 			}
 			else if (strcmp(stack[3]->name, "apparentTemperatureLow") == 0 && v.is_number()) {
 				// Store the low apparent temperature
 				weather::info.ltemp = v.as_number();
-				Serial1.printf("ltemp = %f\n", v.as_number());
+				Log.printf("ltemp = %f\n", v.as_number());
 			}
 		}
 });
@@ -203,7 +203,7 @@ void weather::loop() {
 				config::manager.get_value(config::WEATHER_LAT),
 				config::manager.get_value(config::WEATHER_LONG));
 
-		Serial1.println(url);
+		Log.println(url);
 
 		int16_t status_code;
 		auto cb = util::download_with_callback("_api.darksky.net", url, status_code); // leading _ indicates https
@@ -216,7 +216,7 @@ void weather::loop() {
 		use_next_hour_summary = false;
 		memset(weather::state_data, 0, sizeof(weather::state_data));
 		if (!w_parser.parse(std::move(cb))) {
-			Serial1.println("that's no good");
+			Log.println("that's no good");
 		}
 		util::stop_download();
 		weather_vss.set((uint8_t *)weather::info_buffer, weather::buffer_size);

@@ -8,7 +8,7 @@
 // shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
-#define TO_C if ((millis() - to_start) > Adapter::timeout) { cl.stop(); Serial1.println(F("tn: "));Serial1.println(__LINE__); return false; } 
+#define TO_C if ((millis() - to_start) > Adapter::timeout) { cl.stop(); Log.println(F("tn: "));Log.println(__LINE__); return false; } 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
 struct HttpAdapter {
@@ -36,16 +36,16 @@ struct HttpsAdapter {
 			sd.chdir("/ca");
 			if (!sd.exists(d) && !write) {
 				sd.chdir();
-				Serial1.print(F("couldn't open"));
-				Serial1.println(d);
+				Log.print(F("couldn't open"));
+				Log.println(d);
 				return false;
 			}
 			else {
 				f = sd.open(d, write ? FILE_WRITE : FILE_READ);
 				sd.chdir();
 				if (!f.isOpen()) {
-					Serial1.print(F("couldn't open s2"));
-					Serial1.println(d);
+					Log.print(F("couldn't open s2"));
+					Log.println(d);
 				}
 				return f.isOpen();
 			}
@@ -66,13 +66,13 @@ struct HttpsAdapter {
 
 	// initializing 
 	void init() {
-		Serial1.println("Initing ssl certs from SD card...");
+		Log.println("Initing ssl certs from SD card...");
 
 		sd.chdir("/ca");
 
 		// check if the certs.ar file exists in the ca directory
 		if (!sd.exists("cacert.ar")) {
-			Serial1.println("CA file not found");
+			Log.println("CA file not found");
 			sd.chdir();
 			return;
 		}
@@ -81,13 +81,13 @@ struct HttpsAdapter {
 		int c;
 
 		if (!(c = cs.initCertStore(&b_idx, &b_ar))) {
-			Serial1.print("Didn't get any certs from the SD card (c=");
-			Serial1.println(c);
+			Log.print("Didn't get any certs from the SD card (c=");
+			Log.println(c);
 			return;
 		}
 
 		inited = true;
-		Serial1.printf("loaded %d certs\n", c);
+		Log.printf("loaded %d certs\n", c);
 	}
 
 	bool connect(Client& c, const char * host) {
@@ -121,7 +121,7 @@ struct Downloader {
 		i = 0;
 		// connect to the server
 		if (!ad.connect(cl, host)) return false;
-		Serial1.printf_P(F("dwndl,req: %s %s\n"), host, path);
+		Log.printf_P(F("dwndl,req: %s %s\n"), host, path);
 
 		// send the request
 		cl.write(method);
@@ -139,17 +139,17 @@ struct Downloader {
 			char buf[20];
 			ultoa(size, buf, 10);
 			write_header("Content-Length", buf);
-			Serial1.printf("dwnld: bodys %d\n", (int)size);
+			Log.printf("dwnld: bodys %d\n", (int)size);
 		}
 
 		// send the headers
 		for (int i = 0;;++i) {
 			if (headers[i][0] == nullptr || headers[i][1] == nullptr) break;
 			write_header(headers[i][0], headers[i][1]);
-			Serial1.printf("dwnld: %s, %s --> %s\n", path, headers[i][0], headers[i][1]);
+			Log.printf("dwnld: %s, %s --> %s\n", path, headers[i][0], headers[i][1]);
 		}
 
-		Serial1.printf("dwnld: %s %s\n", method, path);
+		Log.printf("dwnld: %s %s\n", method, path);
 
 		// send blank line
 		cl.write("\r\n");
@@ -178,7 +178,7 @@ struct Downloader {
 			return false;
 		}
 
-		Serial1.println(F("dbgreq got h"));
+		Log.println(F("dbgreq got h"));
 
 		cl.setTimeout(Adapter::timeout);
 
@@ -193,19 +193,19 @@ struct Downloader {
 			return false;
 		}
 
-		Serial1.print(F("dbgreq got hcode: "));
-		Serial1.println(response_code);
+		Log.print(F("dbgreq got hcode: "));
+		Log.println(response_code);
 
 		// now, consume all the headers.
 		to_start = millis();
 		while (true) {
-			Serial1.println(F("hloop debgrq"));
+			Log.println(F("hloop debgrq"));
 			while (!cl.available()) {
 				delay(5);
 				TO_C;
 			}
 			char starting = cl.read();
-			Serial1.println(starting);
+			Log.println(starting);
 			if (starting == '\n') {
 				break;
 			}
@@ -222,31 +222,31 @@ struct Downloader {
 					// could be the content-length
 					char buf[15] = {0};
 					if (cl.readBytesUntil(':', buf, 14) != 13) goto skip;
-					Serial1.println(buf);
+					Log.println(buf);
 					if (strcmp(buf, "ontent-Length") != 0) goto skip;
 					// wait for the space
 					if (!cl.find(' ')) {
-						Serial1.println(F("f3"));
+						Log.println(F("f3"));
 						cl.stop();
 						return false;
 					}
 
 					// read an integer
 					response_size = cl.parseInt();
-					Serial1.println(F("got rlen: "));
-					Serial1.println(response_size);
+					Log.println(F("got rlen: "));
+					Log.println(response_size);
 
 skip:
 					// read another newline
 					if (!cl.find('\n')) {
-						Serial1.println(F("f2"));
+						Log.println(F("f2"));
 						cl.stop();
 						return false;
 					}
 				}
 				else {
 					if (!cl.find('\n')) {
-						Serial1.println(F("f2"));
+						Log.println(F("f2"));
 						cl.stop();
 						return false;
 					}
@@ -254,8 +254,8 @@ skip:
 			}
 		}
 
-		Serial1.print(F("ready: "));
-		Serial1.println(response_size);
+		Log.print(F("ready: "));
+		Log.println(response_size);
 
 		// at this point we are after all the headers (two newlines found w/o another character before then
 		return true;
@@ -273,7 +273,7 @@ skip:
 				delay(5);
 				if (millis() - to_start > Adapter::timeout) {
 					cl.stop();
-					Serial1.println(F("tnu"));
+					Log.println(F("tnu"));
 					return -1;
 				}
 			}
@@ -294,8 +294,15 @@ private:
 Downloader<HttpAdapter> dwnld;
 Downloader<HttpsAdapter> dwnld_s;
 
-template<typename T, Downloader<T>& dwnld>
+template<typename T>
+inline constexpr Downloader<T>& get_downloader() {return dwnld;}; 
+
+template<>
+inline constexpr Downloader<HttpsAdapter>& get_downloader() {return dwnld_s;};
+
+template<typename T>
 inline util::Download download_from_impl(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
+	constexpr static Downloader<T>& dwnld = get_downloader<T>();
 	dwnld.request(host, path, method, headers, body);
 	
 	util::Download d;
@@ -303,7 +310,7 @@ inline util::Download download_from_impl(const char *host, const char *path, con
 	d.error = false;
 	if (dwnld.response_code < 200 || dwnld.response_code >= 300) {
 		dwnld.close();
-		Serial1.printf("dwlnd: got code %d\n", dwnld.response_code);
+		Log.printf("dwlnd: got code %d\n", dwnld.response_code);
 		d.error = true;
 		return d;
 	}
@@ -349,10 +356,10 @@ inline util::Download download_from_impl(const char *host, const char *path, con
 
 util::Download util::download_from(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
 	if (host[0] != '_') {
-		return ::download_from_impl<HttpAdapter, dwnld>(host, path, headers, method, body);
+		return ::download_from_impl<HttpAdapter>(host, path, headers, method, body);
 	}
 	else {
-		return ::download_from_impl<HttpsAdapter, dwnld_s>(++host, path, headers, method, body);
+		return ::download_from_impl<HttpsAdapter>(++host, path, headers, method, body);
 	}
 }
 
@@ -366,8 +373,9 @@ util::Download util::download_from(const char * host, const char * path, const c
 }
 
 
-template<typename T, Downloader<T>& dwnld>
+template<typename T>
 inline std::function<char (void)> download_with_callback_impl(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
+	static Downloader<T>& dwnld = get_downloader<T>();
 	dwnld.request(host, path, method, headers, body);
 
 	status_code_out = dwnld.response_code;
@@ -382,10 +390,10 @@ inline std::function<char (void)> download_with_callback_impl(const char * host,
 
 std::function<char (void)> util::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
 	if (host[0] != '_') {
-		return ::download_with_callback_impl<HttpAdapter, dwnld>(host, path, headers, method, body, status_code_out, size_out);
+		return ::download_with_callback_impl<HttpAdapter>(host, path, headers, method, body, status_code_out, size_out);
 	}
 	else {
-		return ::download_with_callback_impl<HttpsAdapter, dwnld_s>(++host, path, headers, method, body, status_code_out, size_out);
+		return ::download_with_callback_impl<HttpsAdapter>(++host, path, headers, method, body, status_code_out, size_out);
 	}
 }
 
@@ -414,4 +422,60 @@ std::function<char (void)> util::download_with_callback(const char * host, const
 void util::stop_download() {
 	dwnld.close();
 	dwnld_s.close();
+}
+
+util::LogClass Log;
+
+size_t util::LogClass::write(uint8_t c) {
+	if (!quiet_mode) Serial1.write(c);
+	if (hook) hook(c);
+
+	// Buffer to SD card
+	_put(c);
+}
+
+void util::LogClass::update_logs() {
+	if (_remainBuf() < 250) return;
+	File f;
+	if (bytes_sent_to_log > MAX_LOG_FILE_SIZE) {
+		f = sd.open("/log.txt", O_CREAT | O_TRUNC | O_WRITE);
+		bytes_sent_to_log = 0;
+	}
+	else {
+		f = sd.open("/log.txt", O_CREAT | O_APPEND | O_WRITE);
+	}
+	uint8_t buf[200];
+	while (_remainBuf() >= 200) {
+		_grab(buf, 200);
+		f.write(buf, 200);
+		f.flush();
+	}
+	f.close();
+}
+
+size_t util::LogClass::_remainBuf() {
+	if (start <= end) return end - start;
+	else return (&buf[1024] - start) + (end - &buf[0]);
+}
+
+void util::LogClass::_put(uint8_t c) {
+	if (_remainBuf() == 1024) return;
+
+	*end = c;
+
+	if (end == &buf[1024]) end = buf + 1;
+	else ++end;
+}
+
+void util::LogClass::_grab(uint8_t * obuf, size_t length) {
+	if (length > _remainBuf()) return;
+
+	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[1024] - start));
+	if (length > &buf[1024] - start) {
+		memcpy(obuf + (&buf[1024] - start), buf, length - (&buf[1024] - start));
+		start = &buf[length - (&buf[1024] - start)];
+	}
+	else {
+		start += length;
+	}
 }

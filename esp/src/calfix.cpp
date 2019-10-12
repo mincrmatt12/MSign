@@ -16,11 +16,11 @@ namespace calfix {
 
 	json::JSONParser c_parser([](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
 			if (stack_ptr > 2)
-				Serial1.printf("sptr: %d, stack[1]: %s", stack_ptr, stack[1]->name);
+				Log.printf("sptr: %d, stack[1]: %s", stack_ptr, stack[1]->name);
 		if (stack_ptr == 3 && strncmp(stack[1]->name, "sched", 5) == 0 && stack[1]->name[5] == '0' + current_schedule) {
 			int period = stack[1]->index;
 			auto &prdh = (period < 2) ? prdh1 : prdh2;
-			Serial1.printf("sched %d, %d; value = %d\n", period, (int)stack[2]->index, (int)v.int_val);
+			Log.printf("sched %d, %d; value = %d\n", period, (int)stack[2]->index, (int)v.int_val);
 			if (stack[2]->index == 0)
 				((period % 2 == 0) ? prdh.ps1 : prdh.ps2) = v.int_val  * 60 * 60 * 1000;
 			else if (stack[2]->index == 1)
@@ -30,11 +30,11 @@ namespace calfix {
 			int period = stack[1]->index;
 			auto& pinf = (period > 0) ? ((period > 1) ? ((period == 2) ? p3 : p4) : p2) : p1;
 			if (strcmp(stack[2]->name, "name") == 0) {
-				Serial1.printf("perd %d; name = %s\n", period, v.str_val);
+				Log.printf("perd %d; name = %s\n", period, v.str_val);
 				strcpy((char *)pinf.name, v.str_val);
 			}
 			else if (strcmp(stack[2]->name, "loc") == 0) {
-				Serial1.printf("perd %d; room = %s\n", period, v.str_val);
+				Log.printf("perd %d; room = %s\n", period, v.str_val);
 				int out_room;
 				sscanf(v.str_val, "%d", &out_room);
 				pinf.room = out_room;
@@ -57,7 +57,7 @@ namespace calfix {
 		memset(&p4, 0, sizeof p4);
 
 		if (!c_parser.parse(std::move(cb))) {
-			Serial1.println(F("oops"));
+			Log.println(F("oops"));
 		}
 		util::stop_download();
 	}
@@ -68,7 +68,7 @@ namespace calfix {
 		util::Download dwn = util::download_from("calfix.i.mm12.xyz", "/currentday.txt");
 
 		if (dwn.status_code != 200) {
-			Serial1.println(F("invalid response on dwn"));
+			Log.println(F("invalid response on dwn"));
 
 			return false;
 		}
@@ -80,21 +80,21 @@ namespace calfix {
 			strbuf[dwn.length] = 0;
 		}
 		else {
-			Serial1.println(F("invalid return length."));
+			Log.println(F("invalid return length."));
 
 			return false;
 		}
 
 		int i1, i2;
 		if (!sscanf(strbuf, "%d %d", &i1, &i2)) {
-			Serial1.println(strbuf);
-			Serial1.println(F("invalid format"));
+			Log.println(strbuf);
+			Log.println(F("invalid format"));
 		}
 
 		current_day = i1;
 		current_schedule = i2;
 
-		Serial1.println(current_day);
+		Log.println(current_day);
 
 		calfix_info.day = current_day;
 		calfix_info.abnormal = current_schedule != 1;
@@ -145,9 +145,9 @@ namespace calfix {
 				if (ran_today()) {
 					get_currentdata();
 
-					Serial1.println((char *)p1.name);
-					Serial1.println(p1.room);
-					Serial1.println((int)prdh1.ps1);
+					Log.println((char *)p1.name);
+					Log.println(p1.room);
+					Log.println((int)prdh1.ps1);
 
 					serial::interface.update_data(slots::CALFIX_CLS1, (uint8_t *)&p1, sizeof p1);
 					serial::interface.update_data(slots::CALFIX_CLS2, (uint8_t *)&p2, sizeof p2);
@@ -161,7 +161,7 @@ namespace calfix {
 				time_since_last_update = now();
 			}
 			else {
-				Serial1.println(F("failed to req."));
+				Log.println(F("failed to req."));
 			}
 		}
 	}

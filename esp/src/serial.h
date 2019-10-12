@@ -43,6 +43,9 @@ namespace serial {
 		// Reset, informing the STM beforehand.
 		void reset();
 
+		// Send data to the STM debug console port
+		void send_console_data(const uint8_t * buffer, size_t length);
+
 	private:
 		void handle_command(serial::Command cmd, uint8_t size, uint8_t *buf);
 		void send_data_to(uint8_t slot_id, const uint8_t * buffer, uint8_t length);

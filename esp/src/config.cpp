@@ -1,6 +1,7 @@
 #include "config.h"
 #include <SPI.h>
 #include <SdFat.h>
+#include "util.h"
 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -79,7 +80,7 @@ void config::ConfigManager::load_from_sd() {
 	
 	sd.chdir();
 	if (!sd.exists("config.txt")) {
-		Serial1.println(F("Config file missing, seed it with ssid/psdk/url and make the last entry update=now, or place the entire config there"));
+		Log.println(F("Config file missing, seed it with ssid/psdk/url and make the last entry update=now, or place the entire config there"));
 		delay(1000);
 		ESP.restart();
 	}
@@ -107,12 +108,12 @@ void config::ConfigManager::load_from_sd() {
 				for (e = 0; e < config::ENTRY_COUNT; ++e) {
 					if (strcmp(config::entry_names[e], entry_name) == 0) {
 						add_entry(static_cast<Entry>(e), entry_value);
-						Serial1.printf("Set %s (%02x) = %s\n", entry_name, e, entry_value);
+						Log.printf("Set %s (%02x) = %s\n", entry_name, e, entry_value);
 						break;
 					}
 				}
 
-				if (e == config::ENTRY_COUNT) Serial1.printf("Invalid key %s\n", entry_name);
+				if (e == config::ENTRY_COUNT) Log.printf("Invalid key %s\n", entry_name);
 
 				mode = false;
 				pos = 0;
