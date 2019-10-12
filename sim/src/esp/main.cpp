@@ -12,6 +12,7 @@
 #include "calfix.h"
 #include "modelserve.h"
 #include "SdFat.h"
+#include "util.h"
 
 SdFatSoftSpi<D6, D2, D5> sd;
 
@@ -62,5 +63,6 @@ void loop() {
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();
+	Log.update_logs();
 	delay(1);
 }

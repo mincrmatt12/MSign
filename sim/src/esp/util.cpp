@@ -3,11 +3,13 @@
 #include <WiFiClient.h>
 #include <WiFiClientSecureBearSSL.h>
 #include <Time.h>
+#include "SdFat.h"
 
 // shitty HTTP client....
 const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
 
 #define TO_C if ((millis() - to_start) > Adapter::timeout) { cl.stop(); Serial1.println(F("tn: "));Serial1.println(__LINE__); return false; } 
+extern SdFatSoftSpi<D6, D2, D5> sd;
 
 struct HttpAdapter {
 	typedef WiFiClient Client;
@@ -359,4 +361,60 @@ uint16_t util::compute_crc(uint8_t * buf, size_t len, uint16_t crc) {
 
 bool util::crc_valid(uint8_t * buf, size_t len) {
 	return compute_crc(buf, len-2) == *(uint16_t *)(buf + (len - 2));
+}
+
+util::LogClass Log;
+
+size_t util::LogClass::write(uint8_t c) {
+	if (!quiet_mode) Serial1.write(c);
+	if (hook) hook(c);
+
+	// Buffer to SD card
+	_put(c);
+}
+
+void util::LogClass::update_logs() {
+	if (_remainBuf() < 250) return;
+	File f;
+	if (bytes_sent_to_log > MAX_LOG_FILE_SIZE) {
+		f = sd.open("/log.txt", O_TRUNC | O_WRITE);
+		bytes_sent_to_log = 0;
+	}
+	else {
+		f = sd.open("/log.txt", O_APPEND | O_WRITE);
+	}
+	uint8_t buf[200];
+	while (_remainBuf() >= 200) {
+		_grab(buf, 200);
+		f.write(buf, 200);
+		f.flush();
+	}
+	f.close();
+}
+
+size_t util::LogClass::_remainBuf() {
+	if (start <= end) return end - start;
+	else return (&buf[1024] - start) + (end - &buf[0]);
+}
+
+void util::LogClass::_put(uint8_t c) {
+	if (_remainBuf() == 1024) return;
+
+	*end = c;
+
+	if (end == &buf[1024]) end = buf + 1;
+	else ++end;
+}
+
+void util::LogClass::_grab(uint8_t * obuf, size_t length) {
+	if (length > _remainBuf()) return;
+
+	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[1024] - start));
+	if (length > &buf[1024] - start) {
+		memcpy(obuf + (&buf[1024] - start), buf, length - (&buf[1024] - start));
+		start = &buf[length - (&buf[1024] - start)];
+	}
+	else {
+		start += length;
+	}
 }

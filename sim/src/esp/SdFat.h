@@ -5,9 +5,10 @@
 #define O_READ 0x02
 #define O_TRUNC 0x04
 #define O_CREAT 0x00
+#define O_APPEND 0x08
 
 #define FILE_READ O_READ
-#define FILE_WRITE O_WRITE | O_TRUNC
+#define FILE_WRITE O_WRITE | O_APPEND
 
 #include <fstream>
 #include <memory>
@@ -25,13 +26,14 @@ struct SdFile : public Stream {
 
 	}
 	SdFile(const char * name, int mode) {
-		std::ios::openmode m = std::ios::in;
+		std::ios::openmode m = std::ios::binary;
 		this->fst.reset(new std::fstream());
 		this->_name = name;
 
-		if (mode & O_READ == 0) m &= ~std::ios::in;
+		if (mode & O_READ) m |= std::ios::in;
 		if (mode & O_WRITE) m |= std::ios::out;
 		if (mode & O_TRUNC) m |= std::ios::trunc;
+		if (mode & O_APPEND) m |= std::ios::app;
 		if (name[0] == '/') {
 			char buf[strlen(name) + 3];
 			buf[0] = 's'; buf[1] = 'd';
@@ -47,15 +49,21 @@ struct SdFile : public Stream {
 			fst->open(buf, m);
 		}
 
-		// get size
-		fst->seekg (0, std::ios::end);
-		bytes = fst->tellg();
-		fst->seekg(std::ios::beg);
+		if (mode & O_READ) {
+			// get size
+			fst->seekg (0, std::ios::end);
+			bytes = fst->tellg();
+			fst->seekg(std::ios::beg);
+		}
+		else bytes = 0;
 	}
 	SdFile(const SdFile& other) : fst{other.fst}, bytes{other.bytes}, _name{other._name} {
 	}
 	~SdFile() {close();}
 
+	void flush() {
+		fst->flush();
+	}
 	void truncate(int) {;} // no-op
 	int read() override {
 		char out = fst->get();
