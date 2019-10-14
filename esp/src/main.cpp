@@ -22,6 +22,7 @@ void setup() {
 	Serial1.begin(115200, SERIAL_8N1);
 	Serial1.setDebugOutput(true);
 
+	Serial.setRxBufferSize(1024);
 	Serial.swap();
 
 	Serial1.println(F("\n==== Starting Sign Backend v2. ===="));

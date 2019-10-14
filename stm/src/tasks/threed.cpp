@@ -1,7 +1,7 @@
 #include "rng.h"
+#include "srv.h"
 #include "threed.h"
 #include "draw.h"
-#include "srv.h"
 #include "common/slots.h"
 
 extern matrix_type matrix;

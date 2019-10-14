@@ -14,6 +14,10 @@ namespace tasks {
 		
 		void loop() override;
 		void init();
+
+		// button interface
+		void set_hold(bool keep_on_screen);
+		void force_advance();
 	private:
 		void communicate();
 		uint8_t next(uint8_t i);
@@ -39,6 +43,8 @@ namespace tasks {
 
 		uint8_t slot_cfg, slot_time;
 		uint8_t counter = 0;
+
+		bool is_holding = false, should_advance = false;
 	};
 }
 

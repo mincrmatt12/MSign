@@ -21,14 +21,18 @@ void tasks::DispMan::loop() {
 
 	bool extend = (this->on == 2 && this->threedbg.leaveon());
 
-	if (data_ok && timekeeper.current_time - this->last_screen_transition > (times_on[this->on] * (extend ? 3 : 1))) {
+	if (should_advance || (data_ok && !is_holding && timekeeper.current_time - this->last_screen_transition > (times_on[this->on] * (extend ? 3 : 1)))) {
 		teardown(this->on);
 		this->on = next(this->on);
 		activate(this->on);
 		setup(next(this->on));
 		last_screen_transition = timekeeper.current_time;
+		should_advance = false;
 	}
 }
+
+void tasks::DispMan::force_advance() {should_advance = true;}
+void tasks::DispMan::set_hold(bool yn) {is_holding = yn;}
 
 void tasks::DispMan::communicate() {
 	if (counter == 2) {

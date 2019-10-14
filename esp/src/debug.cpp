@@ -92,7 +92,7 @@ namespace debug {
 		add_command("fheap", [](const char *args, char *&begin, const char *){
 			begin += sprintf(begin, "free heap: %d\n", ESP.getFreeHeap());
 		}, 32);
-		add_command("quiet", [](const char *args, char *&begin, const char *){
+		add_command("shutup", [](const char *args, char *&begin, const char *){
 			if (args[1] == 'e') Log.quiet_mode = true;
 			if (args[1] == 'd') Log.quiet_mode = false;
 		}, 8);
