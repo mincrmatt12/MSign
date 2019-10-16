@@ -38,25 +38,7 @@ namespace util {
 	uint16_t compute_crc(uint8_t * buffer, size_t length, uint16_t crc_previous=0);
 	bool crc_valid(uint8_t * buffer, size_t length_including_crc);
 
-	struct LogClass : Print {
-		size_t write(uint8_t c) override;
-		void update_logs();
-		
-		bool quiet_mode = false;
-		std::function<void (uint8_t *, size_t)> hook;
-	private:
-		size_t _remainBuf();
-
-		void _put(uint8_t v);
-		void _grab(uint8_t * obuf, size_t length);
-
-		uint8_t buf[1024];
-		uint8_t *start = buf, *end = buf;
-
-		size_t bytes_sent_to_log = 0;
-	};
-	
 }
 
-extern util::LogClass Log;
+#define Log Serial1
 #endif

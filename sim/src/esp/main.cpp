@@ -63,6 +63,5 @@ void loop() {
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();
-	Log.update_logs();
 	delay(1);
 }
