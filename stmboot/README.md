@@ -8,8 +8,8 @@ It is responsible for updating the stm with new code, as well as booting said ne
 
 ```
 0x0800 0000        										
-|              						 0x080F C000
-|     0x0800 4000    0x0808 0000     |  
+|                                    
+|     0x0800 4000    0x0808 0000     0x080F C000
 |     |              |               |    end of flash
 |     |  496 KiB     |  496 KiB      |    |
 +-----+--------------+---------------+----+
