@@ -5,9 +5,10 @@ Simulates the entire sign, using mostly the same codebase.
 ## Building
 
 Requirements:
-	- a recent clone of the Arduino core for the esp8266, with my patches installed.
-	- a very recent version of CMake
-	- the rest of the source tree
+
+- a recent clone of the Arduino core for the esp8266, with my patches installed.
+- a very recent version of CMake
+- the rest of the source tree
 
 Point `ARDUINO_ESP_PATH` at that clone, then do a normal CMake setup. Building should be entirely automatic at this point.
 
