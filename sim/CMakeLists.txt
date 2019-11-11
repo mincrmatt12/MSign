@@ -51,6 +51,7 @@ message(STATUS "Creating copy targets")
 add_custom_target(copy_stm_src)
 add_custom_command(TARGET copy_stm_src PRE_BUILD
 	COMMENT "Copying stm sources" 
+	BYPRODUCTS ${TOTAL_STM_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
 	${CMAKE_CURRENT_LIST_DIR}/../stm/src ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
 )
@@ -58,6 +59,7 @@ add_custom_command(TARGET copy_stm_src PRE_BUILD
 add_custom_target(copy_esp_src)
 add_custom_command(TARGET copy_esp_src PRE_BUILD
 	COMMENT "Copying esp sources" 
+	BYPRODUCTS ${TOTAL_ESP_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
 	${CMAKE_CURRENT_LIST_DIR}/../esp/src ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
 )
