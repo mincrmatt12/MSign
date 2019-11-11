@@ -29,8 +29,8 @@ namespace draw {
 
 	
 	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t r, uint8_t g, uint8_t b); 
+	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t r0, uint8_t g0, uint8_t b0, uint8_t r1, uint8_t g1, uint8_t b1);
 
-	
 	void fill(matrix_type::framebuffer_type &fb, uint8_t r, uint8_t g, uint8_t b); 
 
 	namespace detail {

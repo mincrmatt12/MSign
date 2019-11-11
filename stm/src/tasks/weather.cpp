@@ -333,6 +333,8 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	int end =   9 + hour * 5;
 
 	uint8_t r = 127, g = 127, b = 127;
+	uint8_t hatch_r = 127, hatch_g = 127, hatch_b = 127;
+	bool do_hatch = false;
     slots::WeatherStateArrayCode code = hour < 16 ? (slots::WeatherStateArrayCode)servicer.slot(s_state[0])[hour] :
 		 		                                    (slots::WeatherStateArrayCode)servicer.slot(s_state[1])[hour - 16];
 	
@@ -361,10 +363,15 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 			r = g = b = 10; break;
 
 		case slots::WeatherStateArrayCode::SNOW:
-			r = g = b = 200; break;
+			r = g = b = 200;
+			hatch_r = hatch_g = hatch_b = 100;
+			do_hatch = true;
+		    break;
 		case slots::WeatherStateArrayCode::HEAVY_SNOW:
-			r = g = b = 255; break;
-
+			r = g = b = 255;
+			hatch_r = hatch_g = hatch_b = 120;
+			do_hatch = true;
+			break;
 		case slots::WeatherStateArrayCode::DRIZZLE:
 			r = g = 30;
 			b = 70;
@@ -380,12 +387,18 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 		case slots::WeatherStateArrayCode::HEAVY_RAIN:
 			r = g = 60;
 			b = 255;
+			hatch_r = hatch_g = 50;
+			hatch_b = 100;
+			do_hatch = true;
 			break;
 		default:
 			break;
 	}
 
-	draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b);
+	if (do_hatch) 
+		draw::hatched_rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b, hatch_r, hatch_g, hatch_b);
+	else
+		draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b);
 }
 
 void tasks::WeatherScreen::draw_graphaxes() {
