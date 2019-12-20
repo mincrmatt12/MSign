@@ -364,17 +364,17 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 
 		case slots::WeatherStateArrayCode::SNOW:
 			r = g = b = 200;
-			hatch_r = hatch_g = hatch_b = 100;
+			hatch_r = hatch_g = hatch_b = 50;
 			do_hatch = true;
 		    break;
 		case slots::WeatherStateArrayCode::HEAVY_SNOW:
 			r = g = b = 255;
-			hatch_r = hatch_g = hatch_b = 120;
+			hatch_r = hatch_g = hatch_b = 60;
 			do_hatch = true;
 			break;
 		case slots::WeatherStateArrayCode::DRIZZLE:
 			r = g = 30;
-			b = 70;
+			b = 90;
 			break;
 		case slots::WeatherStateArrayCode::LIGHT_RAIN:
 			r = g = 40;
