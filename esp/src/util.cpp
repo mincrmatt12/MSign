@@ -430,8 +430,7 @@ size_t util::LogClass::write(uint8_t c) {
 	if (!quiet_mode) Serial1.write(c);
 
 	// Buffer to SD card
-	_put(c);
-	update_logs(1024);
+	if (hook) _put(c);
 
 	return 1;
 }
@@ -439,49 +438,22 @@ size_t util::LogClass::write(uint8_t c) {
 size_t util::LogClass::write(const uint8_t *buf, size_t amt) {
 	if (!quiet_mode) Serial1.write(buf, amt);
 
-	size_t a = amt;
-	while (a--) {
-		_put(*buf++);
+	if (hook) {
+		for (size_t i = 0; i < amt; ++i) _put(buf[i]);
 	}
-
-	update_logs(1024);
-
-	return a;
-}
-
-void util::LogClass::update_logs(int threshold) {
-	if (!hook) return;
-	if (_remainBuf() < threshold) return;
-	uint8_t buf[threshold];
-	while (_remainBuf() >= threshold) {
-		_grab(buf, threshold);
-		if (hook) hook(buf, threshold);
-	}
-}
-
-size_t util::LogClass::_remainBuf() {
-	if (start <= end) return end - start;
-	else return (&buf[2048] - start) + (end - &buf[0]);
+	return amt;
 }
 
 void util::LogClass::_put(uint8_t c) {
-	if (_remainBuf() == 2048) return;
-
-	if (end == &buf[2048]) end = buf;
-	else ++end;
-
-	*end = c;
+	buffer[ptr++] = c;
+	if (ptr == sizeof(buffer) && hook) {
+		dump();
+	}
 }
 
-void util::LogClass::_grab(uint8_t * obuf, size_t length) {
-	if (length > _remainBuf()) return;
-
-	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[2048] - start));
-	if (length > &buf[2048] - start) {
-		memcpy(obuf + (&buf[2048] - start), buf, length - (&buf[2048] - start));
-		start = &buf[length - (&buf[2048] - start)];
+void util::LogClass::dump() {
+	if (hook) {
+		hook(buffer, ptr);
 	}
-	else {
-		start += length;
-	}
+	ptr = 0;
 }

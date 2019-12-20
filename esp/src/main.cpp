@@ -67,11 +67,10 @@ void loop() {
 	wifi::loop();
 	weather::loop();
 	webui::loop();
-	Log.update_logs();
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();
 	debug::loop();
-	Log.update_logs();
+	Log.dump();
 	delay(1);
 }

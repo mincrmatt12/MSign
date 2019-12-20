@@ -37,20 +37,15 @@ namespace util {
 	struct LogClass : Print {
 		size_t write(uint8_t c) override;
 		size_t write(const uint8_t *c, size_t amt) override;
-		void update_logs(int threshold=32);
+		void dump();
 		
 		bool quiet_mode = false;
 		std::function<void (uint8_t *, size_t)> hook;
 	private:
-		size_t _remainBuf();
+		void _put(uint8_t c);
 
-		void _put(uint8_t v);
-		void _grab(uint8_t * obuf, size_t length);
-
-		uint8_t buf[2048];
-		uint8_t *start = buf, *end = buf;
-
-		size_t bytes_sent_to_log = 0;
+		uint8_t buffer[512];
+		int ptr = 0;
 	};
 	
 }
