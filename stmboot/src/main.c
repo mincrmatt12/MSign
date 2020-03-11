@@ -1,5 +1,4 @@
-#include "stm32f205xx.h"
-#include "stm32f2xx.h"
+#include <stm32f2xx.h>
 #include "common/bootcmd.h"
 #include <stdbool.h>
 #include "string.h"
