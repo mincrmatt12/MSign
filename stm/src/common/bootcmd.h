@@ -12,7 +12,8 @@ void bootcmd_init();
 
 enum _bootcmd_t {
 	BOOTCMD_RUN = 0x00ull,
-	BOOTCMD_UPDATE = 0x01
+	BOOTCMD_UPDATE = 0x01,
+	BOOTCMD_NEW_LOADER = 0x02
 };
 typedef enum _bootcmd_t bootcmd_t;
 

@@ -72,6 +72,18 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
+  .rtext :
+  {
+	  . = ALIGN(4);
+	  _srtext = .;
+	  *(.rtxet)
+	  *(.rtext*)
+	  . = ALIGN(4);
+	  _ertext = .;
+  } >RAM AT> FLASH
+
+  _sirtext = LOADADDR(.rtext);
+
   /* Constant data goes into FLASH */
   .rodata :
   {
@@ -81,10 +93,8 @@ SECTIONS
     . = ALIGN(4);
   } >FLASH
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
   .ARM : {
     __exidx_start = .;
-    *(.ARM.exidx*)
     __exidx_end = .;
   } >FLASH
 
