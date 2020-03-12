@@ -186,6 +186,8 @@ where `cmd ID` is:
 | `0x31` | Image checksum error |
 | `0x32` | Invalid state error |
 | `0x40` | Update completed successfully |
+| `0x50` | ESP wrote sector (see below) |
+| `0x51` | ESP copying sector (see below) |
 
 Once message `0x11` is sent, the STM should get ready to recieve the `UPDATE_IMG_START`. This message contains:
 
@@ -225,7 +227,9 @@ Once it sends the `0x13` message, the ESP responds with a chunk like this:
 After each chunk, the STM can respond with an error or a new message.
 If the stm deduces it has received all chunks, it sends the finished message and updates itself.
 After completion of this process, it sends the status corresponding to update completed.
-It then waits for the ESP to send a cmd corresponding to completed.
+The ESP will then begin writing the image to itself in preparation for copying, and will send out "ESP wrote sector" messages
+as it does so.
+The STM then waits for the ESP to send a cmd corresponding to completed.
 It then resets.
 
 ## Serial
