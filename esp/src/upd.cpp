@@ -401,6 +401,7 @@ loopover:
 					ESP.flashEraseSector(flash_addr_ptr / 4096);
 				}
 				Serial1.print('.');
+				send_update_status(0x50);
 
 				memset(data_buffer, 0, 256);
 
@@ -416,6 +417,7 @@ loopover:
 				flash_addr_ptr += 256;
 			}
 
+			send_update_status(0x51);
 			// THE FLASH... HAS.. BEEN WRITTEN
 			Serial1.println(F("ok."));
 
@@ -429,6 +431,7 @@ loopover:
 			ebcmd.args[2] = sectors * 4096;
 			eboot_command_write(&ebcmd);
 
+			delay(25);
 			Serial1.println(F("eboot setup... HOLD ON TO YOUR BUTTS!"));
 			ESP.restart();
 		}
@@ -448,6 +451,9 @@ loopover:
 
 			// send command
 			send_update_status(0x40);
+			send_update_status(0x40);
+			send_update_status(0x40);
+			delay(25);
 
 			// restart
 			ESP.restart();

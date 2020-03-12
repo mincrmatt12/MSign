@@ -42,9 +42,10 @@ namespace webui {
 	void _stream(const char * f, const char * mt, const char * etag) {
 		if (webserver.hasHeader(F("If-None-Match"))) {
 			if (webserver.header(F("If-None-Match")).indexOf(etag) >= 0) {
-				webserver.sendHeader(F("Cache-Control"), F("max-age=0, must-revalidate"));
+				webserver.sendHeader(F("Cache-Control"), F("max-age=2630000, stale-while-revalidate=10520000"));
 				webserver.sendHeader(F("Etag"), etag);
 				webserver.send(304);
+				return;
 			}
 		}
 
@@ -233,6 +234,8 @@ namespace webui {
 			f.print(0); // update SYS
 			f.flush();
 			f.close();
+
+			if (sd.exists("/upd/esp.bin")) sd.remove("/upd/esp.bin");
 
 			webserver.send(200, "text/plain", "ok i'm going jeez");
 			delay(100);
