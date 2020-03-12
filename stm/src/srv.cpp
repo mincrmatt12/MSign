@@ -25,6 +25,8 @@ extern tasks::Timekeeper timekeeper;
 
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
+#define USTATE_WAITING_FOR_FINISH_SECTORCOUNT 21
+#define USTATE_WAITING_FOR_FINISH_WRITE 22
 #define USTATE_ERASING_BEFORE_IMAGE 1
 #define USTATE_WAITING_FOR_PACKET 2
 #define USTATE_PACKET_WRITTEN 3
@@ -148,6 +150,7 @@ void srv::Servicer::loop() {
 						dma_out_buffer[3] = 0x21;
 
 						update_state = USTATE_WAITING_FOR_FINISH;
+						update_chunks_remaining = 0; // used separately
 						send();
 						is_updating = true;
 						start_recv();
@@ -776,6 +779,20 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 				// update done!
 				NVIC_SystemReset();
 			}
+			break;
+		case 0x50:
+			{
+				// sector count up
+				++update_chunks_remaining;
+				this->update_state = USTATE_WAITING_FOR_FINISH_SECTORCOUNT;
+				break;
+			}
+		case 0x51:
+			{
+				// writing
+				this->update_state = USTATE_WAITING_FOR_FINISH_WRITE;
+				break;
+			}
 		default:
 			{
 				update_state = USTATE_FAILED;
@@ -869,6 +886,12 @@ const char * srv::Servicer::update_status() {
 			break;
 		case USTATE_WAITING_FOR_FINISH:
 			snprintf(update_status_buffer, 16, "UPD WESP");
+			break;
+		case USTATE_WAITING_FOR_FINISH_SECTORCOUNT:
+			snprintf(update_status_buffer, 16, "UPD ESCT%04d", update_chunks_remaining);
+			break;
+		case USTATE_WAITING_FOR_FINISH_WRITE:
+			snprintf(update_status_buffer, 16, "UPD EWRT");
 		default:
 			break;
 	}
