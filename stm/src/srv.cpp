@@ -175,7 +175,7 @@ void srv::Servicer::loop() {
 					asm volatile ("nop");
 					asm volatile ("nop");
 					asm volatile ("nop");
-					if (retry_counter == 60) {
+					if (retry_counter == 140) {
 						NVIC_SystemReset();
 					}
 				}
@@ -333,7 +333,7 @@ void srv::Servicer::loop() {
 
 						// Wait a bit for DMA
 						
-						for (int i = 0; i < 100000; ++i) {
+						for (int i = 0; i < 400000; ++i) {
 							asm volatile ("nop");
 						}
 

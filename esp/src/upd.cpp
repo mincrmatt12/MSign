@@ -286,11 +286,28 @@ void upd::update_system() {
 		case USTATE_READY_TO_START:
 			{
 				// wait for the incoming HANDSHAKE_INIT command
-				uint8_t buf[4];
+				uint8_t buf[4] = {0};
 			try_again:
 				Serial.readBytes(buf, 3);
+			check_again:
+				if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != 0x10) {
+					if (buf[1] == 0xa5) {
+						// Offset
+						buf[0] = buf[1];
+						buf[1] = buf[2];
+						buf[2] = Serial.read();
+						goto check_again;
+					}
+					else if (buf[2] == 0xa5) {
+						// Offset
+						buf[0] = buf[2];
+						buf[1] = Serial.read();
+						buf[2] = Serial.read();
+						goto check_again;
+					}
+					else goto try_again;
+				}
 
-				if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != 0x10) goto try_again;
 				buf[0] = 0xa6;
 				buf[2] = 0x13;
 
