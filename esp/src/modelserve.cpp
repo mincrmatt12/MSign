@@ -1,4 +1,5 @@
 #include "modelserve.h"
+#include "debug.h"
 #include "util.h"
 #include <Arduino.h>
 #include <TimeLib.h>
@@ -216,6 +217,11 @@ namespace modelserve {
 			}
 			return false;
 		});
+
+		debug::add_command("nextmodel", [](const char * args, char *&buffer, const char *end){
+			last_switch_time = 0;
+			buffer += snprintf_P(buffer, end - buffer, PSTR("advancing model\n"));
+		}, 32);
 	}
 
 	void loop() {

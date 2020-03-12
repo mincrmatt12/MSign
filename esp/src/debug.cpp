@@ -27,7 +27,7 @@ namespace debug {
 	}
 
 	void logger_hook(uint8_t *buf, size_t length) {
-		wss.broadcastTXT(buf, length);
+		//wss.broadcastTXT(buf, length);
 	}
 
 	void ws_event(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
@@ -50,7 +50,8 @@ namespace debug {
 					if (is_log == 0) {
 						if (*payload == 'l') {
 							is_log = 1;
-							Log.hook = logger_hook;
+							wss.sendTXT(num, "Log off RN.\n");
+							//Log.hook = logger_hook;
 						}
 						else if (*payload == 'd') is_log = 2;
 					}
@@ -101,6 +102,11 @@ namespace debug {
 
 			serial::interface.send_console_data((const uint8_t *)args, strlen(args));
 		}, 8);
+		add_command("help", [](const char *, char *&buffer, const char *end) {
+			for (int i = 0; i < num_of_commands; ++i) {
+				buffer += snprintf_P(buffer, end - buffer, PSTR("- %s\n"), command_prefixes[i]);
+			}
+		}, 64);
 	}
 
 	void loop() {
