@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include "string.h"
 
+// BOOTLOADER REVISION CONSTANT
+const char BL_REV[4] = {'2', 'a', 0, 0};
+
 extern const void * _sirtext;
 extern void * _srtext, *_ertext;
 #define RAMFUNC __attribute__((section(".rtext")))
@@ -18,48 +21,37 @@ void init_scrn() {
 
 	GPIOB->MODER = (
 		GPIO_MODER_MODE5_0 |
-		GPIO_MODER_MODE6_0
+		GPIO_MODER_MODE6_0 |
+		GPIO_MODER_MODE0_0 |
+		GPIO_MODER_MODE1_0 |
+		GPIO_MODER_MODE2_0 |
+		GPIO_MODER_MODE3_0
 	);
 
 	GPIOC->MODER = (
 		GPIO_MODER_MODE6_0 |
 		GPIO_MODER_MODE0_0 |
 		GPIO_MODER_MODE1_0 |
-		GPIO_MODER_MODE2_0 
+		GPIO_MODER_MODE2_0 |
+		GPIO_MODER_MODE3_0 |
+		GPIO_MODER_MODE4_0 |
+		GPIO_MODER_MODE5_0 
 	);
 
 	GPIOB->PUPDR = 0;
+	GPIOB->ODR = (1 << 6);
+	GPIOC->ODR = 0;
 }
 
 void show_line(bool data[64]) {
-	GPIOC->ODR = 0;
-	GPIOB->ODR = (1 << 6); // OE off
+#include "showline.inc"
+}
 
-	asm volatile ("nop");
-
-	// Clock out
-	
-	for (int i = 0; i < 64; ++i) {
-		GPIOC->ODR &= ~(1<<6); // CLK OFF
-		GPIOC->ODR = (data[i] | data[i] << 1 | data[i] << 2); // WHITE/BLACK
-		asm volatile("nop");
-		GPIOC->ODR |= (1 << 6);
-		asm volatile("nop");
-		asm volatile("nop");
-	}
-
-	GPIOC->ODR &= ~(1<<6); // CLK OFF
-	
-	// LATCH
-	
-	GPIOC->ODR |= (1 << 5);
-	asm volatile("nop");
-	asm volatile("nop");
-	GPIOC->ODR = 0; // LATCH off OE on
+RAMFUNC void show_line_ram(bool data[64]) {
+#include "showline.inc"
 }
 
 void jump_to_program() {
-
 	SysTick->CTRL = 0;
 	SysTick->LOAD = 0;
 	SysTick->VAL = 0;
@@ -88,7 +80,7 @@ RAMFUNC void do_update_app() {
 	sp[13] = 1;
 	sp[14] = 1;
 	sp[15] = 0; // status code 0, 1, 1, 0, leds indicate erase count
-	show_line(sp);
+	show_line_ram(sp);
 
 	// set PSIZE
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
@@ -104,7 +96,7 @@ RAMFUNC void do_update_app() {
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
 
 		sp[i+4] = 0;
-		show_line(sp); 
+		show_line_ram(sp); 
 	}
 	CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 
@@ -118,21 +110,24 @@ RAMFUNC void do_update_app() {
 	}
 
 	int sp_pos = 2;
+	int counter = 0;
 	
 	for (uint32_t i = 0; i < size; i += 4) {
+		counter += 4;
 		FLASH->CR |= FLASH_CR_PG;
 		*(uint32_t *)(0x08004000 + i) = *(uint32_t *)(0x08080000 + i);
 
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
 
-		if (i % (size >> 3)) {
+		if (counter > (size / 64)) {
+			counter = 0;
 			sp_pos += 1;
 			if (sp_pos == 64) {
 				memset(sp + 2, 0, 62);
 				sp_pos = 2;
 			}
 			sp[sp_pos] = 1;
-			show_line(sp);
+			show_line_ram(sp);
 		}
 	}
 
@@ -152,6 +147,7 @@ RAMFUNC void do_update_app() {
 		sp[5] = 1;
 		sp[6] = 1;
 		sp[7] = 1; // ERROR - compare fail
+		show_line_ram(sp);
 		for (int i = 0; i < 30000; ++i) {
 			asm volatile ("nop");
 		}
@@ -169,6 +165,84 @@ RAMFUNC void do_update_app() {
 }
 
 RAMFUNC void do_update_bootloader() {
+	bool sp[64] = {1, 1, 0, 0}; // 1, 0, 0, 0 - status RELOAD
+	memset(sp + 4, 0, 60);
+
+	show_line_ram(sp);
+
+	if (bootcmd_update_size() > 16384) {
+		sp[1] = 0;
+		sp[3] = 1;
+		sp[4] = 1;
+		sp[5] = 1;
+		sp[6] = 0;
+		sp[7] = 0; // 1 1 0 0 - error in size of bootloader
+		show_line_ram(sp);
+		for (int i = 0; i < 30000; ++i) {
+			asm volatile ("nop");
+		}
+		// UHOH
+		NVIC_SystemReset(); // retry
+	}
+
+	volatile uint32_t update_size = bootcmd_update_size();
+
+	// bootloader update loop
+	// erase original bootloader
+	//
+	// NO FLASH FUNCTIONS CAN COME AFTER THIS
+	
+	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+	FLASH->CR |= 2 << FLASH_CR_PSIZE_Pos;
+
+	sp[4] = 1;
+	sp[5] = 1; // 1, 1, 0, 0 - erasing sector
+	show_line_ram(sp);
+	
+	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+	FLASH->CR |= FLASH_CR_SER /* section erase + 0 sector */;
+	FLASH->CR |= FLASH_CR_STRT; // WE are now gone
+
+	while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
+	CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+	sp[5] = 0;
+	sp[6] = 1;
+	show_line_ram(sp); // erase OK, copying
+
+	for (uint32_t ptr = 0x08000000, src = 0x08080000; ptr < (0x08000000 + update_size); ptr += 4, src += 4) {
+		FLASH->CR |= FLASH_CR_PG;
+		*((uint32_t *)ptr) = *((uint32_t *)src);
+		while (FLASH->SR & FLASH_SR_BSY) {;}
+	}
+
+	sp[5] = 1;
+	show_line_ram(sp); // 1, 1, 1 - OK
+	FLASH->CR &= ~FLASH_CR_PG;
+
+	// Set the BOOT MODE back to a normal value
+	RTC->BKP0R = BOOTCMD_RUN;
+	RTC->BKP1R = 0xd0d3;
+
+	for (int i = 0; i < 30000; ++i) {asm volatile ("nop");}
+
+	// Manually jump to the bootloader again
+	
+	__set_MSP(*(uint32_t *)(0x08000000));
+	((void(*)(void))(*(uint32_t *)(0x08000004)))();
+
+	// Did it return?
+	sp[0] = 1;
+	sp[1] = 0;
+	sp[2] = 1;
+	sp[3] = 0;
+	sp[4] = 0;
+	sp[5] = 0;
+	sp[6] = 0;
+	sp[7] = 0;
+	sp[8] = 1; // ERROR 0, 0, 0, 0, 1 - new bootloader died
+	show_line_ram(sp);
+
+	while (1) {;}
 }
 
 int main() {
@@ -176,6 +250,8 @@ int main() {
 	MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_3WS);
 
 	if (bootcmd_get_cmd() == BOOTCMD_RUN) {
+		// Set bootloader revision
+		RTC->BKP3R = *(uint32_t *)(BL_REV);
 		jump_to_program();
 
 		while (1) {;}
@@ -189,7 +265,6 @@ int main() {
 		bool tp[64] = {1, 0, 1, 0, 0, 1, 1, 0}; // 1, 0, 1, 0 - error
 												// 0, 1, 1, 0 - invalid command
 		show_line(tp);
-		while (1) {;}
 	}
 
 	bool sp[64] = {1, 1, 1, 0, 0, 1, 1, 1}; // 1, 1, 1, 0 - status
@@ -205,7 +280,7 @@ int main() {
 	show_line(sp);
 
 	// Load RAMFUNCs
-	memcpy(&_srtext, &_sirtext, &_ertext - &_srtext);
+	memcpy(&_srtext, &_sirtext, (uint32_t)(&_ertext) - (uint32_t)(&_srtext));
 
 	if (bootcmd_get_cmd() == BOOTCMD_UPDATE) do_update_app();
 	else do_update_bootloader();
@@ -216,4 +291,5 @@ int main() {
 	sp[6] = 1;
 	sp[7] = 1;
 	show_line(sp); // 0, 0, 1, 1 - returned from update handler
+
 }
