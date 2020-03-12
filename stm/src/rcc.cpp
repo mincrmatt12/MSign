@@ -50,4 +50,10 @@ void rcc::init() {
 	for (int cpp_count = 0; cpp_count < cpp_size; ++cpp_count) {
 		__init_array_start[cpp_count]();
 	} 
+
+	// Enable CACHE
+	
+	LL_FLASH_EnableInstCache();
+	LL_FLASH_EnableDataCache();
+	LL_FLASH_EnablePrefetch();
 }

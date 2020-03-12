@@ -1,5 +1,6 @@
 #include "srv.h"
 
+#include "stm32f2xx_ll_system.h"
 #include "tasks/timekeeper.h"
 #include <string.h>
 #include "stm32f2xx_ll_bus.h"
@@ -301,7 +302,12 @@ void srv::Servicer::loop() {
 						// We are done?
 						//
 						// Verify checksum
-						
+					
+						// Disable D-Cache and flush it
+						LL_FLASH_DisableDataCache();
+						LL_FLASH_EnableDataCacheReset();
+						LL_FLASH_DisableDataCacheReset();
+
 						if (util::compute_crc((uint8_t *)(0x0808'0000), this->update_total_size) != this->update_checksum) {
 							this->update_state = USTATE_FAILED;
 							this->pending_operations[pending_count++] = 0x60'0000'40;
