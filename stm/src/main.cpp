@@ -9,17 +9,22 @@
 #include "schedef.h"
 #include "srv.h"
 #include "tasks/timekeeper.h"
+#include "common/bootcmd.h"
 
 // strange parse error - put this last...
 
 #include "draw.h"
 #include "tasks/dispman.h"
 #include "tasks/debug.h"
+#include <cstring>
 #include <stdlib.h>
 #include <cmath>
-#include <stdio.h>
 
 #define SKIP_THRESH 5
+
+#ifndef MSIGN_GIT_REV
+#define MSIGN_GIT_REV
+#endif
 
 matrix_type matrix;
 
@@ -51,23 +56,26 @@ bool    display_ready = false;
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	fb.clear();
-	draw::text(fb, "MSIGN V3.0", font::lcdpixel_6::info, 0, 7, 0, 255, 0);
-	draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 14, 255, 255, 255);
+	draw::text(fb, "MSIGN V3.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0, 255, 0);
+	draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, 255, 255, 255);
+	char buf[5] = {0};
+	strncpy(buf, bootcmd_get_bl_revision(), 4);
+	draw::text(fb, buf, font::lcdpixel_6::info, draw::text(fb, "BLOAD ", font::lcdpixel_6::info, 0, 14, 255, 127, 0), 14, 255, 255, 255);
 	switch (stage) {
 		case 1:
-			draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 21, 255, 0, 0);
+			draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 255, 0, 0);
 			break;
 		case 2:
-			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 21, 255, 255, 255);
-			draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 28, 0, 255, 0);
+			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 255, 255, 255);
+			draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0, 255, 0);
 			break;
 		case 3:
-			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 21, 255, 255, 255);
+			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 255, 255, 255);
 			if (extra) {
-				draw::text(fb, extra, font::lcdpixel_6::info, 0, 28, 40, 40, 255);
+				draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 40, 40, 255);
 			}
 			else {
-				draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 28, 40, 40, 255);
+				draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 40, 40, 255);
 			}
 			break;
 		default:

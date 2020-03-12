@@ -37,6 +37,10 @@ void bootcmd_service_update() {
 	LL_RTC_BAK_SetRegister(RTC, 0, BOOTCMD_RUN);
 	LL_RTC_BAK_SetRegister(RTC, 1, 0xfece5);
 }
+
+const char * bootcmd_get_bl_revision() {
+	return (const char *)&RTC->BKP3R;
+}
 #else
 // mock interface
 void bootcmd_init() {
@@ -58,6 +62,10 @@ void bootcmd_request_update(uint32_t size) {
 }
 
 void bootcmd_service_update() {
+}
+
+const char * bootcmd_get_bl_revision() {
+	return "";
 }
 #endif
 
