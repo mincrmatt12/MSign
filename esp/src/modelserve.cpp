@@ -219,7 +219,7 @@ namespace modelserve {
 		});
 
 		debug::add_command("nextmodel", [](const char * args, char *&buffer, const char *end){
-			last_switch_time = 0;
+			last_switch_time = 1;
 			buffer += snprintf_P(buffer, end - buffer, PSTR("advancing model\n"));
 		}, 32);
 	}
