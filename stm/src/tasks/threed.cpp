@@ -189,7 +189,7 @@ namespace threed {
 
 		for (uint16_t x = 0; x < matrix_type::framebuffer_type::width; ++x) {
 			for (uint16_t y = 0; y < matrix_type::framebuffer_type::height; ++y) {
-				z_buf[x][y] = 500.0f;
+				z_buf[x][y] = INT16_MAX;
 			}
 		}
 	}
