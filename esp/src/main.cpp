@@ -36,15 +36,24 @@ void setup() {
 		ESP.restart();
 	}
 
+	pinMode(D3, INPUT);
+	delay(5);
+	bool skip_update = digitalRead(D3) == 0;
+
 	// check for updates
-	auto reason = upd::needed();
-	if (reason == upd::WEB_UI) {
-		upd::update_website();
-		ESP.restart();
+	if (!skip_update) {
+		auto reason = upd::needed();
+		if (reason == upd::WEB_UI) {
+			upd::update_website();
+			ESP.restart();
+		}
+		else if (reason == upd::FULL_SYSTEM) {
+			upd::update_system();
+			Serial1.println(F("inv"));
+		}
 	}
-	else if (reason == upd::FULL_SYSTEM) {
-		upd::update_system();
-		Serial1.println(F("inv"));
+	else {
+		Serial1.println(F("skipping update due to FLASH hold"));
 	}
 
 	config::manager.load_from_sd();
