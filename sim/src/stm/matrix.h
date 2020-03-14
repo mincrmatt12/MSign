@@ -30,33 +30,33 @@ namespace led {
 				}                                                                                                                                                                     
 			}                                                                                                                                                                         
 
-			uint8_t & r(uint16_t x, uint16_t y) {
+			uint16_t & r(uint16_t x, uint16_t y) {
 				if (on_screen(x, y))
 					return _r(x, y);
 				return junk;
 			}
-			uint8_t & g(uint16_t x, uint16_t y) {
+			uint16_t & g(uint16_t x, uint16_t y) {
 				if (on_screen(x, y))
 					return _g(x, y);
 				return junk;
 			}
-			uint8_t & b(uint16_t x, uint16_t y) {
+			uint16_t & b(uint16_t x, uint16_t y) {
 				if (on_screen(x, y))
 					return _b(x, y);
 				return junk;
 			}
 
-			const uint8_t & r(uint16_t x, uint16_t y) const {
+			const uint16_t & r(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y))
 					return _r(x, y);
 				return junk;
 			}
-			const uint8_t & g(uint16_t x, uint16_t y) const {
+			const uint16_t & g(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y))
 					return _g(x, y);
 				return junk;
 			}
-			const uint8_t & b(uint16_t x, uint16_t y) const {
+			const uint16_t & b(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y))
 					return _b(x, y);
 				return junk;
@@ -74,28 +74,26 @@ namespace led {
 			static constexpr uint16_t stb_lines = Height / 2;
 
 		private:
-			uint8_t data[Width*Height*3];
+			uint16_t data[Width*Height*3];
 
-			inline uint8_t & _r(uint16_t x, uint16_t y) {
+			inline uint16_t & _r(uint16_t x, uint16_t y) {
 				return data[x*3 + y*Width*3 + 0];
 			}
 
-			inline uint8_t & _g(uint16_t x, uint16_t y) {
+			inline uint16_t & _g(uint16_t x, uint16_t y) {
 				return data[x*3 + y*Width*3 + 1];
 			}
 
-			inline uint8_t & _b(uint16_t x, uint16_t y) {
+			inline uint16_t & _b(uint16_t x, uint16_t y) {
 				return data[x*3 + y*Width*3 + 2];
 			}
 
-			inline uint8_t _remap(uint8_t prev) {                                    
-				if (prev == 0) return 0;                                             
-				float inter = (float)prev / 255.0;                                   
-				return std::min(255, (uint8_t)(255.0 * std::pow(inter, 0.5)) + 10);  
+			inline uint8_t _remap(uint16_t prev) {                                    
+				return std::pow((prev & 0xFFF) / 4095.0, (1/2.2)) * 255;
 			}                                                                        
 
 
-			uint8_t junk; // used as failsafe for read/write out of bounds
+			uint16_t junk; // used as failsafe for read/write out of bounds
 		};
 
 	template<typename FB>                                                                
