@@ -909,16 +909,16 @@ const char * srv::Servicer::update_status() {
 
 size_t srv::ConIO::remaining() {
 	if (start <= end) return end - start;
-	else return (&buf[1024] - start) + (end - &buf[0]);
+	else return (&buf[512] - start) + (end - &buf[0]);
 }
 
 void srv::ConIO::write(const char * ibuf, size_t length) {
-	if (remaining() + length > 1024) return;
+	if (remaining() + length > 512) return;
 
-	memcpy(end, ibuf, std::min((ptrdiff_t)length, &buf[1024] - end));
-	if (length > &buf[1024] - end) {
-		memcpy(buf, ibuf + (&buf[1024] - end), length - (&buf[1024] - end));
-		end = &buf[length - (&buf[1024] - end)];
+	memcpy(end, ibuf, std::min((ptrdiff_t)length, &buf[512] - end));
+	if (length > &buf[512] - end) {
+		memcpy(buf, ibuf + (&buf[512] - end), length - (&buf[512] - end));
+		end = &buf[length - (&buf[512] - end)];
 	}
 	else {
 		end += length;
@@ -928,10 +928,10 @@ void srv::ConIO::write(const char * ibuf, size_t length) {
 void srv::ConIO::read(char * obuf, size_t length) {
 	if (length > remaining()) return;
 
-	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[1024] - start));
-	if (length > &buf[1024] - start) {
-		memcpy(obuf + (&buf[1024] - start), buf, length - (&buf[1024] - start));
-		start = &buf[length - (&buf[1024] - start)];
+	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[512] - start));
+	if (length > &buf[512] - start) {
+		memcpy(obuf + (&buf[512] - start), buf, length - (&buf[512] - start));
+		start = &buf[length - (&buf[512] - start)];
 	}
 	else {
 		start += length;

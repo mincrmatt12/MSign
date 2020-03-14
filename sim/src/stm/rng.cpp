@@ -10,6 +10,6 @@ uint32_t rng::get() {
     return (uint32_t)rndy();     
 }                                
 
-uint8_t rng::getclr() {
-	return rng::get() % 256;
+uint16_t rng::getclr() {
+	return std::pow((rng::get() % 4096) / 4095.0, 2.2) * 4095.0;
 }

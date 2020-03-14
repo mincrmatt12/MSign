@@ -80,6 +80,7 @@ inline constexpr uint16_t operator ""_c(unsigned long long in) {
 	3263, 3295, 3326, 3358, 3390, 3421, 3454, 3486, 3518, 3551, \
 	3584, 3617, 3650, 3683, 3716, 3750, 3784, 3818, 3852, 3886, \
 	3920, 3955, 3990, 4025, 4060, 4095
+GAMMA_TABLE
 	};
 	return gamma_cvt[in];
 }

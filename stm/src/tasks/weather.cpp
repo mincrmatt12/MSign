@@ -332,8 +332,8 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	int start = 4 + hour * 5;
 	int end =   9 + hour * 5;
 
-	uint8_t r = 127, g = 127, b = 127;
-	uint8_t hatch_r = 127, hatch_g = 127, hatch_b = 127;
+	uint16_t r = 127, g = 127, b = 127;
+	uint16_t hatch_r = 127, hatch_g = 127, hatch_b = 127;
 	bool do_hatch = false;
     slots::WeatherStateArrayCode code = hour < 16 ? (slots::WeatherStateArrayCode)servicer.slot(s_state[0])[hour] :
 		 		                                    (slots::WeatherStateArrayCode)servicer.slot(s_state[1])[hour - 16];

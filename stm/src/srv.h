@@ -13,7 +13,7 @@ namespace srv {
 		std::size_t remaining();
 		void read(char *buf, std::size_t length);
 	private:
-		char buf[1024]; // 1K buffer
+		char buf[512]; // 0.5K buffer
 		char *start = buf, *end = buf;
 	};
 
