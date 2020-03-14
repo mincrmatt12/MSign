@@ -82,13 +82,22 @@ namespace modelserve {
 
 			serial::interface.update_data(slots::MODEL_CAM_FOCUS1, (uint8_t *)&v, sizeof(v));
 
-			v.x = get_token_value(c, modelidx * 9 + 3);
-			v.y = get_token_value(c, modelidx * 9 + 4);
-			v.z = get_token_value(c, modelidx * 9 + 5);
+			float temp = get_token_value(c, modelidx * 9 + 3);
+			if (!std::isnan(temp)) {
+				v.x = temp;
+				v.y = get_token_value(c, modelidx * 9 + 4);
+				v.z = get_token_value(c, modelidx * 9 + 5);
+			}
 
 			serial::interface.update_data(slots::MODEL_CAM_FOCUS2, (uint8_t *)&v, sizeof(v));
 
-			v.x = get_token_value(c, modelidx * 9 + 6);
+			temp = get_token_value(c, modelidx * 9 + 6);
+			if (!std::isnan(temp)) {
+				v.x = temp;
+				v.y = get_token_value(c, modelidx * 9 + 4);
+				v.z = get_token_value(c, modelidx * 9 + 5);
+			}
+
 			v.y = get_token_value(c, modelidx * 9 + 7);
 			v.z = get_token_value(c, modelidx * 9 + 8);
 

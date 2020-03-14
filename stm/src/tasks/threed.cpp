@@ -175,15 +175,12 @@ namespace threed {
 					rng::getrange(servicer.slot<slots::Vec3>(s_cip).z, servicer.slot<slots::Vec3>(s_cxp).z)
 				};
 
-				int x = 0;
-				for (;x < 3; ++x) {if (std::isnan(servicer.slot<slots::Vec3>(s_cf[x]).x)) break;}
-
-				camera_look_target = servicer.slot<slots::Vec3>(s_cf[rng::get() % x]);
+				camera_look_target = servicer.slot<slots::Vec3>(s_cf[rng::get() % 3]);
 			}
 		}
 
-		Vec3 current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
-		Vec3 current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
+		current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
+		current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
