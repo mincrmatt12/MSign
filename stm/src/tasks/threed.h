@@ -150,17 +150,18 @@ namespace threed {
 
 		Mat4 perpview;
 		Vec3 camera_pos, camera_target;
+		Vec3 current_pos, current_look;
 		Vec3 camera_look, camera_look_target;
 		uint16_t interp_progress = 20000;
 		uint64_t last_update, last_new_data;
 
 		uint8_t s_info = 0xff, s_rgb, s_p1, s_p2, s_p3, s_cf[3], s_cip, s_cxp;
 
-		int16_t z_buf_at(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y) {
+		inline int16_t z_buf_at(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y) const {
 			return (int16_t)((fb.r(x, y) >> 12) | ((fb.g(x, y) >> 12) << 4) | ((fb.b(x, y) >> 12) << 8));
 		}
 
-		void set_color_and_z(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, int16_t z) {
+		inline void set_color_and_z(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, int16_t z) const {
 			fb.r(x, y) = (r & 0xFFF) | ((z & 0x00F)) << 12;
 			fb.g(x, y) = (g & 0xFFF) | ((z & 0x0F0) >> 4) << 12;
 			fb.b(x, y) = (b & 0xFFF) | ((z & 0xF00) >> 8) << 12;
