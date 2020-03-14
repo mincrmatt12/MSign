@@ -187,7 +187,11 @@ namespace threed {
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
-		memset(z_buf, 0xff, sizeof(z_buf));
+		for (int x = 0; x < matrix_type::framebuffer_type::width; ++x) {
+			for (int y = 0; y < matrix_type::framebuffer_type::height; ++y) {
+				set_color_and_z(matrix.get_inactive_buffer(), x, y, 0, 0, 0, INT16_MAX);
+			}
+		}
 	}
 
 	void Renderer::draw_triangle(const Tri& t) {
