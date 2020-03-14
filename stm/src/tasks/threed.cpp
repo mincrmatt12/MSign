@@ -10,7 +10,7 @@ extern srv::Servicer servicer;
 
 namespace threed {
 	size_t tri_count = 0;
-	Tri tris[384];
+	Tri tris[208];
 
 	float Vec3::length() const {
 		return sqrtf(
@@ -187,11 +187,7 @@ namespace threed {
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
-		for (uint16_t x = 0; x < matrix_type::framebuffer_type::width; ++x) {
-			for (uint16_t y = 0; y < matrix_type::framebuffer_type::height; ++y) {
-				z_buf[x][y] = INT16_MAX;
-			}
-		}
+		memset(z_buf, 0xff, sizeof(z_buf));
 	}
 
 	void Renderer::draw_triangle(const Tri& t) {

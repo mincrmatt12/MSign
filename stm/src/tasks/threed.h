@@ -128,10 +128,12 @@ namespace threed {
 		Mat4  operator*(const Mat4 &rhs) const;
 	};
 
+#pragma pack (push, 1)
 	struct Tri {
 		Vec3 p1, p2, p3;
 		uint8_t r, g, b;
 	};
+#pragma pack (pop)
 
 	struct Renderer : public sched::Task, public sched::Screen {
 		bool init() override;
@@ -154,7 +156,7 @@ namespace threed {
 
 		uint8_t s_info = 0xff, s_rgb, s_p1, s_p2, s_p3, s_cf[3], s_cip, s_cxp;
 
-		int16_t z_buf[matrix_type::framebuffer_type::width][matrix_type::framebuffer_type::height];
+		uint8_t z_buf[matrix_type::framebuffer_type::width / 2][matrix_type::framebuffer_type::height / 2];
 		
 		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
@@ -169,11 +171,11 @@ namespace threed {
 
 			for (int16_t x = x0; x <= x1; ++x) {
 				float d = d1 + (d2 - d1) * (float(x - x0) / float(x1 - x0));
-				if (fb.on_screen(x, y) && z_buf[x][y] > (d * 1000)) {
+				if (fb.on_screen(x, y) && z_buf[x / 2][y / 2] > (d * 16)) {
 					fb.r((uint16_t)x, (uint16_t)y) = r;
 					fb.g((uint16_t)x, (uint16_t)y) = g;
 					fb.b((uint16_t)x, (uint16_t)y) = b;
-					z_buf[x][y] = (d * 1000);
+					z_buf[x / 2][y / 2] = (d * 16);
 				}
 				if (D > 0) {
 					y += yi;
@@ -197,11 +199,11 @@ namespace threed {
 
 			for (int16_t y = y0; y <= y1; ++y) {
 				float d = d1 + (d2 - d1) * (float(y - y0) / float(y1 - y0));
-				if (fb.on_screen(x, y) && z_buf[x][y] > (d * 1000)) {
+				if (fb.on_screen(x, y) && z_buf[x / 2][y / 2] > (d * 16)) {
 					fb.r((uint16_t)x, (uint16_t)y) = r;
 					fb.g((uint16_t)x, (uint16_t)y) = g;
 					fb.b((uint16_t)x, (uint16_t)y) = b;
-					z_buf[x][y] = (d * 1000);
+					z_buf[x / 2][y / 2] = (d * 16);
 				}
 				if (D > 0) {
 					x += xi;
@@ -228,7 +230,7 @@ namespace threed {
 		}
 	};
 
-	extern Tri tris[384];
+	extern Tri tris[208];
 	extern size_t tri_count;
 
 	void init_default_mesh();
