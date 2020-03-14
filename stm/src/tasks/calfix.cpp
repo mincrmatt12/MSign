@@ -67,16 +67,16 @@ void tasks::CalfixScreen::draw_dayp(uint16_t start, uint16_t end, uint16_t lpos,
 			uint16_t bpos = ((daytime - ps) / diff) * offset;
 			bpos += start;
 
-			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 24, 35, 24);
-			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100, 255, 100);
+			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 24_c, 35_c, 24_c);
+			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100, 4095, 100);
 		}
 		else {
-			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 24, 24, 24);
-			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 255, 255, 255);
+			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 24_c, 24_c, 24_c);
+			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 4095, 4095, 4095);
 		}
 	}
 	else {
-		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 255, 50, 50);
+		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 4095, 50, 50);
 	}
 }
 
@@ -145,21 +145,21 @@ void tasks::CalfixScreen::show_noschool() {
 	int16_t x_pos = 27 + std::round(12.0f * sinf((float)(timekeeper.current_time) / 1300.0f));
 	int16_t y_pos = 38 + std::round(6.7f * sinf((float)(timekeeper.current_time) / 400.0f));
 
-	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_15::info, x_pos, y_pos, 0, 0, 255);
+	draw::text(matrix.get_inactive_buffer(), "no school!", font::lato_bold_15::info, x_pos, y_pos, 0, 0, 4095);
 }
 
-const uint8_t bg_color_table[4][3] = {
-	{2, 2, 4},
-	{1, 1, 2},
-	{1, 2, 1},
-	{2, 4, 2}
+const uint16_t bg_color_table[4][3] = {
+	{2_c, 2_c, 4_c},
+	{1_c, 1_c, 2_c},
+	{1_c, 2_c, 1_c},
+	{2_c, 4_c, 2_c}
 };
 
-const uint8_t cls_fg_color_table[4][3] = {
-	{255, 180, 1},
-	{200, 200, 100},
-	{50,  50, 255},
-	{255, 255, 255}
+const uint16_t cls_fg_color_table[4][3] = {
+	{4095, 180_c, 1_c},
+	{200_c, 200_c, 100_c},
+	{50_c,  50_c, 4095},
+	{4095, 4095, 4095}
 };
 
 void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_t room, uint16_t y_pos, uint8_t cl) {
@@ -178,7 +178,7 @@ void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_
 	snprintf(text_buffer, 32, "rm %03d / %02d:%02d", room, timedat.tm_hour, timedat.tm_min);
 
 	uint16_t text_size = draw::text_size(text_buffer, font::lcdpixel_6::info);
-	draw::text(matrix.get_inactive_buffer(), text_buffer, font::lcdpixel_6::info, 128 - text_size - 1, y_pos + 7, 255, 255, 255);
+	draw::text(matrix.get_inactive_buffer(), text_buffer, font::lcdpixel_6::info, 128 - text_size - 1, y_pos + 7, 4095, 4095, 4095);
 }
 
 void tasks::CalfixScreen::draw_header(uint8_t day, bool abnormal) {
@@ -189,18 +189,18 @@ void tasks::CalfixScreen::draw_header(uint8_t day, bool abnormal) {
 	int16_t pos_offset = 64 + std::round(7.5f * sinf((float)(timekeeper.current_time) / 1000.0f));
 
 	if (!abnormal)
-		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244, 244, 244);
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244_c, 244_c, 244_c);
 	else 
-		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244, 50, 50);
-	draw::rect(matrix.get_inactive_buffer(), 0, 15, 128, 16, 1, 1, 1);
+		draw::text(matrix.get_inactive_buffer(), textbuf, font::lato_bold_15::info, pos_offset - text_size / 2, 12, 244_c, 50_c, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 0, 15, 128, 16, 1_c, 1_c, 1_c);
 
 	// create the two other thingies
 	uint8_t pd = day == 1 ? 4 : day - 1;
 	snprintf(textbuf, 7, "<%1d", pd);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 0, 10, 100, 100, 100);
+	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 0, 10, 100_c, 100_c, 100_c);
 
 	pd = day == 4 ? 1 : day + 1;
 	snprintf(textbuf, 7, "%1d>", pd);
-	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 128 - draw::text_size(textbuf, font::vera_8::info) - 1, 10, 100, 100, 100);
+	draw::text(matrix.get_inactive_buffer(), textbuf, font::vera_8::info, 128 - draw::text_size(textbuf, font::vera_8::info) - 1, 10, 100_c, 100_c, 100_c);
 
 }

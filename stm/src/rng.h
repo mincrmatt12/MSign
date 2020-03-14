@@ -9,8 +9,8 @@ namespace rng {
 	uint8_t getclr();
 
 	inline static float getrange(float min, float max) {
-		uint32_t prec = (max - min) * 250;
-		return (float(rng::get() % prec) / 250.0) + min;
+		uint32_t prec = (max - min) * 1000;
+		return (float(rng::get() % prec) / 1000.0) + min;
 	}
 }
 

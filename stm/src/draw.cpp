@@ -1,12 +1,11 @@
 #include "draw.h"
 
 namespace draw {
-
 	uint16_t text_size(const char * text, const void * const font[], bool kern_on) {
 		return text_size(reinterpret_cast<const uint8_t *>(text), font, kern_on);
 	}
 
-	void bitmap(matrix_type::framebuffer_type &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool mirror) {
+	void bitmap(matrix_type::framebuffer_type &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool mirror) {
 		for (uint16_t i = 0, y0 = y; i < height; ++i, ++y0) {
 			for (uint16_t j0 = 0, x0 = x; j0 < width; ++j0, ++x0) {
 				uint16_t j = mirror ? (width - j0) - 1 : j0;
@@ -21,7 +20,7 @@ namespace draw {
 		}
 	}
 
-	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on) {
+	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool kern_on) {
 		uint16_t pen = x;
 		uint8_t c, c_prev = 0;
 
@@ -49,7 +48,7 @@ namespace draw {
 		return pen;
 	}
 
-	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t r, uint16_t g, uint16_t b) {
 		for (uint16_t x = x0; x < x1; ++x) {
 			for (uint16_t y = y0; y < y1; ++y) {
 				fb.r(x, y) = r;
@@ -86,7 +85,7 @@ namespace draw {
 		}
 	}
 
-	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, uint8_t r, uint8_t g, uint8_t b, bool kern_on) {
+	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool kern_on) {
 		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, r, g, b, kern_on);
 	}
 
@@ -149,7 +148,7 @@ namespace draw {
 
 	namespace detail {
 		
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int yi = 1;
@@ -173,7 +172,7 @@ namespace draw {
 		}
 
 		
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int xi = 1;
@@ -197,11 +196,11 @@ namespace draw {
 		}
 	}
 
-	void fill(matrix_type::framebuffer_type &fb, uint8_t r, uint8_t g, uint8_t b) {
+	void fill(matrix_type::framebuffer_type &fb, uint16_t r, uint16_t g, uint16_t b) {
 		rect(fb, 0, 0, matrix_type::framebuffer_type::width, matrix_type::framebuffer_type::height, r, g, b);
 	}
 
-	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint8_t r, uint8_t g, uint8_t b) {
+	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
 		if (std::abs(y1 - y0) < std::abs(x1 - x0)) {
 			if (x0 > x1)
 				detail::line_impl_low(fb, x1, y1, x0, y0, r, g, b);
@@ -216,3 +215,34 @@ namespace draw {
 		}
 	}
 }
+
+// COLOR TABLE
+
+const uint16_t draw::gamma_cvt[256] = {
+	0, 0, 0, 0, 0, 1, 1, 1, 2, 3,
+	3, 4, 5, 6, 7, 8, 9, 11, 12, 13,
+	15, 17, 19, 20, 22, 25, 27, 29, 31, 34,
+	37, 39, 42, 45, 48, 51, 55, 58, 62, 65,
+	69, 73, 77, 81, 85, 89, 94, 98, 103, 108,
+	113, 118, 123, 128, 134, 139, 145, 150, 156, 162,
+	168, 175, 181, 187, 194, 201, 208, 215, 222, 229,
+	236, 244, 251, 259, 267, 275, 283, 291, 300, 308,
+	317, 326, 335, 344, 353, 362, 372, 381, 391, 401,
+	411, 421, 431, 441, 452, 463, 473, 484, 495, 507,
+	518, 529, 541, 553, 565, 577, 589, 601, 613, 626,
+	639, 652, 665, 678, 691, 704, 718, 732, 745, 759,
+	773, 788, 802, 817, 831, 846, 861, 876, 891, 907,
+	922, 938, 954, 970, 986, 1002, 1019, 1035, 1052, 1069,
+	1086, 1103, 1120, 1138, 1155, 1173, 1191, 1209, 1227, 1245,
+	1264, 1282, 1301, 1320, 1339, 1358, 1378, 1397, 1417, 1437,
+	1456, 1477, 1497, 1517, 1538, 1558, 1579, 1600, 1621, 1643,
+	1664, 1686, 1708, 1730, 1752, 1774, 1796, 1819, 1841, 1864,
+	1887, 1910, 1934, 1957, 1981, 2005, 2028, 2053, 2077, 2101,
+	2126, 2150, 2175, 2200, 2225, 2251, 2276, 2302, 2328, 2353,
+	2380, 2406, 2432, 2459, 2486, 2512, 2539, 2567, 2594, 2622,
+	2649, 2677, 2705, 2733, 2761, 2790, 2819, 2847, 2876, 2905,
+	2935, 2964, 2994, 3023, 3053, 3083, 3114, 3144, 3175, 3205,
+	3236, 3267, 3298, 3330, 3361, 3393, 3425, 3457, 3489, 3521,
+	3554, 3586, 3619, 3652, 3685, 3719, 3752, 3786, 3820, 3854,
+	3888, 3922, 3957, 3991, 4026, 4061
+};

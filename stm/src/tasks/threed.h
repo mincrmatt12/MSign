@@ -156,7 +156,7 @@ namespace threed {
 
 		int16_t z_buf[matrix_type::framebuffer_type::width][matrix_type::framebuffer_type::height];
 		
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int yi = 1;
@@ -184,7 +184,7 @@ namespace threed {
 		}
 
 		
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int xi = 1;
@@ -212,7 +212,7 @@ namespace threed {
 		}
 
 		
-		void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint8_t r, uint8_t g, uint8_t b) {
+		void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			if (abs(y1 - y0) < abs(x1 - x0)) {
 				if (x0 > x1)
 					line_impl_low(fb, x1, y1, x0, y0, d2, d1, r, g, b);

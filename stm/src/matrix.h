@@ -17,15 +17,15 @@ namespace led {
 	struct BasicFrameBufferStorage {
 		static const uint_fast16_t EffectiveWidth = Width;
 
-		inline static uint8_t & _r(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _r(uint16_t * data, uint16_t x, uint16_t y) {
 			return data[x*3 + y*Width*3 + 0];
 		}
 
-		inline static uint8_t & _g(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _g(uint16_t * data, uint16_t x, uint16_t y) {
 			return data[x*3 + y*Width*3 + 1];
 		}
 
-		inline static uint8_t & _b(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _b(uint16_t * data, uint16_t x, uint16_t y) {
 			return data[x*3 + y*Width*3 + 2];
 		}
 	};
@@ -45,26 +45,26 @@ namespace led {
 				// we can have nearly any instruction execute conditionally
 				// and the and operation will set flags if it ends with an S...
 
-				uint8_t * lo = (uint8_t *)(((uint32_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 32 + 0x22000000 + pos*4);
-				uint8_t * hi = lo + stb_lines*Storage::EffectiveWidth*3*32;
+				uint8_t * lo = (uint8_t *)(((uint64_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 64 + 0x22000000 + pos*4);
+				uint8_t * hi = lo + stb_lines*Storage::EffectiveWidth*3*64;
 				uint8_t * bs = &byte_stream[0];
 
 				for (uint_fast16_t j = 0; j < Storage::EffectiveWidth; ++j) {
 					asm volatile (
 						// start by loading the bit value at lo into r2
-						"ldrb r2, [%[Lo]], #32\n\t"  // increment by 32 each time to advance a byte
+						"ldrb r2, [%[Lo]], #64\n\t"  // increment by 64 each time to advance a word
 						// load the next byte
-						"ldrb r10, [%[Lo]], #32\n\t"
+						"ldrb r10, [%[Lo]], #64\n\t"
 						// or them together
 						"orr r2, r2, r10, lsl #1\n\t"
 						// repeat for B byte
-						"ldrb r10, [%[Lo]], #32\n\t"
+						"ldrb r10, [%[Lo]], #64\n\t"
 						"orr r2, r2, r10, lsl #2\n\t" // now shift by 2 since it's in bit position 2
 						// do the entire thing but in r3 to save an or
-						"ldrb r3, [%[Hi]], #32\n\t"
-						"ldrb r10, [%[Hi]], #32\n\t"
+						"ldrb r3, [%[Hi]], #64\n\t"
+						"ldrb r10, [%[Hi]], #64\n\t"
 						"orr r3, r3, r10, lsl #1\n\t"
-						"ldrb r10, [%[Hi]], #32\n\t"
+						"ldrb r10, [%[Hi]], #64\n\t"
 						"orr r3, r3, r10, lsl #2\n\t"
 						// move r3 into r2
 						"orr r2, r2, r3, lsl #3\n\t"
@@ -81,38 +81,38 @@ namespace led {
 				}
 			}
 
-			inline uint8_t & r(uint16_t x, uint16_t y) {
+			inline uint16_t & r(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_r(data, x, y);
 				}
 				return junk;
 			}
-			inline uint8_t & g(uint16_t x, uint16_t y) {
+			inline uint16_t & g(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_g(data, x, y);
 				}
 				return junk;
 			}
-			inline uint8_t & b(uint16_t x, uint16_t y) {
+			inline uint16_t & b(uint16_t x, uint16_t y) {
 				if (on_screen(x, y)) {
 					return Storage::_b(data, x, y);
 				}
 				return junk;
 			}
 
-			inline const uint8_t & r(uint16_t x, uint16_t y) const {
+			inline const uint16_t & r(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 					return Storage::_r(data, x, y);
 				}
 				return junk;
 			}
-			inline const uint8_t & g(uint16_t x, uint16_t y) const {
+			inline const uint16_t & g(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 					return Storage::_g(data, x, y);
 				}
 				return junk;
 			}
-			inline const uint8_t & b(uint16_t x, uint16_t y) const {
+			inline const uint16_t & b(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y)) {
 					return Storage::_b(data, x, y);
 				}
@@ -131,9 +131,9 @@ namespace led {
 			static constexpr uint16_t stb_lines = 16;
 
 		protected:
-			uint8_t data[Width*Height*3];
+			uint16_t data[Width*Height*3];
 
-			uint8_t junk; // used as failsafe for read/write out of bounds
+			uint16_t junk; // used as failsafe for read/write out of bounds
 		};
 
 	struct FourPanelSnake {
@@ -144,24 +144,24 @@ namespace led {
 		//2------------------------>
 		//3------------------------>
 		
-		const static uint16_t EffectiveWidth = 256;
+		const static uint_fast16_t EffectiveWidth = 256;
 
 
-		inline static uint8_t & _r(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _r(uint16_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
 				return data[x*3 + (y & 0x1f)*256*3];
 			else
 				return data[(255 - x)*3 + (31 - y)*256*3];
 		}
 
-		inline static uint8_t & _g(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _g(uint16_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
 				return data[x*3 + (y & 0x1f)*256*3 + 1];
 			else
 				return data[(255 - x)*3 + (31 - y)*256*3 + 1];
 		}
 
-		inline static uint8_t & _b(uint8_t * data, uint16_t x, uint16_t y) {
+		inline static uint16_t & _b(uint16_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
 				return data[x*3 + (y & 0x1f)*256*3 + 2];
 			else
@@ -347,11 +347,15 @@ namespace led {
 					32,
 					64,
 					128,
-					256
+					256,
+					512,
+					2048,
+					4096,
+					8192
 				};
 				uint8_t drawn_pos = draw_ticks_table[pos];
 				++pos;
-				if (pos < 8) {
+				if (pos < 12) {
 					// Start the waiting.
 					oe = false;
 					wait(drawn_pos);		

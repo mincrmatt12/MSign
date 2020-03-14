@@ -24,6 +24,6 @@ uint32_t rng::get() {
 	return LL_RNG_ReadRandData32(RNG);
 }
 
-uint8_t rng::getclr() {
-	return std::pow((get() % 256) / 256.0, 2.4) * 256;
+uint16_t rng::getclr() {
+	return std::pow((get() % 4096) / 4096.0, 2.15) * 4096;
 }

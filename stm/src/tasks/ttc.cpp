@@ -26,7 +26,7 @@ extern srv::Servicer servicer;
 
 void tasks::TTCScreen::loop() {
 	draw_bus();
-	draw::rect(matrix.get_inactive_buffer(), 0, 8, 128, 9, 1, 1, 1);
+	draw::rect(matrix.get_inactive_buffer(), 0, 8, 128, 9, 1_c, 1_c, 1_c);
 
 	// Alright, now we have to work out what to show
 	const slots::TTCInfo& info = servicer.slot<slots::TTCInfo>(s_info);
@@ -73,7 +73,7 @@ void tasks::TTCScreen::draw_bus() {
 	switch (bus_state) {
 		case 0:
 			for (uint8_t i = 0; i < bus_type; ++i)
-				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, 230, 230, 230, true);
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, 230_c, 230_c, 230_c, true);
 			break;
 		case 1:
 		case 2:
@@ -142,8 +142,8 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 
 	if (write_pos[0] < 0) return false;
 
-	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255, 255, 255);
-	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 1, 1, 1);
+	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c, 255_c, 255_c);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 1_c, 1_c, 1_c);
 
 	for (int i = 0; i < 4; ++i) {
 		if (write_pos[i] < 0) break;
@@ -155,17 +155,17 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 		snprintf(buf, 16, "%dm", (int)minutes);
 
 		if (minutes < 5) {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 255, 255);
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255_c, 255_c, 255_c);
 		}
 		else if (minutes < 13) {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 100, 255, 100);
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 100_c, 255_c, 100_c);
 		}
 		else {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255, 70,  70);
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255_c, 70_c, 70_c);
 		}
 	}
 
-	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 3, 3, 3);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 3_c, 3_c, 3_c);
 
 	return true;
 }

@@ -216,11 +216,11 @@ namespace threed {
 		int16_t cy = round(((c.y + 1) / 2) * matrix_type::framebuffer_type::height);
 
 		float avg = (a.z + b.z + c.z) / 3.0f;
-		avg = std::min(std::pow(avg * 1.05, 1.48f), 0.95);
+		avg = std::min(std::pow(avg * 1.05, 1.40f), 0.80);
 
-		uint8_t cr = (float)t.r * (1 - (avg - 0.01));
-		uint8_t cg = (float)t.g * (1 - (avg + 0.02));
-		uint8_t cb = (float)t.b * (1 - avg);
+		uint16_t cr = std::pow((float)t.r / 255.0 * (1 - (avg - 0.01)), 2.2) * 4096;
+		uint16_t cg = std::pow((float)t.g / 255.0 * (1 - (avg + 0.02)), 2.2) * 4096;
+		uint16_t cb = std::pow((float)t.b / 255.0 * (1 - avg), 2.2) * 4096;
 
 		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
 			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);

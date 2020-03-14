@@ -56,26 +56,26 @@ bool    display_ready = false;
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	fb.clear();
-	draw::text(fb, "MSIGN V3.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0, 255, 0);
-	draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, 255, 255, 255);
+	draw::text(fb, "MSIGN V3.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0, 4095, 0);
+	draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, 4095, 4095, 4095);
 	char buf[5] = {0};
 	strncpy(buf, bootcmd_get_bl_revision(), 4);
-	draw::text(fb, buf, font::lcdpixel_6::info, draw::text(fb, "BLOAD ", font::lcdpixel_6::info, 0, 14, 255, 127, 0), 14, 255, 255, 255);
+	draw::text(fb, buf, font::lcdpixel_6::info, draw::text(fb, "BLOAD ", font::lcdpixel_6::info, 0, 14, 4095, 127_c, 0), 14, 4095, 4095, 4095);
 	switch (stage) {
 		case 1:
-			draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 255, 0, 0);
+			draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 4095, 0, 0);
 			break;
 		case 2:
-			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 255, 255, 255);
-			draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0, 255, 0);
+			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 4095, 4095, 4095);
+			draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0, 4095, 0);
 			break;
 		case 3:
-			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 255, 255, 255);
+			draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 4095, 4095, 4095);
 			if (extra) {
-				draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 40, 40, 255);
+				draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 40_c, 40_c, 4095);
 			}
 			else {
-				draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 40, 40, 255);
+				draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 40_c, 40_c, 4095);
 			}
 			break;
 		default:
@@ -128,15 +128,15 @@ int main() {
 	uint16_t finalize_counter = 60;
 	while (finalize_counter--) {
 		if (finalize_counter == 50) {
-			draw::fill(matrix.get_inactive_buffer(), 255, 0, 0);
+			draw::fill(matrix.get_inactive_buffer(), 4095, 0, 0);
 			matrix.swap_buffers();
 		}
 		if (finalize_counter == 34) {
-			draw::fill(matrix.get_inactive_buffer(), 0, 255, 0);
+			draw::fill(matrix.get_inactive_buffer(), 0, 4095, 0);
 			matrix.swap_buffers();
 		}
 		if (finalize_counter == 18) {
-			draw::fill(matrix.get_inactive_buffer(), 0, 0, 255);
+			draw::fill(matrix.get_inactive_buffer(), 0, 0, 4095);
 			matrix.swap_buffers();
 		}
 		matrix.display();

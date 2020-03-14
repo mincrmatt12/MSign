@@ -30,5 +30,5 @@ void tasks::ClockScreen::loop() {
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 
 	uint16_t width = draw::text_size(buf, font::dejavusans_12::info);
-	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 64 - (width / 2), 11, 240, 240, 240);
+	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 64 - (width / 2), 11, 240_c, 240_c, 240_c);
 }
