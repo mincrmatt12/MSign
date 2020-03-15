@@ -335,27 +335,13 @@ namespace led {
 				oe = true;
 				strobe = true;
 				show = false;
-				strobe = false;
 				// Thing
 				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-				const static uint16_t draw_ticks_table[] = {
-					2,
-					4,
-					8,
-					16,
-					32,
-					64,
-					128,
-					256,
-					512,
-					1024,
-					2048,
-					4096,
-					8192,
-				};
+				const static uint16_t draw_ticks_table[] = {3,7,13,27,53,107,213,426,852,1705,3410,6820};
 				uint16_t drawn_pos = draw_ticks_table[pos];
 				++row;
 				if (row < FB::stb_lines) {
+					strobe = false;
 					// Send off the next row
 					blast_row();
 					// Start the waiting.
@@ -364,6 +350,7 @@ namespace led {
 					return;
 				}
 				else if (++pos < 12) {
+					strobe = false;
 					// Set back to first row
 					row = 0;
 					// Blast and wait
@@ -373,6 +360,7 @@ namespace led {
 					return;
 				}
 				else {
+					strobe = false;
 					// Alright, row is now == fb::height, so run the wait code
 					// Just wait, but force it to run us again.
 					show = true;

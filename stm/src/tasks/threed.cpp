@@ -217,8 +217,8 @@ namespace threed {
 					 (t.p3 - current_pos).length()));
 		avg = std::min(0.75f, std::pow((avg * 0.5f), 2.0f));
 
-		uint16_t cr = std::pow((float)t.r / 255.0f * (1 - (avg - 0.01f)), 2.2f) * 4096;
-		uint16_t cg = std::pow((float)t.g / 255.0f * (1 - (avg + 0.02f)), 2.2f) * 4096;
+		uint16_t cr = std::pow((float)t.r / 255.0f * (1 - avg), 2.2f) * 4096;
+		uint16_t cg = std::pow((float)t.g / 255.0f * (1 - avg), 2.2f) * 4096;
 		uint16_t cb = std::pow((float)t.b / 255.0f * (1 - avg), 2.2f) * 4096;
 
 		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
