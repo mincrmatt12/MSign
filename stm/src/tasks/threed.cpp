@@ -215,7 +215,7 @@ namespace threed {
 		float avg = std::min((t.p1 - current_pos).length(), std::min(
 					 (t.p2 - current_pos).length(),
 					 (t.p3 - current_pos).length()));
-		avg = std::min(0.75f, std::pow((avg * 0.5f), 2.0f));
+		avg = std::min(0.68f, std::pow((avg * 0.5f), 2.0f));
 
 		uint16_t cr = std::pow((float)t.r / 255.0f * (1 - avg), 2.2f) * 4096;
 		uint16_t cg = std::pow((float)t.g / 255.0f * (1 - avg), 2.2f) * 4096;
