@@ -1,9 +1,12 @@
 #include "timekeeper.h"
+#include <stm32f2xx.h>
 
 #include "srv.h"
 #include "common/slots.h"
 
 extern srv::Servicer servicer;
+
+uint32_t last_ticks_value = 0;
 
 bool tasks::Timekeeper::important() {
 	return (current_time - last_run_time) > 30000 || last_run_time <= 2;
@@ -14,8 +17,11 @@ bool tasks::Timekeeper::done() {
 }
 
 void tasks::Timekeeper::systick_handler() {
-	this->current_time += 1;
-	this->timestamp += 1;
+	uint32_t incr_amt = SysTick->VAL - last_ticks_value;
+	last_ticks_value = SysTick->VAL;
+
+	this->current_time += incr_amt;
+	this->timestamp += incr_amt;
 }
 
 void tasks::Timekeeper::loop() {
