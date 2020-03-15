@@ -267,7 +267,7 @@ void tasks::WeatherScreen::draw_currentstats() {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::snow, 20, 20, 3, 1, y, 255_c, 255_c, 255_c);
 	}
 	else if (strcmp(icon, "clear-day") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::clear_day, 20, 20, 3, 1, y, 210_c, 200_c, 0_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::clear_day, 20, 20, 3, 1, y, 220_c, 250_c, 0_c);
 	}
 	else if (strcmp(icon, "clear-night") == 0) {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::night, 20, 20, 3, 1, y, 79_c, 78_c, 79_c);
@@ -415,9 +415,9 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	}
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().r(x, y) = 40_c;
-		matrix.get_inactive_buffer().g(x, y) = 40_c;
-		matrix.get_inactive_buffer().b(x, y) = 40_c;
+		matrix.get_inactive_buffer().r(x, y) = 34_c;
+		matrix.get_inactive_buffer().g(x, y) = 34_c;
+		matrix.get_inactive_buffer().b(x, y) = 34_c;
 
 		char buf[4] = {0};
 		snprintf(buf, 4, "%.0f", v);
@@ -431,7 +431,7 @@ void tasks::WeatherScreen::draw_graphaxes() {
 			y += 6;
 		}
 
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 50_c, 50_c, 50_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 60_c, 60_c, 60_c);
 	};
 
 	float diff = max_ - min_;
