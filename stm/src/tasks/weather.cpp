@@ -324,8 +324,8 @@ void tasks::WeatherScreen::draw_hourlybar_header() {
 		// todo  make this a gradient
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255_c, 255_c, 255_c);
 	}
-	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 1_c, 1_c, 1_c);
-	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 1_c, 1_c, 1_c);
+	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 50_c, 50_c, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 50_c, 50_c, 50_c);
 }
 
 void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
@@ -356,15 +356,15 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 			break;
 		
 		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
-			r = g = b = 100_c; break;
+			r = g = b = 130_c; break;
 		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
-			r = g = b = 40_c; break;
+			r = g = b = 80_c; break;
 		case slots::WeatherStateArrayCode::OVERCAST:
-			r = g = b = 10_c; break;
+			r = g = b = 50_c; break;
 
 		case slots::WeatherStateArrayCode::SNOW:
 			r = g = b = 200_c;
-			hatch_r = hatch_g = hatch_b = 50_c;
+			hatch_r = hatch_g = hatch_b = 80_c;
 			do_hatch = true;
 		    break;
 		case slots::WeatherStateArrayCode::HEAVY_SNOW:
@@ -405,8 +405,8 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	if (!s_tempgraph.data) return;
 	// graph axes on pos 79 x, 24 y
 	
-	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 4_c, 4_c, 4_c);
-	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   4_c, 4_c, 4_c);
+	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 34_c, 34_c, 34_c);
+	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   34_c, 34_c, 34_c);
 
 	float min_ = 10000, max_ = -10000;
 	for (uint8_t i = 0; i < 24; ++i) {
@@ -415,9 +415,9 @@ void tasks::WeatherScreen::draw_graphaxes() {
 	}
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().r(x, y) = 4;
-		matrix.get_inactive_buffer().g(x, y) = 4;
-		matrix.get_inactive_buffer().b(x, y) = 4;
+		matrix.get_inactive_buffer().r(x, y) = 40_c;
+		matrix.get_inactive_buffer().g(x, y) = 40_c;
+		matrix.get_inactive_buffer().b(x, y) = 40_c;
 
 		char buf[4] = {0};
 		snprintf(buf, 4, "%.0f", v);

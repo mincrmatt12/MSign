@@ -68,7 +68,7 @@ void tasks::CalfixScreen::draw_dayp(uint16_t start, uint16_t end, uint16_t lpos,
 			bpos += start;
 
 			draw::rect(matrix.get_inactive_buffer(), start, 55, bpos, 64, 24_c, 35_c, 24_c);
-			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100, 4095, 100);
+			draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 100_c, 4095, 100_c);
 		}
 		else {
 			draw::rect(matrix.get_inactive_buffer(), start, 55, end,  64, 24_c, 24_c, 24_c);
@@ -76,7 +76,7 @@ void tasks::CalfixScreen::draw_dayp(uint16_t start, uint16_t end, uint16_t lpos,
 		}
 	}
 	else {
-		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 4095, 50, 50);
+		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, lpos, 63, 4095, 50_c, 50_c);
 	}
 }
 
@@ -149,10 +149,10 @@ void tasks::CalfixScreen::show_noschool() {
 }
 
 const uint16_t bg_color_table[4][3] = {
-	{2_c, 2_c, 4_c},
-	{1_c, 1_c, 2_c},
-	{1_c, 2_c, 1_c},
-	{2_c, 4_c, 2_c}
+	{12, 8, 16},
+	{8, 7, 12},
+	{7, 12, 8},
+	{12, 16, 12}
 };
 
 const uint16_t cls_fg_color_table[4][3] = {
@@ -168,8 +168,8 @@ void tasks::CalfixScreen::draw_class(uint64_t clstm, const char * cname, uint16_
 	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 9, bg_color_table[cl][0], bg_color_table[cl][1], bg_color_table[cl][2]);
 	draw::text(matrix.get_inactive_buffer(), cname, font::tahoma_9::info, 1, y_pos + 8, cls_fg_color_table[cl][0], cls_fg_color_table[cl][1], cls_fg_color_table[cl][2]);
 
-	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 1, bg_color_table[cl][0] + 1, bg_color_table[cl][1] + 1, bg_color_table[cl][2] + 1);
-	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 8, 128, y_pos + 9, bg_color_table[cl][0] + 1, bg_color_table[cl][1] + 1, bg_color_table[cl][2] + 1);
+	draw::rect(matrix.get_inactive_buffer(), 0, y_pos, 64, y_pos + 1, bg_color_table[cl][0] + 50, bg_color_table[cl][1] + 50, bg_color_table[cl][2] + 50);
+	draw::rect(matrix.get_inactive_buffer(), 0, y_pos + 8, 128, y_pos + 9, bg_color_table[cl][0] + 50, bg_color_table[cl][1] + 50, bg_color_table[cl][2] + 50);
 
 	char text_buffer[32] = {0};
 	struct tm timedat;

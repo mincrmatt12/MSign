@@ -212,9 +212,9 @@ namespace threed {
 		int16_t by = round(((b.y + 1) / 2) * matrix_type::framebuffer_type::height);
 		int16_t cy = round(((c.y + 1) / 2) * matrix_type::framebuffer_type::height);
 
-		float avg = std::min((t.p1 - current_pos).length(),
+		float avg = std::min((t.p1 - current_pos).length(), std::min(
 					 (t.p2 - current_pos).length(),
-					 (t.p3 - current_pos).length());
+					 (t.p3 - current_pos).length()));
 		avg = std::min(0.75f, std::pow((avg * 0.5f), 2.0f));
 
 		uint16_t cr = std::pow((float)t.r / 255.0f * (1 - (avg - 0.01f)), 2.2f) * 4096;

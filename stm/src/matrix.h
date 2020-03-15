@@ -45,7 +45,7 @@ namespace led {
 				// we can have nearly any instruction execute conditionally
 				// and the and operation will set flags if it ends with an S...
 
-				uint8_t * lo = (uint8_t *)(((uint64_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 64 + 0x22000000 + pos*4);
+				uint8_t * lo = (uint8_t *)(((uint64_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 32 + 0x22000000 + pos*4);
 				uint8_t * hi = lo + stb_lines*Storage::EffectiveWidth*3*64;
 				uint8_t * bs = &byte_stream[0];
 
@@ -185,14 +185,14 @@ namespace led {
 				// Setup the timer.
 				LL_TIM_InitTypeDef tim_init = {0};
 
-				tim_init.Prescaler  = 6; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
+				tim_init.Prescaler  = 3; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
 				tim_init.Autoreload = 1;
 				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM1, &tim_init);
 
-				tim_init.Prescaler  = 28;
+				tim_init.Prescaler  = 2;
 				tim_init.Autoreload = 1;
-				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV4;
+				tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 				LL_TIM_Init(TIM9, &tim_init);
 
 				LL_TIM_DisableARRPreload(TIM9);
@@ -205,9 +205,10 @@ namespace led {
 				gpio_init.Mode = LL_GPIO_MODE_OUTPUT;
 				gpio_init.Speed = LL_GPIO_SPEED_FREQ_VERY_HIGH;
 				gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
-				gpio_init.Pull = LL_GPIO_PULL_NO;
+				gpio_init.Pull = LL_GPIO_PULL_DOWN;
 				LL_GPIO_Init(SIGN_DATA_Port, &gpio_init);
 				gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
+				gpio_init.Pull = LL_GPIO_PULL_NO;
 				LL_GPIO_Init(GPIOB, &gpio_init);
 			}
 
@@ -250,16 +251,12 @@ namespace led {
 				LL_TIM_DisableIT_UPDATE(TIM9);
 				if (!delaying) return;
 				oe = true;
-				asm volatile ("nop");
-				asm volatile ("nop");  // give the display some time to respond
-				asm volatile ("nop");
 				delaying = false;
-				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-				asm volatile ("nop");
-				asm volatile ("nop");  // give the display some time to respond
-				asm volatile ("nop");
 				if (show) do_next();
-				else show = true;
+				else {
+					show = true;
+					GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
+				}
 			}
 
 		private:
@@ -335,11 +332,13 @@ namespace led {
 					LL_TIM_DisableCounter(TIM1);
 					return;
 				}
+				oe = true;
 				strobe = true;
 				show = false;
 				strobe = false;
+				// Thing
+				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 				const static uint16_t draw_ticks_table[] = {
-					1,
 					2,
 					4,
 					8,
@@ -349,27 +348,28 @@ namespace led {
 					128,
 					256,
 					512,
+					1024,
 					2048,
 					4096,
-					8192
+					8192,
 				};
-				uint8_t drawn_pos = draw_ticks_table[pos];
-				++pos;
-				if (pos < 12) {
+				uint16_t drawn_pos = draw_ticks_table[pos];
+				++row;
+				if (row < FB::stb_lines) {
+					// Send off the next row
+					blast_row();
 					// Start the waiting.
 					oe = false;
 					wait(drawn_pos);		
-					// Send off the next row
-					blast_row();
 					return;
 				}
-				else if (++row < FB::stb_lines) {
-					oe = false;
-					wait(drawn_pos);		
-					// Set back to first bit
-					pos = 0;
+				else if (++pos < 12) {
+					// Set back to first row
+					row = 0;
 					// Blast and wait
 					blast_row();
+					oe = false;
+					wait(drawn_pos);		
 					return;
 				}
 				else {
