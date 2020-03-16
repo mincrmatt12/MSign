@@ -174,9 +174,6 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					}
 				}
 
-				on_open(slots::TTC_TIME_1 + slot);
-				on_open(slots::TTC_TIME_1B + slot);
-
 				Log.print(F("Adding ttc entry in slot "));
 				Log.print(slot);
 			}
@@ -186,12 +183,20 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		}
 	});
 
+	auto bkp1 = ttc::times[slot], bkp2 = ttc::times[slot + 3];
+
 	memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
 	memset(&ttc::times[slot+3], 0, sizeof(ttc::times[0]));
 
 	if (!parser.parse(std::move(cb))) {
 		Log.println(F("JSON fucked up."));
+
+		ttc::times[slot] = bkp1;
+		ttc::times[slot + 3] = bkp2;
 	} // parse while calling our function.
+
+	on_open(slots::TTC_TIME_1 + slot);
+	on_open(slots::TTC_TIME_1B + slot);
 
 	util::stop_download();
 	free(dirtag);
