@@ -143,7 +143,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 	if (write_pos[0] < 0) return false;
 
 	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c, 255_c, 255_c);
-	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 50_c, 50_c, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 20_c, 20_c, 20_c);
 
 	for (int i = 0; i < 4; ++i) {
 		if (write_pos[i] < 0) break;
@@ -165,7 +165,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 		}
 	}
 
-	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 15_c, 15_c, 15_c);
+	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 50_c, 50_c, 50_c);
 
 	return true;
 }
