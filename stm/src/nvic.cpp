@@ -23,7 +23,7 @@ void nvic::init() {
 	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));
+	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
 	NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
 	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));

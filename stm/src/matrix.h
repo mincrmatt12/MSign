@@ -255,7 +255,6 @@ namespace led {
 				if (show) do_next();
 				else {
 					show = true;
-					GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 				}
 			}
 
@@ -325,7 +324,7 @@ namespace led {
 
 			void do_next() {
 				// set address pins
-				if (row == (FB::stb_lines)) {
+				if (pos == 12) {
 					// We are now finished
 					blasting = false;
 					// Stop the timer entirely
@@ -361,7 +360,7 @@ namespace led {
 				}
 				else {
 					strobe = false;
-					// Alright, row is now == fb::height, so run the wait code
+					// Alright, pos == 12, so run the wait code
 					// Just wait, but force it to run us again.
 					show = true;
 					oe = false;
