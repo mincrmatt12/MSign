@@ -1,7 +1,4 @@
-# STM codebase
-
-LEDSignCodebase, not public because it'll probably get api keys at some point.
-
+# STM
 The code will run on a nucleo-f207zg or the msign, which uses an stm32f205rgt
 
 ## HUB75
