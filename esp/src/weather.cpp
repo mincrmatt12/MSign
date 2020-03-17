@@ -70,58 +70,58 @@ bool use_next_hour_summary = false;
 json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
 		// First, check if we're in the currently block.
 		
-		if (stack_ptr == 3 && strcmp_P(stack[1]->name, PSTR("currently")) == 0) {
+		if (stack_ptr == 3 && strcmp(stack[1]->name, "currently") == 0) {
 			// Alright, we need to pull out:
 			//
 			// Current temp
 			// Icon (special: if it's partly-cloudy, just mark that)
 			
-			if (strcmp_P(stack[2]->name, PSTR("apparentTemperature")) == 0 && v.is_number()) {
+			if (strcmp(stack[2]->name, "apparentTemperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.ctemp = v.as_number();
 				Log.printf("temp = %f\n", v.float_val);
 			}
-			else if (strcmp_P(stack[2]->name, PSTR("icon")) == 0 && v.type == json::Value::STR) {
+			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
 				memset(weather::icon, 0, 16);
 				strcpy(weather::icon, v.str_val);
 
 				Log.printf("wicon = %s\n", weather::icon);
 			}
-			else if (strcmp_P(stack[2]->name, PSTR("temperature")) == 0 && v.is_number()) {
+			else if (strcmp(stack[2]->name, "temperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.crtemp = v.as_number();
 				Log.printf("rtemp = %f\n", v.float_val);
 			}
 		}
-		else if (stack_ptr == 3 && strcmp_P(stack[1]->name, PSTR("minutely")) == 0) {
-			if (strcmp_P(stack[2]->name, PSTR("summary")) == 0 && v.type == json::Value::STR) {
+		else if (stack_ptr == 3 && strcmp(stack[1]->name, "minutely") == 0) {
+			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR) {
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
 				Log.printf("summary (minute) = %s\n", v.str_val);
 			}
-			else if (strcmp_P(stack[2]->name, PSTR("icon")) == 0 && v.type == json::Value::STR) {
+			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
 				if ( /* list of things that we should probably show an hourly summary for */
-					!strcmp_P(v.str_val, PSTR("rain")) || !strcmp_P(v.str_val, PSTR("snow")) || !strcmp_P(v.str_val, PSTR("sleet"))) {
+					!strcmp(v.str_val, "rain") || !strcmp(v.str_val, "snow") || !strcmp(v.str_val, "sleet")) {
 					use_next_hour_summary = true;
 					Log.println("marking summary as hourly");
 				}
 			}
 		}
-		else if (stack_ptr == 3 && strcmp_P(stack[1]->name, PSTR("hourly")) == 0) {
-			if (strcmp_P(stack[2]->name, PSTR("summary")) == 0 && v.type == json::Value::STR && !use_next_hour_summary) {
+		else if (stack_ptr == 3 && strcmp(stack[1]->name, "hourly") == 0) {
+			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR && !use_next_hour_summary) {
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
 				Log.printf("summary (hour) = %s\n", v.str_val);
 			}
 		}
-		else if (stack_ptr == 4 && strcmp_P(stack[1]->name, PSTR("hourly")) == 0 && strcmp_P(stack[2]->name, PSTR("data")) == 0 && stack[2]->is_array() &&
+		else if (stack_ptr == 4 && strcmp(stack[1]->name, "hourly") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() &&
 				stack[2]->index < 24) {
-			if (strcmp_P(stack[3]->name, PSTR("apparentTemperature")) == 0 && v.is_number()) {
+			if (strcmp(stack[3]->name, "apparentTemperature") == 0 && v.is_number()) {
 				weather::temp_over_day[stack[2]->index] = v.as_number();
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("icon")) == 0 && v.type == json::Value::STR) {
+			else if (strcmp(stack[3]->name, "icon") == 0 && v.type == json::Value::STR) {
 				// Part 1 of algorithm; assume we get icon first and set upper nybble
 				
 				if (strncmp(v.str_val, "partly-cloudy", 13) == 0) {
@@ -130,17 +130,17 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 				else if (strncmp(v.str_val, "clear", 5) == 0) {
 					weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::CLEAR;
 				}
-				else if (strcmp_P(v.str_val, PSTR("snow")) == 0) {
+				else if (strcmp(v.str_val, "snow") == 0) {
 					weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::SNOW;
 				}
-				else if (strcmp_P(v.str_val, PSTR("cloudy")) == 0) {
+				else if (strcmp(v.str_val, "cloudy") == 0) {
 					weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::MOSTLY_CLOUDY;
 				}
-				else if (strcmp_P(v.str_val, PSTR("rain")) == 0) {
+				else if (strcmp(v.str_val, "rain") == 0) {
 					weather::state_data[stack[2]->index] = slots::WeatherStateArrayCode::DRIZZLE;
 				}
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("cloudCover")) == 0 && v.is_number()) {
+			else if (strcmp(stack[3]->name, "cloudCover") == 0 && v.is_number()) {
 				// Part 2a: is the thing a cloud?
 				if (((uint8_t)weather::state_data[stack[2]->index] & 0xf0) == (uint8_t)slots::WeatherStateArrayCode::CLEAR && weather::state_data[stack[2]->index] != slots::WeatherStateArrayCode::CLEAR) {
 					if (v.as_number() < 0.5) {
@@ -154,7 +154,7 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 					}
 				}
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("precipIntensity")) ==0 && v.is_number()) {
+			else if (strcmp(stack[3]->name, "precipIntensity") ==0 && v.is_number()) {
 				// Part 2b: check precip type from icon
 				if (((uint8_t)weather::state_data[stack[2]->index] & 0xf0) == (uint8_t)slots::WeatherStateArrayCode::DRIZZLE) {
 					if (v.as_number() < 0.4) {
@@ -180,22 +180,22 @@ json::JSONParser w_parser([](json::PathNode ** stack, uint8_t stack_ptr, const j
 				}
 			}
 		}
-		else if (stack_ptr == 4 && strcmp_P(stack[1]->name, PSTR("daily")) == 0 && stack[2]->is_array() && strcmp_P(stack[2]->name, PSTR("data")) == 0 && stack[2]->index == 0) {
-			if (strcmp_P(stack[3]->name, PSTR("apparentTemperatureHigh")) == 0 && v.is_number()) {
+		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
+			if (strcmp(stack[3]->name, "apparentTemperatureHigh") == 0 && v.is_number()) {
 				// Store the high apparent temperature
 				weather::info.htemp = v.as_number();
 				Log.printf("htemp = %f\n", v.as_number());
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("apparentTemperatureLow")) == 0 && v.is_number()) {
+			else if (strcmp(stack[3]->name, "apparentTemperatureLow") == 0 && v.is_number()) {
 				// Store the low apparent temperature
 				weather::info.ltemp = v.as_number();
 				Log.printf("ltemp = %f\n", v.as_number());
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("sunriseTime")) == 0 && v.type == json::Value::INT) {
+			else if (strcmp(stack[3]->name, "sunriseTime") == 0 && v.type == json::Value::INT) {
 				// Get the sunrise time
 				weather::suntimes.sunrise = (signtime::to_local(v.int_val) % 86400) * 1000;
 			}
-			else if (strcmp_P(stack[3]->name, PSTR("sunsetTime")) == 0 && v.type == json::Value::INT) {
+			else if (strcmp(stack[3]->name, "sunsetTime") == 0 && v.type == json::Value::INT) {
 				// Get the sunset time
 				weather::suntimes.sunset = (signtime::to_local(v.int_val) % 86400) * 1000;
 			}

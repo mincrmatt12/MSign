@@ -29,11 +29,11 @@ namespace calfix {
 		else if (stack_ptr == 3 && strncmp(stack[1]->name, "day", 3) == 0 && stack[1]->name[3] == '0' + current_day) {
 			int period = stack[1]->index;
 			auto& pinf = (period > 0) ? ((period > 1) ? ((period == 2) ? p3 : p4) : p2) : p1;
-			if (strcmp_P(stack[2]->name, PSTR("name")) == 0) {
+			if (strcmp(stack[2]->name, "name") == 0) {
 				Log.printf("perd %d; name = %s\n", period, v.str_val);
 				strcpy((char *)pinf.name, v.str_val);
 			}
-			else if (strcmp_P(stack[2]->name, PSTR("loc")) == 0) {
+			else if (strcmp(stack[2]->name, "loc") == 0) {
 				Log.printf("perd %d; room = %s\n", period, v.str_val);
 				int out_room;
 				sscanf(v.str_val, "%d", &out_room);

@@ -111,15 +111,15 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		json::PathNode &top = *stack[stack_ptr-1];
 		json::PathNode &parent = *stack[stack_ptr-2];
 
-		if ((parent.is_array() || parent.is_obj()) && strcmp_P(parent.name, PSTR("prediction")) == 0) {
+		if ((parent.is_array() || parent.is_obj()) && strcmp(parent.name, "prediction") == 0) {
 			// use the first two only
 
 			state.e1 = stack[1]->index;
 			state.e2 = parent.index;
 			
-			if (strcmp_P(top.name, PSTR("affectedByLayover")) == 0) {
+			if (strcmp(top.name, "affectedByLayover") == 0) {
 				// is it's value true?
-				if (v.type == json::Value::STR && strcmp_P(v.str_val, PSTR("true")) == 0) {
+				if (v.type == json::Value::STR && strcmp(v.str_val, "true") == 0) {
 					// mark as delayed
 					state.layover = true;
 				}
@@ -127,7 +127,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					state.layover = false;
 				}
 			}
-			if (strcmp_P(top.name, PSTR("dirTag")) == 0 && v.type == json::Value::STR)
+			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 			{
 				strcpy(dirtag, dtag);
 				char *test_str = strtok(dirtag, ",");
@@ -143,11 +143,11 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					}
 				}
 			}
-			if (strcmp_P(top.name, PSTR("epochTime")) == 0 && v.type == json::Value::STR) {
+			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
 				state.epoch = signtime::millis_to_local(atoll(v.str_val));
 			}
 		}
-		else if (top.is_array() && strcmp_P(top.name, PSTR("prediction")) == 0 && v.type == json::Value::OBJ) {
+		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
 			if (state.tag && state.e2 < 4) {
 				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
@@ -268,16 +268,16 @@ void ttc::do_alert_update() {
 			json::PathNode &parent = *stack[stack_ptr - 2];
 			json::PathNode &top = *stack[stack_ptr - 1];
 
-			if (strcmp_P(overall.name, PSTR("statuses")) || !overall.is_array()) return;
+			if (strcmp(overall.name, "statuses") || !overall.is_array()) return;
 
 			// We are in a result.
-			if (strcmp_P(top.name, PSTR("id")) == 0 && stack_ptr == 3 && v.type == json::Value::INT) {
+			if (strcmp(top.name, "id") == 0 && stack_ptr == 3 && v.type == json::Value::INT) {
 				// Get ID
 				current = v.int_val;
 				return;
 			}
 
-			if (strcmp_P(top.name, PSTR("text")) == 0 && stack_ptr == 3 && v.type == json::Value::STR) {
+			if (strcmp(top.name, "text") == 0 && stack_ptr == 3 && v.type == json::Value::STR) {
 				for (int i = 0; i < sindex; ++i) {
 					if (superseded[i] == current) return;
 				}
@@ -322,8 +322,8 @@ void ttc::do_alert_update() {
 			}
 
 			// Are we superseded something?
-			if ((strcmp_P(top.name, PSTR("in_reply_to_status_id")) == 0 && stack_ptr == 3 && v.type == json::Value::INT) ||
-				(strcmp_P(top.name, PSTR("id")) == 0 && stack_ptr == 4 && strcmp_P(parent.name, PSTR("quoted_status")) == 0 && v.type == json::Value::INT)) {
+			if ((strcmp(top.name, "in_reply_to_status_id") == 0 && stack_ptr == 3 && v.type == json::Value::INT) ||
+				(strcmp(top.name, "id") == 0 && stack_ptr == 4 && strcmp(parent.name, "quoted_status") == 0 && v.type == json::Value::INT)) {
 				Log.print(F("superseding:"));
 				Log.println((int)v.int_val);
 				superseded[sindex++] = v.int_val;
