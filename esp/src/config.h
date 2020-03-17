@@ -39,6 +39,9 @@ namespace config {
 		MODEL_MAXPOSES,
 		MODEL_ENABLE,
 
+		ALERT_TWITTER_API_KEY,
+		ALERT_SEARCH,
+
 		// leave me
 		ENTRY_COUNT
 	};

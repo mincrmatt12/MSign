@@ -23,6 +23,11 @@ class ApiPane extends React.Component {
 				<FormControl type='text' value={this.props.configState.darksky} onChange={(e) => {this.upload('darksky', e.target.value);}} />
 			</Form.Group>
 
+			<Form.Group controlId="twit_ctrl">
+				<Form.Label>twitter</Form.Label>
+				<FormControl placeholder="consumerkey:consumersecret:tokenkey:tokensecret" type='text' value={this.props.configState.twitter} onChange={(e) => {this.upload('twitter', e.target.value);}} />
+			</Form.Group>
+
 			<hr className="hr-gray" />
 		</div>
 	}

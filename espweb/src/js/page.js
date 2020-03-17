@@ -46,7 +46,8 @@ class App extends React.Component {
 			ttc: {
 				stopids: [],
 				names: [],
-				dirtags: []
+				dirtags: [],
+				alert: ""
 			},
 			
 			global: {
@@ -58,7 +59,8 @@ class App extends React.Component {
 			},
 
 			apikeys: {
-				darksky: ""
+				darksky: "",
+				twitter: ""
 			},
 
 			weather: {
@@ -108,12 +110,18 @@ class App extends React.Component {
 		// api keys
 		result += "wapikey=" + this.state.apikeys.darksky + "\n";
 
+		if (this.state.apikeys.twitter.length !== "")
+			result += "tapikey=" + this.state.apikeys.twitter + "\n";
+
 		// ttc
 		for (let i = 0; i < this.state.ttc.dirtags.length; ++i) {
 			result += "stopid" + (i + 1).toString() + "=" + this.state.ttc.stopids[i] + "\n";
 			result += "dirtag" + (i + 1).toString() + "=" + this.state.ttc.dirtags[i] + "\n";
 			result += "shortname" + (i + 1).toString() + "=" + this.state.ttc.names[i] + "\n";
 		}
+
+		if (this.state.ttc.alert.length !== "")
+			result += "alertsrch=" + this.state.ttc.alert + "\n";
 
 		// sccfg
 		let needsNewSc = false;
@@ -202,6 +210,9 @@ class App extends React.Component {
 					case 'wapikey':
 						this.setState((s, _) => {s.apikeys.darksky = value; return s});
 						break;
+					case 'tapikey':
+						this.setState((s, _) => {s.apikeys.twitter = value; return s});
+						break;
 					case 'wapilat':
 					case 'wapilon':
 						this.setState((s, _) => {
@@ -227,6 +238,9 @@ class App extends React.Component {
 								return s;
 							});
 						}
+						break;
+					case 'alertsrch':
+						this.setState((s, _) => {s.ttc.alert = value; return s});
 						break;
 					case 'scttc':
 					case 'scweather':

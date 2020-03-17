@@ -42,7 +42,11 @@ const char * config::entry_names[] = {
 	"modelfocuses",
 	"modelminposes",
 	"modelmaxposes",
-	"modelenable"
+	"modelenable",
+
+	// ALERT PARAMETERS
+	"tapikey",
+	"alertsrch"
 };
 
 

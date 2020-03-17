@@ -19,6 +19,12 @@ class TTCPane extends React.Component {
 		this.props['updateState'](v_s);
 	}
 
+	uploadAlert(val) {
+		let v_s = this.props.configState;
+		v_s.alert = val;
+		this.props['updateState'](v_s);
+	}
+
 	add() {
 		let v_s = this.props['configState'];
 		v_s.dirtags.push("");
@@ -70,6 +76,13 @@ class TTCPane extends React.Component {
 			)}
 			<hr className="hr-gray" />
 			<Button variant="light" disabled={this.props.configState.dirtags.length == 3} onClick={() => {this.add()}} className="w-100">+</Button>
+			<hr className="hr-gray" />
+			
+			<Form.Group controlId="alert_ctrl">
+				<Form.Label>alert search</Form.Label>
+				<FormControl type='text' value={this.props.configState.alert} onChange={(e) => {this.uploadAlert(e.target.value);}} />
+			</Form.Group>
+
 			<hr className="hr-gray" />
 		</div>
 	}
