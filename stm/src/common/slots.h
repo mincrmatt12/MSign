@@ -36,6 +36,7 @@ namespace slots {
 		WEATHER_ARRAY1 = 0x46,      // STRING; list of ENUMS for the state per-hour
 		WEATHER_ARRAY2 = 0x47,      // '' 
 		WEATHER_TEMP_GRAPH = 0x41,  // STRUCT; VStr - temp data as floats
+		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
 		CALFIX_CLS1 = 0x51,			// STRUCT; ClassInfo, name and room
@@ -91,6 +92,10 @@ namespace slots {
 		float crtemp;
 	};
 
+	struct WeatherTimes {
+		uint64_t sunrise, sunset;
+	};
+
 	struct VStr {
 		uint8_t index;
 		uint8_t size;
@@ -121,7 +126,9 @@ namespace slots {
 			WEATHER = 2,
 			MODEL = 4,
 			PERIODS = 8,
-			PARCELS = 16
+			PARCELS = 16,
+			JENKINS = 32,
+			PRINTER = 64
 		};
 	};
 

@@ -8,6 +8,7 @@ namespace weather {
 	void loop();
 
 	extern slots::WeatherInfo info;
+	extern slots::WeatherTimes suntimes;
 	extern char * info_buffer;
 	extern uint8_t buffer_size;
 	extern uint8_t echo_index;

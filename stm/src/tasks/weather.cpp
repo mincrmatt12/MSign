@@ -191,6 +191,7 @@ bool tasks::WeatherScreen::init() {
 	if (!(
 		servicer.open_slot(slots::WEATHER_INFO, true, this->s_info) &&
 		servicer.open_slot(slots::WEATHER_ICON, true, this->s_icon) &&
+		servicer.open_slot(slots::WEATHER_TIME_SUN, true, this->s_times) &&
 		servicer.open_slot(slots::WEATHER_ARRAY1, true, this->s_state[0]) &&
 		servicer.open_slot(slots::WEATHER_ARRAY2, true, this->s_state[1]) &&
 		s_status.open(slots::WEATHER_STATUS) &&
@@ -212,6 +213,7 @@ bool tasks::WeatherScreen::deinit() {
 	if (!(
 		servicer.close_slot(s_info) &&
 		servicer.close_slot(s_icon) &&
+		servicer.close_slot(s_times) &&
 		servicer.close_slot(s_state[0]) &&
 		servicer.close_slot(s_state[1])
 	)) {
@@ -342,10 +344,13 @@ void tasks::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	time_t now = rtc_time / 1000;
 	gmtime_r(&now, &timedat);
 	hour = (timedat.tm_hour + hour) % 24;
+	int64_t hourstart = (int64_t)hour * (1000*60*60);
+
+	const auto &times = servicer.slot<slots::WeatherTimes>(s_times);
 
 	switch (code) {
 		case slots::WeatherStateArrayCode::CLEAR:
-			if (hour > 7 && hour < 18) {
+			if (hourstart > times.sunrise && hourstart < times.sunset) {
 				r = 210_c;
 				g = 200_c;
 				b = 0_c;
