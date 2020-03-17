@@ -60,6 +60,9 @@ void setup() {
 
 	config::manager.load_from_sd();
 	while (!serial::interface.ensure_handshake()) {delay(1);}
+
+	randomSeed(secureRandom(ESP.getVcc() + ESP.getCycleCount()));
+
 	wifi::init();
 	debug::init();
 	serial::interface.register_debug_commands();
