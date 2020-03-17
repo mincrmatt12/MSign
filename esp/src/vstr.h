@@ -7,6 +7,7 @@
 #include "serial.h"
 #include "common/slots.h"
 #include <HardwareSerial.h>
+#include "util.h"
 
 namespace serial {
 	struct VStrSender {
