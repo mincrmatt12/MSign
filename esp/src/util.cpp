@@ -6,7 +6,7 @@
 #include <Time.h>
 
 // shitty HTTP client....
-const char * msign_ua = "MSign/2.1.0 ESP8266 screwanalytics/1.0";
+const char * msign_ua = "MSign/3.1.0 ESP8266 screwanalytics/1.0";
 
 #define TO_C if ((millis() - to_start) > Adapter::timeout) { cl.stop(); Log.println(F("tn: "));Log.println(__LINE__); return false; } 
 extern SdFatSoftSpi<D6, D2, D5> sd;
