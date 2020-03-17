@@ -39,6 +39,8 @@ void setup() {
 		Serial1.println(F("inv"));
 	}
 
+	srand(now());
+
 	config::manager.load_from_sd();
 	wifi::init();
 	signtime::init();
