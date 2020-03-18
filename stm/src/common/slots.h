@@ -72,7 +72,7 @@ namespace slots {
 
 		enum Flags : uint16_t {
 			ALERT_0 = 1,
-			ALERT_1 = 2,  // there is an alert
+			ALERT_1 = 2,  // there is an alert, and the relevant message is available in the VSTR.
 			ALERT_2 = 4,
 
 			EXIST_0 = 8,
@@ -82,6 +82,10 @@ namespace slots {
 			DELAY_0 = 64,
 			DELAY_1 = 128, // the slot is reported as delayed
 			DELAY_2 = 256,
+
+			SUBWAY_ALERT = 512, // there is an alert for the subway
+			SUBWAY_DELAYED = 1024, // we think the alert means there's a delay
+			SUBWAY_OFF = 2048, // we think the alert means the subway is currently broken / out of service / off
 		};
 	};
 
