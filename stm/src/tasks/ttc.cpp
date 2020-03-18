@@ -102,9 +102,7 @@ bool tasks::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t time
 	}
 	else {
 		// otherwise make it scroll from the right
-		t_pos %= (size * 2) + 1;
-		t_pos =  ((size * 2) + 1) - t_pos;
-		t_pos -= size;
+		t_pos = draw::scroll(t_pos, size);
 	}
 
 	int16_t write_pos[4] = {-1};

@@ -50,6 +50,40 @@ namespace draw {
 		return gamma_cvt[in];
 	}
 	
+	// Easing/scrolling helper functions.
+	//
+	// These generally take a timebase to use and content size params.
+	
+	// Scrolls content. Output moves backwards, so for left-right scrolling it goes from the right.
+	inline int16_t scroll(int64_t timebase, int16_t content_size) {
+		timebase %= (content_size * 2) + 1;
+		timebase =  ((content_size * 2) + 1) - timebase;
+		timebase -= content_size;
+		return timebase;
+	}
+
+	// ```
+	//           .......            --U
+	//         ..| tS  |..
+	//        .           .
+	//       .             .
+	//     ..               ..| tS |
+	// .... | tT |            ......--0
+	// ```
+	//
+	// Creates a wave of the above pattern. Generally used to show two "screens" of data at once.
+	inline int16_t distorted_ease_wave(int64_t timebase, int64_t tT, int64_t tS, int16_t U) {
+		static const int64_t period = (tT + tS), twoperiod = 2*(tT + tS);
+		bool isU = (timebase % twoperiod) < period;
+
+		if (timebase % period < tS) return isU * U;
+
+		float t = ((timebase % period) - tS) / (float)tT;
+		if (isU) 		
+			return (1 - powf(t, 2.4) / (powf(t, 2.4) + powf(1 - t, 2.4))) * U;
+		else
+			return U * powf(t, 2.4) / (powf(t, 2.4) + powf(1 - t, 2.4));
+	}
 }
 
 inline constexpr uint16_t operator ""_c(unsigned long long in) {

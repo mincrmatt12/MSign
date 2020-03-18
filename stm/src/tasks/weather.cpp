@@ -300,10 +300,7 @@ void tasks::WeatherScreen::draw_status() {
 			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, 64 - text_size / 2, 61, 240_c, 240_c, 240_c);
 		}
 		else {
-			uint16_t t_pos = (uint16_t)(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)));
-			t_pos %= (text_size * 2) + 1;
-			t_pos =  ((text_size * 2) + 1) - t_pos;
-			t_pos -= text_size;
+			int16_t t_pos = draw::scroll(timekeeper.current_time / (40 - (strlen(s_status.data) / 7)), text_size);
 			draw::text(matrix.get_inactive_buffer(), s_status.data, font::tahoma_9::info, t_pos, 61, 240_c, 240_c, 240_c);
 		}
 	}
