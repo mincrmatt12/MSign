@@ -14,9 +14,9 @@ bool tasks::ClockScreen::init() {
 	name[2] = 's';
 	name[3] = 'n';
 
-	bg_color[0] = rng::get() % 256;
-	bg_color[1] = rng::get() % 256;
-	bg_color[2] = rng::get() % 256;
+	bg_color[0] = std::max(rng::getclr(), 50_c);
+	bg_color[1] = std::max(rng::getclr(), 50_c);
+	bg_color[2] = std::max(rng::getclr(), 50_c);
 
 	return true;
 }
@@ -30,5 +30,5 @@ void tasks::ClockScreen::loop() {
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 
 	uint16_t width = draw::text_size(buf, font::dejavusans_12::info);
-	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 64 - (width / 2), 11, 240_c, 240_c, 240_c);
+	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 64 - (width / 2), 11, bg_color[0], bg_color[1], bg_color[2]);
 }

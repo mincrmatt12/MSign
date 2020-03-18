@@ -11,7 +11,7 @@ namespace tasks {
 		void loop() override;
 		bool done() override {return true;}
 	private:
-		uint8_t bg_color[3];
+		uint16_t bg_color[3];
 	};
 }
 
