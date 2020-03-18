@@ -218,12 +218,12 @@ struct Downloader {
 					cl.read();
 					break;
 				}
-				else if (starting == 'C') {
+				else if (starting == 'C' || starting == 'c') {
 					// could be the content-length
 					char buf[15] = {0};
 					if (cl.readBytesUntil(':', buf, 14) != 13) goto skip;
 					Log.println(buf);
-					if (strcmp(buf, "ontent-Length") != 0) goto skip;
+					if (strcasecmp_P(buf, PSTR("ontent-Length")) != 0) goto skip;
 					// wait for the space
 					if (!cl.find(' ')) {
 						Log.println(F("f3"));
