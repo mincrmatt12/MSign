@@ -294,7 +294,7 @@ void ttc::do_alert_update() {
 				Log.println(F("Got tweet:"));
 				Log.println(v.str_val);
 
-				if (strcasestr(v.str_val, "elevator")) return;
+				if (strstr_P(v.str_val, PSTR("elevator")) || strstr_P(v.str_val, PSTR("Elevator"))) return;
 				
 				const char *begin = v.str_val; int size = 0;
 				while (*begin != ':') {
