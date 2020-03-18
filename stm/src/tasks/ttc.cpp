@@ -73,19 +73,18 @@ void tasks::TTCScreen::draw_bus() {
 	switch (bus_state) {
 		case 0:
 			for (uint8_t i = 0; i < bus_type; ++i)
-				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, 230_c, 230_c, 230_c, true);
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 2, 230_c, 230_c, 230_c, true);
 			break;
-		case 1:
 		case 2:
+			pos += 45;
+			pos = (pos * pos) % 228;
+			pos -= 45;
+			[[fallthrough]];
+		case 1:
 			{
-				if (bus_state == 2) {
-					pos += 45;
-					pos = (pos * pos) % 228;
-					pos -= 45;
-				}
 
 				for (uint8_t i = 0; i < bus_type + (bus_state == 2 ? 2 : 0); ++i)
-					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 1, rng::getclr(), rng::getclr(), rng::getclr(), true);
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 2, rng::getclr(), rng::getclr(), rng::getclr(), true);
 			}
 			break;
 	}
