@@ -373,6 +373,8 @@ void ttc::do_alert_update() {
 		else {
 			ptr += sprintf_P(ptr, "%s / ", saved_texts[i]);
 		}
+
+		free(saved_texts[i]);
 	}
 
 	Log.println(F("Alert str:"));
