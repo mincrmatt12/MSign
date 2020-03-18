@@ -293,6 +293,8 @@ void ttc::do_alert_update() {
 				// We have the text. Filter it to find the actual status
 				Log.println(F("Got tweet:"));
 				Log.println(v.str_val);
+
+				if (strcasestr(v.str_val, "elevator")) return;
 				
 				const char *begin = v.str_val; int size = 0;
 				while (*begin != ':') {
