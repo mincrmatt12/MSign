@@ -396,7 +396,7 @@ bool srv::Servicer::open_slot(uint16_t data_id, bool continuous, uint8_t &slot_i
 }
 
 bool srv::Servicer::close_slot(uint8_t slot_id) {
-	if (!this->slot_open(slot_id)) return false;
+	if (!this->slot_connected(slot_id)) return false;
 
 	if (this->pending_count >= 32) {
 		return false;

@@ -9,9 +9,11 @@
 #include "config.h"
 #include "string.h"
 #include "util.h"
+#include "vstr.h"
 
 slots::TTCInfo ttc::info;
 slots::TTCTime ttc::times[6];
+serial::VStrSender vss_alerts;
 
 uint64_t ttc::time_since_last_update = 0;
 uint64_t      time_since_last_alert = 0;
@@ -22,12 +24,19 @@ void ttc::init() {
     ttc::info = { 0 };
 
 	serial::interface.register_handler(&ttc::on_open);
+	serial::interface.register_handler([](uint16_t data_id, uint8_t * buffer, uint8_t & length){
+		if (data_id == slots::TTC_ALERTSTR) {
+			vss_alerts(buffer, length);
+			return true;
+		}
+		return false;
+	});
 }
 
 void ttc::loop() {
 	if ((now() - time_since_last_update > 15 || time_since_last_update == 0) && wifi::available()) {
 		// update the ttc times
-		ttc::info.flags = 0;
+		ttc::info.flags &= (slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::SUBWAY_OFF | slots::TTCInfo::SUBWAY_DELAYED);
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
 			if (stopid != nullptr) {
@@ -219,7 +228,7 @@ void ttc::do_alert_update() {
 	int saved_index = 0;
 	char url[160] = {0};
 
-	bool alert_flags[4] = {false}; // SUBWAY is at address 3
+	ttc::info.flags &= ~(slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::SUBWAY_OFF | slots::TTCInfo::SUBWAY_DELAYED);
 
 	// Do the twitter thingie
 	
@@ -315,9 +324,17 @@ void ttc::do_alert_update() {
 					return;
 				}
 
+				if (strstr_P(real, PSTR("Delays of"))) {
+					info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
+				}
+
+				if (strstr_P(real, PSTR("No service"))) {
+					info.flags |= slots::TTCInfo::SUBWAY_OFF;
+				}
+
 				// Otherwise, we should record this.
 				saved_texts[saved_index++] = real;
-				alert_flags[3] = true;
+				info.flags |= slots::TTCInfo::SUBWAY_ALERT;
 				return;
 			}
 
@@ -358,4 +375,8 @@ void ttc::do_alert_update() {
 
 	Log.println(F("Alert str:"));
 	Log.println(alert_buffer);
+	
+	vss_alerts.set((uint8_t *)alert_buffer, strlen(alert_buffer));
+
+	on_open(slots::TTC_INFO);
 }

@@ -17,6 +17,17 @@ namespace bitmap {
 		0b11101111, 0b10110000,
 		0b00010000, 0b01000000
 	}; // stride = 2, width = 14, height = 7
+
+	const uint8_t subway[] = {
+		0b11111111,0b11111111,0b00000000,
+		0b10000001,0b11110000,0b10000000,
+		0b10111101,0b01010110,0b10000000,
+		0b10111101,0b01010110,0b01000000,
+		0b10000001,0b01010000,0b01000000,
+		0b11111111,0b11111111,0b11000000,
+		0b11010110,0b00001101,0b01000000,
+		0b00101000,0b00000010,0b10000000
+	}; // w=18, h=8, stride=3
 }
 
 extern uint64_t rtc_time;
@@ -25,14 +36,14 @@ extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
 
 void tasks::TTCScreen::loop() {
-	draw_bus();
-	draw::rect(matrix.get_inactive_buffer(), 0, 8, 128, 9, 50_c, 50_c, 50_c);
-
 	// Alright, now we have to work out what to show
 	const slots::TTCInfo& info = servicer.slot<slots::TTCInfo>(s_info);
 	if (servicer.slot_dirty(s_info, true)) ready = true;
 
-	uint32_t y = 9;
+	int16_t y = 10;
+	//if (((~info.flags) & (slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::EXIST_0 | slots::TTCInfo::EXIST_1 | slots::TTCInfo::EXIST_2)) == 0) {
+	//	y = 10 - draw::distorted_ease_wave(rtc_time, 1000, 4500, 18);
+	//}
 
 	uint8_t name[17] = {0};
 
@@ -61,6 +72,51 @@ void tasks::TTCScreen::loop() {
 			}
 		}
 	}
+
+	draw::rect(matrix.get_inactive_buffer(), 0, 0, 128, 10, 0, 0, 0);
+	if (!(info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
+		draw_bus();
+	}
+	else {
+		s_alert.update();
+		draw_alertstr();
+	}
+	draw::rect(matrix.get_inactive_buffer(), 0, 9, 128, 10, 50_c, 50_c, 50_c);
+
+}
+
+void tasks::TTCScreen::draw_alertstr() {
+	if (!s_alert.data) return;
+	// Calculate alertstr size
+	
+	const slots::TTCInfo& info = servicer.slot<slots::TTCInfo>(s_info);
+
+	int16_t alertstr_size = 40 + draw::text_size(s_alert.data, font::tahoma_9::info);
+	int16_t pos = 64 - (alertstr_size / 2);
+	if (alertstr_size >= 120) {
+		pos = draw::scroll(rtc_time / 25, alertstr_size);
+	}
+
+	uint16_t r = 4095, g = 4095, b = 4095;
+	bool f = false;
+	if (info.flags & slots::TTCInfo::SUBWAY_DELAYED) {
+		f = true;
+		g = 127_c;
+		b = 0;
+	}
+	if (info.flags & slots::TTCInfo::SUBWAY_OFF) {
+		if (!f) {
+			g = 10;
+			b = 10;
+		}
+		else {
+			g -= draw::distorted_ease_wave(rtc_time, 800, 1800, 117);
+			b += draw::distorted_ease_wave(rtc_time, 800, 1800, 10);
+		}
+	}
+
+	draw::bitmap(matrix.get_inactive_buffer(), bitmap::subway, 18, 8, 3, pos, 1, 4095, 4095, 4095, true);
+	draw::bitmap(matrix.get_inactive_buffer(), bitmap::subway, 18, 8, 3, draw::text(matrix.get_inactive_buffer(), s_alert.data, font::tahoma_9::info, pos + 20, 8, r, g, b) + 2, 1, 4095, 4095, 4095);
 }
 
 void tasks::TTCScreen::draw_bus() {
@@ -82,7 +138,6 @@ void tasks::TTCScreen::draw_bus() {
 			[[fallthrough]];
 		case 1:
 			{
-
 				for (uint8_t i = 0; i < bus_type + (bus_state == 2 ? 2 : 0); ++i)
 					draw::bitmap(matrix.get_inactive_buffer(), bitmap::bus, 14, 7, 2, pos + (i * 24), 2, rng::getclr(), rng::getclr(), rng::getclr(), true);
 			}
@@ -178,7 +233,8 @@ bool tasks::TTCScreen::init() {
 		servicer.open_slot(slots::TTC_TIME_3, true, this->s_t[2]) &&
 		servicer.open_slot(slots::TTC_TIME_1B, true, this->s_tb[0]) &&
 		servicer.open_slot(slots::TTC_TIME_2B, true, this->s_tb[1]) &&
-		servicer.open_slot(slots::TTC_TIME_3B, true, this->s_tb[2]) 
+		servicer.open_slot(slots::TTC_TIME_3B, true, this->s_tb[2]) &&
+		s_alert.open(slots::TTC_ALERTSTR)
 	)) {
 		return false;
 	}
@@ -196,6 +252,7 @@ bool tasks::TTCScreen::init() {
 }
 
 bool tasks::TTCScreen::deinit() {
+	s_alert.close();
 	if (!(
 		servicer.close_slot(this->s_info) &&
 		servicer.close_slot(this->s_n[0]) &&
