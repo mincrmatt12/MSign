@@ -7,7 +7,7 @@ namespace ttc {
 	void init();
 	void loop();
 
-	void do_update(const char * stop_id, const char * dtag, uint8_t slot);
+	bool do_update(const char * stop_id, const char * dtag, uint8_t slot);
 	void do_alert_update();
 	void on_open(uint16_t data_id);
 

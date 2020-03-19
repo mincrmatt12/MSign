@@ -15,12 +15,9 @@ namespace calfix {
 	uint64_t time_since_last_update = 0;
 
 	json::JSONParser c_parser([](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
-			if (stack_ptr > 2)
-				Log.printf("sptr: %d, stack[1]: %s", stack_ptr, stack[1]->name);
 		if (stack_ptr == 3 && strncmp(stack[1]->name, "sched", 5) == 0 && stack[1]->name[5] == '0' + current_schedule) {
 			int period = stack[1]->index;
 			auto &prdh = (period < 2) ? prdh1 : prdh2;
-			Log.printf("sched %d, %d; value = %d\n", period, (int)stack[2]->index, (int)v.int_val);
 			if (stack[2]->index == 0)
 				((period % 2 == 0) ? prdh.ps1 : prdh.ps2) = v.int_val  * 60 * 60 * 1000;
 			else if (stack[2]->index == 1)
@@ -30,11 +27,9 @@ namespace calfix {
 			int period = stack[1]->index;
 			auto& pinf = (period > 0) ? ((period > 1) ? ((period == 2) ? p3 : p4) : p2) : p1;
 			if (strcmp(stack[2]->name, "name") == 0) {
-				Log.printf("perd %d; name = %s\n", period, v.str_val);
 				strcpy((char *)pinf.name, v.str_val);
 			}
 			else if (strcmp(stack[2]->name, "loc") == 0) {
-				Log.printf("perd %d; room = %s\n", period, v.str_val);
 				int out_room;
 				sscanf(v.str_val, "%d", &out_room);
 				pinf.room = out_room;

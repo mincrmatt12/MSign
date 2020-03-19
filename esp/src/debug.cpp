@@ -91,7 +91,7 @@ namespace debug {
 
 		// commands
 		add_command("fheap", [](const char *args, char *&begin, const char *){
-			begin += sprintf(begin, "free heap: %d\n", ESP.getFreeHeap());
+			begin += sprintf_P(begin, PSTR("free heap: %d\n"), ESP.getFreeHeap());
 		}, 32);
 		add_command("shutup", [](const char *args, char *&begin, const char *){
 			if (args[1] == 'e') Log.quiet_mode = true;

@@ -10,6 +10,7 @@
 #include "string.h"
 #include "util.h"
 #include "vstr.h"
+#include <time.h>
 
 slots::TTCInfo ttc::info;
 slots::TTCTime ttc::times[6];
@@ -36,6 +37,7 @@ void ttc::init() {
 void ttc::loop() {
 	if ((now() - time_since_last_update > 15 || time_since_last_update == 0) && wifi::available()) {
 		// update the ttc times
+		auto oldflags = ttc::info.flags;
 		ttc::info.flags &= (slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::SUBWAY_OFF | slots::TTCInfo::SUBWAY_DELAYED);
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
@@ -45,14 +47,16 @@ void ttc::loop() {
 				serial::interface.update_data(slots::TTC_NAME_1 + slot, (const uint8_t *)name, strlen(name));
 				ttc::info.nameLen[slot] = strlen(name);
 
-				do_update(stopid, dtag, slot);
+				if (!do_update(stopid, dtag, slot)) {
+					if (oldflags & (slots::TTCInfo::EXIST_0 << slot)) ttc::info.flags |= slots::TTCInfo::EXIST_0 << slot;
+				}
 			}
 		}
 
 		serial::interface.update_data(slots::TTC_INFO, (const uint8_t *)&info, sizeof(info));
 		time_since_last_update = now();
 	}
-	if ((now() - time_since_last_alert > 60 || time_since_last_alert == 0) && wifi::available()) {
+	if ((now() - time_since_last_alert > (ttc::info.flags & slots::TTCInfo::SUBWAY_ALERT ? 60 : 250) || time_since_last_alert == 0) && wifi::available()) {
 		// update the alerts
 		do_alert_update();
 		time_since_last_alert = now();
@@ -60,7 +64,7 @@ void ttc::loop() {
 }
 
 void ttc::on_open(uint16_t data_id) {
-	Log.println("onopen: ");
+	Log.println(F("onopen: "));
 	Log.println(data_id);
 	switch (data_id) {
 		case slots::TTC_INFO:
@@ -88,7 +92,7 @@ void ttc::on_open(uint16_t data_id) {
 	}
 }
 
-void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
+bool ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	char url[80];
 	snprintf_P(url, 80, PSTR("/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s"), stop);
 
@@ -98,7 +102,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 
 	if (status_code < 200 || status_code > 299) {
 		util::stop_download();
-		return;
+		return false;
 	}
 
 	// message is here now read it
@@ -120,15 +124,15 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 		json::PathNode &top = *stack[stack_ptr-1];
 		json::PathNode &parent = *stack[stack_ptr-2];
 
-		if ((parent.is_array() || parent.is_obj()) && strcmp(parent.name, "prediction") == 0) {
+		if ((parent.is_array() || parent.is_obj()) && strcmp_P(parent.name, PSTR("prediction")) == 0) {
 			// use the first two only
 
 			state.e1 = stack[1]->index;
 			state.e2 = parent.index;
 			
-			if (strcmp(top.name, "affectedByLayover") == 0) {
+			if (strcmp_P(top.name, PSTR("affectedByLayover")) == 0) {
 				// is it's value true?
-				if (v.type == json::Value::STR && strcmp(v.str_val, "true") == 0) {
+				if (v.type == json::Value::STR && strcmp_P(v.str_val, PSTR("true")) == 0) {
 					// mark as delayed
 					state.layover = true;
 				}
@@ -136,7 +140,7 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					state.layover = false;
 				}
 			}
-			if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
+			if (strcmp_P(top.name, PSTR("dirTag")) == 0 && v.type == json::Value::STR)
 			{
 				strcpy(dirtag, dtag);
 				char *test_str = strtok(dirtag, ",");
@@ -152,11 +156,11 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 					}
 				}
 			}
-			if (strcmp(top.name, "epochTime") == 0 && v.type == json::Value::STR) {
+			if (strcmp_P(top.name, PSTR("epochTime")) == 0 && v.type == json::Value::STR) {
 				state.epoch = signtime::millis_to_local(atoll(v.str_val));
 			}
 		}
-		else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
+		else if (top.is_array() && strcmp_P(top.name, PSTR("prediction")) == 0 && v.type == json::Value::OBJ) {
 			if (state.tag && state.e2 < 4) {
 				ttc::info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 				if (state.epoch < ttc::times[slot].tA || ttc::times[slot].tA == 0) {
@@ -204,11 +208,15 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 	memset(&ttc::times[slot], 0, sizeof(ttc::times[0]));
 	memset(&ttc::times[slot+3], 0, sizeof(ttc::times[0]));
 
+	bool ok = true;
+
 	if (!parser.parse(std::move(cb))) {
 		Log.println(F("JSON fucked up."));
 
 		ttc::times[slot] = bkp1;
 		ttc::times[slot + 3] = bkp2;
+
+		ok = false;
 	} // parse while calling our function.
 
 	on_open(slots::TTC_TIME_1 + slot);
@@ -216,6 +224,8 @@ void ttc::do_update(const char * stop, const char * dtag, uint8_t slot) {
 
 	util::stop_download();
 	free(dirtag);
+
+	return ok;
 }
 
 void ttc::do_alert_update() {
@@ -226,18 +236,22 @@ void ttc::do_alert_update() {
 	
 	char *saved_texts[6] = {0};
 	int saved_index = 0;
-	char url[160] = {0};
+	char *url = nullptr;
 
 	ttc::info.flags &= ~(slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::SUBWAY_OFF | slots::TTCInfo::SUBWAY_DELAYED);
 
 	// Do the twitter thingie
 	
 	if (config::manager.get_value(config::Entry::ALERT_SEARCH) != nullptr) {
-		char query[50] = {0};
 		char query_unencoded[40] = {0};
-		snprintf_P(query_unencoded, 40, PSTR("from:TTCnotices \"%s\""), config::manager.get_value(config::Entry::ALERT_SEARCH));
-		oauth1::percent_encode(query_unencoded, query);
-		snprintf_P(url, 160, PSTR("/1.1/search/tweets.json?result_type=recent&count=10&q=%s"), query);
+		{
+			char query[50] = {0};
+			snprintf_P(query_unencoded, 40, PSTR("from:TTCnotices \"%s\""), config::manager.get_value(config::Entry::ALERT_SEARCH));
+			oauth1::percent_encode(query_unencoded, query);
+			size_t l = snprintf_P(nullptr, 0, PSTR("/1.1/search/tweets.json?result_type=recent&count=10&q=%s"), query);
+			url = (char*)malloc(l + 1);
+			snprintf_P(url, l + 1, PSTR("/1.1/search/tweets.json?result_type=recent&count=10&q=%s"), query);
+		}
 
 		const char *params[][2] = {
 			{"count", "10"},
@@ -256,8 +270,10 @@ void ttc::do_alert_update() {
 			{nullptr, nullptr}
 		};
 
+		Log.println(F("sending req."));
 		auto cb = util::download_with_callback("_api.twitter.com", url, headers, sco);
 		free(authorization); // The headers are already sent at this point.
+		free(url);
 
 		if (sco != 200) {
 			Log.println(F("asdf12failpoopoo"));
@@ -269,6 +285,7 @@ void ttc::do_alert_update() {
 		int sindex = 0;
 		
 		int64_t current = 0;
+		bool tooold = false;
 		auto parser = json::JSONParser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 			if (stack_ptr < 2) return;
 			// Check if we are in the zone
@@ -277,16 +294,33 @@ void ttc::do_alert_update() {
 			json::PathNode &parent = *stack[stack_ptr - 2];
 			json::PathNode &top = *stack[stack_ptr - 1];
 
-			if (strcmp(overall.name, "statuses") || !overall.is_array()) return;
+			if (strcmp_P(overall.name, PSTR("statuses")) || !overall.is_array()) return;
 
 			// We are in a result.
-			if (strcmp(top.name, "id") == 0 && stack_ptr == 3 && v.type == json::Value::INT) {
+			if (strcmp_P(top.name, PSTR("id")) == 0 && stack_ptr == 3 && v.type == json::Value::INT) {
 				// Get ID
 				current = v.int_val;
+				if (tooold) {
+					superseded[sindex++] = current;
+					tooold = false;
+				}
 				return;
 			}
+			
+			// Is this message too old? RN set to 2 day cutoff
+			if (strcmp_P(top.name, PSTR("created_at")) == 0 && stack_ptr == 3 && v.type == json::Value::STR) {
+				// Get time
 
-			if (strcmp(top.name, "text") == 0 && stack_ptr == 3 && v.type == json::Value::STR) {
+				struct tm asdf;
+				strptime(v.str_val, "%a %b %d %H:%M:%S +0000 %Y", &asdf);
+				if (now() - mktime(&asdf) > 2*86400) {
+					Serial1.println(F("tooold"));
+					// Too old
+					tooold = true;
+				}
+			}
+
+			if (strcmp_P(top.name, PSTR("text")) == 0 && stack_ptr == 3 && v.type == json::Value::STR) {
 				for (int i = 0; i < sindex; ++i) {
 					if (superseded[i] == current) return;
 				}
@@ -295,6 +329,7 @@ void ttc::do_alert_update() {
 				Log.println(v.str_val);
 
 				if (strstr_P(v.str_val, PSTR("elevator")) || strstr_P(v.str_val, PSTR("Elevator"))) return;
+				if (strstr_P(v.str_val, PSTR("Regular service has"))) return;
 				
 				const char *begin = v.str_val; int size = 0;
 				while (*begin != ':') {
@@ -318,14 +353,6 @@ void ttc::do_alert_update() {
 				Log.println(F("Got actual:"));
 				Log.println(real);
 				
-				// Is this a regular service
-
-				if (strstr_P(real, PSTR("Regular service has "))) {
-					// Yes, so we don't care that much
-					free(real);
-					return;
-				}
-
 				if (strstr_P(real, PSTR("Delays of"))) {
 					info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
 				}
@@ -341,8 +368,8 @@ void ttc::do_alert_update() {
 			}
 
 			// Are we superseded something?
-			if ((strcmp(top.name, "in_reply_to_status_id") == 0 && stack_ptr == 3 && v.type == json::Value::INT) ||
-				(strcmp(top.name, "id") == 0 && stack_ptr == 4 && strcmp(parent.name, "quoted_status") == 0 && v.type == json::Value::INT)) {
+			if ((strcmp_P(top.name, PSTR("in_reply_to_status_id")) == 0 && stack_ptr == 3 && v.type == json::Value::INT) ||
+				(strcmp_P(top.name, PSTR("id")) == 0 && stack_ptr == 4 && strcmp_P(parent.name, PSTR("quoted_status")) == 0 && v.type == json::Value::INT)) {
 				Log.print(F("superseding:"));
 				Log.println((int)v.int_val);
 				superseded[sindex++] = v.int_val;
@@ -352,6 +379,8 @@ void ttc::do_alert_update() {
 		if (!parser.parse(std::move(cb))) {
 			Log.println(F("oh no"));
 		}
+
+		util::stop_download();
 	}
 
 	// Generate an alert string.
@@ -368,10 +397,10 @@ void ttc::do_alert_update() {
 
 	for (int i = 0; i < saved_index; ++i) {
 		if (i == saved_index - 1) {
-			ptr += sprintf_P(ptr, "%s", saved_texts[i]);
+			ptr += sprintf_P(ptr, PSTR("%s"), saved_texts[i]);
 		}
 		else {
-			ptr += sprintf_P(ptr, "%s / ", saved_texts[i]);
+			ptr += sprintf_P(ptr, PSTR("%s / "), saved_texts[i]);
 		}
 
 		free(saved_texts[i]);
@@ -380,7 +409,7 @@ void ttc::do_alert_update() {
 	Log.println(F("Alert str:"));
 	Log.println(alert_buffer);
 	
-	vss_alerts.set((uint8_t *)alert_buffer, strlen(alert_buffer));
+	vss_alerts.set((uint8_t *)alert_buffer, std::min((size_t)255, strlen(alert_buffer)));
 
 	on_open(slots::TTC_INFO);
 }

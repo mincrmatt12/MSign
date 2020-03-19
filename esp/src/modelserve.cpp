@@ -62,8 +62,11 @@ namespace modelserve {
 		char * token = strtok(temp, ",");
 		int j = i;
 		for (;i > 0;--i) token = strtok(nullptr, ",");
-		Log.printf("v: %s, i: %d, t: %s\n", v, j, token);
-		if (token == nullptr) return std::numeric_limits<float>::quiet_NaN();
+		Log.printf_P(PSTR("v: %s, i: %d, t: %s\n"), v, j, token);
+		if (token == nullptr) {
+			free(temp);
+			return std::numeric_limits<float>::quiet_NaN();
+		}
 		float r = atof(token);
 		Log.println(r);
 		free(temp);
@@ -71,7 +74,7 @@ namespace modelserve {
 	}
 
 	void send_model_parameters(config::Entry e) {
-		Log.printf("smp: %02x, idx = %d\n", e, modelidx);
+		Log.printf_P(PSTR("smp: %02x, idx = %d\n"), e, modelidx);
 		if (modelidx == 2) return;
 		slots::Vec3 v;
 		const char * c;
@@ -240,7 +243,7 @@ namespace modelserve {
 		}
 		else if ((now() - last_switch_time) < 90) return;
 		last_switch_time = now();
-		Log.println("here2");
+		Log.println(F("here2"));
 
 		int last_idx = modelidx;
 
@@ -252,7 +255,7 @@ namespace modelserve {
 
 		if (modelidx == last_idx) return;
 
-		Log.println("here3");
+		Log.println(F("here3"));
 		init_load_model(modelidx);
 	}
 }
