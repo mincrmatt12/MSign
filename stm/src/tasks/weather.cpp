@@ -248,7 +248,7 @@ void tasks::WeatherScreen::draw_currentstats() {
 	}
 
 	snprintf(disp_buf, 16, "\xfe %.0f", servicer.slot<slots::WeatherInfo>(s_info).ltemp);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 17, 30, 127_c, 127_c, 127_c);
+	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 19, 30, 127_c, 127_c, 127_c);
 
 	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(s_info).htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
