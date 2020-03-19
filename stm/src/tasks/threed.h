@@ -181,8 +181,8 @@ namespace threed {
 			for (int16_t x = x0; x <= x1; ++x) {
 				float d = d1 + (d2 - d1) * (float(x - x0) / float(x1 - x0));
 
-				if (fb.on_screen(x, y) && d * 210 < z_buf_at(fb, x, y)) {
-					set_color_and_z(fb, x, y, r, g, b, d * 210);
+				if (fb.on_screen(x, y) && d * 410 < z_buf_at(fb, x, y)) {
+					set_color_and_z(fb, x, y, r, g, b, d * 410);
 				}
 				if (D > 0) {
 					y += yi;
@@ -206,8 +206,8 @@ namespace threed {
 
 			for (int16_t y = y0; y <= y1; ++y) {
 				float d = d1 + (d2 - d1) * (float(y - y0) / float(y1 - y0));
-				if (fb.on_screen(x, y) && d * 210 < z_buf_at(fb, x, y)) {
-					set_color_and_z(fb, x, y, r, g, b, d * 210);
+				if (fb.on_screen(x, y) && d * 410 < z_buf_at(fb, x, y)) {
+					set_color_and_z(fb, x, y, r, g, b, d * 410);
 				}
 				if (D > 0) {
 					x += xi;
