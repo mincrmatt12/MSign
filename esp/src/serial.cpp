@@ -13,7 +13,7 @@ uint16_t serial::search_for(uint16_t val, uint16_t array[256]) {
 		if (array[256-offset-1] == val) return 256-offset-1;
 	}
 
-	Log.printf("Failed search %d\n", val);
+	Log.printf_P(PSTR("Failed search %d\n"), val);
 
 	return ~0;
 }
@@ -282,7 +282,7 @@ void serial::SerialInterface::update_data(uint16_t data_id, const uint8_t * buff
 void serial::SerialInterface::update_open_handlers(uint8_t slot_id) {
 	uint16_t data_id = this->slots_continuous[slot_id];
 	for (uint8_t i = 0; i < number_of_o_handlers; ++i) {
-		Log.printf("calling open handler at %p, \n", o_handlers[i]);
+		Log.printf_P(PSTR("calling open handler at %p, \n"), o_handlers[i]);
 		o_handlers[i](data_id);
 	}
 }

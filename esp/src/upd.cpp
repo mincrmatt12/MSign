@@ -91,7 +91,7 @@ failure:
 	File arF = sd.open("/upd/webui.ar");
 	uint8_t magic[8];
 	if (arF.read(magic, sizeof(magic)) != sizeof(magic) ||
-			memcmp(magic, "!<arch>\n", sizeof(magic)) ) {
+			memcmp_P(magic, PSTR("!<arch>\n"), sizeof(magic)) ) {
 		arF.close();
 invalidformat:
 		Serial1.println(F("what kind of shit are you trying to pull here? give me a .ar file..."));
@@ -110,8 +110,8 @@ invalidformat:
 
 		int iH, iC, iJ;
 		// check the filename
-		if ((iH = memcmp("page.html", fileHeader, 9))
-			&& (iC = memcmp("page.css/", fileHeader, 9)) && (iJ = memcmp("page.js/ ", fileHeader, 9))) {
+		if ((iH = memcmp_P(PSTR("page.html"), fileHeader, 9))
+			&& (iC = memcmp_P("page.css/", fileHeader, 9)) && (iJ = memcmp_P(PSTR("page.js/ "), fileHeader, 9))) {
 			Serial1.println(F("unknown entry"));
 			goto failure;
 		}
