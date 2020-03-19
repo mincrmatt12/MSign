@@ -68,10 +68,7 @@ bool json::JSONParser::parse_value() {
 bool json::JSONParser::parse_number() {
 	bool negative = false;
 	int fractional_offset = 0;
-	union {
-		int64_t integer = 0;
-		uint64_t integer_pos;
-	};
+	int64_t integer = 0;
 	float whole = 0.0;
 	bool isint = true;
 
@@ -89,14 +86,8 @@ bool json::JSONParser::parse_number() {
 		if (peek() > '9' || peek() < '1') return false;
 		while (peek() != 0) {
 			if (peek() >= '0' && peek() <= '9') {
-				if (!negative) {
-					integer *= 10;
-					integer += peek() - '0';
-				}
-				else {
-					integer_pos *= 10;
-					integer_pos += peek() - '0';
-				}
+				integer *= 10;
+				integer += peek() - '0';
 			}
 			else {
 				goto ok;
