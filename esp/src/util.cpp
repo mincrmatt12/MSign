@@ -66,7 +66,7 @@ struct HttpsAdapter {
 
 	// initializing 
 	void init() {
-		Log.println("Initing ssl certs from SD card...");
+		Log.println(F("Initing ssl certs from SD card..."));
 
 		sd.chdir("/ca");
 
@@ -81,13 +81,13 @@ struct HttpsAdapter {
 		int c;
 
 		if (!(c = cs.initCertStore(&b_idx, &b_ar))) {
-			Log.print("Didn't get any certs from the SD card (c=");
+			Log.print(F("Didn't get any certs from the SD card (c="));
 			Log.println(c);
 			return;
 		}
 
 		inited = true;
-		Log.printf("loaded %d certs\n", c);
+		Log.printf_P(PSTR("loaded %d certs\n"), c);
 	}
 
 	bool connect(Client& c, const char * host) {
@@ -115,19 +115,25 @@ struct Downloader {
 
 	// send a request
 	bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const char * body=nullptr) {
+		Log.printf_P(PSTR("%p %p %p %p\n"), host, path, method, headers);
+		Log.println(ESP.getMaxFreeBlockSize());
 		if (cl.connected()) cl.stop();
 		response_size = -1;
 		response_code = 0;
 		i = 0;
-		// connect to the server
-		if (!ad.connect(cl, host)) return false;
+		Log.println(F("connecting"));
 		Log.printf_P(F("dwndl,req: %s %s\n"), host, path);
+		// connect to the server
+		if (!ad.connect(cl, host)) {
+			Log.println(F("connect fail"));
+			return false;
+		}
 
 		// send the request
 		cl.write(method);
 		cl.print(' ');
 		cl.write(path);
-		cl.write(" HTTP/1.1\r\n");
+		cl.print(F(" HTTP/1.1\r\n"));
 
 		// send the host header
 		write_header("Host", host);
@@ -139,17 +145,17 @@ struct Downloader {
 			char buf[20];
 			ultoa(size, buf, 10);
 			write_header("Content-Length", buf);
-			Log.printf("dwnld: bodys %d\n", (int)size);
+			Log.printf_P(PSTR("dwnld: bodys %d\n"), (int)size);
 		}
 
 		// send the headers
 		for (int i = 0;;++i) {
 			if (headers[i][0] == nullptr || headers[i][1] == nullptr) break;
 			write_header(headers[i][0], headers[i][1]);
-			Log.printf("dwnld: %s, %s --> %s\n", path, headers[i][0], headers[i][1]);
+			Log.printf_P(PSTR("dwnld: %s, %s --> %s\n"), path, headers[i][0], headers[i][1]);
 		}
 
-		Log.printf("dwnld: %s %s\n", method, path);
+		Log.printf_P(PSTR("dwnld: %s %s\n"), method, path);
 
 		// send blank line
 		cl.write("\r\n");

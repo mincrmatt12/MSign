@@ -44,7 +44,7 @@ namespace util {
 	private:
 		void _put(uint8_t c);
 
-		uint8_t buffer[512];
+		uint8_t buffer[256];
 		int ptr = 0;
 	};
 	
