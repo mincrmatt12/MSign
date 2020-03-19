@@ -171,19 +171,20 @@ char * oauth1::generate_authorization(const char * const params[][2], const char
 	Log.println(F("Signature:"));
 	Log.println(encoded_signature);
 
-	char * out = (char *)malloc(400);
-	memset(out, 0, 400);
-
 	char encoded_consumer_key[percent_encoded_length(consumer_key)]; percent_encode(consumer_key, encoded_consumer_key);
 	char encoded_api_token[percent_encoded_length(api_token)]; percent_encode(api_token, encoded_api_token);
 
-	snprintf_P(out, 400, PSTR("OAuth oauth_consumer_key=\"%s\", oauth_nonce=\"%s\", oauth_signature=\"%s\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"%s\", oauth_token=\"%s\", oauth_version=\"1.0\""), 
+	size_t length = snprintf_P(nullptr, 0, PSTR("OAuth oauth_consumer_key=\"%s\", oauth_nonce=\"%s\", oauth_signature=\"%s\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"%s\", oauth_token=\"%s\", oauth_version=\"1.0\""), 
+			encoded_consumer_key, nonce, encoded_signature, timestamp, encoded_api_token);
+
+	char * out = (char *)malloc(length + 1);
+	memset(out, 0, length + 1);
+	snprintf_P(out, length + 1, PSTR("OAuth oauth_consumer_key=\"%s\", oauth_nonce=\"%s\", oauth_signature=\"%s\", oauth_signature_method=\"HMAC-SHA1\", oauth_timestamp=\"%s\", oauth_token=\"%s\", oauth_version=\"1.0\""), 
 			encoded_consumer_key, nonce, encoded_signature, timestamp, encoded_api_token);
 
 	Log.println(F("Authorizing with:"));
-	Log.println(out);
 
 	free(secure_params);
-
+	Log.println(out);
 	return out;
 }
