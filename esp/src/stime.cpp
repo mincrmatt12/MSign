@@ -1,4 +1,4 @@
-#include "time.h"
+#include "stime.h"
 #include "serial.h"
 #include "config.h"
 #include "common/slots.h"

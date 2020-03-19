@@ -2,7 +2,7 @@
 #include "serial.h"
 #include "config.h"
 #include <string.h>
-#include "time.h"
+#include "stime.h"
 #include <Arduino.h>
 #include <TimeLib.h>
 #include "util.h"

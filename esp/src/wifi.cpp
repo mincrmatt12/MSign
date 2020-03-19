@@ -1,7 +1,7 @@
 #include "wifi.h"
 
 #include "util.h"
-#include "time.h"
+#include "stime.h"
 #include "common/slots.h"
 #include "config.h"
 #include "serial.h"

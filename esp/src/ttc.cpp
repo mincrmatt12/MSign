@@ -2,7 +2,7 @@
 #include "json.h"
 #include "oauth1.h"
 #include "serial.h"
-#include "time.h"
+#include "stime.h"
 #include "TimeLib.h"
 #include "wifi.h"
 #include <inttypes.h>

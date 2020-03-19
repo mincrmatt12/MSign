@@ -4,7 +4,7 @@
 #include "serial.h"
 #include "config.h"
 #include "wifi.h"
-#include "time.h"
+#include "stime.h"
 #include "ttc.h"
 #include "weather.h"
 #include "sccfg.h"
