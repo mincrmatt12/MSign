@@ -336,7 +336,7 @@ namespace led {
 				show = false;
 				// Thing
 				GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-				const static uint16_t draw_ticks_table[] = {3,7,13,27,53,107,213,426,852,1705,3410,6820};
+				const static uint16_t draw_ticks_table[] = {3,6,12,24,48,96,192,384,768,1536,3072,6144};
 				uint16_t drawn_pos = draw_ticks_table[pos];
 				++row;
 				if (row < FB::stb_lines) {
