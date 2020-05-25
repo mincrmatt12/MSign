@@ -30,6 +30,7 @@ The layout is as follows:
 | `0x00` | Bootloader command, either 0 for run application or 1 for update. |
 | `0x01` | Update status flag, 0 if booting normally, anything else indicates booting from an update |
 | `0x02` | Update size, i.e. number of bytes to copy from `0x0808 0000` to `0x0800 4000` for an update |
+| `0x03` | Bootloader revision (if null, assume original bootloader) stored as 4byte string (e.g. "2a\x00\x00" or "beta") |
 
 The application should clear the update status flag, as if either
 
