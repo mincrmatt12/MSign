@@ -328,6 +328,11 @@ void ttc::do_alert_update() {
 				Log.println(F("Got tweet:"));
 				Log.println(v.str_val);
 
+				if (strstr(v.str_val, config::manager.get_value(config::Entry::ALERT_SEARCH)) != v.str_val) {
+					Log.println(F("OOB search"));
+					return;
+				}
+
 				if (strstr_P(v.str_val, PSTR("elevator")) || strstr_P(v.str_val, PSTR("Elevator"))) return;
 				if (strstr_P(v.str_val, PSTR("Regular service has"))) return;
 				
