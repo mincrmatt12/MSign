@@ -34,16 +34,17 @@ namespace serial {
 			if (data_size - echo_index > 14) {
 				memcpy(vsw.data, (data + vsw.index), 14);
 				echo_index += 14;
+				length = 16;
 			}
 			else {
 				memcpy(vsw.data, (data + vsw.index), (data_size - echo_index));
+				length = 2 + (data_size - echo_index);
 				echo_index = 0;
 			}
 
 			Log.printf("vstr: %d %d\n", vsw.index, vsw.size);
 
 			memcpy(buffer, &vsw, 16);
-			length = 16;
 		}
 	};
 }
