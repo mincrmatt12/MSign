@@ -29,7 +29,7 @@ namespace slots {
 		TTC_TIME_1B = 0x27,			// STRUCT; TTCTime - time of next two buses after previous (3 and 4)
 		TTC_TIME_2B = 0x28,			// ''
 		TTC_TIME_3B = 0x29,			// ''
-		TTC_ALERTSTR = 0x2a,        // STRUCT; VSTR - current alert messages
+		TTC_ALERTSTR = 0x2a,        // STRUCT; VStr - current alert messages
 
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
