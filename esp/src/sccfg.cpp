@@ -15,9 +15,9 @@ namespace sccfg {
 	uint16_t parsed_enabled_mask = (1 << number_of_screens) - 1;
 
 	struct Event {
+		uint32_t timeat;
 		uint8_t pos;
 		bool enable;
-		uint32_t timeat;
 		bool done_today;
 	} parsed_events[number_of_screens * 2 + 1];
 
@@ -69,8 +69,8 @@ namespace sccfg {
 				parsed_enabled_mask &= ~(1 << pos);
 
 				sscanf(val, "%d,%d", &tA, &tB);
-				append_event({pos, true, static_cast<uint32_t>(tA), false});
-				append_event({pos, false, static_cast<uint32_t>(tB), false});
+				append_event({static_cast<uint32_t>(tA), pos, true, false});
+				append_event({static_cast<uint32_t>(tB), pos, false, false});
 			}
 		}
 	}
