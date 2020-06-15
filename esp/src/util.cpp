@@ -113,6 +113,9 @@ struct Downloader {
 	int32_t  response_size;
 	int32_t i = 0;
 
+	const int32_t RESPONSE_UNKNOWN_SIZE = -1;
+	const int32_t RESPONSE_CHUNKED = -2;
+
 	// send a request
 	bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const char * body=nullptr) {
 		Log.printf_P(PSTR("%p %p %p %p\n"), host, path, method, headers);
