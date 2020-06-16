@@ -1,0 +1,214 @@
+// Main HTTP server parser definition
+
+
+out str[40] url;
+out str[16] etag;
+out bool is_conditional = false;
+out bool is_gzipable = false;
+out bool is_chunked = false;
+out enum{JSON,PLAIN,MULTIPART_FILE,OTHER} content_type;
+out enum{GET,POST,PUT,DELETE} method;
+out enum{OK,BAD_METHOD,URL_TOO_LONG,AUTH_TOO_LONG,UNSUPPORTED_VERSION,BAD_REQUEST,UNSUPPORTED_ENCODING} error_code;
+out enum{NO_AUTH,INVALID_TYPE,OK} auth_type;
+out str[52] auth_string;
+out str[71] multipart_boundary;
+out int content_length = 0;
+
+macro ows {
+	optional { " "; }
+}
+
+macro waitend {
+	wait "\r\n\r\n";
+}
+
+parser {
+	auth_type = NO_AUTH;
+	try {
+		// Get the request method
+		case {
+			"GET" -> {method = GET;}
+			"POST" -> {method = POST;}
+			"PUT" -> {method = PUT;}
+			"DELETE" -> {method = DELETE;}
+			else -> {
+				waitend();
+				error_code = BAD_METHOD;
+				finish;
+			}
+		}
+
+		// Match the space and first slash of the URL
+
+		" /";
+
+		// Grab the url
+
+		try {
+			url += /[a-zA-Z0-9_-.?&\/#]*/;
+		}
+		catch (outofspace) {
+			waitend();
+			error_code = URL_TOO_LONG;
+			finish;
+		}
+
+		// Match the following space and HTTP version
+
+		" HTTP/";
+
+		case {
+			"1.1","1.0" -> {}
+			else -> {
+				waitend();
+				error_code = UNSUPPORTED_VERSION;
+				finish;
+			}
+		}
+
+		"\r\n"; // Begin headers
+
+		loop {
+			// Header match loop:
+			// At the beginning, we have just finished a line, so an empty line at this point is the end of the request
+			case {
+				"\r\n" -> {break;}
+
+				// We match the Accept-Encoding parameter to check for gzip
+				"Accept-Encoding:"i -> {
+					ows(); // per the standard
+					loop gzip_matcher {
+						case {
+							"gzip" -> {is_gzipable = true;}
+							"\r\n" -> {break gzip_matcher;}
+							else -> {} // ignore invalid things
+						}
+					}
+				}
+
+				// We match the Transfer-Encoding parameter only to check for chunked or unsupported
+				"Transfer-Encoding:"i -> {
+					ows();
+					case {
+						"identity" -> {is_chunked = false;}
+						"chunked" -> {is_chunked = true;}
+						else -> {
+							wait "\r\n\r\n";
+							error_code = UNSUPPORTED_ENCODING;
+							finish;
+						}
+					}
+					"\r\n";
+				}
+
+				"Content-Length:"i -> {
+					ows();
+					content_length = 0;
+					// Read in a nice hearty integer
+					loop number_parser {
+						case {
+							"\r\n" -> {break number_parser;}
+							/\d/ -> {
+								content_length = [content_length * 10 + ($last - 48)]; // '0' = 48
+							}
+						}
+					}
+				}
+
+				"If-None-Match:"i -> {
+					ows();
+					etag = "";
+
+					// Match an etag
+					try {
+						/([wW]\/)?"/;
+						etag += /([^"])*/;
+						/"/;
+						is_conditional = true;
+
+						optional {
+							/(,\ ?([wW]\/)?"[^"]*")+/; // match extra etags, we only want the first one.
+						}
+
+						"\r\n";
+					}
+					catch (outofspace) {
+						wait "\r\n";
+					}
+				}
+
+				"Content-Type:"i -> {
+					ows();
+
+					case {
+						"text/plain" -> {content_type = PLAIN;}
+						/(text)|(application)\/json/ -> {content_type = JSON;}
+						"multipart/form-data;" -> {
+							content_type = MULTIPART_FILE;
+							multipart_boundary = "";
+							ows();
+							optional {
+								/charset=[^\ \r\n;]+;\ ?/;
+							}
+							"boundary=";
+							try {
+								case {
+									/"/ -> {
+										multipart_boundary += /[^"]+/;
+										/"/;
+									}
+									else -> {
+										multipart_boundary += [$last];
+										multipart_boundary += /[a-zA-Z0-9\-_]*/;
+									}
+								}
+							}
+							catch (outofspace) {
+								waitend();
+								error_code = BAD_REQUEST;
+								finish;
+							}
+						}
+						else -> {
+							content_type=OTHER;
+						}
+					}
+					wait "\r\n";
+				}
+
+				"Authorization:"i -> {
+					ows();
+					auth_string = "";
+					try {
+						"Basic "i;
+						try {
+							auth_string += /[a-zA-Z0-9+\/=]+/;
+						}
+						catch (outofspace) {
+							waitend();
+							error_code = AUTH_TOO_LONG;
+							finish;
+						}
+						"\r\n";
+						auth_type = OK;
+					}
+					catch {
+						auth_type = INVALID_TYPE;
+						wait "\r\n";
+					}
+				}
+
+				// Other unrecognized header:
+				else -> {wait "\r\n";}
+			}
+		}
+
+		error_code = OK;
+		finish;
+	}
+	catch (nomatch) {
+		waitend();
+		error_code = BAD_REQUEST;
+		finish;
+	}
+}
