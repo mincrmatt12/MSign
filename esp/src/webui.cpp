@@ -18,6 +18,11 @@ extern SdFatSoftSpi<D6, D2, D5> sd;
 #define DEFAULT_USERNAME "admin"
 #define DEFAULT_PASSWORD "admin"
 
+// sim stuff
+#ifndef strcasecmp_P
+#define strcasecmp_P strcasecmp
+#endif
+
 namespace webui {
 
 	// webserver
@@ -60,11 +65,11 @@ namespace webui {
 		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
 			auto etag_num = secureRandom(ESP.getCycleCount() + ESP.getChipId());
-			snprintf(etag_buffer, 16, PSTR("\"E%9ldjs\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
 			etags[0] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("\"E%9ldcs\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
 			etags[1] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("\"E%9ldht\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
 			etags[2] = strdup(etag_buffer);
 
 			File fl = sd.open("/web/etag.txt", O_CREAT | O_TRUNC | O_WRITE);
@@ -77,11 +82,11 @@ namespace webui {
 			auto etag_num = fl.parseInt();
 			fl.close();
 
-			snprintf_P(etag_buffer, 16, PSTR("\"E%9ldjs\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
 			etags[0] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("\"E%9ldcs\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
 			etags[1] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("\"E%9ldht\""), etag_num);
+			snprintf(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
 			etags[2] = strdup(etag_buffer);
 		}
 
@@ -94,13 +99,61 @@ namespace webui {
 		int length = strlen_P(pstr_msg);
 
 		activeClient.printf_P(PSTR("HTTP/1.1 %d "), code);
-		activeClient.print(F(code_msg));
+		activeClient.print(FPSTR(code_msg));
 		if (extra_hdrs) {
 			activeClient.print("\r\n");
 			activeClient.print(extra_hdrs);
 		}
 		activeClient.printf_P(PSTR("\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: %d\r\n\r\n"), length);
-		activeClient.print(F(pstr_msg));
+		activeClient.print(FPSTR(pstr_msg));
+	}
+
+	void do_api_response(const char * tgt) {
+		// Temp.
+		send_static_response(200, PSTR("OK"), PSTR("ok."));
+	}
+
+	// Send this file as a response
+	void send_cacheable_file(const char * filename_pstr) {
+		char filename[32];
+		strncpy_P(filename, filename_pstr, 32);
+		char real_filename[32];
+
+		if (reqstate->c.is_gzipable) {
+			snprintf_P(real_filename, 32, PSTR("web/%s.gz"), filename);
+			if (!sd.exists(real_filename)) {
+				Log.println(F("Missing gzipped copy, falling back to uncompressed"));
+				reqstate->c.is_gzipable = false;
+			}
+		}
+		if (!reqstate->c.is_gzipable) {
+			snprintf_P(real_filename, 32, PSTR("web/%s"), filename);
+			if (!sd.exists(real_filename)) {
+				Log.println(F("Missing key file from SD web archive... aborting"));
+				return;
+			}
+		}
+
+		File f = sd.open(real_filename, FILE_READ);
+
+		Log.println(F("File size="));
+		Log.println(f.size());
+		
+		if (reqstate->c.is_gzipable) activeClient.printf_P(PSTR("Content-Encoding: gzip\r\n"));
+		activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), f.size());
+
+		char sendbuf[512];
+
+		while (f.available()) {
+			int chunkSize = f.available();
+			Log.print(F("Sending chunk = "));
+			Log.println(chunkSize);
+			if (chunkSize > 512) chunkSize = 512;
+			f.read(sendbuf, chunkSize);
+			activeClient.write(sendbuf, 512);
+		}
+
+		f.close();
 	}
 
 	void start_real_response() {
@@ -120,8 +173,61 @@ namespace webui {
 				break;
 		}
 
-		// Temp.
-		send_static_response(200, PSTR("OK"), PSTR("ok."));
+		// Check if this is an API method
+		if (strncmp_P(reqstate->c.url, PSTR("a/"), 2) == 0) {
+			do_api_response(reqstate->c.url + 2);
+		}
+		else {
+			// Check for a favicon
+			if (strcasecmp_P(reqstate->c.url, PSTR("favicon.ico")) == 0) {
+				Log.println(F("Sending 404"));
+				// Send a 404
+				send_static_response(404, PSTR("Not Found"), PSTR("No favicon is present"));
+				return;
+			}
+
+			const char * valid_etag = nullptr;
+			const char * actual_name = nullptr;
+			const char * content_type = nullptr;
+			
+			// Check for the js files
+			if (strcasecmp_P(reqstate->c.url, PSTR("page.js")) == 0) {
+				valid_etag = etags[0];
+				actual_name = PSTR("page.js");
+				content_type = PSTR("application/javascript");
+			}
+			else if (strcasecmp_P(reqstate->c.url, PSTR("page.css")) == 0) {
+				valid_etag = etags[1];
+				actual_name = PSTR("page.css");
+				content_type = PSTR("text/css");
+			}
+			else {
+				valid_etag = etags[2];
+				actual_name = PSTR("page.html");
+				content_type = PSTR("text/html");
+			}
+
+			// Check for etag-ability
+			if (reqstate->c.is_conditional && strcmp(valid_etag, reqstate->c.etag) == 0) {
+				// Send a 304
+				activeClient.print(F("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nETag: "));
+				activeClient.print(valid_etag);
+				activeClient.print(F("\r\n\r\n"));
+			}
+			else {
+				Log.println(F("Starting response"));
+				// Start a response
+				activeClient.print(F("HTTP/1.1 200 OK\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nContent-Type: "));
+
+				// Send the content type
+				activeClient.print(FPSTR(content_type));
+				// Send the etag
+				activeClient.printf_P(PSTR("\r\nETag: \"%s\"\r\n"), valid_etag);
+
+				// Send the file contents
+				send_cacheable_file(actual_name);
+			}
+		}
 	}
 	
 	void start_response() {
