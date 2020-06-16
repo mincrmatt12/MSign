@@ -10,20 +10,20 @@ pipeline {
 			parallel {
 				stage('Build STM') {
 					steps {
-						sh 'python2 -m platformio run -d stm'
-						sh 'python2 -m platformio run -d stmboot'
+						sh 'python -m platformio run -d stm'
+						sh 'python -m platformio run -d stmboot'
 					}
 				}
 				stage('Build ESP') {
 					steps {
-						sh 'python2 -m platformio run -d esp'
+						sh 'python -m platformio run -d esp'
 					}
 				}
 			}
 		}
 		stage('Log size') {
 		  steps {
-			sh 'python2 get_sizes.py'
+			sh 'python get_sizes.py'
 			plot(csvFileName: 'plot-signcode-stmsize.csv', csvSeries: [[file: 'stm.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']], group: 'SignCode Size', title: 'STM', style: 'line')
 			plot(csvFileName: 'plot-signcode-espsize.csv', csvSeries: [[file: 'esp.csv', exclusionValues: '', displayTableFlag: false, inclusionFlag: 'OFF', url: '']], group: 'SignCode Size', title: 'ESP', style: 'line')
 		  }

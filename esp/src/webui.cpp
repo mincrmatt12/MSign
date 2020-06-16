@@ -107,14 +107,14 @@ namespace webui {
 		// First we verify the authentication
 		switch (reqstate->c.auth_type) {
 			case HTTP_SERVE_AUTH_TYPE_NO_AUTH:
-				send_static_response(403, PSTR("Not Authorized"), PSTR("No authentication was provided"), F("WWW-Authenticate: Basic realm=\"msign\""));
+				send_static_response(401, PSTR("Unauthorized"), PSTR("No authentication was provided"), F("WWW-Authenticate: Basic realm=\"msign\""));
 				return;
 			case HTTP_SERVE_AUTH_TYPE_INVALID_TYPE:
-				send_static_response(403, PSTR("Not Authorized"), PSTR("Invalid authentication type."));
+				send_static_response(401, PSTR("Unauthorized"), PSTR("Invalid authentication type."));
 				return;
 			case HTTP_SERVE_AUTH_TYPE_OK:
 				if (!_doauth(reqstate->c.auth_string)) {
-					send_static_response(403, PSTR("Not Authorized"), PSTR("Invalid authentication."));
+					send_static_response(403, PSTR("Forbidden"), PSTR("Invalid authentication."));
 					return;
 				}
 				break;
