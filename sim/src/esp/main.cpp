@@ -49,6 +49,7 @@ void setup() {
 	sccfg::init();
 	calfix::init();
 	modelserve::init();
+	webui::init();
 }
 
 bool i = false;
@@ -65,5 +66,6 @@ void loop() {
 	sccfg::loop();
 	calfix::loop();
 	modelserve::loop();
+	webui::loop();
 	delay(1);
 }
