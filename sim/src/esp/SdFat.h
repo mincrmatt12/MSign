@@ -79,7 +79,7 @@ struct SdFile : public Stream {
 		fst->write(buf, amt);
 	}
 	int available() override {
-		return (int)fst->tellg() - bytes;
+		return bytes - (int)fst->tellg();
 	}
 	int peek() override {return fst->peek();};
 	void seek(int pos) {
