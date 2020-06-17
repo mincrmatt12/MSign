@@ -79,6 +79,9 @@ failure:
 	sd.remove("page.html");
 	sd.remove("page.css");
 	sd.remove("page.js");
+	sd.remove("page.html.gz");
+	sd.remove("page.css.gz");
+	sd.remove("page.js.gz");
 
 	if (sd.exists("etag.txt")) {
 		sd.remove("etag.txt");
@@ -105,13 +108,15 @@ invalidformat:
 		if (arF.read(fileHeader, sizeof(fileHeader)) != sizeof(fileHeader)) goto failure;
 		fileHeader[58] = 0;
 
-		Serial1.write(fileHeader,  9);
+		Serial1.write(fileHeader, 12);
 		Serial1.println();
 
-		int iH, iC, iJ;
+		int iH, iC, iJ, iHc, iCc, iJc;
 		// check the filename
-		if ((iH = memcmp_P(PSTR("page.html"), fileHeader, 9))
-			&& (iC = memcmp_P("page.css/", fileHeader, 9)) && (iJ = memcmp_P(PSTR("page.js/ "), fileHeader, 9))) {
+		if ((iH = memcmp_P(PSTR("page.html/"), fileHeader, 10))
+			&& (iC = memcmp_P("page.css/", fileHeader, 9)) && (iJ = memcmp_P(PSTR("page.js/ "), fileHeader, 9)) && 
+			(iHc = memcmp_P(PSTR("page.html.gz"), fileHeader, 12))
+			&& (iCc = memcmp_P("page.css.gz/", fileHeader, 11)) && (iJc = memcmp_P(PSTR("page.js.gz/"), fileHeader, 10))) {
 			Serial1.println(F("unknown entry"));
 			goto failure;
 		}
@@ -126,10 +131,13 @@ invalidformat:
 		if (!iH) tfname = "/web/page.html";
 		else if (!iC) tfname = "/web/page.css";
 		else if (!iJ) tfname = "/web/page.js";
+		else if (!iHc) tfname = "/web/page.html.gz";
+		else if (!iCc) tfname = "/web/page.css.gz";
+		else if (!iJc) tfname = "/web/page.js.gz";
 		else goto failure;
 		File target = sd.open(tfname, FILE_WRITE);
 
-		Serial1.printf("copying to %s: ", tfname);
+		Serial1.printf_P(PSTR("copying to %s: "), tfname);
 
 		{ 
 			uint8_t buf[256];
