@@ -5,44 +5,83 @@
 
 extern SdFatSoftSpi<D6, D2, D5> sd;
 
-config::ConfigManager config::manager;
-const char * config::entry_names[] = {
-	"ssid",
-	"psk",
-	"ntpserver",
+namespace config { namespace entry_name_s {
+	const char s_ssid[] PROGMEM = "ssid";
+	const char s_psk[] PROGMEM = "psk";
+	const char s_ntpserver[] PROGMEM = "ntpserver";
 
 	// TTC PARAMETERS
-	"stopid1",
-	"stopid2",
-	"stopid3",
-	"dirtag1",
-	"dirtag2",
-	"dirtag3",
-	"shortname1",
-	"shortname2",
-	"shortname3",
+	const char s_stopid1[] PROGMEM = "stopid1";
+	const char s_stopid2[] PROGMEM = "stopid2";
+	const char s_stopid3[] PROGMEM = "stopid3";
+	const char s_dirtag1[] PROGMEM = "dirtag1";
+	const char s_dirtag2[] PROGMEM = "dirtag2";
+	const char s_dirtag3[] PROGMEM = "dirtag3";
+	const char s_shortname1[] PROGMEM = "shortname1";
+	const char s_shortname2[] PROGMEM = "shortname2";
+	const char s_shortname3[] PROGMEM = "shortname3";
 
 	// WEATHER PARAMETERS
-	"wapikey",
-	"wapilat",
-	"wapilon",
+	const char s_wapikey[] PROGMEM = "wapikey";
+	const char s_wapilat[] PROGMEM = "wapilat";
+	const char s_wapilon[] PROGMEM = "wapilon";
 
 	// CONFIG PARAMETERS
-	"configuser",
-	"configpass",
+	const char s_configuser[] PROGMEM = "configuser";
+	const char s_configpass[] PROGMEM = "configpass";
+		
+	// SCCFG PARAMETERS
+	const char s_scttc[] PROGMEM = "scttc";
+	const char s_scweather[] PROGMEM = "scweather";
+	const char s_sc3d[] PROGMEM = "sc3d";
+	const char s_sctimes[] PROGMEM = "sctimes";
+	const char s_sccalfix[] PROGMEM = "sccalfix";
+
+	const char s_modelnames[] PROGMEM = "modelnames";
+	const char s_modelfocuses[] PROGMEM = "modelfocuses";
+	const char s_modelminposes[] PROGMEM = "modelminposes";
+	const char s_modelmaxposes[] PROGMEM = "modelmaxposes";
+	const char s_modelenable[] PROGMEM = "modelenable";
+} }
+
+config::ConfigManager config::manager;
+const char * config::entry_names[] = {
+	config::entry_name_s::s_ssid,
+	config::entry_name_s::s_psk,
+	config::entry_name_s::s_ntpserver,
+
+	// TTC PARAMETERS
+	config::entry_name_s::s_stopid1,
+	config::entry_name_s::s_stopid2,
+	config::entry_name_s::s_stopid3,
+	config::entry_name_s::s_dirtag1,
+	config::entry_name_s::s_dirtag2,
+	config::entry_name_s::s_dirtag3,
+	config::entry_name_s::s_shortname1,
+	config::entry_name_s::s_shortname2,
+	config::entry_name_s::s_shortname3,
+
+	// WEATHER PARAMETERS
+	config::entry_name_s::s_wapikey,
+	config::entry_name_s::s_wapilat,
+	config::entry_name_s::s_wapilon,
+
+	// CONFIG PARAMETERS
+	config::entry_name_s::s_configuser,
+	config::entry_name_s::s_configpass,
 	
 	// SCCFG PARAMETERS
-	"scttc",
-	"scweather",
-	"sc3d",
-	"sctimes",
-	"sccalfix",
+	config::entry_name_s::s_scttc,
+	config::entry_name_s::s_scweather,
+	config::entry_name_s::s_sc3d,
+	config::entry_name_s::s_sctimes,
+	config::entry_name_s::s_sccalfix,
 
-	"modelnames",
-	"modelfocuses",
-	"modelminposes",
-	"modelmaxposes",
-	"modelenable",
+	config::entry_name_s::s_modelnames,
+	config::entry_name_s::s_modelfocuses,
+	config::entry_name_s::s_modelminposes,
+	config::entry_name_s::s_modelmaxposes,
+	config::entry_name_s::s_modelenable,
 };
 
 
@@ -106,7 +145,7 @@ void config::ConfigManager::load_from_sd() {
 
 				int e;
 				for (e = 0; e < config::ENTRY_COUNT; ++e) {
-					if (strcmp(config::entry_names[e], entry_name) == 0) {
+					if (strcmp_P(entry_name, config::entry_names[e]) == 0) {
 						add_entry(static_cast<Entry>(e), entry_value);
 						Log.printf("Set %s (%02x) = %s\n", entry_name, e, entry_value);
 						break;

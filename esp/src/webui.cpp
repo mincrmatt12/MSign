@@ -65,11 +65,11 @@ namespace webui {
 		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
 			auto etag_num = secureRandom(ESP.getCycleCount() + ESP.getChipId());
-			snprintf(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
 			etags[0] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
 			etags[1] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
 			etags[2] = strdup(etag_buffer);
 
 			File fl = sd.open("/web/etag.txt", O_CREAT | O_TRUNC | O_WRITE);
@@ -82,11 +82,11 @@ namespace webui {
 			auto etag_num = fl.parseInt();
 			fl.close();
 
-			snprintf(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
 			etags[0] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
 			etags[1] = strdup(etag_buffer);
-			snprintf(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
+			snprintf_P(etag_buffer, 16, PSTR("E%9ldht"), etag_num);
 			etags[2] = strdup(etag_buffer);
 		}
 
@@ -108,9 +108,61 @@ namespace webui {
 		activeClient.print(FPSTR(pstr_msg));
 	}
 
+	void stream_file(File& f) {
+		Log.println(F("File size="));
+		activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), f.size());
+
+		char sendbuf[512];
+
+		while (f.available()) {
+			int chunkSize = f.available();
+			Log.print(F("Sending chunk = "));
+			Log.println(chunkSize);
+			if (chunkSize > 512) chunkSize = 512;
+			f.read(sendbuf, chunkSize);
+			activeClient.write(sendbuf, 512);
+		}
+
+		f.close();
+	}
+
+	int read_from_req_body(uint8_t * tgt, int size) {
+		return activeClient.read(tgt, size);
+	}
+
 	void do_api_response(const char * tgt) {
-		// Temp.
-		send_static_response(200, PSTR("OK"), PSTR("ok."));
+		if (strcasecmp_P(tgt, PSTR("conf.txt")) == 0) {
+			if (reqstate->c.method == HTTP_SERVE_METHOD_GET) {
+				File cfl = sd.open("config.txt", FILE_READ);
+				activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/plain\r\n"));
+				stream_file(cfl);
+			}
+			else if (reqstate->c.method == HTTP_SERVE_METHOD_POST) {
+				// Verify there's actually a request body
+				if (reqstate->c.content_length == 0) goto badrequest;
+				if (reqstate->c.content_length > 2048) {
+					// Too long
+					send_static_response(413, PSTR("Payload Too Large"), PSTR("The provided config is too large, please create one under 2K"));
+					return;
+				}
+				uint8_t buf[reqstate->c.content_length];
+				config::manager.use_new_config((char *)buf, read_from_req_body(buf, reqstate->c.content_length));
+				// Send a handy dandy 204
+				send_static_response(204, PSTR("No Content"), PSTR(""));
+			}
+			else goto invmethod;
+		}
+		else {
+			// Temp.
+			send_static_response(404, PSTR("Not Found"), PSTR("Api method not recognized."));
+		}
+		return;
+	invmethod:
+		send_static_response(405, PSTR("Method Not Allowed"), PSTR("Invalid API method."));
+		return;
+	badrequest:
+		send_static_response(400, PSTR("Bad Request"), PSTR("Invalid parameters to API method."));
+		return;
 	}
 
 	// Send this file as a response
@@ -136,24 +188,10 @@ namespace webui {
 
 		File f = sd.open(real_filename, FILE_READ);
 
-		Log.println(F("File size="));
 		Log.println(f.size());
 		
 		if (reqstate->c.is_gzipable) activeClient.printf_P(PSTR("Content-Encoding: gzip\r\n"));
-		activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), f.size());
-
-		char sendbuf[512];
-
-		while (f.available()) {
-			int chunkSize = f.available();
-			Log.print(F("Sending chunk = "));
-			Log.println(chunkSize);
-			if (chunkSize > 512) chunkSize = 512;
-			f.read(sendbuf, chunkSize);
-			activeClient.write(sendbuf, 512);
-		}
-
-		f.close();
+		stream_file(f);
 	}
 
 	void start_real_response() {
@@ -178,6 +216,11 @@ namespace webui {
 			do_api_response(reqstate->c.url + 2);
 		}
 		else {
+			// Only allow GET requests
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) {
+				send_static_response(405, PSTR("Method Not Allowed"), PSTR("Static resources are only gettable with GET"));
+				return;
+			}
 			// Check for a favicon
 			if (strcasecmp_P(reqstate->c.url, PSTR("favicon.ico")) == 0) {
 				Log.println(F("Sending 404"));
@@ -204,7 +247,7 @@ namespace webui {
 			else {
 				valid_etag = etags[2];
 				actual_name = PSTR("page.html");
-				content_type = PSTR("text/html");
+				content_type = PSTR("text/html; charset=UTF-8");
 			}
 
 			// Check for etag-ability
