@@ -41,26 +41,26 @@ namespace webui {
 
 	http_serve_state_t * reqstate = nullptr;
 
-	bool _doauth(const char *in) {
-		const char * user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
-		const char * pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
+        bool check_auth(const char *in) {
+          const char *user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
+          const char *pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
 
-		char actual_buf[64] = {0};
-		char * c = actual_buf;
+          char actual_buf[64] = {0};
+          char *c = actual_buf;
 
-		base64_encodestate es;
-		base64_init_encodestate(&es);
+          base64_encodestate es;
+          base64_init_encodestate(&es);
 
-		c += base64_encode_block(user, strlen(user), c, &es);
-		c += base64_encode_block(":", 1, c, &es);
-		c += base64_encode_block(pass, strlen(pass), c, &es);
-		c += base64_encode_blockend(c, &es);
-		*c = 0;
+          c += base64_encode_block(user, strlen(user), c, &es);
+          c += base64_encode_block(":", 1, c, &es);
+          c += base64_encode_block(pass, strlen(pass), c, &es);
+          c += base64_encode_blockend(c, &es);
+          *c = 0;
 
-		return (strncmp(in, actual_buf, 64) == 0);
-	}
+          return (strncmp(in, actual_buf, 64) == 0);
+        }
 
-	void init() {
+        void init() {
 		// check if an etag file exists on disk (deleted during updates)
 		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
@@ -121,6 +121,8 @@ namespace webui {
 			if (chunkSize > 512) chunkSize = 512;
 			f.read(sendbuf, chunkSize);
 			activeClient.write(sendbuf, 512);
+
+			// TODO: get this to potentially yield back to the serial processing thread?
 		}
 
 		f.close();
@@ -152,6 +154,26 @@ namespace webui {
 			}
 			else goto invmethod;
 		}
+		else if (strcasecmp_P(tgt, PSTR("mpres.json")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+			bool m0 = sd.exists("/model.bin");
+			bool m1 = sd.exists("/model1.bin");
+
+			char buf[34] = {0};
+			snprintf_P(buf, 34, PSTR("{\"m0\":%s,\"m1\":%s}"), m0 ? "true" : "false", m1 ? "true" : "false");
+			
+			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/json\r\n"));
+			activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), strlen(buf));
+			activeClient.print(buf);
+		}
+		else if (strcasecmp_P(tgt, PSTR("model.bin")) == 0 || strcasecmp_P(tgt, PSTR("model1.bin")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+			if (!sd.exists(tgt - 1)) goto notfound;
+
+			File mfl = sd.open(tgt - 1, FILE_READ);
+			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n"));
+			stream_file(mfl);
+		}
 		else {
 			// Temp.
 			send_static_response(404, PSTR("Not Found"), PSTR("Api method not recognized."));
@@ -162,6 +184,9 @@ namespace webui {
 		return;
 	badrequest:
 		send_static_response(400, PSTR("Bad Request"), PSTR("Invalid parameters to API method."));
+		return;
+	notfound:
+		send_static_response(404, PSTR("Not Found"), PSTR("The data that resource points to does not exist."));
 		return;
 	}
 
@@ -204,7 +229,7 @@ namespace webui {
 				send_static_response(401, PSTR("Unauthorized"), PSTR("Invalid authentication type."));
 				return;
 			case HTTP_SERVE_AUTH_TYPE_OK:
-				if (!_doauth(reqstate->c.auth_string)) {
+				if (!check_auth(reqstate->c.auth_string)) {
 					send_static_response(403, PSTR("Forbidden"), PSTR("Invalid authentication."));
 					return;
 				}
