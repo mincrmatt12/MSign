@@ -79,18 +79,18 @@ void weather_json_cb(json::PathNode ** stack, uint8_t stack_ptr, const json::Val
 			if (strcmp_P(stack[2]->name, PSTR("apparentTemperature")) == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.ctemp = v.as_number();
-				Log.printf("temp = %f\n", v.float_val);
+				Log.printf_P(PSTR("temp = %f\n"), v.float_val);
 			}
 			else if (strcmp_P(stack[2]->name, PSTR("icon")) == 0 && v.type == json::Value::STR) {
 				memset(weather::icon, 0, 16);
 				strcpy(weather::icon, v.str_val);
 
-				Log.printf("wicon = %s\n", weather::icon);
+				Log.printf_P(PSTR("wicon = %s\n"), weather::icon);
 			}
 			else if (strcmp_P(stack[2]->name, PSTR("temperature")) == 0 && v.is_number()) {
 				// Store the apparent temperature
 				weather::info.crtemp = v.as_number();
-				Log.printf("rtemp = %f\n", v.float_val);
+				Log.printf_P(PSTR("rtemp = %f\n"), v.float_val);
 			}
 		}
 		else if (stack_ptr == 3 && strcmp_P(stack[1]->name, PSTR("minutely")) == 0) {
@@ -98,7 +98,7 @@ void weather_json_cb(json::PathNode ** stack, uint8_t stack_ptr, const json::Val
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
-				Log.printf("summary (minute) = %s\n", v.str_val);
+				Log.printf_P(PSTR("summary (minute) = %s\n"), v.str_val);
 			}
 			else if (strcmp_P(stack[2]->name, PSTR("icon")) == 0 && v.type == json::Value::STR) {
 				if ( /* list of things that we should probably show an hourly summary for */
@@ -113,7 +113,7 @@ void weather_json_cb(json::PathNode ** stack, uint8_t stack_ptr, const json::Val
 				weather::buffer_size = strlen(v.str_val) + 1;
 				weather::info_buffer = (char*)realloc(weather::info_buffer, weather::buffer_size);
 				strcpy(weather::info_buffer, v.str_val);
-				Log.printf("summary (hour) = %s\n", v.str_val);
+				Log.printf_P(PSTR("summary (hour) = %s\n"), v.str_val);
 			}
 		}
 		else if (stack_ptr == 4 && strcmp_P(stack[1]->name, PSTR("hourly")) == 0 && strcmp_P(stack[2]->name, PSTR("data")) == 0 && stack[2]->is_array() &&
@@ -184,12 +184,12 @@ void weather_json_cb(json::PathNode ** stack, uint8_t stack_ptr, const json::Val
 			if (strcmp_P(stack[3]->name, PSTR("apparentTemperatureHigh")) == 0 && v.is_number()) {
 				// Store the high apparent temperature
 				weather::info.htemp = v.as_number();
-				Log.printf("htemp = %f\n", v.as_number());
+				Log.printf_P(PSTR("htemp = %f\n"), v.as_number());
 			}
 			else if (strcmp_P(stack[3]->name, PSTR("apparentTemperatureLow")) == 0 && v.is_number()) {
 				// Store the low apparent temperature
 				weather::info.ltemp = v.as_number();
-				Log.printf("ltemp = %f\n", v.as_number());
+				Log.printf_P(PSTR("ltemp = %f\n"), v.as_number());
 			}
 			else if (strcmp_P(stack[3]->name, PSTR("sunriseTime")) == 0 && v.type == json::Value::INT) {
 				// Get the sunrise time
