@@ -1,10 +1,9 @@
 #include "debug.h"
 #include "util.h"
-#include <WebSocketsServer.h>
 #include "serial.h"
 
 namespace debug {
-	WebSocketsServer wss(81);
+	//WebSocketsServer wss(81);
 	int connected = -1;
 	// 0 - unk
 	// 1 - log
@@ -30,64 +29,9 @@ namespace debug {
 		//wss.broadcastTXT(buf, length);
 	}
 
-	void ws_event(uint8_t num, WStype_t type, uint8_t * payload, size_t length) {
-		switch (type) {
-			case WStype_CONNECTED:
-				{
-					connected = (int)num;
-					Log.println(F("connected 1"));
-					return;
-				}
-			case WStype_DISCONNECTED:
-				{
-					if (is_log == 1) Log.hook = nullptr;
-					is_log = 0;
-					connected = -1;
-					return;
-				}
-			case WStype_TEXT:
-				{
-					if (is_log == 0) {
-						if (*payload == 'l') {
-							is_log = 1;
-							wss.sendTXT(num, "Log off RN.\n");
-							//Log.hook = logger_hook;
-						}
-						else if (*payload == 'd') is_log = 2;
-					}
-					else {
-						if (is_log != 2) return; 
-						char * paycopy = (char *)malloc(length + 1);
-						memcpy(paycopy, payload, length);
-						paycopy[length] = 0;
-
-						// Do command.
-						char * value;
-						int cmd = match_command((char *)paycopy, value);
-
-						if (cmd == -1) {
-							wss.sendTXT(num, "Invalid command.\n");
-						}
-						else {
-							char *block = (char *)malloc(allocation_sizes[cmd]);
-							char *block_begin = block;
-							command_handlers[cmd](value, block, block + allocation_sizes[cmd]);
-							if (block != block_begin) wss.sendTXT(num, block_begin, block - block_begin);
-							free(block_begin);
-						}
-
-						free(paycopy);
-					}
-				}
-				break;
-			default:
-				break;
-		}
-	}
-
 	void init() {
-		wss.begin();
-		wss.onEvent(ws_event);
+		//wss.begin();
+		//wss.onEvent(ws_event);
 
 		// commands
 		add_command("fheap", [](const char *args, char *&begin, const char *){
@@ -110,7 +54,7 @@ namespace debug {
 	}
 
 	void loop() {
-		wss.loop();
+		//wss.loop();
 	}
 
 	void add_command(const char *prefix, CommandHandler ch, int outputSize) {
@@ -121,8 +65,5 @@ namespace debug {
 	}
 	
 	void send_msg(char *buf, int amt) {
-		if (connected != -1 && is_log == 2) {
-			wss.sendTXT(connected, buf, amt);
-		}
 	}
 }
