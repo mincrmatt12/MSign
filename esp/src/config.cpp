@@ -1,6 +1,7 @@
 #include "config.h"
 #include <SPI.h>
 #include <SdFat.h>
+#include "sys/pgmspace.h"
 #include "util.h"
 
 extern SdFatSoftSpi<D6, D2, D5> sd;
@@ -147,12 +148,12 @@ void config::ConfigManager::load_from_sd() {
 				for (e = 0; e < config::ENTRY_COUNT; ++e) {
 					if (strcmp_P(entry_name, config::entry_names[e]) == 0) {
 						add_entry(static_cast<Entry>(e), entry_value);
-						Log.printf("Set %s (%02x) = %s\n", entry_name, e, entry_value);
+						Log.printf_P(PSTR("Set %s (%02x) = %s\n"), entry_name, e, entry_value);
 						break;
 					}
 				}
 
-				if (e == config::ENTRY_COUNT) Log.printf("Invalid key %s\n", entry_name);
+				if (e == config::ENTRY_COUNT) Log.printf_P(PSTR("Invalid key %s\n"), entry_name);
 
 				mode = false;
 				pos = 0;
