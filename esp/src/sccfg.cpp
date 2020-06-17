@@ -86,7 +86,7 @@ namespace sccfg {
 			obj.display_on = true;
 			obj.enabled_mask = last_enabled_mask;
 
-			Log.printf("enabled data: %d\n", last_enabled_mask);
+			Log.printf_P(PSTR("enabled data: %d\n"), last_enabled_mask);
 
 			serial::interface.update_data(slots::SCCFG_INFO, (uint8_t *)&obj, sizeof(obj));
 		}
@@ -128,7 +128,7 @@ namespace sccfg {
 
 		serial::interface.register_handler([](uint16_t data_id, uint8_t * buffer, uint8_t & length){
 				if (data_id == slots::SCCFG_TIMING) {
-					Log.printf("sending scc %d\n", send_idx);
+					Log.printf_P(PSTR("sending scc %d\n"), send_idx);
 
 					memcpy(buffer, &times[send_idx++], sizeof(times[0]));				
 					send_idx %= number_of_screens;
