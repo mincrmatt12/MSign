@@ -150,8 +150,9 @@ namespace webui {
 
 	int read_from_req_body(uint8_t * tgt, int size) {
 		// TODO: make me handle chunked encoding
-		while (activeClient.available() <= size) {;}
-		return activeClient.read(tgt, size);
+		int i = 0;
+		while (activeClient && (i += activeClient.read(tgt, size) < size)) {yield();}
+		return i;
 	}
 
 	int read_from_req_body() {
@@ -305,6 +306,17 @@ flush_buf:
 			File mfl = sd.open(tgt - 1, FILE_READ);
 			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n"));
 			stream_file(mfl);
+		}
+		else if (strcasecmp_P(tgt, PSTR("fheap")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+
+			char buf[16];
+			snprintf_P(buf, 32, PSTR("%lu"), ESP.getFreeHeap());
+
+			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: "));
+			activeClient.print(strlen(buf));
+			activeClient.print(F("\r\n\r\n"));
+			activeClient.print(buf);
 		}
 		else if (strcasecmp_P(tgt, PSTR("newmodel")) == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
