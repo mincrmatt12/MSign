@@ -102,7 +102,7 @@ invalidformat:
 	}
 
 	int files_read = 0;
-	while (files_read < 3) {
+	while (files_read < 6) {
 		if (arF.peek() == '\n') arF.read();
 		uint8_t fileHeader[60];
 		if (arF.read(fileHeader, sizeof(fileHeader)) != sizeof(fileHeader)) goto failure;
