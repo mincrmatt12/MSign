@@ -59,7 +59,7 @@ struct SdFile : public Stream {
 	}
 	SdFile(const SdFile& other) : fst{other.fst}, bytes{other.bytes}, _name{other._name} {
 	}
-	~SdFile() {close();}
+	~SdFile() {}
 
 	void flush() {
 		fst->flush();
@@ -87,7 +87,7 @@ struct SdFile : public Stream {
 	}
 	size_t write(const uint8_t * buf, size_t amt) override {
 		fst->write((char *)buf, amt);
-		return fst->gcount();
+        return amt;
 	}
 	void read(void * buf, size_t amt) {
 		fst->read((char *)buf, amt);
@@ -98,7 +98,6 @@ struct SdFile : public Stream {
 	const char * name() {return _name.c_str();}
 
 	bool isOpen() {
-		if (!fst.get()) return false;
 		return fst->is_open();
 	}
 
@@ -141,7 +140,7 @@ struct SdFatSoftSpi {
 		if (c[0] == '/') c = "sd" + c;
 		else c = "sd/" + c;
 
-		mkdir(c.c_str());
+		::mkdir(c.c_str(), 0775);
 	}
 
 	SdFile open(const char * name, int mode=FILE_READ) {
