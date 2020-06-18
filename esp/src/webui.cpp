@@ -148,6 +148,18 @@ namespace webui {
 		HOOK_ABORT
 	};
 
+	int read_from_req_body(uint8_t * tgt, int size) {
+		// TODO: make me handle chunked encoding
+		while (activeClient.available() < size) {;}
+		return activeClient.read(tgt, size);
+	}
+
+	int read_from_req_body() {
+		// TODO: make me handle chunked encoding
+		while (!activeClient.available()) {;} // TODO: timeout
+		return activeClient.read();
+	}
+
 	template<typename MultipartHook>
 	MultipartStatus do_multipart(MultipartHook hook) {
 		multipart_header_state_t header_state;
@@ -155,20 +167,20 @@ namespace webui {
 continuewaiting:
 		// Try to read the start of a header block
 		while (activeClient) {
-			auto val = activeClient.read();
+			auto val = read_from_req_body();
 			if (val == '-') break;
 			if (val == '\r') {
-				if (activeClient.read() != '\n') continue;
-				if (activeClient.read() != '-') continue;
+				if (read_from_req_body() != '\n') continue;
+				if (read_from_req_body() != '-') continue;
 				break;
 			}
 		}		
 		Log.println(F("got past -"));
 		if (!activeClient) return MultipartStatus::EOF_EARLY;
-		if (activeClient.read() != '-') goto continuewaiting;
+		if (read_from_req_body() != '-') goto continuewaiting;
 		Log.println(F("got past -2"));
 		for (int i = 0; i < strlen(reqstate->c.multipart_boundary); ++i) {
-			if (activeClient.read() != reqstate->c.multipart_boundary[i]) goto continuewaiting;
+			if (read_from_req_body() != reqstate->c.multipart_boundary[i]) goto continuewaiting;
 		}
 
 		Log.println(F("Got multipart start"));
@@ -180,7 +192,7 @@ continuewaiting:
 			// Continue parsing until done
 			while (true) {
 				if (!activeClient) return MultipartStatus::EOF_EARLY;
-				switch (multipart_header_feed(activeClient.read(), false, &header_state)) {
+				switch (multipart_header_feed(read_from_req_body(), false, &header_state)) {
 					case MULTIPART_HEADER_OK:
 						continue;
 					case MULTIPART_HEADER_FAIL:
@@ -219,7 +231,7 @@ endloop:
 						}
 						pos = 0;
 					}
-					auto inval = activeClient.read();
+					auto inval = read_from_req_body();
 					if (inval == '\r') break;
 					else {buf[pos++] = inval;}
 				}
@@ -230,11 +242,11 @@ endloop:
 				buf[0] = '\r';
 				pos = 1;
 				// Try to read the rest of the boundary
-				if ((buf[pos++] = activeClient.read()) != '\n') goto flush_buf;
-				if ((buf[pos++] = activeClient.read()) != '-') goto flush_buf;
-				if ((buf[pos++] = activeClient.read()) != '-') goto flush_buf;
+				if ((buf[pos++] = read_from_req_body()) != '\n') goto flush_buf;
+				if ((buf[pos++] = read_from_req_body()) != '-') goto flush_buf;
+				if ((buf[pos++] = read_from_req_body()) != '-') goto flush_buf;
 				for (int i = 0; i < strlen(reqstate->c.multipart_boundary); ++i) {
-					if ((buf[pos++] = activeClient.read()) != reqstate->c.multipart_boundary[i]) goto flush_buf;
+					if ((buf[pos++] = read_from_req_body()) != reqstate->c.multipart_boundary[i]) goto flush_buf;
 				}
 				// We have read an entire boundary delimiter, break out of this loop
 				break;
@@ -247,11 +259,6 @@ flush_buf:
 			if (!is_skipping) hook(nullptr, -2, &header_state); // it's invalid to error in this case
 		}
 		return MultipartStatus::OK;
-	}
-
-	int read_from_req_body(uint8_t * tgt, int size) {
-		// TODO: make me handle chunked encoding
-		return activeClient.read(tgt, size);
 	}
 
 	void do_api_response(const char * tgt) {
@@ -398,7 +405,7 @@ flush_buf:
 
 			send_static_response(200, PSTR("OK"), PSTR("Updating UI."));
 			delay(100);
-			serial::interface.reset();
+			ESP.restart();
 		}
 		else if (strcasecmp_P(tgt, PSTR("updatefirm")) == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
