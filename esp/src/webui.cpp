@@ -151,7 +151,18 @@ namespace webui {
 	int read_from_req_body(uint8_t * tgt, int size) {
 		// TODO: make me handle chunked encoding
 		int i = 0;
-		while (activeClient && (i += activeClient.read(tgt + i, size - i) < size)) {delay(5);}
+		while (i < size) {
+			int avail = activeClient.available();
+			if (!avail) {
+				yield();
+			}
+			if (avail + i > size) {
+				avail = size - i;
+			}
+			activeClient.read(tgt, avail);
+			tgt += avail;
+			i += avail;
+		}
 		return i;
 	}
 
@@ -281,9 +292,15 @@ flush_buf:
 					return;
 				}
 				uint8_t buf[reqstate->c.content_length];
-				config::manager.use_new_config((char *)buf, read_from_req_body(buf, reqstate->c.content_length));
-				// Send a handy dandy 204
-				send_static_response(204, PSTR("No Content"), PSTR(""));
+				int len = read_from_req_body(buf, reqstate->c.content_length);
+				if (len != reqstate->c.content_length) {
+					send_static_response(400, PSTR("Bad Request"), PSTR("The config failed to download"));
+				}
+				else {
+					config::manager.use_new_config((char *)buf, len);
+					// Send a handy dandy 204
+					send_static_response(204, PSTR("No Content"), PSTR(""));
+				}
 			}
 			else goto invmethod;
 		}
