@@ -60,7 +60,6 @@ class App extends React.Component {
 
 			apikeys: {
 				darksky: "",
-				twitter: ""
 			},
 
 			weather: {
@@ -109,9 +108,6 @@ class App extends React.Component {
 
 		// api keys
 		result += "wapikey=" + this.state.apikeys.darksky + "\n";
-
-		if (this.state.apikeys.twitter.length !== "")
-			result += "tapikey=" + this.state.apikeys.twitter + "\n";
 
 		// ttc
 		for (let i = 0; i < this.state.ttc.dirtags.length; ++i) {
@@ -209,9 +205,6 @@ class App extends React.Component {
 						break;
 					case 'wapikey':
 						this.setState((s, _) => {s.apikeys.darksky = value; return s});
-						break;
-					case 'tapikey':
-						this.setState((s, _) => {s.apikeys.twitter = value; return s});
 						break;
 					case 'wapilat':
 					case 'wapilon':
