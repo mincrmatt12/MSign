@@ -6,6 +6,7 @@
 #include "util.h"
 extern "C" {
 #include "parser/http_serve.h"
+#include "parser/multipart_header.h"
 }
 #include <WiFiClient.h>
 #include <WiFiServer.h>
@@ -32,35 +33,28 @@ namespace webui {
 	WiFiServer webserver(80);
 	WiFiClient activeClient;
 
-	// client state
-	enum struct ClientState {
-		RX_HEADER,
-		RX_BODY,
-		SENDING_BODY
-	} cstate;
-
 	http_serve_state_t * reqstate = nullptr;
 
-        bool check_auth(const char *in) {
-          const char *user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
-          const char *pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
+	bool check_auth(const char *in) {
+		const char *user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
+		const char *pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
 
-          char actual_buf[64] = {0};
-          char *c = actual_buf;
+		char actual_buf[64] = {0};
+		char *c = actual_buf;
 
-          base64_encodestate es;
-          base64_init_encodestate(&es);
+		base64_encodestate es;
+		base64_init_encodestate(&es);
 
-          c += base64_encode_block(user, strlen(user), c, &es);
-          c += base64_encode_block(":", 1, c, &es);
-          c += base64_encode_block(pass, strlen(pass), c, &es);
-          c += base64_encode_blockend(c, &es);
-          *c = 0;
+		c += base64_encode_block(user, strlen(user), c, &es);
+		c += base64_encode_block(":", 1, c, &es);
+		c += base64_encode_block(pass, strlen(pass), c, &es);
+		c += base64_encode_blockend(c, &es);
+		*c = 0;
 
-          return (strncmp(in, actual_buf, 64) == 0);
-        }
+		return (strncmp(in, actual_buf, 64) == 0);
+	}
 
-        void init() {
+	void init() {
 		// check if an etag file exists on disk (deleted during updates)
 		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
@@ -128,7 +122,133 @@ namespace webui {
 		f.close();
 	}
 
+	// AD-HOC MULTIPART/FORM-DATA PARSER
+	//
+	// Does contain an NMFU-based parser for the headers though
+	//
+	// Structure as a loop of
+	//  - wait for \r\n--
+	//  - using the helper function to bail early read and compare to the boundary. if at any point we fail go back to step 1 without eating
+	//  - start the content-disposition NMFU (this sets up in a state struct which is passed in)
+	//  - it eats until the body
+	//  - if there's a content length, read that many
+	//  - otherwise, read until \r\n-- again
+	//
+	// Takes a hook with the following "virtual" typedef
+	// Size == -1 means start
+	//      == -2 means end
+	//
+	// typedef bool (*MultipartHook)(uint8_t * tgt, int size, multipart_header_state_t * header_state);
+
+	enum struct MultipartStatus {
+		OK,
+		INVALID_HEADER,
+		NO_CONTENT_DISP,
+		EOF_EARLY,
+		HOOK_ABORT
+	};
+
+	template<typename MultipartHook>
+	MultipartStatus do_multipart(MultipartHook hook) {
+		multipart_header_state_t header_state;
+
+continuewaiting:
+		// Try to read the start of a header block
+		while (activeClient) {
+			auto val = activeClient.read();
+			if (val == '-') break;
+			if (val == '\r') {
+				if (activeClient.read() != '\n') continue;
+				if (activeClient.read() != '-') continue;
+				break;
+			}
+		}		
+		Log.println(F("got past -"));
+		if (!activeClient) return MultipartStatus::EOF_EARLY;
+		if (activeClient.read() != '-') goto continuewaiting;
+		Log.println(F("got past -2"));
+		for (int i = 0; i < strlen(reqstate->c.multipart_boundary); ++i) {
+			if (activeClient.read() != reqstate->c.multipart_boundary[i]) goto continuewaiting;
+		}
+
+		Log.println(F("Got multipart start"));
+
+		while (activeClient) {
+			// Start the multipart_header parser
+			multipart_header_start(&header_state);
+
+			// Continue parsing until done
+			while (true) {
+				if (!activeClient) return MultipartStatus::EOF_EARLY;
+				switch (multipart_header_feed(activeClient.read(), false, &header_state)) {
+					case MULTIPART_HEADER_OK:
+						continue;
+					case MULTIPART_HEADER_FAIL:
+						return MultipartStatus::INVALID_HEADER;
+					case MULTIPART_HEADER_DONE:
+						goto endloop;
+				}
+				continue;
+endloop:
+				break;
+			}
+
+			Log.println(F("Got multipart header end"));
+
+			// Check if this is the end
+			if (header_state.c.is_end) return MultipartStatus::OK;
+			// Check if this is a valid header
+			if (!header_state.c.ok) return MultipartStatus::NO_CONTENT_DISP;
+			// Otherwise, start reading the response
+
+			bool is_skipping = false;
+			if (!hook(nullptr, -1, &header_state)) {
+				is_skipping = true;
+			}
+
+			uint8_t buf[512];
+			while (true) {
+				if (!activeClient) return MultipartStatus::EOF_EARLY;
+				// Try to read
+				int pos = 0;
+				while (true) {
+					if (pos == 512) {
+						// Send that buffer into the hook
+						hook(buf, pos, &header_state);
+						pos = 0;
+					}
+					auto inval = activeClient.read();
+					if (inval == '\r') break;
+					else {buf[pos++] = inval;}
+				}
+				// Send that buffer into the hook
+				if (pos && !is_skipping) {
+					if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
+				}
+				buf[0] = '\r';
+				pos = 1;
+				// Try to read the rest of the boundary
+				if ((buf[pos++] = activeClient.read()) != '\n') goto flush_buf;
+				if ((buf[pos++] = activeClient.read()) != '-') goto flush_buf;
+				if ((buf[pos++] = activeClient.read()) != '-') goto flush_buf;
+				for (int i = 0; i < strlen(reqstate->c.multipart_boundary); ++i) {
+					if ((buf[pos++] = activeClient.read()) != reqstate->c.multipart_boundary[i]) goto flush_buf;
+				}
+				// We have read an entire boundary delimiter, break out of this loop
+				break;
+flush_buf:
+				if (!is_skipping) {
+					if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
+				}
+			}
+
+			if (!is_skipping) hook(nullptr, -2, &header_state); // it's invalid to error in this case
+		}
+		return MultipartStatus::OK;
+	}
+
 	int read_from_req_body(uint8_t * tgt, int size) {
+		// TODO: make me handle chunked encoding
 		return activeClient.read(tgt, size);
 	}
 
@@ -330,30 +450,22 @@ namespace webui {
 		if (activeClient) {
 			// Deal with the client
 rerun:
-			switch (cstate) {
-				case ClientState::RX_HEADER:
-					while (activeClient.available()) {
-						switch (http_serve_feed(activeClient.read(), false, reqstate)) {
-							case HTTP_SERVE_FAIL:
-								reqstate->c.error_code = HTTP_SERVE_ERROR_CODE_BAD_REQUEST;
-								[[fallthrough]];
-							case HTTP_SERVE_DONE:
-								// Done handling
-								start_response();
-							default:
-								break;
-						}
-					}
-					break;
-				default:
-					activeClient.stop();
-					break;
+			while (activeClient.available()) {
+				switch (http_serve_feed(activeClient.read(), false, reqstate)) {
+					case HTTP_SERVE_FAIL:
+						reqstate->c.error_code = HTTP_SERVE_ERROR_CODE_BAD_REQUEST;
+						[[fallthrough]];
+					case HTTP_SERVE_DONE:
+						// Done handling
+						start_response();
+					default:
+						break;
+				}
 			}
 		}
 		else {
 			activeClient = webserver.available();
 			if (activeClient) {
-				cstate = ClientState::RX_HEADER;
 				reqstate = new http_serve_state_t;
 				http_serve_start(reqstate);
 				goto rerun;
