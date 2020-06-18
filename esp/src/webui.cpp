@@ -58,7 +58,7 @@ namespace webui {
 		// check if an etag file exists on disk (deleted during updates)
 		if (!sd.exists("/web/etag.txt")) {
 			char etag_buffer[16] = {0};
-			auto etag_num = secureRandom(ESP.getCycleCount() + ESP.getChipId());
+			long etag_num = secureRandom(ESP.getCycleCount() + ESP.getChipId());
 			snprintf_P(etag_buffer, 16, PSTR("E%9ldjs"), etag_num);
 			etags[0] = strdup(etag_buffer);
 			snprintf_P(etag_buffer, 16, PSTR("E%9ldcs"), etag_num);
@@ -87,7 +87,7 @@ namespace webui {
 		// Start the webserver
 		webserver.begin();
 	}
-	
+
 	template<typename HdrT=char>
 	void send_static_response(int code, const char * code_msg, const char * pstr_msg, const HdrT * extra_hdrs=nullptr) {
 		int length = strlen_P(pstr_msg);
@@ -104,7 +104,7 @@ namespace webui {
 
 	void stream_file(File& f) {
 		Log.println(F("File size="));
-		activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), f.size());
+		activeClient.printf_P(PSTR("Content-Length: %lu\r\n\r\n"), f.size());
 
 		char sendbuf[512];
 
@@ -214,7 +214,9 @@ endloop:
 				while (true) {
 					if (pos == 512) {
 						// Send that buffer into the hook
-						hook(buf, pos, &header_state);
+						if (!is_skipping) {
+							if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
+						}
 						pos = 0;
 					}
 					auto inval = activeClient.read();
@@ -281,7 +283,7 @@ flush_buf:
 
 			char buf[34] = {0};
 			snprintf_P(buf, 34, PSTR("{\"m0\":%s,\"m1\":%s}"), m0 ? "true" : "false", m1 ? "true" : "false");
-			
+
 			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/json\r\n"));
 			activeClient.printf_P(PSTR("Content-Length: %d\r\n\r\n"), strlen(buf));
 			activeClient.print(buf);
@@ -294,18 +296,300 @@ flush_buf:
 			activeClient.print(F("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n"));
 			stream_file(mfl);
 		}
+		else if (strcasecmp_P(tgt, PSTR("newmodel")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
+
+			File out_model;
+			bool ok = false;
+			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
+				if (!state->name_counter) {
+					Log.println(F("no name"));
+					return false;
+				}
+				
+				if (len == -1) {
+					out_model = sd.open((strcasecmp_P(state->c.name, PSTR("model")) == 0) ? "/model.bin" : "/model1.bin", O_WRITE | O_CREAT | O_TRUNC);
+					return true;
+				}
+				else if (len == -2) {
+					out_model.flush();
+					out_model.close();
+					ok = true;
+					return true;
+				}
+				else {
+					out_model.write(buf, len);
+					return true;
+				}
+			})) {
+				case MultipartStatus::EOF_EARLY:
+					return;
+				case MultipartStatus::INVALID_HEADER:
+					send_static_response(400, PSTR("Bad Request"), PSTR("The server was unable to interpret the header area of the form data request."));
+					return;
+				case MultipartStatus::HOOK_ABORT:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You have sent invalid files."));
+					return;
+				case MultipartStatus::NO_CONTENT_DISP:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You are missing a Content-Disposition header in your request."));
+					return;
+				case MultipartStatus::OK:
+					break;
+				default:
+					return;
+			}
+
+			if (!ok) send_static_response(400, PSTR("Bad Request"), PSTR("Not enough files were provided"));
+			else send_static_response(204, PSTR("No Content"), PSTR(""));
+		}
+		else if (strcasecmp_P(tgt, PSTR("newui")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
+
+			if (!sd.exists("/upd")) sd.mkdir("/upd");
+
+			File out_ui = sd.open("/upd/webui.ar", O_CREAT | O_WRITE | O_TRUNC);
+			bool ok = false;
+			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
+				if (!state->name_counter) {
+					Log.println(F("no name"));
+					return false;
+				}
+				
+				if (len == -1) {
+					return true;
+				}
+				else if (len == -2) {
+					out_ui.flush();
+					out_ui.close();
+					ok = true;
+					return true;
+				}
+				else {
+					out_ui.write(buf, len);
+					return true;
+				}
+			})) {
+				case MultipartStatus::EOF_EARLY:
+					return;
+				case MultipartStatus::INVALID_HEADER:
+					send_static_response(400, PSTR("Bad Request"), PSTR("The server was unable to interpret the header area of the form data request."));
+					return;
+				case MultipartStatus::HOOK_ABORT:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You have sent invalid files."));
+					return;
+				case MultipartStatus::NO_CONTENT_DISP:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You are missing a Content-Disposition header in your request."));
+					return;
+				case MultipartStatus::OK:
+					break;
+				default:
+					return;
+			}
+
+			if (!ok) {
+				send_static_response(400, PSTR("Bad Request"), PSTR("Not enough files were provided"));
+				return;
+			}
+			
+			out_ui = sd.open("/upd/state.txt", O_WRITE | O_CREAT | O_TRUNC);
+			out_ui.print(16);
+			out_ui.flush();
+			out_ui.close();
+
+			send_static_response(200, PSTR("OK"), PSTR("Updating UI."));
+			delay(100);
+			serial::interface.reset();
+		}
+		else if (strcasecmp_P(tgt, PSTR("updatefirm")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
+
+			File out_file;
+			int gotcount = 0;
+
+			uint16_t stm_csum = 0, esp_csum = 0;
+
+			// Make the update directory
+			if (!sd.exists("/upd"))
+				sd.mkdir("/upd");
+
+			// Temp.
+			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
+				if (!state->name_counter) {
+					Log.println(F("no name"));
+					return false;
+				}
+
+				if (len == -1) {
+					if (strcasecmp_P(state->c.name, PSTR("stm")) == 0) {
+						out_file = sd.open("/upd/stm.bin", O_WRITE | O_CREAT | O_TRUNC);
+						Log.println(F("Writing the stm bin"));
+						stm_csum = 0;
+						return true;
+					}
+					if (strcasecmp_P(state->c.name, PSTR("esp")) == 0) {
+						out_file = sd.open("/upd/esp.bin", O_WRITE | O_CREAT | O_TRUNC);
+						Log.println(F("Writing the esp bin"));
+						esp_csum = 0;
+						return true;
+					}
+					else {
+						Log.println(F("Ignoring"));
+						return false;
+					}
+				}
+				else if (len == -2) {
+					out_file.flush();
+					out_file.close();
+					++gotcount;
+				}
+				else {
+					// Write the buffer
+					out_file.write(buf, len);
+
+					// Update the checksum
+					if (strcasecmp_P(state->c.name, PSTR("stm")) == 0) 
+						stm_csum = util::compute_crc(buf, len, stm_csum);
+					else 												
+						esp_csum = util::compute_crc(buf, len, esp_csum);
+				}
+				return true;
+			})) {
+				case MultipartStatus::EOF_EARLY:
+					return;
+				case MultipartStatus::INVALID_HEADER:
+					send_static_response(400, PSTR("Bad Request"), PSTR("The server was unable to interpret the header area of the form data request."));
+					return;
+				case MultipartStatus::HOOK_ABORT:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You have sent invalid files."));
+					return;
+				case MultipartStatus::NO_CONTENT_DISP:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You are missing a Content-Disposition header in your request."));
+					return;
+				case MultipartStatus::OK:
+					break;
+				default:
+					return;
+			}
+
+			if (gotcount <= 2) {
+				send_static_response(400, PSTR("Bad Request"), PSTR("Not enough files were provided"));
+				return;
+			}
+
+			// Alright we've got stuff. Write the csum file now.
+			out_file = sd.open("/upd/chck.sum", O_WRITE | O_CREAT | O_TRUNC);
+			out_file.print(esp_csum);
+			out_file.print(' ');
+			out_file.print(stm_csum);
+			out_file.flush();
+			out_file.close();
+
+			// Set the update state for update
+			out_file = sd.open("/upd/state.txt", O_WRITE | O_CREAT | O_TRUNC);
+			out_file.print(0); // Update system (state 0 in upd.cpp)
+			out_file.flush();
+			out_file.close();
+
+			send_static_response(200, PSTR("OK"), PSTR("Starting the update."));
+			delay(100); // give it some time to send it
+			serial::interface.reset();
+		}
+		else if (strcasecmp_P(tgt, PSTR("reboot")) == 0) {
+			// Just reboot
+			send_static_response(204, PSTR("No Content"), PSTR(""));
+			serial::interface.reset();
+		}
+		else if (strcasecmp_P(tgt, PSTR("updatestm")) == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
+
+			File out_file = sd.open("/upd/stm.bin", O_WRITE | O_CREAT | O_TRUNC);
+			bool ok = false;
+
+			uint16_t stm_csum = 0;
+
+			// Make the update directory
+			if (!sd.exists("/upd"))
+				sd.mkdir("/upd");
+
+			// Temp.
+			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
+				if (!state->name_counter) {
+					Log.println(F("no name"));
+					return false;
+				}
+
+				if (len == -1) {
+					return strcasecmp_P(state->c.name, PSTR("stm")) == 0;
+				}
+				else if (len == -2) {
+					out_file.flush();
+					out_file.close();
+					ok = true;
+				}
+				else {
+					// Write the buffer
+					out_file.write(buf, len);
+
+					// Update the checksum
+					stm_csum = util::compute_crc(buf, len, stm_csum);
+				}
+				return true;
+			})) {
+				case MultipartStatus::EOF_EARLY:
+					return;
+				case MultipartStatus::INVALID_HEADER:
+					send_static_response(400, PSTR("Bad Request"), PSTR("The server was unable to interpret the header area of the form data request."));
+					return;
+				case MultipartStatus::HOOK_ABORT:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You have sent invalid files."));
+					return;
+				case MultipartStatus::NO_CONTENT_DISP:
+					send_static_response(400, PSTR("Bad Request"), PSTR("You are missing a Content-Disposition header in your request."));
+					return;
+				case MultipartStatus::OK:
+					break;
+				default:
+					return;
+			}
+
+			if (!ok) {
+				send_static_response(400, PSTR("Bad Request"), PSTR("The stm firmware was not provided"));
+				return;
+			}
+
+			// Alright we've got stuff. Write the csum file now.
+			out_file = sd.open("/upd/chck.sum", O_WRITE | O_CREAT | O_TRUNC);
+			out_file.print(0);
+			out_file.print(' ');
+			out_file.print(stm_csum);
+			out_file.flush();
+			out_file.close();
+
+			// Ensure there isn't an errant /upd/esp.bin
+			if (sd.exists("/upd/esp.bin")) sd.remove("/upd/esp.bin");
+
+			// Set the update state for update
+			out_file = sd.open("/upd/state.txt", O_WRITE | O_CREAT | O_TRUNC);
+			out_file.print(0); // Update system (state 0 in upd.cpp)
+			out_file.flush();
+			out_file.close();
+
+			send_static_response(200, PSTR("OK"), PSTR("Starting the update."));
+			delay(100); // give it some time to send it
+			serial::interface.reset();
+		}
 		else {
 			// Temp.
 			send_static_response(404, PSTR("Not Found"), PSTR("Api method not recognized."));
 		}
 		return;
-	invmethod:
+invmethod:
 		send_static_response(405, PSTR("Method Not Allowed"), PSTR("Invalid API method."));
 		return;
-	badrequest:
+badrequest:
 		send_static_response(400, PSTR("Bad Request"), PSTR("Invalid parameters to API method."));
 		return;
-	notfound:
+notfound:
 		send_static_response(404, PSTR("Not Found"), PSTR("The data that resource points to does not exist."));
 		return;
 	}
@@ -334,7 +618,7 @@ flush_buf:
 		File f = sd.open(real_filename, FILE_READ);
 
 		Log.println(f.size());
-		
+
 		if (reqstate->c.is_gzipable) activeClient.printf_P(PSTR("Content-Encoding: gzip\r\n"));
 		stream_file(f);
 	}
@@ -377,7 +661,7 @@ flush_buf:
 			const char * valid_etag = nullptr;
 			const char * actual_name = nullptr;
 			const char * content_type = nullptr;
-			
+
 			// Check for the js files
 			if (strcasecmp_P(reqstate->c.url, PSTR("page.js")) == 0) {
 				valid_etag = etags[0];
@@ -417,7 +701,7 @@ flush_buf:
 			}
 		}
 	}
-	
+
 	void start_response() {
 		Log.println(F("Got request from server"));
 		switch (reqstate->c.error_code) {
