@@ -29,6 +29,7 @@ void setup() {
 	wifi::prepare();
 
 	// check for updates
+    Serial1.println("checking upd");
 	auto reason = upd::needed();
 	if (reason == upd::WEB_UI) {
 		upd::update_website();
