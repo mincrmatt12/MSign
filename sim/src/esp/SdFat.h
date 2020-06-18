@@ -89,8 +89,9 @@ struct SdFile : public Stream {
 		fst->write((char *)buf, amt);
         return amt;
 	}
-	void read(void * buf, size_t amt) {
+	size_t read(void * buf, size_t amt) {
 		fst->read((char *)buf, amt);
+        return amt;
 	}
 
 	void close() {fst->close();};
@@ -118,6 +119,10 @@ template<int A, int B, int C>
 struct SdFatSoftSpi {
 	bool exists(const char * place) {
 		std::string c = place;
+        if (_chdir.size()) {
+            if (_chdir[_chdir.size() - 1] == '/') c = _chdir + c;
+            else c = _chdir + '/' + c;
+        }
 		if (c[0] == '/') c = "sd" + c;
 		else c = "sd/" + c;
 
@@ -126,10 +131,15 @@ struct SdFatSoftSpi {
 	}
 	bool chdir(const char * place="") {
 		_chdir = place;
+        return true;
 	}
 	void begin(int pin) {;}
 	void remove(const char * name) {
 		std::string c = name;
+        if (_chdir.size()) {
+            if (_chdir[_chdir.size() - 1] == '/') c = _chdir + c;
+            else c = _chdir + '/' + c;
+        }
 		if (c[0] == '/') c = "sd" + c;
 		else c = "sd/" + c;
 		std::remove(c.c_str());
@@ -137,10 +147,18 @@ struct SdFatSoftSpi {
 
 	void mkdir(const char * dir) {
 		std::string c = dir;
+        if (_chdir.size()) {
+            if (_chdir[_chdir.size() - 1] == '/') c = _chdir + c;
+            else c = _chdir + '/' + c;
+        }
 		if (c[0] == '/') c = "sd" + c;
 		else c = "sd/" + c;
 
 		::mkdir(c.c_str(), 0775);
+	}
+
+	void rmdir(const char * dir) {
+        // no-op
 	}
 
 	SdFile open(const char * name, int mode=FILE_READ) {
