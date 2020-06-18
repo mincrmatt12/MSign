@@ -11,9 +11,9 @@ namespace debug {
 	int is_log = 0;
 
 	int num_of_commands = 0;
-	CommandHandler command_handlers[32];
-	int            allocation_sizes[32];
-	const char *   command_prefixes[32];
+	CommandHandler command_handlers[20];
+	int            allocation_sizes[20];
+	const char *   command_prefixes[20];
 
 	int match_command(char * in, char *& out) {
 		for (int i = 0; i < num_of_commands; ++i) {
