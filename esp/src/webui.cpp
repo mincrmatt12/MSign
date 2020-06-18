@@ -257,6 +257,9 @@ flush_buf:
 			}
 
 			if (!is_skipping) hook(nullptr, -2, &header_state); // it's invalid to error in this case
+
+			Log.println(F("got end"));
+			Log.println(is_skipping);
 		}
 		return MultipartStatus::OK;
 	}
@@ -478,7 +481,7 @@ flush_buf:
 					return;
 			}
 
-			if (gotcount <= 2) {
+			if (gotcount < 2) {
 				send_static_response(400, PSTR("Bad Request"), PSTR("Not enough files were provided"));
 				return;
 			}
