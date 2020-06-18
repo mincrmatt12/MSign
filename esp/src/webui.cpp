@@ -151,7 +151,7 @@ namespace webui {
 	int read_from_req_body(uint8_t * tgt, int size) {
 		// TODO: make me handle chunked encoding
 		int i = 0;
-		while (activeClient && (i += activeClient.read(tgt, size) < size)) {yield();}
+		while (activeClient && (i += activeClient.read(tgt + i, size - i) < size)) {delay(5);}
 		return i;
 	}
 
