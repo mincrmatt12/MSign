@@ -1,0 +1,66 @@
+// Parses the headers of a multipart form/data
+
+out str[32] name;
+out str[32] filename;
+out int content_length = -1;
+out bool ok = false;
+out bool is_end = false;
+
+macro ows {
+    optional { " "; }
+}
+
+parser {
+    optional {
+        "--";
+        is_end = true;
+        finish;
+    }
+
+    wait "\r\n";
+
+    loop {
+        case {
+            "Content-Disposition:"i -> {
+                ows();
+                ok = true;
+
+                "form-data;";
+
+                loop {
+                    ows();
+                    case {
+                        "name=" -> {
+                            /"/;
+                            name += /[^"]+/;
+                            /"/;
+                        }
+                        "filename=" -> {
+                            /"/;
+                            filename += /[^"]+/;
+                            /"/;
+                        }
+                    }
+                    case {
+                        "\r\n" -> {break;}
+                        ";" -> {}
+                    }
+                }
+            }
+            "Content-Length:"i -> {
+                ows();
+                content_length = 0;
+                loop {
+                    case {
+                        "\r\n" -> { break; }
+                        /\d/ -> {content_length = [content_length * 10 + ($last - 48)];}
+                    }
+                }
+            }
+            else -> {
+                wait "\r\n";
+            }
+            "\r\n" -> {finish;}
+        }
+    }
+}
