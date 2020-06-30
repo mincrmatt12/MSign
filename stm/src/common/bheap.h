@@ -318,7 +318,7 @@ namespace bheap {
 			// First, check if there's enough space to fit in this block.
 			uint32_t free_space = this->free_space();
 			if (contains(slotid)) {
-				free_space = this->free_space(this->get(slotid));
+				free_space = this->free_space(this->get(slotid), FreeSpaceAllocatable); // explicitly use the second one to avoid a warning
 			}
 
 			uint32_t required_space = 4;
@@ -373,7 +373,7 @@ namespace bheap {
 				// Region starting at begin_pos + containing_block.datasize has size offset + length - begin_pos + containing_block.datasize
 				auto sublength = begin_pos + containing_block.datasize - offset;
 				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, set_flush) &&
-					   update_contents(slotid, offset + sublength, length - sublength, data + sublength, set_flush);
+					   update_contents(slotid, offset + sublength, length - sublength, static_cast<uint8_t*>(data) + sublength, set_flush);
 			}
 
 			// Check if this is a remote region, in which case we have to convert it
