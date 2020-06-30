@@ -47,16 +47,16 @@ namespace slots {
 		CALFIX_PRDH1 = 0x55, 		// STRUCT; PeriodInfo, start time for period 1 & 2
 		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
 
-		MODEL_INFO = 0x0900, 		// UINT16_T; number of triangles in the model
-		MODEL_XYZ1 = 0x0901, 		// STRUCT; Vec3; position of point 1; requested per triangle
-		MODEL_XYZ2 = 0x0902, 		// ''
-		MODEL_XYZ3 = 0x0903, 		// ''
-		MODEL_RGB  = 0x0904, 		// '', color of triangle
-		MODEL_CAM_MINPOS  = 0x9005, // STRUCT; Vec3; minimum position of the camera 
-		MODEL_CAM_MAXPOS  = 0x9006, // ''; maximum position of the camera 
-		MODEL_CAM_FOCUS1  = 0x9007, // ''; lookat point of camera
-		MODEL_CAM_FOCUS2  = 0x9008, // ''; '' 2
-		MODEL_CAM_FOCUS3  = 0x9009, // ''; '' 3
+		MODEL_INFO = 0x900, 		// UINT16_T; number of triangles in the model
+		MODEL_XYZ1 = 0x901, 		// STRUCT; Vec3; position of point 1; requested per triangle
+		MODEL_XYZ2 = 0x902, 		// ''
+		MODEL_XYZ3 = 0x903, 		// ''
+		MODEL_RGB  = 0x904, 		// '', color of triangle
+		MODEL_CAM_MINPOS  = 0x905, // STRUCT; Vec3; minimum position of the camera 
+		MODEL_CAM_MAXPOS  = 0x906, // ''; maximum position of the camera 
+		MODEL_CAM_FOCUS1  = 0x907, // ''; lookat point of camera
+		MODEL_CAM_FOCUS2  = 0x908, // ''; '' 2
+		MODEL_CAM_FOCUS3  = 0x909, // ''; '' 3
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT; ScCfgTime, how long to enable a certain screen; polled (inited to zero when SCCFG_INFO is updated, circular)
