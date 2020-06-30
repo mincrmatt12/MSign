@@ -584,11 +584,13 @@ finish_setting:
 			for (const Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
 			}
+			__builtin_unreachable();
 		}
 		Block& get(uint32_t slotid) {
 			for (Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
 			}
+			__builtin_unreachable();
 		}
 
 		inline const Block& get(slots::DataID slotid, uint32_t offset) const {return get((uint32_t)slotid, offset);}
@@ -601,6 +603,7 @@ finish_setting:
 				if (offset >= pos && offset < pos + x.datasize) return x;
 				pos += x.datasize;
 			}
+			__builtin_unreachable();
 		}
 		Block& get(uint32_t slotid, uint32_t offset) {
 			uint32_t pos = 0;
@@ -610,6 +613,7 @@ finish_setting:
 				if (offset >= pos && offset < pos + x.datasize) return x;
 				pos += x.datasize;
 			}
+			__builtin_unreachable();
 		}
 
 		// Get the last block of that SlotID
