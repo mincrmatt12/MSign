@@ -7,6 +7,12 @@
 #include <iterator>
 #include "slots.h"
 
+#if __cpp_inline_variables >= 201603
+#define MSN_BHEAP_INLINE_V const inline static
+#else
+#define MSN_BHEAP_INLINE_V constexpr static
+#endif
+
 // "Block-HEAP"
 //
 // The datastructure which implements stuff in the README
@@ -25,19 +31,19 @@ namespace bheap {
 		uint32_t location : 2;
 		uint32_t flags : 2;
 
-		const inline static uint32_t TemperatureHot = 0b11;
-		const inline static uint32_t TemperatureWarm = 0b10;
-		const inline static uint32_t TemperatureCold = 0b01;
+		MSN_BHEAP_INLINE_V uint32_t TemperatureHot = 0b11;
+		MSN_BHEAP_INLINE_V uint32_t TemperatureWarm = 0b10;
+		MSN_BHEAP_INLINE_V uint32_t TemperatureCold = 0b01;
 
-		const inline static uint32_t LocationCanonical = 0b01;
-		const inline static uint32_t LocationEphemeral = 0b10;
-		const inline static uint32_t LocationRemote = 0b11;
+		MSN_BHEAP_INLINE_V uint32_t LocationCanonical = 0b01;
+		MSN_BHEAP_INLINE_V uint32_t LocationEphemeral = 0b10;
+		MSN_BHEAP_INLINE_V uint32_t LocationRemote = 0b11;
 
-		const inline static uint32_t SlotEmpty = 0xff0;
-		const inline static uint32_t SlotEnd = 0xff1;
+		MSN_BHEAP_INLINE_V uint32_t SlotEmpty = 0xff0;
+		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
 
-		const inline static uint32_t FlagDirty = 1;
-		const inline static uint32_t FlagFlush = 2;
+		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
+		MSN_BHEAP_INLINE_V uint32_t FlagFlush = 2;
 
 		// DATA ACCESS
 
@@ -176,8 +182,9 @@ namespace bheap {
 	// Helper type to access blocks of a known type
 	template<typename T>
 	struct TypedBlock : protected Block {
-		using data_type = std::conditional_t<std::is_pointer_v<std::decay_t<T>>, T, T&>;
-		using const_data_type = std::conditional_t<std::is_pointer_v<std::decay_t<T>>, std::add_pointer_t<const std::remove_pointer_t<T>>, const T&>;
+#if __cpp_if_constexpr >= 201603
+		using data_type = std::conditional_t<std::is_pointer<std::decay_t<T>>::value, T, T&>;
+		using const_data_type = std::conditional_t<std::is_pointer<std::decay_t<T>>::value, std::add_pointer_t<const std::remove_pointer_t<T>>, const T&>;
 
 		// Get the data of this block.
 		// If T is a pointer type, return a pointer to that type at the beginning of the data block (useful for variable length arrays / strings)
@@ -199,6 +206,13 @@ namespace bheap {
 			}
 		}
 
+		// Allow use as a pointer type
+		T* operator->() {return &data();}
+		const T* operator->() const {return &data();}
+		T& operator*() {return data();}
+		const T& operator*() const {return data();}
+#endif
+
 		using Block::next;
 
 		// Allow access to the metadata
@@ -209,12 +223,6 @@ namespace bheap {
 
 		// Allow access to the helper bool
 		using Block::operator bool;
-
-		// Allow use as a pointer type
-		T* operator->() {return &data();}
-		const T* operator->() const {return &data();}
-		T& operator*() {return data();}
-		const T& operator*() const {return data();}
 	};
 
 	// An arena of blocks (fight!)
@@ -222,7 +230,7 @@ namespace bheap {
 	struct Arena {
 		template<typename T, bool Adjacent>
 		struct Iterator {
-			static_assert(!(Adjacent && !std::is_same_v<std::decay_t<T>, Block>), "Using Arena::Iterator in adjacent mode on TypedBlocks is invalid.");
+			static_assert(!(Adjacent && !std::is_same<typename std::decay<T>::type, Block>::value), "Using Arena::Iterator in adjacent mode on TypedBlocks is invalid.");
 
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = T;
@@ -242,10 +250,14 @@ namespace bheap {
 			reference_type operator*() {return *ptr;}
 
 			Iterator& operator++() {
+#if __cpp_if_constexpr >= 201603
 				if constexpr (Adjacent)
 					ptr = ptr->adjacent();
 				else
 					ptr = ptr->next();
+#else
+				ptr = Adjacent ? ptr->adjacent() : ptr->next();
+#endif
 				return *this;
 			}
 
@@ -512,7 +524,7 @@ finish_setting:
 		// DATA ACCESS OPERATIONS
 
 		// Size/offset for something that doesn't exist
-		static const inline uint32_t npos = ~0u;
+		MSN_BHEAP_INLINE_V uint32_t npos = ~0u;
 
 		// Return the offset into the slot id this block is at.
 		//
@@ -538,14 +550,14 @@ finish_setting:
 		}
 
 		// Get the total free space (with various flags for what counts as "free" space)
-		const inline static uint32_t FreeSpaceEmpty = 1; // Total size of empty regions + their headers
-		const inline static uint32_t FreeSpaceZeroSizeCanonical = 2; // Headers for empty canonical blocks
-		const inline static uint32_t FreeSpaceEphemeral = 4; // Headers + data for ephemeral blocks (cold + warm)
-		const inline static uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceEmpty = 1; // Total size of empty regions + their headers
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceZeroSizeCanonical = 2; // Headers for empty canonical blocks
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceEphemeral = 4; // Headers + data for ephemeral blocks (cold + warm)
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
 
-		const inline static uint32_t FreeSpaceAllocatable = FreeSpaceEmpty;
-		const inline static uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral;
-		const inline static uint32_t FreeSpaceDefrag = FreeSpaceCleanup | FreeSpaceHomogenizeable;
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty;
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral;
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceCleanup | FreeSpaceHomogenizeable;
 
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) {
 			return free_space(first, mode);
