@@ -342,7 +342,7 @@ namespace bheap {
 			if (contains(slotid)) newb.temperature = get(slotid).temperature;
 
 			for (Block* x = contains(slotid) ? &last(slotid) : &first; x->adjacent(); x = x->adjacent()) {
-				if (x->slotid == Block::SlotEnd) return false; // end
+				if (x->slotid == Block::SlotEnd) return false; // end; fragmented
 				if (*x) continue; // non-empty
 				// empty block, is there space?
 				if (x->will_fit(newb, 0)) {
@@ -352,7 +352,7 @@ namespace bheap {
 				}
 			}
 
-			return false; // ?
+			return false; // Broken heap
 		}
 
 		// Update the contents of the data at that offset + length with data.
@@ -519,6 +519,57 @@ finish_setting:
 				}
 			}
 			return true;
+		}
+
+		// Homogenize data: ensure all of its blocks are in order, and (if possible) merge their data together
+		// This does it's "best effort":
+		//  - it'll try to merge blocks as it can
+		inline void homogenize(slots::DataID slotid) {
+			homogenize((uint32_t)slotid);
+		}
+		void homogenize(uint32_t slotid) {
+			// Rearrange all of the blocks
+			for (auto x = this->begin(slotid); x != this->end(slotid); ++x) {
+				if (x->next()) {
+					move_left(*x->next(), *x);
+					// Try to merge
+					//
+					// We can merge if:
+					// 	- the location is equal
+					// 	- the flush flag is equal (if the dirty flag is unequal, or it)
+
+					while (x->location == x->next()->location && (x->flags & Block::FlagFlush) == (x->next()->flags & Block::FlagFlush)) {
+						// If this is a remote block, just increase the size
+						if (x->location == Block::LocationRemote) {
+							x->datasize += x->next()->datasize;
+							x->next()->location = Block::LocationCanonical;
+							x->next()->slotid = Block::SlotEmpty;
+							x->next()->datasize = 0;
+						}
+						else {
+							// Copy the data
+							Block old = *x->next();
+							void * old_dat = x->next()->data();
+							char * append_at = (char *)x->data();
+							uintptr_t old_p = reinterpret_cast<uintptr_t>(x->next()->adjacent());
+							append_at += x->datasize;
+							// Overwrite
+							memmove(append_at, old_dat, old.datasize);
+							// Update status
+							x->datasize += old.datasize;
+							x->flags |= old.flags;
+							// Re-use old
+							old = Block{};
+							old.datasize = (old_p - reinterpret_cast<uintptr_t>(x->adjacent())) - 4;
+							old.slotid = Block::SlotEmpty;
+							*x->adjacent() = old;
+						}
+
+						if (x->next()) move_left(*x->next(), *x);
+						else break;
+					}
+				}
+			}
 		}
 
 		// DATA ACCESS OPERATIONS
@@ -812,7 +863,7 @@ finish_setting:
 				if (!make_space_after(block, space_required - 4)) return false;
 
 				// Shift with memmove
-				char * starting_pos = block.as<char *>().data() + offset_in_block;
+				char * starting_pos = ((char *)block.data()) + offset_in_block;
 				memmove(starting_pos + space_required, starting_pos, block.datasize - offset_in_block);
 
 				// Shrink block to generate header in right place
@@ -828,6 +879,26 @@ copy_data:
 			block.adjacent()->datasize = new_length;
 
 			return true;
+		}
+
+		// Move a block to the left of another, moving the middle region wordwise
+		void move_left(Block& to_move, Block& in_front_of) {
+			if (in_front_of.adjacent() == &to_move) return;
+			
+			uint32_t * middle_start = reinterpret_cast<uint32_t *>(in_front_of.adjacent());
+			uint32_t * middle_end = reinterpret_cast<uint32_t *>(&to_move);
+			uint32_t * paste_from = middle_end;
+			uint32_t * paste_to = middle_start;
+
+			// Compute total length
+			uint32_t paste_amount = to_move.adjacent() - &to_move;
+			for (int i = 0; i < paste_amount; ++i) {
+				uint32_t temp = *paste_from++;
+				memmove(middle_start + 1, middle_start, (middle_end - middle_start) * 4);
+				middle_start++;
+				middle_end++;
+				*paste_to++ = temp;
+			}
 		}
 	};
 }
