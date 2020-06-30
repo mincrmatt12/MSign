@@ -508,7 +508,6 @@ finish_setting:
 			// if the actual size == size, we just do nothing
 			while (contents_size(slotid) > size) {
 				auto& endptr = last(slotid);
-				uint32_t starting_pos = block_offset(endptr);
 				uint32_t should_reclaim = contents_size(slotid) - size;
 				if (should_reclaim >= endptr.datasize) {
 					// delete the block
@@ -519,6 +518,7 @@ finish_setting:
 					endptr.shrink(endptr.datasize - should_reclaim);
 				}
 			}
+			return true;
 		}
 
 		// DATA ACCESS OPERATIONS
@@ -562,7 +562,7 @@ finish_setting:
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) {
 			return free_space(first, mode);
 		}
-		uint32_t free_space(const Block& after, uint32_t mode=FreeSpaceAllocatable) const {
+		uint32_t free_space(const Block& after, uint32_t mode) const {
 			uint32_t total = 0;
 			if (mode & FreeSpaceEmpty) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
