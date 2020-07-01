@@ -160,7 +160,8 @@ namespace bheap {
 
 		// Check if that block will fit in this location
 		bool will_fit(const Block& b, uint32_t offset) const {
-			return (reinterpret_cast<uintptr_t>(this) + offset + ((b && b.location == LocationRemote) ? 0 : b.datasize) <= reinterpret_cast<uintptr_t>(adjacent()));
+			uint32_t length = offset + (b.adjacent() - &b) * 4;
+			return length <= (adjacent() - this) * 4;
 		}
 
 		operator bool() const {
