@@ -42,9 +42,12 @@ The code will run on a nucleo-f207zg or the msign, which uses an stm32f205rgt
 Uses DMA to the GPIO to drive R0-B1 as well as the clock.
 DMA is triggered off of TIM1 update event; the delay between different bits of color in PCM encoding goes off of TIM9.
 
-## Protocol
+## Serial Protocol
 
 The protocol starts with a handshake, initiated from the STM32, and continues asynchronously.
+
+The system is mostly based around the sharing and storage of various "slots" of data, which have variable length, which while being capped at 65k by technical restrictions
+is limited to around 8k in practice.
 
 ### Command format
 
@@ -62,6 +65,15 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 | `HANDSHAKE_RESP` | `0x11` |
 | `HANDSHAKE_OK` | `0x12` |
 | `HANDSHAKE_UOK` | `0x13` |
+| `DATA_TEMP` | `0x20` |
+| `DATA_UPDATE` | `0x21` |
+| `DATA_MOVE` | `0x22` |
+| `DATA_DEL` | `0x23` |
+| `ACK_DATA_TEMP` | `0x30` |
+| `ACK_DATA_UPDATE` | `0x31` |
+| `ACK_DATA_MOVE` | `0x32` |
+| `ACK_DATA_DEL` | `0x33` |
+| `QUERY_FREE_HEAP` | `0x40` |
 | `RESET` | `0x50` |
 | `PING` | `0x51` |
 | `PONG` | `0x52` |
@@ -76,6 +88,105 @@ The protocol starts with a handshake, initiated from the STM32, and continues as
 
 STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, STM finishes with `HANDSHAKE_OK`. All handshake commands have payload size 0 and no payload.
 The command `HANDSHAKE_UOK` is sent to indicate that the STM should enter update mode.
+
+### Slots
+
+Each slot is represented as a theoretically unbounded, randomly-accessible and partitionable chunk of memory.
+
+Each part of the slot's data can be stored on either the ESP or the STM when not in use. Data stored on a processor in this way is called _canonical_ data. The other processor refers
+to this data as _remote_ data, using a placeholder to avoid duplicating it. Remote data may temporarily be converted to _ephemeral_ data, which is a temporary copy of _canonical_ data, almost
+always by the STM for use on-screen.
+
+An entire slot has a _temperature_, which relates to where a version of it should be made available:
+
+| Temperature | Meaning |
+| ----------- | ---------------- |
+| Cold | Not required for the display right now |
+| Warm | Will be required soon for the display, should be sent. |
+| Hot | Is being displayed right now. |
+
+Any updates to data that is at least level Warm should be immediately transferred to the STM. Additionally, if any part of the slot's data is stored _canonically_ on the STM and the slot
+is made Warm or higher, all the remaining parts of the data still stored on the ESP should be flushed to the STM and marked remote.
+
+The STM controls the temperature of data using the `DATA_TEMP` (data temperature) message:
+
+```
+| 0x090a | 0x01 |
+  |        |
+  |        ---- the temperature to update to, one of the Block::Temperature* constants
+  ----- the slot ID to update (12 bits, stored as 16 bit with upper nybble 0)
+```
+
+The STM shall send this message whenever it wishes to change the temperature of a slot, and should send it repeatedly until it receives an identical message of type `ACK_DATA_TEMP` confirming the change
+(although it's allowed to stop sending if it wants to)
+
+#### Updating
+
+The ESP uses the `DATA_UPDATE` message to signal that the STM should create an ephemeral part of the data at some offset and length. It also sends along the total length of the slot.
+
+```
+| 0x090a | 0x0100 | 0x0500 | 0x0120 | <data> |
+  |        |        |        |
+  |        |        |        ---- total length of this update
+  |        |        ---- total length of slot
+  |        --- offset to update at
+  --- slot ID + framing info:
+
+  0b0000  0x90a
+    ||||    |
+    ||\\    slot ID
+    ||-- reserved
+    |- end
+    - start
+```
+
+#### Framing
+
+This message (as well as `DATA_MOVE`) is framed to allow for sending more than 249 bytes: the `start` bit is set for the first message corresponding to this update, the `end` bit is set for the last message, and the offset is always
+the offset of this message.
+
+This is enough to both know the size and starting offset of an update immediately, progressively update, and again know the size and starting offset of the entire update as well.
+
+#### Acknowledgements
+
+This message (as well as `DATA_MOVE`) send a single acknowledgement to indicate successful/unsuccessful completion of the update as a whole. Note that an acknowledgement is not required if an `end` packet
+is not sent.
+
+This acknowledgement takes the form
+
+```
+| 0x090a | 0x0100 | 0x0120 | 0 |
+  |           |      |       |
+  |           |      |       -- result code
+  |           |      -- length of update
+  -- slot ID  -- start of update
+```
+
+Valid result codes are:
+
+| Code | Usage |
+| ---- | ----- |
+| `0x00` | Completed OK |
+| `0x01` | Not enough space to store |
+| `0x02` | Illegal internal state |
+| `0x03` | Parameters don't make sense / other NAK |
+
+#### Moving 
+
+The ESP or STM are both allowed to "flush" parts of data to the opposite processor, and convert them from canonical parts to remote parts. This is accomplished with the `DATA_MOVE` message, which has the
+same format and acknowledgement scheme as `DATA_UPDATE`, but semantically means to create a canonical part not an ephemeral one.
+
+#### Deletion
+
+The ESP can also send the following message to indicate that a slot has been nulled entirely (a 0-slot-length update packet is illegal)
+
+```
+| 0x090a |
+   |
+   -- slot ID
+```
+
+This is acknowledged with a copy of the message, and it is illegal to not have this complete succesfully: if the data is not present, silently ignore it.
 
 ### Consoles
 
@@ -105,6 +216,9 @@ When either device sends the `RESET` command, both devices should reset. Usually
 When either device sends the `PING` command, the other MUST respond with the `PONG` command, UNLESS the handshake has not been completed.
 
 The above three commands have no payload.
+
+When either device sends the `QUERY_FREE_HEAP` command (with no payload) the other device should respond with the same message ID but with a payload corresponding to the
+maximum amount of data that can be `DATA_MOVE`d to it. This should only ever underestimate this quantity, not over estimate it. The value itself is represented as an unsigned 16 bit integer.
 
 ### Update commands
 
