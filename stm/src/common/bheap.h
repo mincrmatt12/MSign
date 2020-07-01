@@ -359,10 +359,10 @@ namespace bheap {
 		// Update the contents of the data at that offset + length with data.
 		//
 		// This function will convert remote chunks to either canonical + flush or ephemeral (semantically the correct choice)
-		inline bool update_contents(slots::DataID slotid, uint32_t offset, uint32_t length, void *data, bool set_flush=false) {
+		inline bool update_contents(slots::DataID slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
 			return update_contents((uint32_t)slotid, offset, length, data, set_flush);
 		}
-		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, void *data, bool set_flush=false) {
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
 			if (offset + length > contents_size(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
 			Block& containing_block = get(slotid, offset);
@@ -374,7 +374,7 @@ namespace bheap {
 				// Region starting at begin_pos + containing_block.datasize has size offset + length - begin_pos + containing_block.datasize
 				auto sublength = begin_pos + containing_block.datasize - offset;
 				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, set_flush) &&
-					   update_contents(slotid, offset + sublength, length - sublength, static_cast<uint8_t*>(data) + sublength, set_flush);
+					   update_contents(slotid, offset + sublength, length - sublength, static_cast<const uint8_t*>(data) + sublength, set_flush);
 			}
 
 			// Check if this is a remote region, in which case we have to convert it
