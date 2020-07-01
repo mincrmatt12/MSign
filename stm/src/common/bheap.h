@@ -512,6 +512,7 @@ finish_setting:
 				uint32_t should_reclaim = contents_size(slotid) - size;
 				if (should_reclaim >= endptr.datasize) {
 					// delete the block
+					if (endptr.location == Block::LocationRemote) endptr.datasize = 0;
 					endptr.slotid = Block::SlotEmpty;
 				}
 				else {
