@@ -635,9 +635,9 @@ finish_setting:
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceEphemeral = 4; // Headers + data for ephemeral blocks (cold + warm)
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
 
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty;
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral;
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceCleanup | FreeSpaceHomogenizeable;
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty; // Free space for new allocations
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral; // Free space after removing stuff
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceHomogenizeable; // Free space after defrag()
 
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) {
 			return free_space(first, mode);
@@ -646,10 +646,27 @@ finish_setting:
 			uint32_t total = 0;
 			if (mode & FreeSpaceEmpty) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (blk->slotid == Block::SlotEmpty) total += 4 + blk->datasize;
+					if (blk->slotid == Block::SlotEmpty) {
+						total += 4 + blk->datasize;
+						if (total % 4) total += 4 - (total % 4);
+					}
 				}
 			}
-			// TODO
+			if (mode & FreeSpaceZeroSizeCanonical) {
+				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
+					if (blk->slotid < Block::SlotEmpty && blk->location == Block::LocationCanonical && blk->datasize == 0) total += 4 ;
+				}
+			}
+			if (mode & FreeSpaceEphemeral) {
+				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
+					if (blk->slotid < Block::SlotEmpty && blk->location == Block::LocationEphemeral && blk->temperature < Block::TemperatureHot && !blk->flags) total += 4 + blk->datasize;
+				}
+			}
+			if (mode & FreeSpaceHomogenizeable) {
+				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
+					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagFlush) == (blk->next()->flags & Block::FlagFlush)) total += 4;
+				}
+			}
 			return total;
 		}
 
