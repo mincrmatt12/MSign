@@ -574,6 +574,25 @@ finish_setting:
 			}
 		}
 
+		// Defragment this Arena
+		//
+		// Does the following actions:
+		// 	- Homogenizes all slots
+		// 	- Condenses adjacent empties
+		void defrag() {
+			// Homogenize all slots
+			for (auto& x : *this) {
+				if (x && x.next()) homogenize(x.slotid);
+			}
+			// Condense empty slots
+			for (auto& x : *this) {
+				while (x.adjacent() && x.slotid == Block::SlotEmpty && x.adjacent()->slotid == Block::SlotEmpty) {
+					x.datasize += 4 + x.adjacent()->datasize;
+					if (x.datasize % 4) x.datasize += (4 - x.datasize % 4);
+				}
+			}
+		}
+
 		// DATA ACCESS OPERATIONS
 
 		// Size/offset for something that doesn't exist
