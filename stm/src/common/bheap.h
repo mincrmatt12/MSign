@@ -580,6 +580,14 @@ finish_setting:
 		// 	- Homogenizes all slots
 		// 	- Condenses adjacent empties
 		void defrag() {
+			// Remove unnecessary placeholders
+			for (auto& x : *this) {
+				if (x && x.location == Block::LocationRemote && x.datasize == 0 && x.next()) {
+					x.datasize = 0;
+					x.slotid = Block::SlotEmpty;
+					x.location = Block::LocationCanonical;
+				}
+			}
 			// Homogenize all slots
 			for (auto& x : *this) {
 				if (x && x.next()) homogenize(x.slotid);
