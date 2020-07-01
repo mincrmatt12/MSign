@@ -847,6 +847,7 @@ finish_setting:
 				// After reclaiming we memmove
 
 				uint32_t remaining_new_alloc_space = containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
+				if (next_empty->datasize % 4) next_empty->datasize += (4 - next_empty->datasize % 4);
 				uint32_t reclaimable_space = next_empty->datasize + 4;
 				if (reclaimable_space % 4) {
 					reclaimable_space += 4 - (reclaimable_space % 4);
