@@ -180,7 +180,66 @@ namespace slots {
 		HEAVY_SNOW
 	};
 
+	// PROTOCOL DEFINITIONS
+	
+	namespace protocol {
+		enum Command : uint8_t {
+			HANDSHAKE_INIT = 0x10,
+			HANDSHAKE_RESP,
+			HANDSHAKE_OK,
+			HANDSHAKE_UOK,
 
+			DATA_TEMP = 0x20,
+			DATA_UPDATE,
+			DATA_MOVE,
+			DATA_DEL,
+
+			ACK_DATA_TEMP = 0x30,
+			ACK_DATA_UPDATE,
+			ACK_DATA_MOVE,
+			ACK_DATA_DEL,
+
+			QUERY_FREE_HEAP = 0x40,
+
+			RESET = 0x50,
+			PING,
+			PONG,
+			
+			UPDATE_CMD = 0x60,
+			UPDATE_IMG_DATA,
+			UPDATE_IMG_START,
+			UPDATE_STATUS,
+
+			CONSOLE_MSG = 0x70
+		};
+
+		enum struct UpdateStatus : uint8_t {
+			ENTERED_UPDATE = 0x10,
+			READY_FOR_IMAGE = 0x12,
+			READY_FOR_CHUNK = 0x13,
+
+			BEGINNING_COPY = 0x20,
+			COPY_COMPLETED,
+
+			RESEND_LAST_CHUNK_CSUM = 0x30,
+
+			ABORT_CSUM = 0x40
+		};
+
+		enum struct UpdateCmd : uint8_t {
+			CANCEL_UPDATE = 0x10,
+			PREPARE_FOR_IMAGE,
+
+			ERR_IMG_READ = 0x30,
+			ERR_IMG_CSUM,
+			ERR_STATUS,
+
+			UPDATE_COMPLETED_OK = 0x40,
+
+			ESP_WROTE_SECTOR = 0x50,
+			ESP_COPYING
+		};
+	}
 }
 
 #endif

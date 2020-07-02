@@ -27,6 +27,8 @@ uint64_t rtc_time;
 
 tasks::Timekeeper timekeeper{rtc_time};
 
+extern void pump_faux_dma();
+
 tasks::DispMan dispman;
 
 // Scheduler parameters
@@ -74,7 +76,10 @@ void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	}
 }
 
-int main() {
+char ** orig_argv;
+
+int main(int argc, char ** argv) {
+	orig_argv = argv;
 	rcc::init();
 	nvic::init();
 	rng::init();
@@ -92,6 +97,7 @@ int main() {
 
 	// Init esp comms
 	while (!servicer.ready()) {
+		pump_faux_dma();
 		servicer.loop();
 		matrix.display();
 		while (matrix.is_active()) {;}
@@ -102,10 +108,11 @@ int main() {
 	if (servicer.updating()) {
 		// Go into a simple servicer only update mode
 		while (true) {
+			pump_faux_dma();
 			servicer.loop();
 			matrix.display();
 			show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
-			while (matrix.is_active()) {servicer.loop();}
+			while (matrix.is_active()) {pump_faux_dma(); servicer.loop();}
 			matrix.swap_buffers();
 		}
 
@@ -142,10 +149,11 @@ int main() {
 
 	// Main loop of software
 	while (true) {
-
 		matrix.display();
 		// ... scheduler loop ...
 		while (matrix.is_active()) {
+			// Update fake DMA
+			pump_faux_dma();
 			//simulator time
 			timeval current_time;
 			gettimeofday(&current_time, NULL);

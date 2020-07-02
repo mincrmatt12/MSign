@@ -4,6 +4,7 @@
 #include "schedef.h"
 #include <stdint.h>
 #include <type_traits>
+#include "protocol.h"
 
 namespace srv {
 	// Implements a stupid 
@@ -28,7 +29,7 @@ namespace srv {
 	// Once a slot is no longer required to be updated, it can be stopped.
 	//
 	// This class also handles the update procedure.
-	struct Servicer : public sched::Task {
+	struct Servicer : public sched::Task, private ProtocolImpl {
 		
 		// non-task interface
 		void init(); // starts the system, begins dma, and starts handshake procedure
@@ -54,8 +55,7 @@ namespace srv {
 		bool ack_slot(uint8_t slot_id);
 		bool close_slot(uint8_t slot_id);
 
-		// interrupt handlers
-		void dma_finish(bool incoming);
+		using ProtocolImpl::dma_finish;
 
 		void loop()      override;
 		bool done()      override;
@@ -66,27 +66,15 @@ namespace srv {
 
 	private:
 		uint8_t slots[256][16];
-		uint8_t dma_buffer[64];
-		uint8_t dma_out_buffer[16];
 		uint8_t slot_states[64] = {0}; // 2 bits per
 		uint8_t slot_dirties[32] = {0};
 		uint32_t pending_operations[32]; // pending operations, things that need to be sent out
 
-		uint8_t state = 0;
 		uint8_t pending_count = 0;
-
-		uint64_t last_comm = 0;
-		bool is_sending = false;
-		bool sent_ping = false;
 		
 		uint16_t retry_counter = 0;
 
-		void send();
-		void start_recv();
-		bool recv_full();
-		void cancel_recv();
-
-		void process_command();
+		void process_command() override;
 		void process_update_cmd(uint8_t cmd);
 		void do_send_operation(uint32_t operation);
 
