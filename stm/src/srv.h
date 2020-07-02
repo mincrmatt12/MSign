@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <type_traits>
 #include "protocol.h"
+#include "common/bheap.h"
 
 namespace srv {
 	// Implements a stupid 
@@ -22,11 +23,10 @@ namespace srv {
 
 	// Talks to the ESP8266
 	//
-	// Uses up to 256 16-byte "data slots", which can be set to contain any 16-byte stream identifier.
-	// Some streams are continuous, while some are acknowledge-only.
+	// Manages slots of arbitrary length data using the bheap.
 	//
-	// The slots are assigned automatically, (although long term slots can be specified to optimize the searching algorithm)
-	// Once a slot is no longer required to be updated, it can be stopped.
+	// NOTE: the result of a call to data() may become invalid at any point.
+	//       this may change depending on available RAM / queueing system, but presently 
 	//
 	// This class also handles the update procedure.
 	struct Servicer : public sched::Task, private ProtocolImpl {
@@ -35,25 +35,6 @@ namespace srv {
 		void init(); // starts the system, begins dma, and starts handshake procedure
 		bool ready(); // is the esp talking?
 		bool updating() {return is_updating;} // are we in update mode?
-
-		// slot interface
-		//
-		// persistent means to allocate from the end of the array.:w
-		//
-		bool open_slot(uint16_t data_id, bool continuous, uint8_t &slot_id_out, bool persistent=false);
-		bool slot_open(uint8_t slot_id);
-		bool slot_connected(uint8_t slot_it);
-		bool slot_dirty(uint8_t slot_id, bool mark_clean=false);
-
-		const uint8_t * slot(uint8_t slot_id);
-		
-		template<typename T>
-		inline std::enable_if_t<sizeof(T) <= 16, const T&> slot(uint8_t slot_id) const {
-			return *(reinterpret_cast<const T*>(this->slots[slot_id]));
-		}
-
-		bool ack_slot(uint8_t slot_id);
-		bool close_slot(uint8_t slot_id);
 
 		using ProtocolImpl::dma_finish;
 
@@ -64,10 +45,20 @@ namespace srv {
 		// Update state introspections
 		const char * update_status();
 
+		// Data request methods
+		bool set_temperature(uint16_t slotid, uint32_t temperature);
+
+		// Data access methods
+		const bheap::Block& slot(uint16_t slotid) const;
+		inline const bheap::Block& operator[](uint16_t slotid) const {return slot(slotid);}
+		template<typename T>
+		inline const bheap::TypedBlock<T>& slot(uint16_t slotid) const {return slot(slotid).as<T>();}
+
+		// Helpers
+		bool slot_dirty(bool clear=true);
+
 	private:
-		uint8_t slots[256][16];
-		uint8_t slot_states[64] = {0}; // 2 bits per
-		uint8_t slot_dirties[32] = {0};
+		bheap::Arena<1404> arena;
 		uint32_t pending_operations[32]; // pending operations, things that need to be sent out
 
 		uint8_t pending_count = 0;
