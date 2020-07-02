@@ -5,7 +5,6 @@
 #include <string.h>
 #include <type_traits>
 #include <iterator>
-#include "slots.h"
 
 #if __cpp_inline_variables >= 201603
 #define MSN_BHEAP_INLINE_V const inline static
@@ -312,9 +311,6 @@ namespace bheap {
 		// Add a new block of this size somewhere after the last block of this slot.
 		//
 		// If this is the first block, the temperature is initialized to cold, otherwise it is kept correct
-		inline bool add_block(slots::DataID slotid, uint32_t datalocation, size_t datasize) {
-			return add_block((uint32_t)slotid, datalocation, datasize);
-		}
 		bool add_block(uint32_t slotid, uint32_t datalocation, size_t datasize) {
 			// First, check if there's enough space to fit in this block.
 			uint32_t free_space = this->free_space();
@@ -359,9 +355,6 @@ namespace bheap {
 		// Update the contents of the data at that offset + length with data.
 		//
 		// This function will convert remote chunks to either canonical + flush or ephemeral (semantically the correct choice)
-		inline bool update_contents(slots::DataID slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
-			return update_contents((uint32_t)slotid, offset, length, data, set_flush);
-		}
 		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
 			if (offset + length > contents_size(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
@@ -397,9 +390,6 @@ namespace bheap {
 		//
 		// If told to convert to remote, will create the necessary block.
 		// If told to convert _from_ remote, will create necessary blocks and shrink/replace remote sections.
-		inline bool set_location(slots::DataID slotid, uint32_t offset, uint32_t length, uint32_t location) {
-			return set_location((uint32_t)slotid, offset, length, location);
-		}
 		bool set_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) {
 			// Strategy for normal locations:
 			// 	- find beginning block and ending block (min max, possibly overshooting)
@@ -488,9 +478,6 @@ finish_setting:
 		}
 
 		// Set the temperature of data
-		inline bool set_temperature(slots::DataID slotid, uint32_t temperature) {
-			return set_temperature((uint32_t)slotid, temperature);
-		}
 		bool set_temperature(uint32_t slotid, uint32_t temperature) {
 			if (!contains(slotid)) return false;
 			// Change the temperature of all blocks
@@ -501,9 +488,6 @@ finish_setting:
 		}
 
 		// Trim data blocks so that the total size is truncated
-		inline bool truncate_contents(slots::DataID slotid, uint32_t size) {
-			return truncate_contents((uint32_t)slotid, size);
-		}
 		bool truncate_contents(uint32_t slotid, uint32_t size) {
 			if (contents_size(slotid) < size) return false; // also does npos
 			// if the actual size == size, we just do nothing
@@ -526,9 +510,6 @@ finish_setting:
 		// Homogenize data: ensure all of its blocks are in order, and (if possible) merge their data together
 		// This does it's "best effort":
 		//  - it'll try to merge blocks as it can
-		inline void homogenize(slots::DataID slotid) {
-			homogenize((uint32_t)slotid);
-		}
 		void homogenize(uint32_t slotid) {
 			// Rearrange all of the blocks
 			for (auto x = this->begin(slotid); x != this->end(slotid); ++x) {
@@ -619,7 +600,6 @@ finish_setting:
 		}
 
 		// Get the total size of a given slotid (returns npos if not found)
-		inline uint32_t contents_size(slots::DataID slotid) const {return contents_size((uint32_t)slotid);}
 		uint32_t contents_size(uint32_t slotid) const {
 			uint32_t total = npos;
 			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
@@ -671,12 +651,9 @@ finish_setting:
 		}
 
 		// Is this data ID represented in this arena
-		inline bool contains(slots::DataID slotid) const {return get(slotid);} // uses bool conversion here
 		inline bool contains(uint32_t slotid) const {return get(slotid);}
 
 		// Get the first block of that SlotID (returning the end block if not present, whose bool() is false)
-		inline const Block& get(slots::DataID slotid) const {return get((uint32_t)slotid);}
-		inline Block& get(slots::DataID slotid) {return get((uint32_t)slotid);}
 		const Block& get(uint32_t slotid) const {
 			for (const Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
@@ -690,8 +667,6 @@ finish_setting:
 			__builtin_unreachable();
 		}
 
-		inline const Block& get(slots::DataID slotid, uint32_t offset) const {return get((uint32_t)slotid, offset);}
-		inline Block& get(slots::DataID slotid, uint32_t offset) {return get((uint32_t)slotid, offset);}
 		const Block& get(uint32_t slotid, uint32_t offset) const {
 			uint32_t pos = 0;
 			for (const Block& x : *this) {
@@ -714,8 +689,6 @@ finish_setting:
 		}
 
 		// Get the last block of that SlotID
-		inline const Block& last(slots::DataID slotid) const {return last((uint32_t)slotid);}
-		inline Block& last(slots::DataID slotid) {return last((uint32_t)slotid);}
 		const Block& last(uint32_t slotid) const {
 			const Block* ptr = &get(slotid);
 			while (ptr->next()) ptr = ptr->next();
@@ -729,17 +702,11 @@ finish_setting:
 
 		// Get the first block of that SlotID as a TypedBlock
 		template<typename T>
-		inline const TypedBlock<T>& get(slots::DataID slotid) const {return get<T>((uint32_t)slotid);}
-		template<typename T>
-		inline TypedBlock<T>& get(slots::DataID slotid) {return get<T>((uint32_t)slotid);}
-		template<typename T>
 		inline const TypedBlock<T>& get(uint32_t slotid) {return get(slotid).template as<T>();}
 		template<typename T>
 		inline TypedBlock<T>& get(uint32_t slotid) {return get(slotid).template as<T>();}
 
 		// HELPERS
-		inline const Block& operator[](slots::DataID slotid) const {return get((uint32_t)slotid);}
-		inline Block& operator[](slots::DataID slotid) {return get((uint32_t)slotid);}
 		inline const Block& operator[](uint32_t slotid) const {return get(slotid);}
 		inline Block& operator[](uint32_t slotid) {return get(slotid);}
 
@@ -762,14 +729,6 @@ finish_setting:
 
 		// Iterate over blocks for slotid without type
 
-		inline nonadj_iterator begin(slots::DataID slotid) {return nonadj_iterator(this->get(slotid));}
-		inline nonadj_const_iterator begin(slots::DataID slotid) const {return nonadj_const_iterator(this->get(slotid));}
-		inline nonadj_const_iterator cbegin(slots::DataID slotid) const {return nonadj_const_iterator(this->get(slotid));}
-
-		inline nonadj_iterator end(slots::DataID slotid) {return nonadj_iterator();}
-		inline nonadj_const_iterator end(slots::DataID slotid) const {return nonadj_const_iterator();}
-		inline nonadj_const_iterator cend(slots::DataID slotid) const {return nonadj_const_iterator();}
-
 		inline nonadj_iterator begin(uint32_t slotid) {return nonadj_iterator(this->get(slotid));}
 		inline nonadj_const_iterator begin(uint32_t slotid) const {return nonadj_const_iterator(this->get(slotid));}
 		inline nonadj_const_iterator cbegin(uint32_t slotid) const {return nonadj_const_iterator(this->get(slotid));}
@@ -784,20 +743,6 @@ finish_setting:
 		using data_iterator = Iterator<TypedBlock<T>, false>;
 		template<typename T>
 		using data_const_iterator = Iterator<const TypedBlock<T>, false>;
-
-		template<typename T>
-		inline data_iterator<T> begin(slots::DataID slotid) {return data_iterator<T>(this->get(slotid));}
-		template<typename T>
-		inline data_const_iterator<T> begin(slots::DataID slotid) const {return data_const_iterator<T>(this->get(slotid));}
-		template<typename T>
-		inline data_const_iterator<T> cbegin(slots::DataID slotid) const {return data_const_iterator<T>(this->get(slotid));}
-
-		template<typename T>
-		inline data_iterator<T> end(slots::DataID slotid) {return data_iterator<T>();}
-		template<typename T>
-		inline data_const_iterator<T> end(slots::DataID slotid) const {return data_const_iterator<T>();}
-		template<typename T>
-		inline data_const_iterator<T> cend(slots::DataID slotid) const {return data_const_iterator<T>();}
 
 		template<typename T>
 		inline data_iterator<T> begin(uint32_t slotid) {return data_iterator<T>(this->get(slotid));}
