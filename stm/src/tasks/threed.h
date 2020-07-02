@@ -9,10 +9,10 @@ namespace threed {
 	struct Vec3 {
 		float x, y, z;
 
-		Vec3()                          : x(0), y(0), z(0) {}
-		Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
-		Vec3(float a)                   : x(a), y(a), z(a) {}
-		Vec3(const slots::Vec3& v)      : x(v.x), y(v.y), z(v.z) {}
+		constexpr Vec3()                          : x(0), y(0), z(0) {}
+		constexpr Vec3(float a, float b, float c) : x(a), y(b), z(c) {}
+		constexpr Vec3(float a)                   : x(a), y(a), z(a) {}
+		constexpr Vec3(const slots::Vec3& v)      : x(v.x), y(v.y), z(v.z) {}
 
 		float length() const;
 		Vec3 normalize() const;
@@ -234,8 +234,5 @@ namespace threed {
 		}
 	};
 
-	extern Tri tris[208];
 	extern size_t tri_count;
-
-	void init_default_mesh();
 }
