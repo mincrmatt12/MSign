@@ -8,6 +8,8 @@
 namespace lru {
 	template<size_t Buckets, size_t ChainLength>
 	struct Cache {
+		static_assert(!(Buckets & (Buckets - 1)), "Buckets must be power of two");
+
 		bool contains(uint16_t key) {
 			for (int i = 0; i < ChainLength; ++i) {
 				if (bucket_for(key)[i] >> 16 == key) return true;
@@ -46,7 +48,9 @@ namespace lru {
 
 	private:
 		uint32_t* bucket_for(uint16_t key) {
-			return values[key % Buckets];
+			const uint16_t constant = 40503;
+			constexpr int shift = 16 - __builtin_clz(Buckets);
+			return values[(key * constant) >> shift];
 		}
 
 		uint32_t values[Buckets][ChainLength] = {0};
