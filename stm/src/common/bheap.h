@@ -373,7 +373,7 @@ namespace bheap {
 			// Check if this is a remote region, in which case we have to convert it
 			if (containing_block.location == Block::LocationRemote) {
 				// Set the location
-				set_location(slotid, offset, length, set_flush ? Block::LocationCanonical : Block::LocationEphemeral);
+				if (!set_location(slotid, offset, length, set_flush ? Block::LocationCanonical : Block::LocationEphemeral)) return false;
 				Block& new_block = get(slotid, offset);
 				new_block.flags = (set_flush ? Block::FlagFlush : Block::FlagDirty);
 				// Tail recursion
@@ -383,6 +383,17 @@ namespace bheap {
 			// Otherwise, just patch the block content
 			memcpy((uint8_t *)(containing_block.data()) + (offset - begin_pos), data, length);
 			containing_block.flags |= Block::FlagDirty;
+			return true;
+		}
+
+		// Check if the range given is stored at the given location.
+		bool check_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) const {
+			const Block& start = get(slotid, offset);
+			const Block& end = get(slotid, offset + length);
+
+			for (auto it = nonadj_const_iterator(start); it != end.next() ? nonadj_const_iterator(*end.next()) : nonadj_const_iterator(); ++it) {
+				if (it->location != location) return false;
+			}
 			return true;
 		}
 
@@ -563,7 +574,7 @@ finish_setting:
 		void defrag() {
 			// Remove unnecessary placeholders
 			for (auto& x : *this) {
-				if (x && x.location == Block::LocationRemote && x.datasize == 0 && x.next()) {
+				if (x && x.datasize == 0 && x.next()) {
 					x.datasize = 0;
 					x.slotid = Block::SlotEmpty;
 					x.location = Block::LocationCanonical;
