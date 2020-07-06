@@ -41,6 +41,8 @@ void nvic::init() {
 	NVIC_SetPriority(BusFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(BusFault_IRQn);
 
+	SCB->SHCSR |= SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_USGFAULTENA_Msk;
+
 	__set_BASEPRI(0U);
 }
 
