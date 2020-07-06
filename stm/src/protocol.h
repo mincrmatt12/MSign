@@ -18,7 +18,7 @@ namespace srv {
 		// Buffers for DMA
 
 		uint8_t dma_buffer[258];
-		uint8_t dma_out_buffer[32];
+		uint8_t dma_out_buffer[67];
 
 		// Implementation
 		void setup_uart_dma();
