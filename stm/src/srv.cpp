@@ -236,6 +236,15 @@ void srv::Servicer::loop() {
 			}
 		}
 
+		// Fix homogenizability order
+		for (bheap::Block& b : arena) {
+			if (b && b.temperature == bheap::Block::TemperatureHot && b.next()) {
+				// Homogenize
+				bcache.evict();
+				arena.homogenize(b.slotid);
+			}
+		}
+
 		if (should_reclaim_amt || arena.free_space() < srv_reclaim_low_watermark) {
 			should_reclaim_amt = std::max(should_reclaim_amt, srv_reclaim_high_watermark);
 
@@ -561,6 +570,7 @@ void srv::Servicer::process_command() {
 				// Immediately truncate to size = 0
 				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
 				arena.truncate_contents(slotid, 0);
+				bcache.evict(slotid);
 				if (pending_count == 32) break;
 				this->pending_operations[pending_count++] = 0x2300'0000 | slotid;
 			}
