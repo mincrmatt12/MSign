@@ -6,9 +6,10 @@
 #include <type_traits>
 #include "protocol.h"
 #include "common/bheap.h"
+#include "lru.h"
 
 namespace srv {
-	// Implements a stupid 
+	// ConIO: console stuff
 	struct ConIO {
 		void write(const char *buf, std::size_t length);
 
@@ -19,8 +20,6 @@ namespace srv {
 		char *start = buf, *end = buf;
 	};
 
-	// ConIO: console stuff
-
 	// Talks to the ESP8266
 	//
 	// Manages slots of arbitrary length data using the bheap.
@@ -29,7 +28,7 @@ namespace srv {
 	//       this may change depending on available RAM / queueing system, but presently 
 	//
 	// This class also handles the update procedure.
-	struct Servicer : public sched::Task, private ProtocolImpl {
+	struct Servicer final : public sched::Task, private ProtocolImpl {
 		
 		// non-task interface
 		void init(); // starts the system, begins dma, and starts handshake procedure
@@ -58,11 +57,11 @@ namespace srv {
 		bool slot_dirty(bool clear=true);
 
 	private:
-		bheap::Arena<1404> arena;
+		bheap::Arena<14284> arena;
+		lru::Cache<8, 4> bcache;
 		uint32_t pending_operations[32]; // pending operations, things that need to be sent out
 
 		uint8_t pending_count = 0;
-		
 		uint16_t retry_counter = 0;
 
 		void process_command() override;
