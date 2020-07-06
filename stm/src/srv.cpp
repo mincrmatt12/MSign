@@ -372,7 +372,104 @@ void srv::Servicer::do_send_operation(uint32_t operation) {
 	uint8_t op = (operation >> 24) & 0xFF;
 	uint32_t param = operation & 0xFFFFFF;
 
+	auto param_hi = [&](){
+		return pending_operations[--this->pending_count];
+	};
+
 	switch (op) {
+		case 0x20:
+			// update data temperature
+			{
+				uint8_t newtemp = param & 0xff;
+				uint16_t slotid = param >> 8;
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 3;
+				dma_out_buffer[2] = slots::protocol::DATA_TEMP;
+				memcpy(dma_out_buffer + 3, &slotid, 2);
+				memcpy(dma_out_buffer + 5, &newtemp, 1);
+
+				send();
+			}
+			break;
+		case 0x21:
+		case 0x22:
+			// send an ACK to data_move / data_update
+			{
+				uint32_t slotid_start = param_hi();
+				uint16_t slotid = slotid_start & 0xffff;
+				uint16_t start =  (slotid_start >> 16) & 0xffff;
+				uint16_t length = param >> 8;
+				uint8_t  code = param & 0xff;
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 7;
+				dma_out_buffer[2] = op + 0x10;
+
+				memcpy(dma_out_buffer + 3, &slotid, 2);
+				memcpy(dma_out_buffer + 5, &start, 2);
+				memcpy(dma_out_buffer + 7, &length, 2);
+				dma_out_buffer[9] = code;
+
+				send();
+			}
+			break;
+		case 0x23:
+			// send an ack to a DATA_DEL
+			{
+				uint16_t slotid = param & 0xffff;
+				
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 2;
+				dma_out_buffer[2] = slots::protocol::ACK_DATA_DEL;
+
+				memcpy(dma_out_buffer + 3, &slotid, 2);
+
+				send();
+			}
+			break;
+		case 0x30:
+			// send a DATA_MOVE
+			{
+				uint32_t slotid_start = param_hi();
+				uint16_t slotid = slotid_start & 0xffff;
+				uint16_t start =  (slotid_start >> 16) & 0xffff;
+				uint16_t length = param & 0xff;
+
+				const auto& blk = arena.get(slotid, start);
+				if (!blk) return;
+				if (arena.block_offset(blk) != start) return; // This is OK to do, since we always send the beginning of a flushable chunk.
+				uint8_t buf[length];
+				// Send an appropriate data_move
+				memcpy(buf, arena.get(slotid, start).data(), length);
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 8 + length;
+				dma_out_buffer[2] = slots::protocol::DATA_MOVE;
+
+				slotid |= 0xC000;
+
+				memcpy(dma_out_buffer + 3, &slotid, 2);
+				memcpy(dma_out_buffer + 5, &start, 2);
+				// ESP ignores total length when sent it.
+				memcpy(dma_out_buffer + 9, &length, 2);
+				memcpy(dma_out_buffer + 11, buf, length); // length is limited to 52
+
+				send();
+			}
+			break;
+		case 0x40:
+			// Send free heap
+			{
+				uint16_t fheap = arena.free_space();
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x02;
+				dma_out_buffer[2] = slots::protocol::QUERY_FREE_HEAP;
+				memcpy(dma_out_buffer + 3, &fheap, 2);
+
+				send();
+			}
+			break;
 		case 0x50:
 			{
 				dma_out_buffer[0] = 0xa5;
@@ -417,6 +514,87 @@ void srv::Servicer::process_command() {
 	namespace sp = slots::protocol;
 
 	switch (dma_buffer[2]) {
+		case sp::QUERY_FREE_HEAP:
+			{
+				if (pending_count == 32) break;
+				this->pending_operations[pending_count++] = 0x40000000;
+				break;
+			}
+			break;
+		case sp::DATA_DEL:
+			{
+				// Immediately truncate to size = 0
+				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
+				arena.truncate_contents(slotid, 0);
+				if (pending_count == 32) break;
+				this->pending_operations[pending_count++] = 0x2300'0000 | slotid;
+			}
+			break;
+		case sp::DATA_UPDATE:
+		case sp::DATA_MOVE:
+			{
+				uint16_t sid_frame = *(uint16_t *)(dma_buffer + 3);
+				uint16_t offset = *(uint16_t *)(dma_buffer + 5);
+				uint16_t totallen = *(uint16_t *)(dma_buffer + 7);
+				uint16_t totalupdlen = *(uint16_t *)(dma_buffer + 9);
+				uint8_t  packetlength = dma_buffer[1] - 8;
+
+				bool start = sid_frame & (1 << 15);
+				bool end = sid_frame & (1 << 14);
+				uint16_t slotid = sid_frame & 0xfff;
+
+				uint8_t errcode = 0;
+				uint16_t targetlocation = dma_buffer[2] == slots::protocol::DATA_UPDATE ? bheap::Block::LocationEphemeral : bheap::Block::LocationEphemeral;
+				
+				// We're trying to avoid storing state between messages, so we divide the process into multiple steps:
+				if (start) {
+					// If this is the starting packet, we ensure there's enough space at the end of the buffer.
+					auto currsize = arena.contents_size(slotid);
+					if (currsize == arena.npos) currsize = 0;
+					if (totallen > 8400) errcode = 0x3;
+					else if (currsize < totallen) {
+						// Just make a remote chunk
+						// Does not invalidate cache
+						if (!arena.add_block(slotid, bheap::Block::LocationRemote, totallen - currsize)) errcode = 0x1;
+					}
+
+					// Also try to create the actual location type
+					if (!errcode) {
+						if (!arena.check_location(slotid, offset, totalupdlen, targetlocation)) {
+							bcache.evict();
+							if (!arena.set_location(slotid, offset, totalupdlen, targetlocation)) errcode = 0x1;
+						}
+					}
+				}
+				else {
+					// Otherwise just verify it's OK
+					if (!arena.check_location(slotid, offset, packetlength, targetlocation)) errcode = 0x1;
+				}
+
+				if (errcode) {
+do_ack:
+					if (!end) break;
+
+					// Only send a response for end == true
+					uint16_t origoffset = offset - (totalupdlen - packetlength);
+
+					uint32_t param_hi = static_cast<uint32_t>(slotid) | static_cast<uint32_t>(origoffset) << 16;
+					uint32_t operation = dma_buffer[2];
+					operation <<= 24;
+					operation |= errcode;
+					operation |= static_cast<uint32_t>(totalupdlen) << 8;
+
+					if (pending_count > 30) pending_count = 30;
+					pending_operations[this->pending_count++] = param_hi;
+					pending_operations[this->pending_count++] = operation;
+					break;
+				}
+
+				// Update the data of the slot
+				if (!arena.update_contents(slotid, offset, packetlength, dma_buffer + 11)) errcode = 0x02;
+				goto do_ack;
+			}
+			break;
 		case sp::RESET:
 			{
 				// RESET
