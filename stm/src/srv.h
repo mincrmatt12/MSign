@@ -80,6 +80,7 @@ namespace srv {
 		uint32_t update_total_size;
 		uint16_t update_checksum;
 		uint16_t update_chunks_remaining;
+		uint16_t should_reclaim_amt = 0;
 	};
 
 }

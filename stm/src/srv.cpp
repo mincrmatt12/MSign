@@ -15,6 +15,9 @@
 
 extern tasks::Timekeeper timekeeper;
 
+constexpr uint16_t srv_reclaim_low_watermark = 2048;
+constexpr uint16_t srv_reclaim_high_watermark = 4096;
+
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
 #define USTATE_WAITING_FOR_FINISH_SECTORCOUNT 21
@@ -233,8 +236,40 @@ void srv::Servicer::loop() {
 			}
 		}
 
+		if (should_reclaim_amt || arena.free_space() < srv_reclaim_low_watermark) {
+			should_reclaim_amt = std::max(should_reclaim_amt, srv_reclaim_high_watermark);
+
+			auto reclaim = [&](auto x){
+				should_reclaim_amt = (should_reclaim_amt > x) ? should_reclaim_amt - x : 0;
+			};
+			// Try to defrag
+			if (arena.free_space(arena.FreeSpaceDefrag)) {
+				uint32_t before = arena.free_space();
+				arena.defrag();
+				bcache.evict();
+				reclaim(before - arena.free_space());
+			}
+			while (should_reclaim_amt) {
+				// evict ephemeral
+				for (bheap::Block& b : arena) {
+					if (b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationEphemeral && b) {
+						reclaim(b.datasize + 4);
+						bcache.evict(b.slotid);
+						b.slotid = bheap::Block::SlotEmpty;
+						goto continue_reclaim;
+					}
+				}
+				// evict canonical
+				// TODO
+				break;
+continue_reclaim:
+				;
+			}
+
+			should_reclaim_amt = 0;
+		}
 		// send out console information
-		if (debug_out.remaining() && !this->pending_count && !is_sending) {
+		else if (debug_out.remaining() && !this->pending_count && !is_sending) {
 			char buf[64];
 			uint8_t amt = std::min(debug_out.remaining(), (size_t)64);
 			debug_out.read(buf, amt);
@@ -591,6 +626,10 @@ do_ack:
 					if (pending_count > 30) pending_count = 30;
 					pending_operations[this->pending_count++] = param_hi;
 					pending_operations[this->pending_count++] = operation;
+
+					if (errcode == 0x1) {
+						should_reclaim_amt = std::max(should_reclaim_amt, totalupdlen);
+					}
 					break;
 				}
 
