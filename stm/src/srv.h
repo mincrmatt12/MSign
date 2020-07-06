@@ -48,13 +48,13 @@ namespace srv {
 		bool set_temperature(uint16_t slotid, uint32_t temperature);
 
 		// Data access methods
-		const bheap::Block& slot(uint16_t slotid) const;
-		inline const bheap::Block& operator[](uint16_t slotid) const {return slot(slotid);}
+		const bheap::Block& slot(uint16_t slotid);
+		inline const bheap::Block& operator[](uint16_t slotid) {return slot(slotid);}
 		template<typename T>
-		inline const bheap::TypedBlock<T>& slot(uint16_t slotid) const {return slot(slotid).as<T>();}
+		inline const bheap::TypedBlock<T>& slot(uint16_t slotid) {return slot(slotid).as<T>();}
 
 		// Helpers
-		bool slot_dirty(bool clear=true);
+		bool slot_dirty(uint16_t slotid, bool clear=true);
 
 	private:
 		bheap::Arena<14284> arena;

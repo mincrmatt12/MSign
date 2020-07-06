@@ -411,6 +411,31 @@ void srv::Servicer::init() {
 	this->setup_uart_dma();
 }
 
+bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
+	bool is_dirty = std::any_of(arena.begin(slotid), arena.end(slotid), [](const auto& b){return b.flags & bheap::Block::FlagDirty;});
+	if (is_dirty && clear) {
+		for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
+			it->flags &= ~bheap::Block::FlagDirty;
+		}
+	}
+	return is_dirty;
+}
+
+const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
+	const bheap::Block* target;
+	if (bcache.contains(slotid)) {
+		target = reinterpret_cast<const bheap::Block*>(&arena.region[bcache.lookup(slotid) * 4]);
+	}
+	else {
+		target = &arena.get(slotid);
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpointer-to-int-cast"
+		bcache.insert(slotid, reinterpret_cast<uint16_t>(target - arena.first));
+#pragma clang diagnostic pop
+	}
+	return *target;
+}
+
 void srv::Servicer::do_send_operation(uint32_t operation) {
 	// switch on the operation
 	uint8_t op = (operation >> 24) & 0xFF;
