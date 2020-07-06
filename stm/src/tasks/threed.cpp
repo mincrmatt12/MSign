@@ -10,7 +10,6 @@ extern srv::Servicer servicer;
 
 namespace threed {
 	size_t tri_count = 0;
-	Tri tris[208];
 
 	float Vec3::length() const {
 		return sqrtf(
