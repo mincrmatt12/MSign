@@ -544,7 +544,7 @@ void srv::Servicer::process_command() {
 				uint16_t slotid = sid_frame & 0xfff;
 
 				uint8_t errcode = 0;
-				uint16_t targetlocation = dma_buffer[2] == slots::protocol::DATA_UPDATE ? bheap::Block::LocationEphemeral : bheap::Block::LocationEphemeral;
+				uint16_t targetlocation = dma_buffer[2] == slots::protocol::DATA_UPDATE ? bheap::Block::LocationEphemeral : bheap::Block::LocationCanonical;
 				
 				// We're trying to avoid storing state between messages, so we divide the process into multiple steps:
 				if (start) {
@@ -556,6 +556,10 @@ void srv::Servicer::process_command() {
 						// Just make a remote chunk
 						// Does not invalidate cache
 						if (!arena.add_block(slotid, bheap::Block::LocationRemote, totallen - currsize)) errcode = 0x1;
+					}
+					else if (currsize > totallen) {
+						// Truncate
+						if (!arena.truncate_contents(slotid, totallen)) errcode = 0x2;
 					}
 
 					// Also try to create the actual location type
@@ -593,6 +597,31 @@ do_ack:
 				// Update the data of the slot
 				if (!arena.update_contents(slotid, offset, packetlength, dma_buffer + 11)) errcode = 0x02;
 				goto do_ack;
+			}
+			break;
+		case sp::ACK_DATA_TEMP:
+			{
+				// Actually update the temperature
+				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
+				uint8_t  temperature = dma_buffer[5];
+
+				arena.set_temperature(slotid, temperature);
+			}
+			break;
+		case sp::ACK_DATA_MOVE:
+			{
+				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
+				uint16_t updstart = *(uint16_t *)(dma_buffer + 5);
+				uint16_t updlen = *(uint16_t *)(dma_buffer + 7);
+				uint8_t result = dma_buffer[9]; 
+				// Ensure the location makes sense
+
+				if (result) break;
+				if (!arena.check_location(slotid, updstart, updlen, bheap::Block::LocationCanonical)) break;
+
+				// Update the length + clear the cache
+				bcache.evict();
+				arena.set_location(slotid, updstart, updlen, bheap::Block::LocationRemote);
 			}
 			break;
 		case sp::RESET:
