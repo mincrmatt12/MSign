@@ -388,6 +388,7 @@ namespace bheap {
 
 		// Check if the range given is stored at the given location.
 		bool check_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) const {
+			if (offset + length > contents_size(slotid)) return false;
 			const Block& start = get(slotid, offset);
 			const Block& end = get(slotid, offset + length);
 
@@ -402,6 +403,7 @@ namespace bheap {
 		// If told to convert to remote, will create the necessary block.
 		// If told to convert _from_ remote, will create necessary blocks and shrink/replace remote sections.
 		bool set_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) {
+			if (offset + length > contents_size(slotid)) return false;
 			// Strategy for normal locations:
 			// 	- find beginning block and ending block (min max, possibly overshooting)
 			// 	- over all "inner" blocks just change value
