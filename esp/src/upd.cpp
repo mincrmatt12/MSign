@@ -116,7 +116,7 @@ invalidformat:
 		if ((iH = memcmp_P(fileHeader, PSTR("page.html/"), 10))
 			&& (iC = memcmp_P(fileHeader, "page.css/", 9)) && (iJ = memcmp_P(fileHeader, PSTR("page.js/ "), 9)) && 
 			(iHc = memcmp_P(fileHeader, PSTR("page.html.gz"), 12))
-			&& (iCc = memcmp_P(fileHeader, "page.css.gz/", 11)) && (iJc = memcmp_P(fileHeader, PSTR("page.js.gz/"), 10))) {
+			&& (iCc = memcmp_P(fileHeader, PSTR("page.css.gz/"), 11)) && (iJc = memcmp_P(fileHeader, PSTR("page.js.gz/"), 10))) {
 			Serial1.println(F("unknown entry"));
 			goto failure;
 		}
