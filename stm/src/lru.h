@@ -49,7 +49,7 @@ namespace lru {
 	private:
 		uint32_t* bucket_for(uint16_t key) {
 			const uint16_t constant = 40503;
-			constexpr int shift = 16 - __builtin_clz(Buckets);
+			constexpr int shift = sizeof(unsigned int)*8 - __builtin_clz(Buckets);
 			return values[(key * constant) >> shift];
 		}
 
