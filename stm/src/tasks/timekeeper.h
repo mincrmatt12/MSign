@@ -1,23 +1,15 @@
 #ifndef TIMEKEEPER_H
 #define TIMEKEEPER_H
 
-#include "schedef.h"
 #include <stdint.h>
 
 namespace tasks {
-	struct Timekeeper : public sched::Task {
+	struct Timekeeper {
 		Timekeeper(uint64_t &timestamp) :
 			timestamp(timestamp) {
-				name[0] = 't';
-				name[1] = 'i';
-				name[2] = 'm';
-				name[3] = 'e';
-		};
+		}
 
-		bool important() override;
-		bool done() override;
-		void loop() override;
-
+		void loop();
 		void systick_handler();
 
 		// Current time; as in the systick time. Useful if you don't want the clock going backwards when the ESP updates / animation.
@@ -28,7 +20,6 @@ namespace tasks {
 		bool waiting_for_data = false;
 
 		uint64_t &timestamp;
-		uint8_t   time_slot;
 	};
 }
 
