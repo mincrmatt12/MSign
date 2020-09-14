@@ -1,7 +1,6 @@
 #ifndef SRV_H
 #define SRV_H
 
-#include "schedef.h"
 #include <stdint.h>
 #include <type_traits>
 #include "protocol.h"
@@ -9,17 +8,6 @@
 #include "lru.h"
 
 namespace srv {
-	// ConIO: console stuff
-	struct ConIO {
-		void write(const char *buf, std::size_t length);
-
-		std::size_t remaining();
-		void read(char *buf, std::size_t length);
-	private:
-		char buf[512]; // 0.5K buffer
-		char *start = buf, *end = buf;
-	};
-
 	// Talks to the ESP8266
 	//
 	// Manages slots of arbitrary length data using the bheap.
@@ -28,24 +16,24 @@ namespace srv {
 	//       this may change depending on available RAM / queueing system, but presently 
 	//
 	// This class also handles the update procedure.
-	struct Servicer final : public sched::Task, private ProtocolImpl {
-		
-		// non-task interface
-		void init(); // starts the system, begins dma, and starts handshake procedure
+	struct Servicer final : private ProtocolImpl {
 		bool ready(); // is the esp talking?
 		bool updating() {return is_updating;} // are we in update mode?
 
 		using ProtocolImpl::dma_finish;
 
-		void loop()      override;
-		bool done()      override;
-		bool important() override;
+		// Runs the servicer blocking.
+		void run();
 
 		// Update state introspections
 		const char * update_status();
 
 		// Data request methods
 		bool set_temperature(uint16_t slotid, uint32_t temperature);
+		template<typename... Args>
+		bool set_temperature_all(uint32_t temperature, Args... args) {
+			return (set_temperature(temperature, args) || ...);
+		}
 
 		// Data access methods
 		const bheap::Block& slot(uint16_t slotid);
@@ -57,11 +45,12 @@ namespace srv {
 		bool slot_dirty(uint16_t slotid, bool clear=true);
 
 	private:
+		// Init HW
+		void init();
+
 		bheap::Arena<14284> arena;
 		lru::Cache<8, 4> bcache;
-		uint32_t pending_operations[32]; // pending operations, things that need to be sent out
 
-		uint8_t pending_count = 0;
 		uint16_t retry_counter = 0;
 
 		void process_command() override;
@@ -84,9 +73,5 @@ namespace srv {
 	};
 
 }
-
-extern srv::ConIO debug_in, debug_out;
-extern srv::ConIO log_out;            
-
 
 #endif

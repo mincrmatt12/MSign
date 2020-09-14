@@ -13,6 +13,9 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#define FLASH_KEY1 0x45670123U
+#define FLASH_KEY2 0xCDEF89ABU
+
 extern tasks::Timekeeper timekeeper;
 
 constexpr uint16_t srv_reclaim_low_watermark = 2048;
@@ -118,15 +121,7 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 }
 
 
-bool srv::Servicer::important() {
-	return !done();
-}
-
-bool srv::Servicer::done() {
-	return (this->pending_count == 0 && !is_sending); // always runs in one loop iter
-}
-
-void srv::Servicer::loop() {
+void srv::Servicer::run() {
 	if (this->state < ProtocolState::DMA_WAIT_SIZE) {
 		if (last_comm > 10000) {
 			// invalid state error -- attempt going back to the main loop
@@ -428,12 +423,17 @@ const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
 	}
 	else {
 		target = &arena.get(slotid);
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wpointer-to-int-cast"
-		bcache.insert(slotid, reinterpret_cast<uint16_t>(target - arena.first));
-#pragma clang diagnostic pop
+		bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<uintptr_t>(target - arena.first)));
 	}
 	return *target;
+}
+
+bool srv::Servicer::set_temperature(uint16_t slotid, uint32_t temperature) {
+	if (slot(slotid) && slot(slotid).temperature == temperature) return true;
+	// Update temperature
+	if (pending_count == 32) return false;
+	pending_operations[pending_count++] = 0x20'0000'00 | (temperature & 0xff) | (static_cast<uint32_t>(slotid) << 8);
+	return true;
 }
 
 void srv::Servicer::do_send_operation(uint32_t operation) {
