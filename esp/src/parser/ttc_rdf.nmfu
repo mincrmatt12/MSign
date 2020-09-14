@@ -1,0 +1,86 @@
+// Parses a limited subset of RSS 1.0 to read the TTC service alerts _properly_
+
+out str[300] advisory;
+out str[32] date;
+
+hook on_advisory;
+
+macro ows {
+    /\s*/;
+}
+
+parser {
+    ows();
+    "<?xml";
+    ows();
+    /version="1.0"/;
+    ows();
+    "?>";
+
+    // Make sure this is an RDF
+
+    ows();
+
+    "<rdf:RDF";
+
+    // Wait for body
+
+    wait ">";
+
+    loop rdf_body {
+        case {
+            else -> {}
+            /<\s*channel/ -> {wait "</channel>";}
+            /<\s*image/ -> {wait "</image>";}
+            /<\s*item/ -> {
+                // Actually handle the item
+
+                wait ">"; // wait for end of thing
+
+                date = "";
+                advisory = "";
+
+                loop item_body {
+                    case {
+                        else -> {}
+                        "</item>" -> {break item_body;}
+                        "<title>" -> {wait "</title>";}
+                        "<link>" -> {wait "</link>";}
+                        "<description>" -> {
+                            ows(); // eat all spaces before message
+                            try {
+                                advisory += /\w[^\n\r<>]+/;
+                            }
+                            catch (outofspace) {
+                                // ignore error
+                            }
+                            "\n";
+                            // TODO: parse "affecting"
+                            wait "</description>";
+                        }
+                        "<dc:date>" -> {
+                            ows();
+
+                            try {
+                                try {
+                                    date += /\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+[\-+]\d\d:\d\d/;
+                                }
+                                catch (outofspace) {
+                                    date = "";
+                                }
+
+                                wait "</dc:date>";
+                            }
+                            catch (nomatch) {
+                                wait "</dc:date>";
+                            }
+                        }
+                    }
+                }
+
+                on_advisory();
+            }
+            "</rdf:RDF>" -> {finish;}
+        }
+    }
+}
