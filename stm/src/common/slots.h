@@ -23,20 +23,16 @@ namespace slots {
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
 		TTC_NAME_3 = 0x23,			// ''
-		TTC_TIME_1 = 0x24,			// STRUCT; TTCTime - time of next two buses
+		TTC_TIME_1 = 0x24,			// STRUCT[]; TTCTime - time of next two buses
 		TTC_TIME_2 = 0x25,			// ''
 		TTC_TIME_3 = 0x26,			// ''
-		TTC_TIME_1B = 0x27,			// STRUCT; TTCTime - time of next two buses after previous (3 and 4)
-		TTC_TIME_2B = 0x28,			// ''
-		TTC_TIME_3B = 0x29,			// ''
-		TTC_ALERTSTR = 0x2a,        // STRUCT; VStr - current alert messages
+		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
 
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
-		WEATHER_STATUS = 0x45,		// STRUCT; VStr - current summary; polled
-		WEATHER_ARRAY1 = 0x46,      // STRING; list of ENUMS for the state per-hour
-		WEATHER_ARRAY2 = 0x47,      // '' 
-		WEATHER_TEMP_GRAPH = 0x41,  // STRUCT; VStr - temp data as floats
+		WEATHER_STATUS = 0x45,		// STRING; weather status string
+		WEATHER_ARRAY = 0x46,       // STRING; list of ENUMS for the state per-hour
+		WEATHER_TEMP_GRAPH = 0x41,  // FLOAT[]; temp data per hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
@@ -48,10 +44,7 @@ namespace slots {
 		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
 
 		MODEL_INFO = 0x900, 		// UINT16_T; number of triangles in the model
-		MODEL_XYZ1 = 0x901, 		// STRUCT; Vec3; position of point 1; requested per triangle
-		MODEL_XYZ2 = 0x902, 		// ''
-		MODEL_XYZ3 = 0x903, 		// ''
-		MODEL_RGB  = 0x904, 		// '', color of triangle
+		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
 		MODEL_CAM_MINPOS  = 0x905, // STRUCT; Vec3; minimum position of the camera 
 		MODEL_CAM_MAXPOS  = 0x906, // ''; maximum position of the camera 
 		MODEL_CAM_FOCUS1  = 0x907, // ''; lookat point of camera
@@ -59,7 +52,7 @@ namespace slots {
 		MODEL_CAM_FOCUS3  = 0x909, // ''; '' 3
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
-		SCCFG_TIMING = 0xb1,     	// STRUCT; ScCfgTime, how long to enable a certain screen; polled (inited to zero when SCCFG_INFO is updated, circular)
+		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
 	};
 
 #pragma pack (push, 1)
@@ -148,20 +141,14 @@ namespace slots {
 		float z;
 	};
 
+	struct Tri { // effective declaration for ESP only; actual triangle struct is used and declared in threed.h
+		Vec3 p1, p2, p3;
+		uint8_t r, g, b;
+	};
+
 #pragma pack (pop)
 
 #define SLOT_CHECK_DEF(sn)	static_assert(sizeof(sn) <= 16, #sn " too large")
-
-	SLOT_CHECK_DEF(TTCTime);
-	SLOT_CHECK_DEF(TTCInfo);
-	SLOT_CHECK_DEF(WeatherInfo);
-	SLOT_CHECK_DEF(VStr);
-	SLOT_CHECK_DEF(CalfixInfo);
-	SLOT_CHECK_DEF(ClassInfo);
-	SLOT_CHECK_DEF(PeriodInfo);
-	SLOT_CHECK_DEF(ScCfgInfo);
-	SLOT_CHECK_DEF(ScCfgTime);
-	SLOT_CHECK_DEF(Vec3);
 
 	enum struct WeatherStateArrayCode : uint8_t {
 		UNK = 0,
