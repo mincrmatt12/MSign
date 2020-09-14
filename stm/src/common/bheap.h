@@ -234,9 +234,9 @@ namespace bheap {
 
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = T;
-			using distance_type = void;
-			using reference_type = T&;
-			using pointer_type = T*;
+			using difference_type = void;
+			using reference = T&;
+			using pointer = T*;
 
 			Iterator(T& f) {
 				ptr = &f;
@@ -246,8 +246,8 @@ namespace bheap {
 				ptr = nullptr;
 			}
 
-			pointer_type operator->() {return ptr;}
-			reference_type operator*() {return *ptr;}
+			pointer operator->() {return ptr;}
+			reference operator*() {return *ptr;}
 
 			Iterator& operator++() {
 #if __cpp_if_constexpr >= 201603
