@@ -13,6 +13,8 @@
 #include <unistd.h>
 #include <stdio.h>
 
+#include <semphr.h>
+
 #define FLASH_KEY1 0x45670123U
 #define FLASH_KEY2 0xCDEF89ABU
 
@@ -120,290 +122,12 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 	state = USTATE_PACKET_WRITTEN;
 }
 
-
-void srv::Servicer::run() {
-	if (this->state < ProtocolState::DMA_WAIT_SIZE) {
-		if (last_comm > 10000) {
-			// invalid state error -- attempt going back to the main loop
-			start_recv();
-		}
-		// currently doing the handshake
-		switch (this->state) {
-			case ProtocolState::UNINIT:
-				{
-					// Check if the system has just updated
-					if (bootcmd_did_just_update()) {
-						// We did! Send out an update state finished
-						dma_out_buffer[0] = 0xa5;
-						dma_out_buffer[1] = 0x01;
-						dma_out_buffer[2] = 0x63;
-						dma_out_buffer[3] = 0x21;
-
-						update_state = USTATE_WAITING_FOR_FINISH;
-						update_chunks_remaining = 0; // used separately
-						send();
-						is_updating = true;
-						start_recv();
-						break;
-					}
-					else {
-						// Send out the HANDSHAKE_INIT command.
-						dma_out_buffer[0] = 0xa5;
-						dma_out_buffer[1] = 0x00;
-						dma_out_buffer[2] = 0x10;
-						send();
-						start_recv();
-						state = ProtocolState::HANDSHAKE_RECV;
-						break;
-					}
-				}
-			case ProtocolState::HANDSHAKE_RECV:
-				{
-					++retry_counter;
-					asm volatile ("nop");
-					asm volatile ("nop");
-					asm volatile ("nop");
-					asm volatile ("nop");
-					if (retry_counter == 140) {
-						NVIC_SystemReset();
-					}
-				}
-				break;
-			case ProtocolState::HANDSHAKE_SENT:
-				{
-					// Send out the HANDSHAKE_OK command.
-					dma_out_buffer[0] = 0xa5;
-					dma_out_buffer[1] = 0x00;
-					dma_out_buffer[2] = 0x12;
-					send();
-
-
-					// clear the overrun flag
-					LL_USART_ClearFlag_ORE(ESP_USART);
-					LL_USART_ClearFlag_PE(ESP_USART);
-					start_recv();
-					break;
-				}
-			case ProtocolState::UPDATE_STARTING:
-				{
-					// Enter update mode, and tell the ESP we did
-					
-					dma_out_buffer[0] = 0xa5;
-					dma_out_buffer[1] = 0x01;
-					dma_out_buffer[2] = 0x63;
-					dma_out_buffer[3] = 0x10; // UPDATE_STATUS; cmd=update mode entered
-
-					send();
-					is_updating = true; // Mark update mode.
-					start_recv(); // Begin recieveing messages
-				}
-			default:
-				break;
-		}
-	}
-	else {
-		if (this->pending_count > 0 && !is_sending) {
-			uint32_t pending_operation = this->pending_operations[--this->pending_count];
-			do_send_operation(pending_operation);
-		}
-
-		if (!is_updating) {
-			// authenticate last_time makes sense
-			if (timekeeper.current_time - last_comm > 200000) {
-				// the failsafe should have activated, otherwise we've gone madd
-				last_comm = timekeeper.current_time; // there was probably a time glitch
-				// shit happens
-				return;
-			}
-
-			if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping) {
-				this->pending_operations[pending_count++] = 0x51000000;
-				sent_ping = true;
-			}
-			if ((timekeeper.current_time - last_comm) > 30000) {
-				// Reset.
-				if (timekeeper.current_time < last_comm) {
-					last_comm = timekeeper.current_time;
-					return;
-				}
-
-				nvic::show_error_screen("ESPTimeout");
-			}
-		}
-
-		// Fix homogenizability order
-		for (bheap::Block& b : arena) {
-			if (b && b.temperature == bheap::Block::TemperatureHot && b.next()) {
-				// Homogenize
-				bcache.evict();
-				arena.homogenize(b.slotid);
-			}
-		}
-
-		if (should_reclaim_amt || arena.free_space() < srv_reclaim_low_watermark) {
-			should_reclaim_amt = std::max(should_reclaim_amt, srv_reclaim_high_watermark);
-
-			auto reclaim = [&](auto x){
-				should_reclaim_amt = (should_reclaim_amt > x) ? should_reclaim_amt - x : 0;
-			};
-			// Try to defrag
-			if (arena.free_space(arena.FreeSpaceDefrag)) {
-				uint32_t before = arena.free_space();
-				arena.defrag();
-				bcache.evict();
-				reclaim(before - arena.free_space());
-			}
-			while (should_reclaim_amt) {
-				// evict ephemeral
-				for (bheap::Block& b : arena) {
-					if (b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationEphemeral && b) {
-						reclaim(b.datasize + 4);
-						bcache.evict(b.slotid);
-						b.slotid = bheap::Block::SlotEmpty;
-						goto continue_reclaim;
-					}
-				}
-				// evict canonical
-				// TODO
-				break;
-continue_reclaim:
-				;
-			}
-
-			should_reclaim_amt = 0;
-		}
-		// send out console information
-		else if (debug_out.remaining() && !this->pending_count && !is_sending) {
-			char buf[64];
-			uint8_t amt = std::min(debug_out.remaining(), (size_t)64);
-			debug_out.read(buf, amt);
-
-			this->dma_out_buffer[0] = 0xa5;
-			this->dma_out_buffer[1] = amt + 1;
-			this->dma_out_buffer[2] = 0x70;
-			this->dma_out_buffer[3] = 0x02;
-
-			memcpy(&dma_out_buffer[4], buf, amt);
-
-			send();
-		}
-		else if (log_out.remaining() && !this->pending_count && !is_sending) {
-			char buf[64];
-			uint8_t amt = std::min(log_out.remaining(), (size_t)64);
-			log_out.read(buf, amt);
-
-			this->dma_out_buffer[0] = 0xa5;
-			this->dma_out_buffer[1] = amt + 1;
-			this->dma_out_buffer[2] = 0x70;
-			this->dma_out_buffer[3] = 0x10;
-
-			memcpy(&dma_out_buffer[4], buf, amt);
-
-			send();
-		}
-	}
-
-	// Update ASYNC logic
-	if (this->is_updating) {
-		switch (this->update_state) {
-			case USTATE_ERASING_BEFORE_IMAGE:
-				{
-					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
-						// Report readiness for bytes
-						this->update_state = USTATE_WAITING_FOR_PACKET;
-						this->pending_operations[pending_count++] = 0x60'0000'12;
-					}
-					break;
-				}
-			case USTATE_ERASING_BEFORE_PACKET:
-				{
-					if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-						CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
-						this->update_state = USTATE_WAITING_FOR_PACKET;
-
-						append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
-					}
-					break;
-				}
-			case USTATE_PACKET_WRITTEN:
-				{
-					if (--this->update_chunks_remaining == 0) {
-						// We are done?
-						//
-						// Verify checksum
-					
-						// Disable D-Cache and flush it
-						LL_FLASH_DisableDataCache();
-						LL_FLASH_EnableDataCacheReset();
-						LL_FLASH_DisableDataCacheReset();
-
-						if (util::compute_crc((uint8_t *)(0x0808'0000), this->update_total_size) != this->update_checksum) {
-							this->update_state = USTATE_FAILED;
-							this->pending_operations[pending_count++] = 0x60'0000'40;
-
-							break;
-						}
-
-						// Checksum is OK, write the BCMD
-						
-						bootcmd_request_update(this->update_total_size);
-
-						// Clear pg byte
-						
-						CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
-
-						// Relock FLASH
-						
-						FLASH->CR |= FLASH_CR_LOCK;
-
-						// Send out final message
-						
-						do_send_operation(0x60'0000'20);
-
-						// Wait a bit for DMA
-						
-						for (int i = 0; i < 400000; ++i) {
-							asm volatile ("nop");
-						}
-
-						// Reset
-						
-						NVIC_SystemReset();
-
-						// At this point the bootloader will update us.
-					}
-
-					this->update_state = USTATE_WAITING_FOR_PACKET;
-					this->pending_operations[pending_count++] = 0x60'0000'13;
-					break;
-				}
-			case USTATE_PACKET_WRITE_FAIL_CSUM:
-				{
-					this->update_state = USTATE_WAITING_FOR_PACKET;
-					this->pending_operations[pending_count++] = 0x60'0000'30;
-					break;
-				}
-			default:
-				break;
-		}
-	}
-}
-
-bool srv::Servicer::ready() {
-	return this->state >= ProtocolState::DMA_WAIT_SIZE;
-}
-
-void srv::Servicer::init() {
-	// Set name
-	
-	name[0] = 's';
-	name[1] = 'r';
-	name[2] = 'v';
-	name[3] = 'c';
-
-	// Setup HW
-	this->setup_uart_dma();
+void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
+	PendRequest pr;
+	pr.type = PendRequest::TypeChangeTemp;
+	pr.slotid = slotid;
+	pr.temperature = temp;
+	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
 }
 
 bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
@@ -416,6 +140,7 @@ bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
 	return is_dirty;
 }
 
+
 const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
 	const bheap::Block* target;
 	if (bcache.contains(slotid)) {
@@ -423,335 +148,506 @@ const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
 	}
 	else {
 		target = &arena.get(slotid);
-		bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<uintptr_t>(target - arena.first)));
+		bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<ptrdiff_t>(target - arena.first)));
 	}
 	return *target;
 }
 
-bool srv::Servicer::set_temperature(uint16_t slotid, uint32_t temperature) {
-	if (slot(slotid) && slot(slotid).temperature == temperature) return true;
-	// Update temperature
-	if (pending_count == 32) return false;
-	pending_operations[pending_count++] = 0x20'0000'00 | (temperature & 0xff) | (static_cast<uint32_t>(slotid) << 8);
-	return true;
+bool srv::Servicer::do_bheap_cleanup() {
+	// TODO
+	return false;
 }
 
-void srv::Servicer::do_send_operation(uint32_t operation) {
-	// switch on the operation
-	uint8_t op = (operation >> 24) & 0xFF;
-	uint32_t param = operation & 0xFFFFFF;
+void srv::Servicer::do_handshake() {
+	int retries = 0;
 
-	auto param_hi = [&](){
-		return pending_operations[--this->pending_count];
-	};
+	// Check if the system has just updated
+	if (bootcmd_did_just_update()) {
+		// We did! Send out an update state finished
+		dma_out_buffer[0] = 0xa5;
+		dma_out_buffer[1] = 0x01;
+		dma_out_buffer[2] = 0x63;
+		dma_out_buffer[3] = 0x21;
 
-	switch (op) {
-		case 0x20:
-			// update data temperature
+		update_state = USTATE_WAITING_FOR_FINISH;
+		update_chunks_remaining = 0; // used separately
+		send();
+		is_updating = true;
+		start_recv(); // start receieving packets, will implicitly setup the state correctly. return to main loop to go to actual logic
+		return;
+	}
+	else {
+retry_handshake:
+		// Send out the HANDSHAKE_INIT command.
+		dma_out_buffer[0] = 0xa5;
+		dma_out_buffer[1] = 0x00;
+		dma_out_buffer[2] = 0x10;
+		send();
+		start_recv(ProtocolState::HANDSHAKE_RECV);
+	}
+
+	// Wait for the state to not be handshake_recv. Check every few ms
+	// TODO: this could use task notifications but /shrug may as well keep old code around
+
+	while (state == ProtocolState::HANDSHAKE_RECV) {
+		vTaskDelay(pdMS_TO_TICKS(40));
+		if (!is_sending) ++retries;
+
+		if (retries == 3 || retries == 6 || retries == 9) {
+			// Try sending it again
+			goto retry_handshake;
+		}
+
+		if (retries == 12) {
+			// Just reset at that point
+			NVIC_SystemReset();
+		}
+	}
+
+	// Send the actual handshake ok command and finish this process; or go into the update system
+	switch (state) {
+		case ProtocolState::HANDSHAKE_SENT:
 			{
-				uint8_t newtemp = param & 0xff;
-				uint16_t slotid = param >> 8;
-
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 3;
-				dma_out_buffer[2] = slots::protocol::DATA_TEMP;
-				memcpy(dma_out_buffer + 3, &slotid, 2);
-				memcpy(dma_out_buffer + 5, &newtemp, 1);
-
-				send();
-			}
-			break;
-		case 0x21:
-		case 0x22:
-			// send an ACK to data_move / data_update
-			{
-				uint32_t slotid_start = param_hi();
-				uint16_t slotid = slotid_start & 0xffff;
-				uint16_t start =  (slotid_start >> 16) & 0xffff;
-				uint16_t length = param >> 8;
-				uint8_t  code = param & 0xff;
-
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 7;
-				dma_out_buffer[2] = op + 0x10;
-
-				memcpy(dma_out_buffer + 3, &slotid, 2);
-				memcpy(dma_out_buffer + 5, &start, 2);
-				memcpy(dma_out_buffer + 7, &length, 2);
-				dma_out_buffer[9] = code;
-
-				send();
-			}
-			break;
-		case 0x23:
-			// send an ack to a DATA_DEL
-			{
-				uint16_t slotid = param & 0xffff;
-				
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 2;
-				dma_out_buffer[2] = slots::protocol::ACK_DATA_DEL;
-
-				memcpy(dma_out_buffer + 3, &slotid, 2);
-
-				send();
-			}
-			break;
-		case 0x30:
-			// send a DATA_MOVE
-			{
-				uint32_t slotid_start = param_hi();
-				uint16_t slotid = slotid_start & 0xffff;
-				uint16_t start =  (slotid_start >> 16) & 0xffff;
-				uint16_t length = param & 0xff;
-
-				const auto& blk = arena.get(slotid, start);
-				if (!blk) return;
-				if (arena.block_offset(blk) != start) return; // This is OK to do, since we always send the beginning of a flushable chunk.
-				uint8_t buf[length];
-				// Send an appropriate data_move
-				memcpy(buf, arena.get(slotid, start).data(), length);
-
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 8 + length;
-				dma_out_buffer[2] = slots::protocol::DATA_MOVE;
-
-				slotid |= 0xC000;
-
-				memcpy(dma_out_buffer + 3, &slotid, 2);
-				memcpy(dma_out_buffer + 5, &start, 2);
-				// ESP ignores total length when sent it.
-				memcpy(dma_out_buffer + 9, &length, 2);
-				memcpy(dma_out_buffer + 11, buf, length); // length is limited to 52
-
-				send();
-			}
-			break;
-		case 0x40:
-			// Send free heap
-			{
-				uint16_t fheap = arena.free_space();
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 0x02;
-				dma_out_buffer[2] = slots::protocol::QUERY_FREE_HEAP;
-				memcpy(dma_out_buffer + 3, &fheap, 2);
-
-				send();
-			}
-			break;
-		case 0x50:
-			{
+				// Send out the HANDSHAKE_OK command.
 				dma_out_buffer[0] = 0xa5;
 				dma_out_buffer[1] = 0x00;
-				dma_out_buffer[2] = slots::protocol::PONG;
-
+				dma_out_buffer[2] = 0x12;
 				send();
-			}
-			break;
-		case 0x51:
-			{
-				dma_out_buffer[0] = 0xa5;
-				dma_out_buffer[1] = 0x00;
-				dma_out_buffer[2] = slots::protocol::PING;
 
-				send();
+
+				// clear the overrun flag
+				LL_USART_ClearFlag_ORE(ESP_USART); // this should really be moved elsewhere
+				LL_USART_ClearFlag_PE(ESP_USART);
+				start_recv();
+				return;
 			}
-			break;
-		// update
-		case 0x60:
+		case ProtocolState::UPDATE_STARTING:
 			{
-				// send an update_status
+				// Enter update mode, and tell the ESP we did
 				
 				dma_out_buffer[0] = 0xa5;
 				dma_out_buffer[1] = 0x01;
-				dma_out_buffer[2] = slots::protocol::UPDATE_STATUS;
-				dma_out_buffer[3] = param & 0xFF;
+				dma_out_buffer[2] = 0x63;
+				dma_out_buffer[3] = 0x10; // UPDATE_STATUS; cmd=update mode entered
 
 				send();
+				is_updating = true; // Mark update mode.
+				start_recv(); // Begin recieveing messages
 			}
-			break;
+		default:
+			return;
 	}
 }
 
-void srv::Servicer::process_command() {
-	// determine what to do
-    if (dma_buffer[0] != 0xa6) {
-		// a6 means from the esp
-		return;
+void srv::Servicer::run() {
+	// Initialize our task handle
+	this_task = xTaskGetCurrentTaskHandle();
+
+	// Do the handshake
+	do_handshake();
+
+	// If in update mode, go to the update logic handlers
+	if (this->is_updating) {
+		while (true)
+			do_update_logic();
 	}
 
-	namespace sp = slots::protocol;
+	union {
+		uint8_t msgbuf[16];
+		uint16_t msgbuf_x16[8];
+	};
+	PendRequest active_request{};
+	bool is_cleaning = false;
+	uint8_t move_update_errcode = 0;
 
-	switch (dma_buffer[2]) {
-		case sp::QUERY_FREE_HEAP:
-			{
-				if (pending_count == 32) break;
-				this->pending_operations[pending_count++] = 0x40000000;
+	// Otherwise, begin processing packets/requests
+	while (true) {
+		// Wait for a packet to come in over DMA. If this returns 0 (i.e. no packet but we still interrupted) then check the queue for a new task.
+		//
+		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
+		// Additionally, a queue event will only ever cause a write and "wait" for a read in response.
+
+		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(500)); // every 100 ms we also try and look for cleanup-problems
+		// Check for a new queue operation if we're not still processing one.
+		if (amount < 3) {
+			if (active_request.type == PendRequest::TypeNone) {
+				// Check for new queue operation
+				if (xQueueReceive(pending_requests, &active_request, 0)) {
+					// Start handling it.
+					start_pend_request(active_request);
+				}
+				// Otherwise, try and run the cleanup system
+				else {
+					is_cleaning = do_bheap_cleanup();
+				}
+			}
+			continue;
+		}
+		// This message will come pre-verified from the protocol layer.
+		//
+		// Now we dispatch based on command
+
+		switch (slots::protocol::Command(msgbuf[2])) {
+			using namespace slots::protocol;
+
+			case ACK_DATA_TEMP:
+				{
+					// Handle a data temperature message
+					// Read the 3 byte content
+					if (!xStreamBufferReceive(dma_rx_queue, msgbuf, 3, portMAX_DELAY)) continue;
+					
+					uint16_t slotid = msgbuf_x16[0];
+
+					// Update the temperature in the bheap. Never messes with any offsets so can occur w/o lock/cache clear
+					arena.set_temperature(slotid, msgbuf[2]);
+
+					// Check if we can process the next req
+					if (active_request.type == PendRequest::TypeChangeTemp && active_request.slotid == slotid && active_request.temperature == msgbuf[2]) {
+						// Consume this request.
+						active_request.type = PendRequest::TypeNone;
+						// Try tail-chaining it
+						if (xQueueReceive(pending_requests, &active_request, 0)) start_pend_request(active_request);
+					}
+				}
 				break;
-			}
-			break;
-		case sp::DATA_DEL:
-			{
-				// Immediately truncate to size = 0
-				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
-				arena.truncate_contents(slotid, 0);
-				bcache.evict(slotid);
-				if (pending_count == 32) break;
-				this->pending_operations[pending_count++] = 0x2300'0000 | slotid;
-			}
-			break;
-		case sp::DATA_UPDATE:
-		case sp::DATA_MOVE:
-			{
-				uint16_t sid_frame = *(uint16_t *)(dma_buffer + 3);
-				uint16_t offset = *(uint16_t *)(dma_buffer + 5);
-				uint16_t totallen = *(uint16_t *)(dma_buffer + 7);
-				uint16_t totalupdlen = *(uint16_t *)(dma_buffer + 9);
-				uint8_t  packetlength = dma_buffer[1] - 8;
+			case ACK_DATA_MOVE:
+				{
+					// The only current initiator of data_move is the cleanup system (for evicting blocks when the arena is too full)
+					// If we're not cleaning up right now though something's gone rather wrong. We still have to process it though regardless.
 
-				bool start = sid_frame & (1 << 15);
-				bool end = sid_frame & (1 << 14);
-				uint16_t slotid = sid_frame & 0xfff;
+					if (!xStreamBufferReceive(dma_rx_queue, msgbuf, 7, portMAX_DELAY)) continue; // This shouldn't fail due to how the dma logic works [citation needed]
 
-				uint8_t errcode = 0;
-				uint16_t targetlocation = dma_buffer[2] == slots::protocol::DATA_UPDATE ? bheap::Block::LocationEphemeral : bheap::Block::LocationCanonical;
-				
-				// We're trying to avoid storing state between messages, so we divide the process into multiple steps:
-				if (start) {
-					// If this is the starting packet, we ensure there's enough space at the end of the buffer.
-					auto currsize = arena.contents_size(slotid);
-					if (currsize == arena.npos) currsize = 0;
-					if (totallen > 8400) errcode = 0x3;
-					else if (currsize < totallen) {
-						// Just make a remote chunk
-						// Does not invalidate cache
-						if (!arena.add_block(slotid, bheap::Block::LocationRemote, totallen - currsize)) errcode = 0x1;
-					}
-					else if (currsize > totallen) {
-						// Truncate
-						if (!arena.truncate_contents(slotid, totallen)) errcode = 0x2;
+					uint16_t slotid = msgbuf_x16[0],
+							 start  = msgbuf_x16[1],
+							 len    = msgbuf_x16[2];
+					uint8_t  code   = msgbuf    [6];
+
+					if (!code && arena.check_location(slotid, start, len, bheap::Block::LocationCanonical)) {
+						// Acquire lock
+						ServicerLockGuard g(*this);
+
+						// Evict the cache
+						bcache.evict();
+
+						// Change the location of the marked segment to remote
+						arena.set_location(slotid, start, len, bheap::Block::LocationRemote);
 					}
 
-					// Also try to create the actual location type
-					if (!errcode) {
-						if (!arena.check_location(slotid, offset, totalupdlen, targetlocation)) {
-							bcache.evict();
-							if (!arena.set_location(slotid, offset, totalupdlen, targetlocation)) errcode = 0x1;
+					// If we're still cleaning run the clean function again so it can send another block over (this is outside the lock
+					// since we don't use recursive mutexes)
+					if (is_cleaning)
+						is_cleaning = do_bheap_cleanup();
+				}
+				break;
+			case DATA_UPDATE:
+			case DATA_MOVE:
+				{
+					uint8_t packet_length = msgbuf[1] - 8;
+					uint16_t target_loc   = msgbuf[2] == DATA_UPDATE ? bheap::Block::LocationEphemeral : bheap::Block::LocationCanonical;
+					// Read the header
+					if (!xStreamBufferReceive(dma_rx_queue, msgbuf, 8, portMAX_DELAY)) continue;
+
+					uint16_t sid_frame     = msgbuf_x16[0],
+							 offset        = msgbuf_x16[1],
+							 total_len     = msgbuf_x16[2],
+							 total_upd_len = msgbuf_x16[3];
+
+					bool start = sid_frame & (1 << 15);
+					bool end   = sid_frame & (1 << 14);
+					sid_frame &= 0xfff;
+					
+					// The process is divided into multiple steps, both for framing purposes and to save storing too much state.
+
+					// The first message sets up most of the transfer, and is the only one that's allowed to set an error code
+					if (start) {
+						move_update_errcode = 0; // init back to 0 here
+
+						// Ensure there's enough space in the buffer and decide how to setup the buffer for this new data.
+						auto currsize = arena.contents_size(sid_frame);
+						if (currsize == arena.npos) currsize = 0;
+						if (total_len > 8400) /* impose a max limit on slot size */
+							move_update_errcode = 0x3;
+						else if (currsize < total_len) {
+							// The slot has expanded, so we add an extra block at the end.
+							// This doesn't invalidate anything due to how bheap works, so we can just do it.
+							if (!arena.add_block(sid_frame, bheap::Block::LocationRemote, total_len - currsize)) move_update_errcode = 0x1;
+						}
+						else if (currsize > total_len) {
+							// The slot has shrunk, so we truncate.
+							// Similarly, this won't invalidate anything (due to the 4-byte aligned requirement)
+							if (!arena.truncate_contents(sid_frame, total_len)) move_update_errcode = 0x2;
+						}
+
+						// If all that succeeded...
+						if (!move_update_errcode) {
+							// Ensure there's actual space for the data to go into.
+							// This isn't handled during remote block adding since it's valid for the update message to grow a slot
+							// without updating the new region
+							if (!arena.check_location(sid_frame, offset, total_upd_len, target_loc)) {
+								// Lock the heap as this messes with stuff
+								ServicerLockGuard g(*this);
+
+								// This also evicts the entire cache
+								bcache.evict();
+								if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) move_update_errcode = 0x1;
+							}
 						}
 					}
-				}
-				else {
-					// Otherwise just verify it's OK
-					if (!arena.check_location(slotid, offset, packetlength, targetlocation)) errcode = 0x1;
-				}
-
-				if (errcode) {
-do_ack:
-					if (!end) break;
-
-					// Only send a response for end == true
-					uint16_t origoffset = offset - (totalupdlen - packetlength);
-
-					uint32_t param_hi = static_cast<uint32_t>(slotid) | static_cast<uint32_t>(origoffset) << 16;
-					uint32_t operation = dma_buffer[2];
-					operation <<= 24;
-					operation |= errcode;
-					operation |= static_cast<uint32_t>(totalupdlen) << 8;
-
-					if (pending_count > 30) pending_count = 30;
-					pending_operations[this->pending_count++] = param_hi;
-					pending_operations[this->pending_count++] = operation;
-
-					if (errcode == 0x1) {
-						should_reclaim_amt = std::max(should_reclaim_amt, totalupdlen);
+					else if (!move_update_errcode) {
+						// If this isn't the start message we don't do any allocation, but we do still check there is space for the data 
+						// (to avoid locking it again)
+						if (!arena.check_location(sid_frame, offset, packet_length, target_loc)) move_update_errcode = 0x1;
 					}
-					break;
+
+					// Read (or discard) the remaining packet data
+					amount = 0;
+					while (amount < packet_length) {
+						auto got = xStreamBufferReceive(dma_rx_queue, msgbuf, std::min(16u, (packet_length - amount)), portMAX_DELAY);
+						// If nothing has gone wrong, update the contents in 16-byte chunks reading from the buffer.
+						if (!move_update_errcode)
+							if (!arena.update_contents(sid_frame, offset + amount, got, msgbuf)) move_update_errcode = 0x2;
+						amount += got;
+					}
+
+					// Send an ack if we're at the end
+					if (end) {
+						uint16_t orig_offset = offset - (total_upd_len - packet_length);
+
+						wait_for_not_sending();
+
+						// Prepare the output using msgbuf
+						msgbuf_x16[0] = sid_frame;
+						msgbuf_x16[1] = orig_offset;
+						msgbuf_x16[2] = total_upd_len;
+						msgbuf    [6] = move_update_errcode;
+
+						// Copy into the dma buffer
+						memcpy(dma_out_buffer + 3, msgbuf, 7);
+
+						// Fill out header
+						dma_out_buffer[0] = 0xa5;
+						dma_out_buffer[1] = 7;
+						dma_out_buffer[2] = (target_loc == bheap::Block::LocationCanonical ? ACK_DATA_MOVE : ACK_DATA_UPDATE);
+						
+						// Send the packet
+						send();
+
+						// Don't bother waiting for it
+					}
+				}
+				break;
+			case DATA_DEL:
+				{
+					// Read the slot ID
+					uint16_t slotid;
+					if (!xStreamBufferReceive(dma_rx_queue, &slotid, 2, portMAX_DELAY)) continue;
+
+					// Erase the contents. This doesn't screw up anything per se, but could cause dual-access problems with the cache
+					{
+						ServicerLockGuard g(*this);
+
+						arena.truncate_contents(slotid, 0);
+						bcache.evict(slotid);
+					}
+
+					// Send an ack
+					wait_for_not_sending();
+
+					dma_out_buffer[0] = 0xa5;
+					dma_out_buffer[1] = 2;
+					dma_out_buffer[2] = ACK_DATA_DEL;
+					memcpy(dma_out_buffer + 3, &slotid, 2);
+
+					send();
+				}
+				break;
+			case slots::protocol::Command::RESET:
+				NVIC_SystemReset();
+			case PING:
+				{
+					// Send a pong
+					wait_for_not_sending();
+
+					dma_out_buffer[0] = 0xa5;
+					dma_out_buffer[1] = 0;
+					dma_out_buffer[2] = PONG;
+
+					send();
+				}
+				break;
+			default:
+				// unknown command. don't bother logging it though. just eat it up
+
+				amount = msgbuf[1];
+				while (amount) {
+					amount -= xStreamBufferReceive(dma_rx_queue, msgbuf, std::min(16u, amount), portMAX_DELAY);
 				}
 
-				// Update the data of the slot
-				if (!arena.update_contents(slotid, offset, packetlength, dma_buffer + 11)) errcode = 0x02;
-				goto do_ack;
-			}
-			break;
-		case sp::ACK_DATA_TEMP:
-			{
-				// Actually update the temperature
-				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
-				uint8_t  temperature = dma_buffer[5];
+				break;
+		}
+	}
+}
 
-				arena.set_temperature(slotid, temperature);
-			}
-			break;
-		case sp::ACK_DATA_MOVE:
+void srv::Servicer::do_update_logic() {
+	switch (this->update_state) {
+		case USTATE_ERASING_BEFORE_IMAGE:
 			{
-				uint16_t slotid = *(uint16_t *)(dma_buffer + 3);
-				uint16_t updstart = *(uint16_t *)(dma_buffer + 5);
-				uint16_t updlen = *(uint16_t *)(dma_buffer + 7);
-				uint8_t result = dma_buffer[9]; 
-				// Ensure the location makes sense
-
-				if (result) break;
-				if (!arena.check_location(slotid, updstart, updlen, bheap::Block::LocationCanonical)) break;
-
-				// Update the length + clear the cache
-				bcache.evict();
-				arena.set_location(slotid, updstart, updlen, bheap::Block::LocationRemote);
-			}
-			break;
-		case sp::RESET:
-			{
-				// RESET
-				NVIC_SystemReset();
-			}
-			break;
-		case sp::PING:
-			{
-				// PING
-				if (pending_count == 32) break;
-				this->pending_operations[pending_count++] = 0x50000000;
+				if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+					CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+					// Report readiness for bytes
+					this->update_state = USTATE_WAITING_FOR_PACKET;
+					//this->pending_operations[pending_count++] = 0x60'0000'12;
+				}
 				break;
 			}
-		case sp::UPDATE_CMD:
+		case USTATE_ERASING_BEFORE_PACKET:
 			{
-				// UPDATE_CMD
-				process_update_cmd(dma_buffer[3]);
-				break;
-			}
-		case sp::UPDATE_IMG_START: 
-			{
-				// UPDATE_MSG_START
-				
-				this->update_chunks_remaining = *(uint16_t *)(dma_buffer + 9);
-				this->update_total_size = *(uint32_t *)(dma_buffer + 5);
-				this->update_checksum = *(uint16_t *)(dma_buffer + 3);
+				if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+					CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+					this->update_state = USTATE_WAITING_FOR_PACKET;
 
-				// Send the next status
-				
-				this->pending_operations[pending_count++] = 0x60'0000'13;
+					append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
+				}
 				break;
 			}
-		case sp::UPDATE_IMG_DATA:
+		case USTATE_PACKET_WRITTEN:
 			{
-				this->update_pkg_size = this->dma_buffer[1] - 2;
-				memcpy(this->update_pkg_buffer, this->dma_buffer + 5, this->update_pkg_size);  // copy data
-				memcpy(this->update_pkg_buffer + this->update_pkg_size, this->dma_buffer + 3, 2); // copy crc
+				if (--this->update_chunks_remaining == 0) {
+					// We are done?
+					//
+					// Verify checksum
+				
+					// Disable D-Cache and flush it
+					LL_FLASH_DisableDataCache();
+					LL_FLASH_EnableDataCacheReset();
+					LL_FLASH_DisableDataCacheReset();
 
-				append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size);
+					if (util::compute_crc((uint8_t *)(0x0808'0000), this->update_total_size) != this->update_checksum) {
+						this->update_state = USTATE_FAILED;
+						//this->pending_operations[pending_count++] = 0x60'0000'40;
+
+						break;
+					}
+
+					// Checksum is OK, write the BCMD
+					
+					bootcmd_request_update(this->update_total_size);
+
+					// Clear pg byte
+					
+					CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
+
+					// Relock FLASH
+					
+					FLASH->CR |= FLASH_CR_LOCK;
+
+					// Send out final message
+					
+					//do_send_operation(0x60'0000'20);
+
+					// Wait a bit for DMA
+					
+					for (int i = 0; i < 400000; ++i) {
+						asm volatile ("nop");
+					}
+
+					// Reset
+					
+					NVIC_SystemReset();
+
+					// At this point the bootloader will update us.
+				}
+
+				this->update_state = USTATE_WAITING_FOR_PACKET;
+				//this->pending_operations[pending_count++] = 0x60'0000'13;
 				break;
 			}
-		case sp::CONSOLE_MSG:
+		case USTATE_PACKET_WRITE_FAIL_CSUM:
 			{
-				// CONSOLE_MESSAGE
-				
-				if (this->dma_buffer[3] != 0x01) break; // if console is not the dinput
-				
-				debug_in.write((char *)this->dma_buffer + 4, this->dma_buffer[1] - 1);
+				this->update_state = USTATE_WAITING_FOR_PACKET;
+				//this->pending_operations[pending_count++] = 0x60'0000'30;
 				break;
 			}
 		default:
 			break;
 	}
+}
 
+bool srv::Servicer::ready() {
+	return this->state >= ProtocolState::DMA_WAIT_SIZE;
+}
+
+void srv::Servicer::init() {
+	// Setup HW
+	this->setup_uart_dma();
+	// Setup RTOS
+	
+	// Create the mutex for locking the bheap
+	bheap_mutex = xSemaphoreCreateMutex();
+
+	// Create the pending operation queue
+	pending_requests = xQueueCreate(32, sizeof(PendRequest));
+
+	// Create the incoming packet buffer
+	dma_rx_queue = xStreamBufferCreate(2048, 3);
+
+	// Create the debug in/out
+	log_in = xStreamBufferCreate(256, 1);
+	log_out = xStreamBufferCreate(128, 1); // blocking allowed
+
+	// this_task is initialized in run()
+}
+
+void srv::Servicer::process_command() {
+	// Currently this is almost exclusively going to just dump the result into the stream buffer, but for console messages it does something more intelligent
+	if (dma_buffer[2] == slots::protocol::CONSOLE_MSG && dma_buffer[3] == 0x1) {
+		xStreamBufferSendFromISR(log_in, dma_buffer + 4, dma_buffer[1] - 1, nullptr);
+	}
+	else {
+		// Otherwise, we send the entire command into the queue all at once
+		xStreamBufferSendFromISR(dma_rx_queue, dma_buffer, dma_buffer[1] + 3, nullptr);
+	}
+}
+
+void srv::Servicer::take_lock() {
+	xSemaphoreTake(bheap_mutex, portMAX_DELAY);
+}
+
+void srv::Servicer::give_lock() {
+	xSemaphoreGive(bheap_mutex);
+}
+
+void srv::Servicer::start_pend_request(PendRequest req) {
+	switch (req.type) {
+		case PendRequest::TypeChangeTemp:
+			{
+				// Send a DATA_TEMP
+
+				wait_for_not_sending();
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 3;
+				dma_out_buffer[2] = slots::protocol::DATA_TEMP;
+				
+				// Load the slotid
+
+				*reinterpret_cast<uint16_t *>(dma_out_buffer + 3) = req.slotid;
+				dma_out_buffer[5] = req.temperature;
+
+				send();
+			}
+		default:
+			break;
+	}
+}
+
+void srv::Servicer::wait_for_not_sending() {
+	if (!is_sending) return;
+
+	else {
+		this->notify_on_send_done = xTaskGetCurrentTaskHandle();
+		xTaskNotifyWait(0, 0xFFFF'FFFFul, nullptr, portMAX_DELAY);
+	}
 }
 
 void srv::Servicer::process_update_cmd(uint8_t cmd) {
@@ -830,47 +726,8 @@ const char * srv::Servicer::update_status() {
 
 	return update_status_buffer;
 }
-
-// ConIO interface
-
-size_t srv::ConIO::remaining() {
-	if (start <= end) return end - start;
-	else return (&buf[512] - start) + (end - &buf[0]);
-}
-
-void srv::ConIO::write(const char * ibuf, size_t length) {
-	if (remaining() + length > 512) return;
-
-	memcpy(end, ibuf, std::min((ptrdiff_t)length, &buf[512] - end));
-	if (length > &buf[512] - end) {
-		memcpy(buf, ibuf + (&buf[512] - end), length - (&buf[512] - end));
-		end = &buf[length - (&buf[512] - end)];
-	}
-	else {
-		end += length;
-	}
-}
-
-void srv::ConIO::read(char * obuf, size_t length) {
-	if (length > remaining()) return;
-
-	memcpy(obuf, start, std::min((ptrdiff_t)length, &buf[512] - start));
-	if (length > &buf[512] - start) {
-		memcpy(obuf + (&buf[512] - start), buf, length - (&buf[512] - start));
-		start = &buf[length - (&buf[512] - start)];
-	}
-	else {
-		start += length;
-	}
-}
-
-srv::ConIO debug_in, debug_out;
-srv::ConIO log_out;
-
 // override _write
 
-extern "C" int _write(int file, char* ptr, int len) {
-	if (file == STDOUT_FILENO) log_out.write(ptr, len);
-	else                       debug_out.write(ptr, len);
-	return len;
+extern "C" int __attribute__((used)) _write(int file, char* ptr, int len) {
+	return 0; // todo
 }
