@@ -238,6 +238,11 @@ namespace led {
 			xTaskNotifyWait(0, 0xffffffffUL, NULL, portMAX_DELAY);
 		}
 
+		void swap_buffers_from_isr() {
+			should_swap = true;
+			while (should_swap) {;}
+		}
+
 		FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}
 		const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}
 

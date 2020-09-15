@@ -11,13 +11,13 @@
 #include "draw.h"
 #include "fonts/lcdpixel_6.h"
 
+#include <FreeRTOS.h>
 
 extern matrix_type matrix;
 extern srv::Servicer servicer;
 extern tasks::Timekeeper timekeeper;
 
 void nvic::init() {
-	SCB->VTOR = 0x4000; // set vector table relocation to 0x4000 since that's where our image starts.
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
 	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
@@ -80,8 +80,11 @@ extern "C" void NVIC_SRV_TX_IRQ_HANDLER() {
 	}
 }
 
+extern "C" void xPortSysTickHandler();
+
 extern "C" void SysTick_Handler() {
 	timekeeper.systick_handler();
+	xPortSysTickHandler();
 }
 
 // hard fault handler renderer...
@@ -99,13 +102,10 @@ namespace {
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
 	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 	// there was a hardfault... delay for a while so i know
-	while (matrix.is_active()) {;}
 	for (int j = 0; j < 128; ++j) {
 		draw_hardfault_screen(j);
 		draw::text(matrix.get_inactive_buffer(), errcode, font::lcdpixel_6::info, 0, 20, 4095, 128_c, 0);
-		matrix.swap_buffers();
-		matrix.display();
-		while (matrix.is_active()) {;}
+		matrix.swap_buffers_from_isr();
 	}
 
 	NVIC_SystemReset();
