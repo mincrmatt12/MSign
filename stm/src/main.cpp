@@ -6,16 +6,13 @@
 #include "fonts/latob_15.h"
 #include "fonts/dejavu_10.h"
 #include "fonts/lcdpixel_6.h"
-#include "schedef.h"
-#include "srv.h"
 #include "tasks/timekeeper.h"
+#include "srv.h"
 #include "common/bootcmd.h"
 
 // strange parse error - put this last...
 
 #include "draw.h"
-#include "tasks/dispman.h"
-#include "tasks/debug.h"
 #include <cstring>
 #include <stdlib.h>
 #include <cmath>
@@ -28,12 +25,10 @@
 
 matrix_type matrix;
 
-srv::Servicer servicer;
+srv::Servicer servicer{};
 uint64_t rtc_time;
 
-tasks::Timekeeper timekeeper{rtc_time};
-tasks::DebugConsole console;
-tasks::DispMan dispman;
+tasks::Timekeeper timekeeper(rtc_time);
 
 // Scheduler parameters
 
@@ -44,7 +39,6 @@ tasks::DispMan dispman;
 // Slot 0 is usually the active display
 // Slot 1 is usually the switcher, responsible for managing slot 0
 // Slot 2 is an overlay, which can be started in response to a notification
-sched::TaskPtr task_list[8] = {nullptr};
 uint8_t task_index = 0;
 
 // increments per skipped task, used to make sure task_list run on time
@@ -83,26 +77,13 @@ void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	}
 }
 
-int main() {
-	rcc::init();
-	nvic::init();
-	rng::init();
-	matrix.init();
-	servicer.init();
-
-	task_list[3] = &servicer;
-	task_list[4] = &dispman;
-	task_list[5] = &timekeeper;
-	task_list[6] = &console;
-
+void screen_task(void *) {
 	show_test_pattern(0, matrix.get_inactive_buffer());
+
 	matrix.swap_buffers();
 
 	// Init esp comms
 	while (!servicer.ready()) {
-		servicer.loop();
-		matrix.display();
-		while (matrix.is_active()) {;}
 		show_test_pattern(1, matrix.get_inactive_buffer());
 		matrix.swap_buffers();
 	}
@@ -110,10 +91,7 @@ int main() {
 	if (servicer.updating()) {
 		// Go into a simple servicer only update mode
 		while (true) {
-			servicer.loop();
-			matrix.display();
 			show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
-			while (matrix.is_active()) {servicer.loop();}
 			matrix.swap_buffers();
 		}
 
@@ -127,87 +105,37 @@ int main() {
 
 	uint16_t finalize_counter = 60;
 	while (finalize_counter--) {
-		if (finalize_counter == 50) {
+		if (finalize_counter >= 50) matrix.swap_buffers();
+		else if (finalize_counter >= 34) {
 			draw::fill(matrix.get_inactive_buffer(), 4095, 0, 0);
 			matrix.swap_buffers();
 		}
-		if (finalize_counter == 34) {
+		else if (finalize_counter >= 18) {
 			draw::fill(matrix.get_inactive_buffer(), 0, 4095, 0);
 			matrix.swap_buffers();
 		}
-		if (finalize_counter == 18) {
+		else {
 			draw::fill(matrix.get_inactive_buffer(), 0, 0, 4095);
 			matrix.swap_buffers();
 		}
-		matrix.display();
-		while (matrix.is_active()) {;}
-		matrix.display();
-		while (matrix.is_active()) {;} // render a few frames so the test patters are actually visible
 	}
 
-	dispman.init();
-
-	// Main loop of software
-	while (true) {
-		matrix.display();
-		// ... scheduler loop ...
-		while (matrix.is_active()) {
-			// Are we done?
-			if (task_index >= 8) {
-				if (display_ready) continue;
-				// No, we are starting anew
-				task_index = 0;
-			}
-
-			// Check if the current task is null, if so skip
-
-			if (task_list[task_index] == nullptr) {
-				++task_index;
-				if (task_index == 3) display_ready = true;
-				continue;
-			}
-
-			// Are we in a display slot?
-
-			if (task_index <= 2) {
-				// If so, then we need to treat the task as important
-				goto run_it;
-			}
-			else {
-				if (!display_ready) {
-					// we are running on borrowed time, skip unless important
-					if (task_list[task_index]->important()) goto run_it;
-					goto skip;
-				}
-				else {
-					// run the task, it is ok
-					goto run_it;
-				}
-			}
-
-skip:
-			++skipped_counter[task_index];
-			if (skipped_counter[task_index] > SKIP_THRESH) {
-				--skipped_counter[task_index];
-				goto run_it;
-			}
-			++task_index;
-			continue;
-run_it:
-			if (skipped_counter[task_index] > 0)
-				--skipped_counter[task_index];
-
-			task_list[task_index]->loop();
-			if (task_list[task_index]->done()) {
-				++task_index;
-				if (task_index == 3) display_ready = true;
-			}
-		}
-
-		if (display_ready) {
-			matrix.swap_buffers(); 
-			matrix.get_inactive_buffer().clear();
-			display_ready = false;
-		}
+	while (1) {
+		vTaskDelay(pdMS_TO_TICKS(50));
 	}
+}
+
+int main() {
+	rcc::init();
+	nvic::init();
+	rng::init();
+
+	matrix.init();
+	servicer.init();
+
+	xTaskCreate((TaskFunction_t)&srv::Servicer::run, "srvc", 256, &servicer, 5, nullptr);
+	xTaskCreate(screen_task, "screen", 512, nullptr, 4, nullptr);
+
+	matrix.start_display();
+	vTaskStartScheduler();
 }
