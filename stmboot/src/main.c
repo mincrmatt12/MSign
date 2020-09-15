@@ -4,7 +4,7 @@
 #include "string.h"
 
 // BOOTLOADER REVISION CONSTANT
-const char BL_REV[4] = {'2', 'a', 0, 0};
+const char BL_REV[4] = {'2', 'b', 0, 0};
 
 extern const void * _sirtext;
 extern void * _srtext, *_ertext;
@@ -56,8 +56,9 @@ void jump_to_program() {
 	SysTick->LOAD = 0;
 	SysTick->VAL = 0;
 
-	__set_MSP(*(uint32_t *)(0x08004000));
+	SCB->VTOR = 0x4000;
 
+	__set_MSP(*(uint32_t *)(0x08004000));
 	((void(*)(void))(*(uint32_t *)(0x08004004)))();
 }
 
