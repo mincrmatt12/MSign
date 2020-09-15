@@ -8,6 +8,10 @@
 extern "C" {
 	extern void (*__init_array_start [])(void);
 	extern void (*__init_array_end [])(void);
+
+	uint32_t SystemCoreClock;
+	const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
+	const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 }
 
 void rcc::init() {
@@ -39,10 +43,9 @@ void rcc::init() {
 	{
 
 	}
-	LL_Init1msTick(120000000);
-	LL_SYSTICK_SetClkSource(LL_SYSTICK_CLKSOURCE_HCLK);
 	LL_SetSystemCoreClock(120000000);
-	LL_SYSTICK_EnableIT();
+
+	// Let FREERTOS init the systick, we just leech off of it
 
 	// Initialize the cpp runtime
 
