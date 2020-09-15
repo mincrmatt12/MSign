@@ -82,8 +82,5 @@ header file. */
 #define vPortSVCHandler    SVC_Handler
 #define xPortPendSVHandler PendSV_Handler
 
-// TODO: hijack this to use the global timery thingy idk
-#define xPortSysTickHandler SysTick_Handler
-
 #endif /* FREERTOS_CONFIG_H */
 
