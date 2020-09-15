@@ -1,6 +1,6 @@
 # Builds the STM binaries
 cmake_minimum_required(VERSION 3.13)
-project(msynth-stm)
+project(msynth-stm C CXX ASM)
 
 set(CMAKE_EXE_LINKER_FLAGS "")
 set(CMAKE_CXX_STANDARD 17)
@@ -68,19 +68,26 @@ target_include_directories(freertos PUBLIC
 )
 
 # get the actual app sources
-file(GLOB_RECURSE stm_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_BINARY_DIR}/src/*.c ${CMAKE_CURRENT_SOURCE_DIR}/src/*.s)
+file(GLOB_RECURSE stm_srcs FOLLOW_SYMLINKS 
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp 
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.c 
+	${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
+)
 
 add_executable(stm ${stm_srcs})
 
 target_link_libraries(stm
 	cube_ll
 	freertos
+
+	c m gcc
 )
 
 target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
+	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions>
 )
 
 target_link_options(stm
