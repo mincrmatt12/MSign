@@ -66,6 +66,11 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 		}
 
 		is_sending = false;
+
+		if (notify_on_send_done) {
+			xTaskNotifyFromISR(notify_on_send_done, 1, eSetValueWithOverwrite, nullptr);
+			notify_on_send_done = nullptr;
+		}
 	}
 }
 
@@ -161,8 +166,8 @@ void srv::ProtocolImpl::send() {
 	LL_USART_EnableDMAReq_TX(ESP_USART);
 }
 
-void srv::ProtocolImpl::start_recv() {
-	state = ProtocolState::DMA_WAIT_SIZE;
+void srv::ProtocolImpl::start_recv(srv::ProtocolState target_state) {
+	state = target_state;
 	// setup a receieve of 3 bytes
 
 	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
