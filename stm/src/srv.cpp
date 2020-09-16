@@ -190,7 +190,7 @@ retry_handshake:
 	// TODO: this could use task notifications but /shrug may as well keep old code around
 
 	while (state == ProtocolState::HANDSHAKE_RECV) {
-		vTaskDelay(pdMS_TO_TICKS(40));
+		vTaskDelay(pdMS_TO_TICKS(500));
 		if (!is_sending) ++retries;
 
 		if (retries == 3 || retries == 6 || retries == 9) {
@@ -402,7 +402,7 @@ void srv::Servicer::run() {
 					// Read (or discard) the remaining packet data
 					amount = 0;
 					while (amount < packet_length) {
-						auto got = xStreamBufferReceive(dma_rx_queue, msgbuf, std::min(16u, (packet_length - amount)), portMAX_DELAY);
+						auto got = xStreamBufferReceive(dma_rx_queue, msgbuf, std::min<size_t>(16, (packet_length - amount)), portMAX_DELAY);
 						// If nothing has gone wrong, update the contents in 16-byte chunks reading from the buffer.
 						if (!move_update_errcode)
 							if (!arena.update_contents(sid_frame, offset + amount, got, msgbuf)) move_update_errcode = 0x2;
@@ -480,7 +480,7 @@ void srv::Servicer::run() {
 
 				amount = msgbuf[1];
 				while (amount) {
-					amount -= xStreamBufferReceive(dma_rx_queue, msgbuf, std::min(16u, amount), portMAX_DELAY);
+					amount -= xStreamBufferReceive(dma_rx_queue, msgbuf, std::min<size_t>(16, amount), portMAX_DELAY);
 				}
 
 				break;
