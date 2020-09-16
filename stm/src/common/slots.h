@@ -45,11 +45,11 @@ namespace slots {
 
 		MODEL_INFO = 0x900, 		// UINT16_T; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
-		MODEL_CAM_MINPOS  = 0x905, // STRUCT; Vec3; minimum position of the camera 
-		MODEL_CAM_MAXPOS  = 0x906, // ''; maximum position of the camera 
-		MODEL_CAM_FOCUS1  = 0x907, // ''; lookat point of camera
-		MODEL_CAM_FOCUS2  = 0x908, // ''; '' 2
-		MODEL_CAM_FOCUS3  = 0x909, // ''; '' 3
+		MODEL_CAM_MINPOS  = 0x905,  // STRUCT; Vec3; minimum position of the camera 
+		MODEL_CAM_MAXPOS  = 0x906,  // ''; maximum position of the camera 
+		MODEL_CAM_FOCUS1  = 0x907,  // ''; lookat point of camera
+		MODEL_CAM_FOCUS2  = 0x908,  // ''; '' 2
+		MODEL_CAM_FOCUS3  = 0x909,  // ''; '' 3
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
