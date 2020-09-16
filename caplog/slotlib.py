@@ -6,6 +6,31 @@ import os
 import struct
 import binascii
 import copy
+import textwrap
+
+class DeclaredMemberStruct:
+    def __init__(self, name, members):
+        self.name = name
+        self.members = members
+        self.decodestr = "<" + "".join(x.typetoken for x in members)
+        self.typetoken = f"{struct.calcsize(self.decodestr)}s"
+        self.member_decode_slices = []
+        idx = 0
+        for member in members:
+            self.member_decode_slices.append(slice(idx, idx + struct.calcsize(member.typetoken)))
+            idx += struct.calcsize(member.typetoken)
+
+    def parse(self, segment):
+        parsed_args = struct.unpack(self.decodestr, segment)
+        for member, idx in zip(self.members, self.member_decode_slices):
+            member.parse(segment[idx])
+
+    def formatted_value(self):
+        init_indent = f"{self.name}: "
+        text = "\n".join(x.formatted_value() for x in self.members)
+        text = textwrap.indent(text, " "*len(init_indent))
+        text = init_indent + text[len(init_indent):]
+        return text
 
 class DeclaredMember:
     def __init__(self, name, typetoken, bitfield=None):
@@ -90,14 +115,13 @@ class SlotType:
         idx = 0
         self.member_decode_slices = []
         for member in members:
-            self.member_decode_slices.append(slice(idx, idx + len(member.typetoken)))
-            idx += len(member.typetoken)
+            self.member_decode_slices.append(slice(idx, idx + struct.calcsize(member.typetoken)))
+            idx += struct.calcsize(member.typetoken)
         
     def parse(self, dat):
         member_copy = copy.deepcopy(self.members)
-        parsed_args = struct.unpack("<" + self.decodestr, dat)
         for member, idx in zip(member_copy, self.member_decode_slices):
-            member.parse(parsed_args[idx])
+            member.parse(dat[idx])
         return member_copy
 
     def get_formatted(self, data):
@@ -106,6 +130,37 @@ class SlotType:
         else:
             return data[0].formatted_value()[(len(data[0].name) + 2):]
 
+    def get_length(self, dat):
+        return struct.calcsize("<" + self.decodestr)
+
+class SlotTypeArray:
+    VARLEN = 0
+
+    def __init__(self, subtype, length=VARLEN):
+        self.subtype = subtype
+        self.length = length
+
+    def parse(self, dat):
+        values = []
+        remain = len(dat)
+        pos = 0
+        while remain and (self.length == SlotTypeArray.VARLEN or len(values) < self.length):
+            amt = self.subtype.get_length(dat[pos:])
+            remain -= amt
+            if remain < 0:
+                raise ValueError("invalid size for varlen")
+            values.append(self.subtype.parse(dat[pos:pos+amt]))
+            pos += amt
+        return values
+
+    def get_formatted(self, data):
+        response = ""
+        for j, val in enumerate(data):
+            init_indent = f"[{j}]: "
+            text = textwrap.indent(self.subtype.get_formatted(val), " "*len(init_indent))
+            text = init_indent + text[len(init_indent):]
+            response += text + "\n"
+        return response[:-1]
 
 class SlotTypeString:
     def parse(self, dat):
@@ -113,10 +168,16 @@ class SlotTypeString:
             length = dat.index(b'\x00')
             return dat[:length]
         else:
-            return dat[:16]
+            return dat
 
     def get_formatted(self, data):
         return repr(data)[1:]
+
+    def get_length(self, dat):
+        if b'\x00' in dat:
+            return dat.index(b'\x00') + 1
+        else:
+            return len(dat)
 
 
 
@@ -131,6 +192,23 @@ xml_generator_config = parser.xml_generator_configuration_t(
     xml_generator=gn)
 
 declarations_in_file = parser.parse_string(full_text, xml_generator_config)
+
+def _create_member_list(struct_info):
+    new_type_members = []
+    for i in struct_info.variables():
+        bitfield = None
+        if declarations.is_integral(i.decl_type):
+            try:
+                enumerator = struct_info.enumerations()[0]
+                bitfield = enumerator.get_name2value_dict()
+            except RuntimeError:
+                bitfield = None
+
+        if declarations.is_class(i.decl_type):
+            new_type_members.append(DeclaredMemberStruct(i.name, _create_member_list(i.decl_type.declaration)))
+        else:
+            new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield))
+    return new_type_members
 
 def _convert_opaque_to_token(x):
     """
@@ -180,7 +258,7 @@ def _convert_opaque_to_token(x):
         raise ValueError("unknown instance: " + repr(x))
 
 # don't you just love regexes?
-comment_interpreter = re.compile(r"^\s*(\w+)\s*=\s*0x\w+,\s*//\s+([A-Z0-9_']+)(?:;[^\S\n\r]*(\w+)?)?(.+)?$", re.MULTILINE)
+comment_interpreter = re.compile(r"^\s*(\w+)\s*=\s*0x\w+,\s*//\s+([A-Z0-9_']+(?:\[\])?)(?:;[^\S\n\r]*(\w+)?)?(.+)?$", re.MULTILINE)
 
 """
 primary dict of type info
@@ -191,24 +269,15 @@ comment_matches = comment_interpreter.findall(full_text)
 comment_matches_indexed = {}
 for i in comment_matches:
     comment_matches_indexed[i[0]] = i[1:]
-slots_namespace = declarations.get_global_namespace(declarations_in_file).namespace("slots")
+global_namespace = declarations.get_global_namespace(declarations_in_file)
+slots_namespace = global_namespace.namespace("slots")
 dataid_enum = slots_namespace.enumeration("DataID")
 previous_match = None
 
 def _handle_struct(entryname, struct_name):
     struct_info = slots_namespace.class_(struct_name)
-    
-    new_type_members = []
-    for i in struct_info.variables():
-        bitfield = None
-        if declarations.is_integral(i.decl_type):
-            try:
-                enumerator = struct_info.enumerations()[0]
-                bitfield = enumerator.get_name2value_dict()
-            except RuntimeError:
-                bitfield = None
 
-        new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield))
+    new_type_members = _create_member_list(struct_info)
 
     slot_types[entryname][1] = SlotType(new_type_members)
 
@@ -216,7 +285,10 @@ def _handle_match(entryname, match_data):
     global slot_types
     global previous_match
 
-    if len(match_data) == 1:
+    if match_data[0].endswith("[]"):
+        _handle_match(entryname, (match_data[0].rstrip("[]"), *match_data[1:]))
+        slot_types[entryname][1] = SlotTypeArray(slot_types[entryname][1])
+    elif len(match_data) == 1:
         match_type = match_data[0]
         if match_type in ["STRUCT", "ENUM"]:
             raise SyntaxError("invalid: struct or enum without typename")
@@ -238,6 +310,7 @@ def _handle_match(entryname, match_data):
         else:
             _handle_struct(entryname, match_data[1])
     else:
+        print(entryname, match_data)
         _handle_match(entryname, match_data[:2])
 
     if match_data[0] not in ('"', "''"):
