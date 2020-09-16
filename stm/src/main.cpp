@@ -30,23 +30,6 @@ uint64_t rtc_time;
 
 tasks::Timekeeper timekeeper(rtc_time);
 
-// Scheduler parameters
-
-// Slots 0-2: display tasks; need to be run before swap_buffers
-// Slot  3  : the service interface - only marks as important when data is in buffer; talks to esp
-// Slots 4-7: low priority stuff irrelevant of the thing; possibly alarms/etc, sometimes timekeeping
-//
-// Slot 0 is usually the active display
-// Slot 1 is usually the switcher, responsible for managing slot 0
-// Slot 2 is an overlay, which can be started in response to a notification
-uint8_t task_index = 0;
-
-// increments per skipped task, used to make sure task_list run on time
-uint8_t skipped_counter[8] = {0};
-
-// true when the display is ready
-bool    display_ready = false;
-
 template <typename FB>
 void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 	fb.clear();
