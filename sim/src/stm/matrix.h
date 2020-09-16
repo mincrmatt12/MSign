@@ -7,6 +7,8 @@
 #include <iostream>
 #include <chrono>
 #include <cmath>
+#include <FreeRTOS.h>
+#include <task.h>
 
 namespace led {
 
@@ -21,6 +23,7 @@ namespace led {
 			}
 
 			void show() {                                                                                                                                                             
+				portENTER_CRITICAL();
 				std::cout << "\e[;H\e[?25l";                                                                                                                                                 
 				for (size_t y = 0; y < Height; ++y) {                                                                                                                                 
 					for (size_t x = 0; x < Width; ++x) {                                                                                                                              
@@ -28,6 +31,7 @@ namespace led {
 					}                                                                                                                                                                 
 					std::cout << std::endl;                                                                                                                                           
 				}                                                                                                                                                                     
+				portEXIT_CRITICAL();
 			}                                                                                                                                                                         
 
 			uint16_t & r(uint16_t x, uint16_t y) {
@@ -102,37 +106,52 @@ namespace led {
 
 			Matrix() : fb0(), fb1() {                                                    
 			}                                                                            
+
 			void init() {                                                                
 			}                                                                            
 
-			void display() {                                                             
-				using namespace std::chrono;
+			void start_display() {                                                             
+				should_swap = false;
+				xTaskCreate((TaskFunction_t)&Matrix<FB>::disptask, "dispint", 1024, this, 6, &me);
+			}
 
-				this->_get_active_buffer().show();                                       
-				started_at = duration_cast<milliseconds>(system_clock::now().time_since_epoch());
-			}                                                                            
+			// This should only be called from an RTOS task
+			void swap_buffers() {
+				//active_buffer = !active_buffer;
+				notify_when_swapped = xTaskGetCurrentTaskHandle();
+				should_swap = true;
 
-			void swap_buffers() {                                                        
-				if (is_active()) return;                                                 
-				active_buffer = !active_buffer;                                          
-			}                                                                            
+				// This uses the task notification value to wait for something to happen.
+				// This _does_ preclude the use of notification values for anything else.
+				xTaskNotifyWait(0, 0xffffffffUL, NULL, portMAX_DELAY);
+			}
+
+			void swap_buffers_from_isr() {
+				should_swap = true;
+				while (should_swap) {;}
+			}
 
 			FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}                
 			const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}            
-			volatile bool is_active() {                                                  
-				using namespace std::chrono;
-
-				return (duration_cast<milliseconds>(system_clock::now().time_since_epoch()) - started_at) < (1000ms / 30);                                                            
-			}                                                                            
-
 		private:                                                                         
+
+			void disptask() {
+				while (true) {
+					_get_active_buffer().show();
+					vTaskDelay(pdMS_TO_TICKS(1000/60));
+					// We have finished clocking out a row, process buffer swaps
+					if (should_swap) {
+						active_buffer = !active_buffer;
+						if (notify_when_swapped) xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+					}
+				}
+			}
+
 			FB fb0, fb1;                                                                 
 			bool active_buffer = false;                                                  
 			uint8_t pos = 0;                                                             
 			uint16_t row = 0;                                                            
 			uint8_t dma_buffer[(FB::width * 2) + 1];                                     
-
-			std::chrono::milliseconds started_at;
 
 			// impl for the wait system                                                  
 			uint16_t delay_counter = 0;                                                  
@@ -144,6 +163,9 @@ namespace led {
 			// clock is tied to tim2_ch3                                                 
 
 			FB& _get_active_buffer() {return active_buffer ? fb0 : fb1;}                 
+
+			TaskHandle_t me, notify_when_swapped = nullptr;
+			bool should_swap = false;
 		};                                                                               
 }
 

@@ -7,7 +7,7 @@
 extern char ** orig_argv;
 
 [[noreturn]] inline void NVIC_SystemReset() {
-	execve(orig_argv[0], orig_argv, nullptr);
+	exit(0);
 	while (1) {;}
 }
 

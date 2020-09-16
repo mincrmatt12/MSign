@@ -29,6 +29,9 @@ extern "C" void DMA2_Stream7_IRQHandler() {
 extern "C" void SysTick_Handler() {                           
 }                                                             
 
+extern "C" void vApplicationIdleHook() {
+	timekeeper.systick_handler();
+}
 
 extern void NVIC_SystemReset();
 
@@ -44,13 +47,10 @@ namespace {
 
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
 	// there was a hardfault... delay for a while so i know
-	while (matrix.is_active()) {;}
 	for (int j = 0; j < 128; ++j) {
 		draw_hardfault_screen(j);
 		draw::text(matrix.get_inactive_buffer(), errcode, font::lcdpixel_6::info, 0, 20, 4095, 128_c, 0);
-		matrix.swap_buffers();
-		matrix.display();
-		while (matrix.is_active()) {;}
+		matrix.swap_buffers_from_isr();
 	}
 
 	NVIC_SystemReset();

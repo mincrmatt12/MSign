@@ -4,27 +4,37 @@
 #include <iostream>
 #include "srv.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 uint32_t faux_dma_counter = 0;
 uint8_t * faux_dma_ptr = 0;
+
 #include "tasks/timekeeper.h"
 #include "stm32f2xx_ll_system.h"
 
 extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
 
-void pump_faux_dma() {
-	// handle fauxdma:tm:
-	if (!(faux_dma_ptr == 0 || faux_dma_counter == 0)) {
-		int bytes_waiting;
-		ioctl(0, FIONREAD, &bytes_waiting);
-		while (bytes_waiting--) {
-			if (faux_dma_ptr == 0) break;
-			*faux_dma_ptr++ = getchar();
-			if (!--faux_dma_counter) {
-				faux_dma_ptr = 0;
-				servicer.dma_finish(true);
+void pump_faux_dma_task(void*) {
+	while (true) {
+		// handle fauxdma:tm:
+		if (!(faux_dma_ptr == 0 || faux_dma_counter == 0)) {
+			portENTER_CRITICAL();
+			int bytes_waiting;
+			ioctl(0, FIONREAD, &bytes_waiting);
+			while (bytes_waiting--) {
+				if (faux_dma_ptr == 0) break;
+				*faux_dma_ptr++ = getchar();
+				if (!--faux_dma_counter) {
+					faux_dma_ptr = 0;
+					servicer.dma_finish(true);
+				}
 			}
+			portEXIT_CRITICAL();
 		}
+
+		vTaskDelay(pdMS_TO_TICKS(5));
 	}
 }
 
@@ -79,8 +89,8 @@ void srv::ProtocolImpl::send() {
 	is_sending = false;
 }
 
-void srv::ProtocolImpl::start_recv() {
-	state = ProtocolState::DMA_WAIT_SIZE;
+void srv::ProtocolImpl::start_recv(srv::ProtocolState s) {
+	state = s;
 	
 	faux_dma_ptr = dma_buffer;
 	faux_dma_counter = 3;
