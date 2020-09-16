@@ -8,6 +8,10 @@ endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
+set(SIM_FREERTOS_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
+
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
 
 # This CMake file is responsible for a) creating the source directories from:
 # - the original directory
@@ -79,11 +83,37 @@ foreach(I IN LISTS TOTAL_ESP_SRCS)
 endforeach()
 
 # ----- section two: compile stm -----
+
+# setup freertos
+
+add_library(stm_freertos STATIC
+	${SIM_FREERTOS_DIR}/event_groups.c
+	${SIM_FREERTOS_DIR}/list.c
+	${SIM_FREERTOS_DIR}/queue.c
+	${SIM_FREERTOS_DIR}/stream_buffer.c
+	${SIM_FREERTOS_DIR}/tasks.c
+
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/port.c
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
+	${SIM_FREERTOS_DIR}/portable/MemMang/heap_1.c # we never malloc on the sign from the stm
+)
+
+target_include_directories(stm_freertos PUBLIC
+	${SIM_FREERTOS_DIR}/include
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix
+
+	${CMAKE_CURRENT_SOURCE_DIR}/cfg/stm
+)
+
+target_link_libraries(stm_freertos Threads::Threads)
+
 add_executable(stmsim ${TOTAL_STM_SRCS})
 file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
 target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
 target_compile_options(stmsim PRIVATE -DSIM)
 add_dependencies(stmsim copy_stm_src)
+
+target_link_libraries(stmsim stm_freertos)
 
 # ----- section three: setup ESP build -----
 # A lot of this is stolen from https://github.com/esp8266/Arduino/blob/master/tests/host/Makefile
