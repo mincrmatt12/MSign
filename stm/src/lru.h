@@ -49,8 +49,8 @@ namespace lru {
 	private:
 		uint32_t* bucket_for(uint16_t key) {
 			const uint16_t constant = 40503;
-			constexpr int shift = sizeof(unsigned int)*8 - __builtin_clz(Buckets);
-			return values[(key * constant) >> shift];
+			constexpr int shift = 16 - __builtin_ctz(Buckets);
+			return values[static_cast<uint16_t>(key * constant) >> shift];
 		}
 
 		uint32_t values[Buckets][ChainLength] = {0};
