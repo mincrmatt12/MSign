@@ -1,0 +1,91 @@
+#ifndef MSN_SCREEN_BASE_H
+#define MSN_SCREEN_BASE_H
+
+#include <utility>
+#include <stdint.h>
+#include <stddef.h>
+
+namespace screen {
+
+	// Override these (and the destructor/constructor); not virtual because we use a tagged union
+	struct Screen {
+		// Set necessary slots to warm here. Note that only a minimum of slots should be enabled here.
+		//
+		// This is called twice, once when it's the next screen to appear and once a second before we
+		// initialize the screen (this allows you to do stuff like pre-load data conditionally)
+		static void prepare(bool which_run /* true if first call */) {};
+
+		// Draw to the screen
+		void draw() {};
+
+		// Does this screen require clearing?
+		constexpr static inline bool require_clearing() { return true; }
+	};
+
+	// Screen IDs are order in template parameters.
+	//
+	// Starts with showing no screen at all (state can be induced with shutoff)
+	template<typename ...Screens>
+	class ScreenSwapper {
+		typename std::aligned_union<0, Screens...>::type storage;
+		constexpr inline static size_t npos = ~0u;
+
+		size_t selected = npos;
+
+		template<size_t ...Idx>
+		inline void _destruct(size_t idx, std::index_sequence<Idx...>) {
+			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->~Screens(), true)) || ...);
+		}
+
+		template<size_t ...Idx>
+		inline void _construct(size_t idx, std::index_sequence<Idx...>) {
+			((idx == Idx && (new (&storage) Screens{}, true)) || ...);
+		}
+
+		template<size_t ...Idx>
+		inline bool _require_clearing(size_t idx, std::index_sequence<Idx...>) {
+			return ((idx == Idx ? Screens::require_clearing() : true) && ...);
+		}
+
+		template<size_t ...Idx>
+		inline void _notify(size_t idx, bool param, std::index_sequence<Idx...>) {
+			((idx == Idx && (Screens::prepare(param), true)) && ...);
+		}
+
+		template<size_t ...Idx>
+		inline void _draw(size_t idx, std::index_sequence<Idx...>) {
+			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) && ...);
+		}
+
+	public:
+		void shutoff() { // disable screenswapper and have draw return nothing
+			if (selected != npos) {
+				_destruct(selected, std::index_sequence_for<Screens...>{});
+			}
+			selected = npos;
+		}
+
+		void draw() {
+			if (selected != npos)
+				_draw(selected, std::index_sequence_for<Screens...>{});
+		}
+
+		void transition(size_t which) {
+			if (selected != npos) {
+				_destruct(selected, std::index_sequence_for<Screens...>{});
+			}
+			selected = which;
+			_construct(which,  std::index_sequence_for<Screens...>{});
+		}
+
+		void notify_before_transition(size_t id, bool which_run) {
+			_notify(id, which_run, std::index_sequence_for<Screens...>{});
+		}
+
+		bool require_clearing() {
+			return _require_clearing(selected, std::index_sequence_for<Screens...>{});
+		}
+	};
+}
+
+#endif
