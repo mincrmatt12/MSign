@@ -209,8 +209,8 @@ namespace bheap {
 		// Allow use as a pointer type
 		T* operator->() {return &data();}
 		const T* operator->() const {return &data();}
-		T& operator*() {return data();}
-		const T& operator*() const {return data();}
+		data_type operator*() {return data();}
+		const_data_type operator*() const {return data();}
 #endif
 
 		using Block::next;
