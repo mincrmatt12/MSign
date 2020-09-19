@@ -1,3 +1,4 @@
 .pio*
 .gdb_history
 .vscode/
+build/
