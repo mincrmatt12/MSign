@@ -93,10 +93,20 @@ tempcodes = {
 def data_temp(dat):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
     
-    print(f" : request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
+    print(f": request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
 phandle = {
     0x20: data_temp
+}
+
+def ack_data_temp(dat):
+    slotid, tempcode = struct.unpack("<HB", bytes(dat))
+    
+    print(f": acknowledgement of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
+
+phandle = {
+    0x20: data_temp,
+    0x30: ack_data_temp
 }
 
 while (ptr < len(datastream)) if not realtime else True:
