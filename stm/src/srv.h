@@ -39,7 +39,7 @@ namespace srv {
 		void set_temperature(uint16_t slotid, uint32_t temperature);
 		template<typename... Args>
 		void set_temperature_all(uint32_t temperature, Args... args) {
-			(set_temperature(temperature, args) || ...);
+			(set_temperature(args, temperature), ...);
 		}
 
 		// Data access methods
