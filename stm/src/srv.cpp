@@ -304,7 +304,14 @@ void srv::Servicer::run() {
 					uint16_t slotid = msgbuf_x16[0];
 
 					// Update the temperature in the bheap. Never messes with any offsets so can occur w/o lock/cache clear
-					arena.set_temperature(slotid, msgbuf[2]);
+					if (!arena.set_temperature(slotid, msgbuf[2])) {
+						ServicerLockGuard g(*this);
+
+						arena.add_block(slotid, bheap::Block::LocationRemote, 0);
+						arena.set_temperature(slotid, msgbuf[2]);
+
+						bcache.evict();
+					}
 
 					// Check if we can process the next req
 					if (active_request.type == PendRequest::TypeChangeTemp && active_request.slotid == slotid && active_request.temperature == msgbuf[2]) {
