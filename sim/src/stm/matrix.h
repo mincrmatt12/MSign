@@ -127,8 +127,7 @@ namespace led {
 			}
 
 			void swap_buffers_from_isr() {
-				should_swap = true;
-				while (should_swap) {;}
+				swap_buffers();
 			}
 
 			FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}                
