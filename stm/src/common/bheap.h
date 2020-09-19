@@ -221,8 +221,9 @@ namespace bheap {
 		using Block::location;
 		using Block::temperature;
 
-		// Allow access to the helper bool
-		using Block::operator bool;
+		operator bool() const {
+			return Block::operator bool() && this->datasize;
+		}
 	};
 
 	// An arena of blocks (fight!)
