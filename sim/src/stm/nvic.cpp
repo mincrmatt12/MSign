@@ -29,7 +29,7 @@ extern "C" void DMA2_Stream7_IRQHandler() {
 extern "C" void SysTick_Handler() {                           
 }                                                             
 
-extern "C" void vApplicationIdleHook() {
+extern "C" void vApplicationTickHook() {
 	timekeeper.systick_handler();
 }
 
