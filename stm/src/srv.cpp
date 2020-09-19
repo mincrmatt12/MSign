@@ -276,9 +276,14 @@ void srv::Servicer::run() {
 					// Start handling it.
 					start_pend_request(active_request);
 				}
-				// Otherwise, try and run the cleanup system
+				// Otherwise, do various random tasks.
 				else {
+					check_connection_ping();
+
+					// TODO: dump out log_out
+
 					is_cleaning = do_bheap_cleanup();
+
 				}
 			}
 			continue;
@@ -485,6 +490,28 @@ void srv::Servicer::run() {
 
 				break;
 		}
+	}
+}
+
+void srv::Servicer::check_connection_ping() {
+	if ((timekeeper.current_time - last_comm) > 1000 && !sent_ping && !is_sending) {
+		wait_for_not_sending(); // ensure this is the case although we check earlier to avoid blocking
+		
+		dma_out_buffer[0] = 0xa5;
+		dma_out_buffer[1] = 0;
+		dma_out_buffer[2] = slots::protocol::PING; // send a ping
+
+		sent_ping = true;
+		send();
+	}
+	if ((timekeeper.current_time - last_comm) > 3000) {
+		if (timekeeper.current_time < last_comm) {
+			// ignore if the clock went backwards
+			last_comm = timekeeper.current_time;
+			return;
+		}
+		// otherwise, reset
+		nvic::show_error_screen("esp timeout");
 	}
 }
 

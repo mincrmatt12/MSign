@@ -74,6 +74,7 @@ namespace srv {
 
 		bool do_bheap_cleanup(); // returns done
 		void wait_for_not_sending(); // uses notification
+		void check_connection_ping(); // verify we're still connected with last_transmission
 
 		// Logic related to update
 		bool is_updating = false;
