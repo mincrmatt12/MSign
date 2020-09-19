@@ -10,16 +10,15 @@ void tasks::Timekeeper::systick_handler() {
 }
 
 void tasks::Timekeeper::loop() {
-	if (last_run_time == 0) {
-		// Init temperature of TIME to warm
-		servicer.set_temperature(slots::TIME_OF_DAY, bheap::Block::TemperatureWarm);
-	}
-	if ((current_time - last_run_time) > 30000 || last_run_time <= 2) {
+	srv::ServicerLockGuard g(servicer);
+
+	if ((current_time - last_run_time) > 30000 || first) {
 		servicer.set_temperature(slots::TIME_OF_DAY, bheap::Block::TemperatureHot);
 	}
 	if (servicer.slot_dirty(slots::TIME_OF_DAY)) {
 		servicer.set_temperature(slots::TIME_OF_DAY, bheap::Block::TemperatureWarm);
 		this->last_run_time = this->current_time;
 		this->timestamp = servicer.slot<uint64_t>(slots::TIME_OF_DAY);
+		this->first = false;
 	}
 }

@@ -16,8 +16,7 @@ namespace tasks {
 		uint32_t current_time =  0;
 	private:
 		uint32_t last_run_time = 0;
-		uint32_t ack_timer = 0;
-		bool waiting_for_data = false;
+		bool first = true;
 
 		uint64_t &timestamp;
 	};
