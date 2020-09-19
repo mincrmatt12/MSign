@@ -110,7 +110,7 @@ target_link_libraries(stm_freertos Threads::Threads)
 add_executable(stmsim ${TOTAL_STM_SRCS})
 file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
 target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
-target_compile_options(stmsim PRIVATE -DSIM)
+target_compile_options(stmsim PRIVATE -DSIM -Wno-pmf-conversions)
 add_dependencies(stmsim copy_stm_src)
 
 target_link_libraries(stmsim stm_freertos)
