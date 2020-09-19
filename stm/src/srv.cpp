@@ -149,7 +149,7 @@ const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
 	}
 	else {
 		target = &arena.get(slotid);
-		bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<ptrdiff_t>(target - arena.first)));
+		bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<ptrdiff_t>(target - &arena.first)));
 	}
 	return *target;
 }
