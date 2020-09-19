@@ -310,7 +310,6 @@ def _handle_match(entryname, match_data):
         else:
             _handle_struct(entryname, match_data[1])
     else:
-        print(entryname, match_data)
         _handle_match(entryname, match_data[:2])
 
     if match_data[0] not in ('"', "''"):

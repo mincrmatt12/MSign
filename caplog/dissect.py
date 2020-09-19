@@ -63,60 +63,40 @@ pnames = {
     0x11: "HANDSHAKE_RESP",
     0x12: "HANDSHAKE_OK",
     0x13: "HANDSHAKE_UOK",
-    0x20: "OPEN_CONN",
-    0x21: "CLOSE_CONN",
-    0x22: "NEW_DATA",
-    0x30: "ACK_OPEN_CONN",
-    0x31: "ACK_CLOSE_CONN",
-    0x40: "SLOT_DATA",
+    0x20: "DATA_TEMP",
+    0x21: "DATA_UPDATE",
+    0x22: "DATA_MOVE",
+    0x23: "DATA_DEL",
+    0x30: "ACK_DATA_TEMP",
+    0x31: "ACK_DATA_UPDATE",
+    0x32: "ACK_DATA_MOVE",
+    0x33: "ACK_DATA_DEL",
+    0x40: "QUERY_FREE_HEAP",
     0x50: "RESET",
     0x51: "PING",
     0x52: "PONG",
     0x60: "UPDATE_CMD",
     0x61: "UPDATE_IMG_DATA",
     0x62: "UPDATE_IMG_START",
-    0x63: "UPDATE_STATUS"
+    0x63: "UPDATE_STATUS",
+    0x70: "CONSOLE_MSG"
 }
 
 header_width = 5 + 2 + 2 + 2 + 2 + 20 + 2
-connection_data = {
-    
+
+tempcodes = {
+    0b11: "Hot",
+    0b10: "Warm",
+    0b01: "Cold"
 }
 
-def open_conn(dat):
-    connection_data[dat[1]] = dat[2] + (dat[3] << 8)
-    if not dat[0]:
-        print(": continuous {:02x} as {:04x} (i.e. {})".format(dat[1], connection_data[dat[1]], slotlib.slot_types[connection_data[dat[1]]][0]))
-    else:
-        print(": polled {:02x} as {:04x} (i.e. {})".format(dat[1], connection_data[dat[1]], slotlib.slot_types[connection_data[dat[1]]][0]))
-
-def close_conn(dat):
-    print(": {:02x} (was {:04x}, i.e. {})".format(dat[0], connection_data[dat[0]], slotlib.slot_types[connection_data[dat[0]]][0]))
-    del connection_data[dat[0]]
-
-def slot_data(dat):
-    data = bytes(dat[1:])
-    sid = dat[0]
-    if sid not in connection_data:
-        try:
-            asc = data.decode('ascii')
-        except:
-            asc = 'unk'
-        
-        print(": {:02x} is {} ({})".format(sid, binascii.hexlify(data).decode('ascii'), asc))
-    else:
-        print(": {:02x} (data {:04x}, i.e. {}) is:".format(sid, connection_data[sid], slotlib.slot_types[connection_data[sid]][0]))
-
-        st = slotlib.slot_types[connection_data[sid]][1]
-        try:
-            print(textwrap.indent(st.get_formatted(st.parse(data)), ' ' * (header_width + 2) + '└'))
-        except struct.error:
-            print(' ' * (header_width + 2) + "<error while decoding {}>".format(binascii.hexlify(data).decode('ascii')))
+def data_temp(dat):
+    slotid, tempcode = struct.unpack("<HB", bytes(dat))
+    
+    print(f" : request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
 phandle = {
-        0x20: open_conn,
-        0x21: close_conn,
-        0x40: slot_data
+    0x20: data_temp
 }
 
 while (ptr < len(datastream)) if not realtime else True:
@@ -141,4 +121,4 @@ while (ptr < len(datastream)) if not realtime else True:
         if header[2] in phandle:
             phandle[header[2]](read(header[1]))
         else:
-            print("? " + binascii.hexlify(bytes(read(header[1]))))
+            print("? " + binascii.hexlify(bytes(read(header[1]))).decode("ascii"))
