@@ -23,7 +23,7 @@ namespace slots {
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
 		TTC_NAME_3 = 0x23,			// ''
-		TTC_TIME_1 = 0x24,			// STRUCT[]; TTCTime - time of next two buses
+		TTC_TIME_1 = 0x24,			// STRUCT[]; TTCTime - time of next up to six buses
 		TTC_TIME_2 = 0x25,			// ''
 		TTC_TIME_3 = 0x26,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
@@ -147,8 +147,6 @@ namespace slots {
 	};
 
 #pragma pack (pop)
-
-#define SLOT_CHECK_DEF(sn)	static_assert(sizeof(sn) <= 16, #sn " too large")
 
 	enum struct WeatherStateArrayCode : uint8_t {
 		UNK = 0,
