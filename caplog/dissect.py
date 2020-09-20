@@ -39,24 +39,37 @@ else:
 
 ptr = 0
 if not realtime:
-    def read(x):
+    def read_buf(x):
         global ptr
         ptr += x
+        if ptr >= len(datastream):
+            exit()
         return datastream[ptr-x:ptr]
+
+    def read():
+        header = bytearray(read_buf(3))
+        while header[0] not in (0xa5, 0xa6):
+            header[0:1] = header[1:2]
+            header[2] = read_buf(1)[0]
+        yield bytes(header) + read_buf(header[1])
 else:
     files = [open(x, 'rb') for x in sys.argv[2:]]
     import select
-    
-    def read(x):
-        if len(datastream) >= x:
-            return [datastream.pop(0) for y in range(x)]
-        else:
-            while len(datastream) < x:
-                (ok, _, _) = select.select(files, [], [])
-                for f in ok:
-                    datastream.extend([y for y in os.read(f.fileno(), 128)])
-            return read(x)
 
+    def read_exact(f, x):
+        buf = bytearray()
+        while len(buf) < x:
+            buf += os.read(f.fileno(), x-len(buf))
+        return buf
+    
+    def read():
+        (ok, _, _) = select.select(files, [], [])
+        for f in ok:
+            header = read_exact(f, 3)
+            while header[0] not in (0xa5, 0xa6):
+                header[0:1] = header[1:2]
+                header[2] = read_exact(f, 1)[0]
+            yield bytes(header + read_exact(f, header[1]))
 
 pnames = {
     0x10: "HANDSHAKE_INIT",
@@ -90,7 +103,10 @@ tempcodes = {
     0b01: "Cold"
 }
 
-def data_temp(dat):
+slot_temps = {}
+slot_databufs = {}
+
+def data_temp(dat, from_esp):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
     
     print(f": request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
@@ -99,10 +115,13 @@ phandle = {
     0x20: data_temp
 }
 
-def ack_data_temp(dat):
+def ack_data_temp(dat, from_esp):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
     
     print(f": acknowledgement of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
+
+def data_update(dat, from_esp):
+    pass
 
 phandle = {
     0x20: data_temp,
@@ -110,25 +129,30 @@ phandle = {
 }
 
 while (ptr < len(datastream)) if not realtime else True:
-    header = read(3)
-
-    if header[0] == 0xa6:
-        print('E->S ', end='')
-    elif header[0] == 0xa5:
-        print('S->E ', end='')
-    else:
-        print('UNK  ', end='')
-
-    print(": 0x{:02x} ({:20}) ".format(header[2], pnames[header[2]]), end="")
-
-    if header[1] == 0x00:
-        print()
-        continue
-    if header[1] == 0x01 and header[2] not in phandle:
-        v = read(1)[0]
-        print(": {:02x}".format(v))
-    else:
-        if header[2] in phandle:
-            phandle[header[2]](read(header[1]))
+    for pkt in read():
+        if pkt[0] == 0xa6:
+            print('E->S ', end='')
+        elif pkt[0] == 0xa5:
+            print('S->E ', end='')
         else:
-            print("? " + binascii.hexlify(bytes(read(header[1]))).decode("ascii"))
+            print('UNK  ', end='')
+
+        if pkt[2] not in pnames:
+            print(f": {pkt[0]:02x}{pkt[1]:02x}{pkt[2]:02x} <invalid packet>")
+            continue
+
+        print(": 0x{:02x} ({:20}) ".format(pkt[2], pnames[pkt[2]]), end="")
+
+        if pkt[1] == 0x00:
+            print()
+            continue
+        if pkt[1] == 0x01 and pkt[2] not in phandle:
+            print(": {:02x}".format(pkt[3]))
+        else:
+            if pkt[2] in phandle:
+                try:
+                    phandle[pkt[2]](pkt[3:], pkt[0] == 0xa6)
+                except:
+                    print("error decoding " + binascii.hexlify(pkt[3:]).decode("ascii"))
+            else:
+                print("? " + binascii.hexlify(pkt[3:]).decode("ascii"))
