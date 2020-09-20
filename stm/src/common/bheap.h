@@ -524,7 +524,18 @@ finish_setting:
 		// Homogenize data: ensure all of its blocks are in order, and (if possible) merge their data together
 		// This does it's "best effort":
 		//  - it'll try to merge blocks as it can
+		//  - it'll also remove 0-size placeholders
 		void homogenize(uint32_t slotid) {
+			// Remove 0-size placeholders
+			for (auto x = this->begin(slotid); x != this->end(slotid); ++x) {
+				if (x->next() && x->location == Block::LocationRemote && x->datasize == 0) {
+					auto nextptr = x;
+					++nextptr;
+					x->slotid = Block::SlotEmpty;
+					x->location = Block::LocationCanonical;
+					x = nextptr;
+				}
+			}
 			// Rearrange all of the blocks
 			for (auto x = this->begin(slotid); x != this->end(slotid); ++x) {
 				if (x->next()) {
@@ -633,7 +644,7 @@ finish_setting:
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral; // Free space after removing stuff
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceHomogenizeable; // Free space after defrag()
 
-		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) {
+		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) const {
 			return free_space(first, mode);
 		}
 		uint32_t free_space(const Block& after, uint32_t mode) const {
