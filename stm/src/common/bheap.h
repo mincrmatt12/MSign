@@ -235,7 +235,7 @@ namespace bheap {
 
 			using iterator_category = std::forward_iterator_tag;
 			using value_type = T;
-			using difference_type = void;
+			using difference_type = ptrdiff_t;
 			using reference = T&;
 			using pointer = T*;
 
@@ -247,8 +247,8 @@ namespace bheap {
 				ptr = nullptr;
 			}
 
-			pointer operator->() {return ptr;}
-			reference operator*() {return *ptr;}
+			pointer operator->() const {return ptr;}
+			reference operator*() const {return *ptr;}
 
 			Iterator& operator++() {
 #if __cpp_if_constexpr >= 201603
@@ -269,19 +269,19 @@ namespace bheap {
 				return copy;
 			}
 
-			operator Iterator<const T, Adjacent>() {
+			operator Iterator<const T, Adjacent>() const {
 				return Iterator<const T, Adjacent>(*ptr);
 			}
 
-			bool operator==(const Iterator& other) {
+			bool operator==(const Iterator& other) const {
 				return other.ptr == ptr;
 			}
 
-			bool operator!=(const Iterator& other) {
+			bool operator!=(const Iterator& other) const {
 				return other.ptr != ptr;
 			}
 
-			operator T*() {
+			operator T*() const {
 				return ptr;
 			}
 
