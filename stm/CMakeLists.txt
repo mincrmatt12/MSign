@@ -15,6 +15,8 @@ find_program(openocd_executable
 	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
 )
 
+find_package(Python 3 COMPONENTS Interpreter)
+
 # Add libraries for the vendored libs
 
 # hal
@@ -87,8 +89,23 @@ target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions>
+	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics>
 )
+
+# Get the current version
+if (${Python_FOUND})
+	execute_process(COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/get_ver.py
+		WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR}
+		OUTPUT_VARIABLE version_str
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+
+	message(STATUS "Revision code is ${version_str}")
+
+	target_compile_definitions(stm PUBLIC
+		MSIGN_GIT_REV=\"${version_str}\"
+	)
+endif()
 
 target_link_options(stm
 	PUBLIC

@@ -1,10 +1,10 @@
 import subprocess
 from datetime import datetime
 
-revision = subprocess.check_output(["git", "rev-parse", "HEAD"]).strip()
+revision = subprocess.check_output(["git", "rev-parse", "HEAD"]).decode("ascii").strip()[:7]
 try:
     subprocess.check_call(["git", "diff", "--quiet", "HEAD"])
 except subprocess.CalledProcessError:
     revision += "-dev"
 
-print("-DMSIGN_GIT_REV=\\\"-{}\\\"".format(revision[:7]))
+print("-" + revision, end="")
