@@ -61,6 +61,16 @@ namespace srv {
 		void take_lock();
 		void give_lock();
 
+		// Read from the debug log. Will block for the timeout amount of ticks and will return up to the amount of data requested.
+		// Returns the amount of data read
+		size_t read_dbg(uint8_t *buf, size_t len, TickType_t timeout);
+
+		// Write to the debug output. Will block until there is space to queue the data. Normally always flushes, if flush is set to false but
+		// there is no space in the buffer we still trigger a flush to avoid deadlocking.
+		//
+		// Always writes the entire buffer or times out.
+		bool write_dbg(uint8_t *buf, size_t len, TickType_t timeout, bool should_flush=true);
+
 	private:
 		bheap::Arena<14284> arena;
 		lru::Cache<8, 4> bcache;
@@ -72,7 +82,8 @@ namespace srv {
 		void do_update_logic();
 		void do_handshake();
 
-		bool do_bheap_cleanup(); // returns done
+		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
+		bool do_bheap_cleanup(bool full_cleanup=true); // returns done
 		void wait_for_not_sending(); // uses notification
 		void check_connection_ping(); // verify we're still connected with last_transmission
 
@@ -87,7 +98,7 @@ namespace srv {
 		uint32_t update_total_size;
 		uint16_t update_checksum;
 		uint16_t update_chunks_remaining;
-		uint16_t should_reclaim_amt = 0;
+		int16_t last_update_failed_delta_size = 0;
 
 		// Sync primitives + log buffers + dma buffer
 		QueueHandle_t bheap_mutex;
@@ -104,12 +115,13 @@ namespace srv {
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
 				TypeChangeTemp,
-				TypePing
+				TypeDumpLogOut
 			} type;
 		};
 		QueueHandle_t pending_requests;
 
 		void start_pend_request(PendRequest req);
+		void evict_block(bheap::Block& block);
 		
 		// Stream buffers for dma-ing
 		//

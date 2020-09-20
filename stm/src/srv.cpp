@@ -20,8 +20,9 @@
 
 extern tasks::Timekeeper timekeeper;
 
-constexpr uint16_t srv_reclaim_low_watermark = 2048;
-constexpr uint16_t srv_reclaim_high_watermark = 4096;
+constexpr uint16_t srv_reclaim_low_watermark = 768;
+constexpr uint16_t srv_reclaim_high_watermark_simple = 1636;
+constexpr uint16_t srv_reclaim_high_watermark_complex = 1152;
 
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
@@ -154,9 +155,178 @@ const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
 	return *target;
 }
 
-bool srv::Servicer::do_bheap_cleanup() {
-	// TODO
+bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
+	// Do periodic/required cleanup:
+	//
+	// This function returns true if it sent a packet.
+	
+	// Start by checking how much free allocatable space we have
+	
+	auto current_space = arena.free_space();
+
+	// If we more space than the low watermark + the total last update delta we don't do anything
+	if (current_space > (srv_reclaim_low_watermark + last_update_failed_delta_size)) {
+		last_update_failed_delta_size = 0;
+		return false;
+	}
+
+	// TODO: use high_watermark_complex when checking for defrags
+	int to_free = static_cast<int>(srv_reclaim_high_watermark_simple - current_space);
+
+	srv::ServicerLockGuard g(*this); // Lock the buffer
+
+	// First just try coalescing stuff
+	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
+		arena.defrag();
+		bcache.evict();
+
+		last_update_failed_delta_size = 0;
+		return false;
+	}
+
+	// Otherwise we begin freeing up blocks.
+	// This first pass will eliminate all non-cached cold ephemeral blocks
+	//
+	// We free from left to right; this could probably be more efficient going right to left but it'd use more memory more of the time.
+	for (auto& block : arena) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !bcache.contains(block.slotid)) {
+			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
+			auto len = block.datasize;
+			block.shrink(0);
+			block.location = bheap::Block::LocationRemote;
+			block.datasize = len;
+
+			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
+			to_free -= freed;
+			current_space += freed;
+		}
+
+		if (to_free <= 0) {
+			last_update_failed_delta_size = 0;
+			return false;
+		}
+	}
+
+	// We now do a cleanup to try and reclaim space if it'll recover enough on its own
+	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
+		arena.defrag();
+		bcache.evict();
+
+		last_update_failed_delta_size = 0;
+		return false;
+	}
+
+	// Otherwise we start clearing out _all_ cold blocks.
+	for (auto& block : arena) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold) {
+			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
+			auto len = block.datasize;
+			block.shrink(0);
+			block.location = bheap::Block::LocationRemote;
+			block.datasize = len;
+
+			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
+			to_free -= freed;
+			current_space += freed;
+		}
+
+		if (to_free <= 0) {
+			last_update_failed_delta_size = 0;
+			return false;
+		}
+	}
+
+	// .. followed by all _warm_ blocks not in the cache
+	for (auto& block : arena) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm && !bcache.contains(block.slotid)) {
+			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
+			auto len = block.datasize;
+			block.shrink(0);
+			block.location = bheap::Block::LocationRemote;
+			block.datasize = len;
+
+			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
+			to_free -= freed;
+			current_space += freed;
+		}
+
+		if (to_free <= 0) {
+			last_update_failed_delta_size = 0;
+			return false;
+		}
+	}
+
+	// We then _again_ run defrag uncoditionally
+	arena.defrag();
+	bcache.evict();
+
+	to_free -= (arena.free_space() - current_space);
+	current_space = arena.free_space();
+
+	// At this point we're forced to start evicting blocks, so we bail out in the case where we're not allowed to start evicting anything.
+	if (to_free <= 0) {
+		last_update_failed_delta_size = 0;
+		return false;
+	}
+	else if (!full_cleanup) {
+		return false;
+	}
+
+	// Otherwise, try and find a good block to evict.
+	
+	// The best candidate is a cold block, so find the smallest cold block first
+	bheap::Block *best_option = nullptr;
+	for (auto &t : arena) {
+		if (t && t.location == bheap::Block::LocationCanonical && t.temperature == bheap::Block::TemperatureCold) {
+			if (best_option == nullptr) best_option = &t;
+			else if (best_option->datasize >= t.datasize) best_option = &t; // >= to get the farthest right one (messing with stuff on the left is harder)
+		}
+	}
+
+	// If we have a candidate, evict it
+	if (best_option) {
+		evict_block(*best_option);
+		return true;
+	}
+
+	// Otherwise, try to evict a warm block.
+	for (auto &t : arena) {
+		if (t && t.location == bheap::Block::LocationCanonical && t.temperature == bheap::Block::TemperatureWarm) {
+			if (best_option == nullptr) best_option = &t;
+			else if (best_option->datasize >= t.datasize) best_option = &t; // >= to get the farthest right one (messing with stuff on the left is harder)
+		}
+	}
+
+	// If we have a candidate, evict it
+	if (best_option) {
+		evict_block(*best_option);
+		return true;
+	}
+
+	// Otherwise, we just give up and stop trying to clear 
+	last_update_failed_delta_size = 0;
 	return false;
+}
+
+void srv::Servicer::evict_block(bheap::Block& block) {
+	uint16_t full_slot_size = arena.contents_size(block.slotid);
+	uint16_t offset = arena.block_offset(block);
+	uint16_t sid_frame = block.slotid | (0b1100 << 12);
+	uint16_t total_upd_len = std::min<uint16_t>(56, block.datasize);
+
+	wait_for_not_sending();
+
+	dma_out_buffer[0] = 0xa5;
+	dma_out_buffer[1] = total_upd_len + 8;
+	dma_out_buffer[2] = slots::protocol::DATA_MOVE;
+
+	*reinterpret_cast<uint16_t *>(dma_out_buffer + 3) = sid_frame;
+	*reinterpret_cast<uint16_t *>(dma_out_buffer + 5) = offset;
+	*reinterpret_cast<uint16_t *>(dma_out_buffer + 7) = full_slot_size;
+	*reinterpret_cast<uint16_t *>(dma_out_buffer + 9) = total_upd_len;
+	memcpy(dma_out_buffer + 11, block.data(), total_upd_len);
+
+	send();
 }
 
 void srv::Servicer::do_handshake() {
@@ -281,10 +451,14 @@ void srv::Servicer::run() {
 				else {
 					check_connection_ping();
 
-					// TODO: dump out log_out
+					if (xStreamBufferBytesAvailable(log_out) > 100) {
+						// Do a flush
+						start_pend_request(PendRequest{
+							.type = PendRequest::TypeDumpLogOut
+						});
+					}
 
-					is_cleaning = do_bheap_cleanup();
-
+					if (!is_cleaning) is_cleaning = do_bheap_cleanup();
 				}
 			}
 			continue;
@@ -311,6 +485,14 @@ void srv::Servicer::run() {
 						arena.add_block(slotid, bheap::Block::LocationRemote, 0);
 						arena.set_temperature(slotid, msgbuf[2]);
 
+						bcache.evict();
+					}
+
+					// Check if we need to homogenize
+					if (msgbuf[3] == bheap::Block::TemperatureHot && arena.get(slotid).next()) {
+						ServicerLockGuard g(*this);
+
+						arena.homogenize(slotid);
 						bcache.evict();
 					}
 
@@ -383,7 +565,21 @@ void srv::Servicer::run() {
 						else if (currsize < total_len) {
 							// The slot has expanded, so we add an extra block at the end.
 							// This doesn't invalidate anything due to how bheap works, so we can just do it.
-							if (!arena.add_block(sid_frame, bheap::Block::LocationRemote, total_len - currsize)) move_update_errcode = 0x1;
+							if (!arena.add_block(sid_frame, target_loc, total_len - currsize)) {
+								move_update_errcode = 0x1;
+
+								// Mark the total clear length
+								last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_len - currsize);
+
+								// Try to clean up without sending a packet to recover
+								do_bheap_cleanup(false);
+
+								// If we now have enough space (last_update_failed_delta_size is zero) re-add the block and continue along
+								if (last_update_failed_delta_size == 0) {
+									if (!arena.add_block(sid_frame, target_loc, total_len - currsize)) move_update_errcode = 0x1;
+									else move_update_errcode = 0;
+								}
+							}
 						}
 						else if (currsize > total_len) {
 							// The slot has shrunk, so we truncate.
@@ -446,6 +642,20 @@ void srv::Servicer::run() {
 						send();
 
 						// Don't bother waiting for it
+
+						// If we failed due to an out of space, trigger cleanup
+						if (move_update_errcode == 0x01 && !is_cleaning) {
+							last_update_failed_delta_size = std::max<int16_t>(0, (int)arena.contents_size(sid_frame) - total_len);
+							is_cleaning = do_bheap_cleanup();
+						}
+
+						// If this is a hot packet and not homogenous we also homogenize it
+						if (arena.get(sid_frame).temperature == bheap::Block::TemperatureHot && arena.get(sid_frame).next()) {
+							ServicerLockGuard g(*this);
+
+							arena.homogenize(sid_frame);
+							bcache.evict();
+						}
 					}
 				}
 				break;
@@ -627,7 +837,7 @@ void srv::Servicer::init() {
 	dma_rx_queue = xStreamBufferCreate(2048, 3);
 
 	// Create the debug in/out
-	log_in = xStreamBufferCreate(256, 1);
+	log_in = xStreamBufferCreate(176, 1);
 	log_out = xStreamBufferCreate(128, 1); // blocking allowed
 
 	// this_task is initialized in run()
@@ -670,6 +880,23 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[5] = req.temperature;
 
 				send();
+			}
+			break;
+		case PendRequest::TypeDumpLogOut:
+			{
+				// Send a CONSOLE_MSG
+
+				while (xStreamBufferBytesAvailable(log_out)) {
+					wait_for_not_sending();
+
+					dma_out_buffer[0] = 0xa5;
+					dma_out_buffer[2] = slots::protocol::CONSOLE_MSG;
+					dma_out_buffer[3] = 0x2;
+
+					dma_out_buffer[1] = 1 + xStreamBufferReceive(log_out, dma_out_buffer + 4, 63, 0);
+
+					send();
+				}
 			}
 		default:
 			break;
