@@ -1,6 +1,6 @@
 # Builds the STM binaries
 cmake_minimum_required(VERSION 3.13)
-project(msynth-stm C CXX ASM)
+project(msign-stm C CXX ASM)
 
 set(CMAKE_EXE_LINKER_FLAGS "")
 set(CMAKE_CXX_STANDARD 17)

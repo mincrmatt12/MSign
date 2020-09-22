@@ -1,9 +1,15 @@
 #include "upd.h"
 #include "config.h"
-#include <SdFat.h>
 #include "common/util.h"
-#include <eboot_command.h>
 
+void upd::update_cacerts() {}
+void upd::update_website() {}
+void upd::update_system() {}
+upd::UpdateKind upd::needed() {
+	return upd::NO_UPDATE;
+}
+
+/*
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
 
@@ -335,7 +341,7 @@ void upd::update_system() {
 				uint8_t status;
 				while (!retrieve_update_status(status)) delay(5);
 
-				if (status != 0x12 /* ready for image */) {
+				if (status != 0x12 / * ready for image * /) {
 					Serial1.println(F("invalid command for readyimg"));
 					ESP.restart();
 				}
@@ -485,3 +491,4 @@ loopover:
 		}
 	}
 }
+*/

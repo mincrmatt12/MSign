@@ -1,3 +1,4 @@
+/*
 #include "debug.h"
 #include "util.h"
 #include "serial.h"
@@ -67,3 +68,4 @@ namespace debug {
 	void send_msg(char *buf, int amt) {
 	}
 }
+*/

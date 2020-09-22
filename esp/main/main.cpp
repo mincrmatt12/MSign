@@ -1,22 +1,15 @@
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <SdFat.h>
 #include "serial.h"
 #include "config.h"
 #include "wifi.h"
 #include "stime.h"
-#include "ttc.h"
-#include "weather.h"
-#include "sccfg.h"
-#include "webui.h"
 #include "upd.h"
-#include "calfix.h"
-#include "modelserve.h"
 #include "util.h"
-#include "debug.h"
-	
-SdFatSoftSpi<D6, D2, D5> sd;
 
+extern "C" void app_main() {
+	puts("Starting MSign backend");
+}
+
+/*
 void setup() {
 	Serial.begin(115200, SERIAL_8E1);
 	Serial1.begin(115200, SERIAL_8N1);
@@ -88,3 +81,4 @@ void loop() {
 	Log.dump();
 	delay(1);
 }
+*/
