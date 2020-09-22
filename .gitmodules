@@ -1,0 +1,12 @@
+[submodule "vendor/BearSSL"]
+	path = vendor/BearSSL
+	url = https://www.bearssl.org/git/BearSSL
+[submodule "vendor/ESP8266_RTOS_SDK"]
+	path = vendor/ESP8266_RTOS_SDK
+	url = https://github.com/espressif/ESP8266_RTOS_SDK
+[submodule "vendor/FreeRTOS"]
+	path = vendor/FreeRTOS
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
+[submodule "vendor/STM32CubeF2"]
+	path = vendor/STM32CubeF2
+	url = https://github.com/STMicroelectronics/STM32CubeF2
