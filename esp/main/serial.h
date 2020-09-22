@@ -88,6 +88,8 @@ namespace serial {
 		};
 
 		Event wait_for_event(TickType_t timeout=portMAX_DELAY);
+
+		TaskHandle_t srv_task;
 	};
 
 	extern SerialInterface interface;

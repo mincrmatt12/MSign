@@ -25,8 +25,8 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	message(STATUS "Found NMFU: " ${NMFU_EXECUTABLE})
 
 	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 14)
-	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}parser)
+	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
 	add_dependencies(${COMPONENT_LIB} msign_parsers)
 
-	message(STATUS "Incdir " ${CMAKE_CURRENT_BINARY_DIR}/parser " from " ${msign_nmfus_gen})
+	target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions>)
 endif()

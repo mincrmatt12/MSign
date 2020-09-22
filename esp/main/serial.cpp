@@ -15,6 +15,8 @@ void serial::SerialInterface::run() {
 	// Initialize queue
 	requests = xQueueCreate(4, sizeof(Request));
 	xTaskNotifyStateClear(NULL);
+
+	srv_task = xTaskGetCurrentTaskHandle();
 	// Initialize the protocol
 	init_hw();
 
@@ -36,7 +38,7 @@ void serial::SerialInterface::run() {
 		uint8_t buf_reply[3] = {
 			0xa6,
 			0x00,
-			slots::protocol::HANDSHAKE_OK
+			slots::protocol::HANDSHAKE_RESP
 		};
 
 		send_pkt(buf_reply);
@@ -59,7 +61,7 @@ void serial::SerialInterface::run() {
 		auto event = wait_for_event(active_request.type == Request::TypeEmpty ? pdMS_TO_TICKS(10000) : pdMS_TO_TICKS(1000));
 		// this should be a switch...
 		if (event == EventPacket || event == EventAll) {
-			if (active_request.type != Request::TypeEmpty)
+			if (active_request.type == Request::TypeEmpty)
 				process_packet();
 			else {
 				if (!packet_request())
@@ -148,4 +150,9 @@ rewait:
 	if (f & STASK_BIT_PACKET) return EventPacket;
 	if (f & STASK_BIT_REQUEST) return EventQueue;
 	goto rewait;
+}
+
+void serial::SerialInterface::on_pkt() {
+	// Send a notification
+	xTaskNotify(srv_task, STASK_BIT_PACKET, eSetBits);
 }

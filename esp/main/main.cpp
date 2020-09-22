@@ -5,8 +5,17 @@
 #include "upd.h"
 #include "util.h"
 
+#include <esp_log.h>
+
+const static char * TAG = "app_main";
+
 extern "C" void app_main() {
-	puts("Starting MSign backend");
+	ESP_LOGI(TAG, "Starting MSign...");
+
+	// Start up the servicer
+	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1024, &serial::interface, 9, NULL);
+
+	ESP_LOGI(TAG, "Created tasks");
 }
 
 /*
