@@ -880,7 +880,6 @@ retry:
 		}
 
 		ESP_LOGI(TAG, "Initialized FAT on sd card");
-		// TODO: check for updates
 		return InitStatus::Ok;
 	}
 }

@@ -8,7 +8,6 @@ namespace sd {
 		Ok,
 		NoCard,
 		FormatError,
-		UpdateFound,
 		UnusableCard,
 		UnkErr
 	};
