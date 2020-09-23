@@ -1,13 +1,13 @@
 #include "serial.h"
 #include "config.h"
-#include "wifi.h"
-#include "stime.h"
+#include "wifitime.h"
 #include "upd.h"
 #include "sd.h"
 #include "util.h"
 #include "config.h"
 
 #include <esp_log.h>
+#include <esp_system.h>
 #include <FreeRTOS.h>
 #include <task.h>
 
@@ -43,8 +43,13 @@ extern "C" void app_main() {
 	// Start up the servicer
 	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1024, &serial::interface, 9, NULL);
 
+	if (!wifi::init()) {
+		ESP_LOGE(TAG, "Not starting data services due to no WIFI.");
+		// TODO: make this setup softap mode for netcfg
+	}
+
 	ESP_LOGI(TAG, "Created tasks");
-	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(MALLOC_CAP_32BIT | MALLOC_CAP_8BIT));
+	ESP_LOGI(TAG, "Free heap available is %d", esp_get_free_heap_size());
 }
 
 /*
