@@ -1,8 +1,14 @@
 #include <stdlib.h>
 #include "config.h"
 #include "util.h"
+#include <esp_log.h>
+
+#include "sd.h"
+
+const static char* TAG = "config";
 
 config::ConfigManager config::manager;
+
 const char * config::entry_names[] = {
 	"ssid",
 	"psk",
@@ -48,21 +54,14 @@ config::ConfigManager::ConfigManager() {
 	memset(this->offsets, 0xFF, sizeof(this->offsets));
 }
 
-bool config::ConfigManager::use_new_config(const char * data, uint32_t size) {
-	/*SdFile config("config.txt", O_WRITE);
-	config.truncate(0); // erase file.
-	config.write(data, size);
-	config.close();*/
-
+bool config::ConfigManager::reload_config() {
 	free(this->data);
 	this->data = (char *)malloc(128);
 	this->size = 128;
 	this->ptr = 0;
 	memset(this->offsets, 0xFF, sizeof(this->offsets));
 
-	load_from_sd();
-
-	return true;
+	return load_from_sd();
 }
 
 const char * config::ConfigManager::get_value(config::Entry e, const char * value) {
@@ -72,29 +71,30 @@ const char * config::ConfigManager::get_value(config::Entry e, const char * valu
 	return (this->data + this->offsets[e]);
 }
 
-void config::ConfigManager::load_from_sd() {
-	// Make sure the config file exists before we read it.
-	
-	/*
-	sd.chdir();
-	if (!sd.exists("config.txt")) {
-		Log.println(F("Config file missing, seed it with ssid/psdk/url and make the last entry update=now, or place the entire config there"));
-		delay(1000);
-		ESP.restart();
+bool config::ConfigManager::load_from_sd() {
+	FIL config;
+	switch (f_open(&config, "0:/config.txt", FA_READ)) {
+		case FR_OK:
+			break;
+		case FR_NO_FILE:
+		case FR_NO_PATH:
+			ESP_LOGE(TAG, "Could not find the configuration. Place it on the SD card at /config.txt and restart.");
+			return false;
+		default:
+			ESP_LOGE(TAG, "Could not load the configuration, please check the SD");
+			return false;
 	}
-
-	// Open the file
-	
-	SdFile config("config.txt", O_READ);
 
 	// Begin parsing it.
 	char entry_name[16];
 	char entry_value[256];
 	bool mode = false;
 	uint8_t pos = 0;
+	UINT br;
 	
-	while (config.available()) {
-		char c = config.read();
+	while (!f_eof(&config)) {
+		char c;
+		f_read(&config, &c, 1, &br);
 		if (mode) {
 			if (c != '\n') {
 				entry_value[pos++] = c;
@@ -104,14 +104,16 @@ void config::ConfigManager::load_from_sd() {
 
 				int e;
 				for (e = 0; e < config::ENTRY_COUNT; ++e) {
-					if (strcmp_P(entry_name, config::entry_names[e]) == 0) {
+					if (strcmp(entry_name, config::entry_names[e]) == 0) {
+						ESP_LOGI(TAG, "Set %s (%02x) = %s", entry_name, e, entry_value);
 						add_entry(static_cast<Entry>(e), entry_value);
-						Log.printf_P(PSTR("Set %s (%02x) = %s\n"), entry_name, e, entry_value);
 						break;
 					}
 				}
 
-				if (e == config::ENTRY_COUNT) Log.printf_P(PSTR("Invalid key %s\n"), entry_name);
+				if (e == config::ENTRY_COUNT) {
+					ESP_LOGW(TAG, "Invalid key %s, ignoring", entry_name);
+				}
 
 				mode = false;
 				pos = 0;
@@ -132,8 +134,8 @@ void config::ConfigManager::load_from_sd() {
 		}
 	}
 
-	config.close();
-	*/
+	f_close(&config);
+	return true;
 }
 
 void config::ConfigManager::add_entry(Entry e, const char * value) {

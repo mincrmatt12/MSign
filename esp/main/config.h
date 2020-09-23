@@ -47,8 +47,8 @@ namespace config {
 	struct ConfigManager {
 		ConfigManager();
 		
-		void load_from_sd();
-		bool use_new_config(const char * data, uint32_t size);
+		bool load_from_sd();
+		bool reload_config(); // re-inits the class and calls load_from_sd
 		const char * get_value(Entry e, const char * value=nullptr);
 	private:
 		void add_entry(Entry e, const char *buffer);

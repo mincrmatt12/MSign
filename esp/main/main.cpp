@@ -5,6 +5,7 @@
 #include "upd.h"
 #include "sd.h"
 #include "util.h"
+#include "config.h"
 
 #include <esp_log.h>
 #include <FreeRTOS.h>
@@ -32,6 +33,11 @@ extern "C" void app_main() {
 			return;
 		default:
 			break;
+	}
+
+	// Load the config from the SD card
+	if (!config::manager.load_from_sd()) {
+		return;
 	}
 
 	// Start up the servicer
