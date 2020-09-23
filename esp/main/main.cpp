@@ -16,7 +16,23 @@ extern "C" void app_main() {
 	ESP_LOGI(TAG, "Starting MSign...");
 
 	// Try and start the SD layer
-	sd::init();
+	switch (sd::init()) {
+		case sd::InitStatus::NoCard:
+			ESP_LOGE(TAG, "=============================");
+			ESP_LOGE(TAG, "No card is inserted! Halting!");
+			ESP_LOGE(TAG, "=============================");
+			return;
+		case sd::InitStatus::UnusableCard:
+		case sd::InitStatus::UnkErr:
+			ESP_LOGE(TAG, "Unusable/unknown error while initializing the card.");
+			return;
+		case sd::InitStatus::FormatError:
+			ESP_LOGE(TAG, "No filesystem on card");
+			// TODO: maybe indicate these failures to the STM somehow?
+			return;
+		default:
+			break;
+	}
 
 	// Start up the servicer
 	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1024, &serial::interface, 9, NULL);
