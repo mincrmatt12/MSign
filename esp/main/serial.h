@@ -26,7 +26,7 @@ namespace serial {
 
 		// Request queue; very small (only 2 entries: a few size changes and at most nTasks updateRequests as they block; for you naysayers who think I should just
 		// use a mailbox with a semaphore, do remember that FreeRTOS semaphores are just disguised queues- ha! who's wasting memory now, fools!)
-		QueueHandle_t requests;
+		QueueHandle_t requests = nullptr;
 
 		// Like with the STM, we use direct to task notifications to select() on requests and packets, except here the packets are stored in an external buffer
 		// so we just notify directly.
