@@ -84,6 +84,8 @@ Files marked with a `!` are only present during an update.
 The `htm` file is served whenever a request is made that _doesn't_ contain a valid API URI.
 The other files are served whenever a request for their exact names is made.
 
+The compressed forms of the website files are also cached to internal flash for faster loading.
+
 ### Update files
 
 The files in the `upd` folder relate to the ongoing system update.

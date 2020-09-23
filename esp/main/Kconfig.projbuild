@@ -1,0 +1,19 @@
+menu "MSign"
+
+config SDCARD_CS_IO
+	int "SDCS GPIO number"
+	default 5
+
+config SDCARD_CLK_IO
+	int "SDCLK GPIO number"
+	default 14
+
+config SDCARD_MISO_IO
+	int "SD_MISO GPIO number"
+	default 12
+
+config SDCARD_MOSI_IO
+	int "SD_MOSI GPIO number"
+	default 4
+
+endmenu

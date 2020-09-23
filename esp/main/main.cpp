@@ -3,19 +3,26 @@
 #include "wifi.h"
 #include "stime.h"
 #include "upd.h"
+#include "sd.h"
 #include "util.h"
 
 #include <esp_log.h>
+#include <FreeRTOS.h>
+#include <task.h>
 
 const static char * TAG = "app_main";
 
 extern "C" void app_main() {
 	ESP_LOGI(TAG, "Starting MSign...");
 
+	// Try and start the SD layer
+	sd::init();
+
 	// Start up the servicer
 	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1024, &serial::interface, 9, NULL);
 
 	ESP_LOGI(TAG, "Created tasks");
+	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(MALLOC_CAP_32BIT | MALLOC_CAP_8BIT));
 }
 
 /*
