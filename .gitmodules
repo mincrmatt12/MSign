@@ -4,6 +4,7 @@
 [submodule "vendor/ESP8266_RTOS_SDK"]
 	path = vendor/ESP8266_RTOS_SDK
 	url = https://github.com/espressif/ESP8266_RTOS_SDK
+	ignore = dirty
 [submodule "vendor/FreeRTOS"]
 	path = vendor/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
