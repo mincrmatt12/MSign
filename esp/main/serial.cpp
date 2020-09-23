@@ -9,7 +9,7 @@ serial::SerialInterface serial::interface;
 #define STASK_BIT_PACKET 1
 #define STASK_BIT_REQUEST 2
 
-const char * TAG = "servicer";
+static const char * TAG = "servicer";
 
 void serial::SerialInterface::run() {
 	// Initialize queue
