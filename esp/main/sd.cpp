@@ -323,6 +323,14 @@ namespace sd {
 			tx_bit(from);
 			tx_bit(from);
 		}
+
+		inline void reselect() {
+			portENTER_CRITICAL();
+			spi::deselect();
+			spi::tx_byte(0xff);
+			spi::select();
+			portEXIT_CRITICAL();
+		}
 	}
 
 	enum struct command_status {
@@ -773,17 +781,18 @@ namespace sd {
 			arg.raw_data = 0;
 			arg.hcs = card.type == Card::CardTypeSDVer2OrLater ? 1 : 0; // If card supports it, ask for SDHC
 
-			int tries = 30;
+			int tries = 4095;
 
 			while (true) {
+				spi::reselect();
 				// Send ACMD41
 				if (send_command<false>(0, 55, x) != command_status::Ok) {
 					ESP_LOGE(TAG, "Card didn't respond to CMD55");
 					return InitStatus::UnusableCard;
 				}
 
+				spi::reselect();
 				if (send_command<false>(arg, 41, x) != command_status::Ok || x.idle) {
-					vTaskDelay(1);
 					--tries;
 					if (tries < 0) {
 						ESP_LOGE(TAG, "Timed out waiting for ACMD41");
@@ -800,6 +809,7 @@ namespace sd {
 			// Read OCR
 			if (card.type == Card::CardTypeSDVer2OrLater) {
 retry:
+				spi::reselect();
 				if (send_command<false>(0, 58, response) != command_status::Ok) {
 					ESP_LOGE(TAG, "Failed to get OCR");
 					return InitStatus::UnusableCard;
@@ -808,7 +818,6 @@ retry:
 				if (!response.response.busy) {
 					// Card is busy
 					++tries;
-
 					if (tries > 3000) {
 						ESP_LOGE(TAG, "Card not responding to CCS request");
 						return InitStatus::UnusableCard;
@@ -824,6 +833,8 @@ retry:
 				}
 			}
 		}
+
+		spi::reselect();
 
 		// Read the CSD
 		{
