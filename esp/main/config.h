@@ -8,6 +8,7 @@ namespace config {
 		SSID,
 		PSK,
 		TIME_ZONE_SERVER,
+		TIME_ZONE_STR, // todo: make the configurator delete this info
 
 		// TTC stuff
 		STOPID1,

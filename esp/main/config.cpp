@@ -13,6 +13,7 @@ const char * config::entry_names[] = {
 	"ssid",
 	"psk",
 	"ntpserver",
+	"timezone",
 
 	// TTC PARAMETERS
 	"stopid1",
