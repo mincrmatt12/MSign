@@ -10,15 +10,17 @@ void tasks::Timekeeper::systick_handler() {
 }
 
 void tasks::Timekeeper::loop() {
-	srv::ServicerLockGuard g(servicer);
-
 	if ((current_time - last_run_time) > 30000 || first) {
-		servicer.set_temperature(slots::TIME_OF_DAY, bheap::Block::TemperatureHot);
-	}
-	if (servicer.slot_dirty(slots::TIME_OF_DAY)) {
-		servicer.set_temperature(slots::TIME_OF_DAY, bheap::Block::TemperatureWarm);
-		this->last_run_time = this->current_time;
-		this->timestamp = servicer.slot<uint64_t>(slots::TIME_OF_DAY);
-		this->first = false;
+		uint64_t time_when_requested, current_timestamp;
+
+		switch (servicer.request_time(current_timestamp, time_when_requested)) {
+			case slots::protocol::TimeStatus::Ok:
+				timestamp = (this->current_time - time_when_requested) + current_timestamp;
+				last_run_time = current_time;
+				first = false;
+			case slots::protocol::TimeStatus::NotSet:
+				vTaskDelay(1000);
+				break;
+		}
 	}
 }
