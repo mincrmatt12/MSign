@@ -498,6 +498,31 @@ void srv::Servicer::run() {
 		switch (slots::protocol::Command(msgbuf[2])) {
 			using namespace slots::protocol;
 
+			case QUERY_TIME:
+				{
+					// Check to ensure we're processing this request
+					if (active_request.type != PendRequest::TypeRxTime) {
+						// Just dump it
+						xStreamBufferReceive(dma_rx_queue, msgbuf, 9, portMAX_DELAY);
+						continue;
+					}
+
+					// Otherwise, read the data into our buffer
+					if (!xStreamBufferReceive(dma_rx_queue, &active_request.rx_req->status_out, 1, portMAX_DELAY)) continue;
+					if (!xStreamBufferReceive(dma_rx_queue, &active_request.rx_req->timestamp_out, 8, portMAX_DELAY)) continue;
+
+					// Notify the task that requested the time
+					xTaskNotify(active_request.rx_req->notify, 1, eSetValueWithOverwrite);
+
+					// Consume this request.
+					active_request.type = PendRequest::TypeNone;
+					active_request_send_retries = 0;
+					// Try tail-chaining it
+					if (xQueueReceive(pending_requests, &active_request, 0)) {
+						start_pend_request(active_request);
+					}
+				}
+				break;
 			case ACK_DATA_TEMP:
 				{
 					// Handle a data temperature message
@@ -929,6 +954,15 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 					send();
 				}
 			}
+		case PendRequest::TypeRxTime:
+			{
+				wait_for_not_sending();
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x00;
+				dma_out_buffer[2] = slots::protocol::QUERY_TIME;
+				req.rx_req->start_out = timekeeper.current_time;
+				send();
+			}
 		default:
 			break;
 	}
@@ -941,6 +975,24 @@ void srv::Servicer::wait_for_not_sending() {
 		this->notify_on_send_done = xTaskGetCurrentTaskHandle();
 		xTaskNotifyWait(0, 0xFFFF'FFFFul, nullptr, portMAX_DELAY);
 	}
+}
+
+slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint64_t &time_when_sent) {
+	slots::protocol::TimeStatus s;
+	PendRequest::TimeRequest tr {
+		.notify = xTaskGetCurrentTaskHandle(),
+		.status_out = s,
+		.timestamp_out = response,
+		.start_out = time_when_sent
+	};
+	PendRequest pr;
+	pr.type = PendRequest::TypeRxTime;
+	pr.rx_req = &tr;
+	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+	// Wait for task notification
+	xTaskNotifyWait(0, 0xffff'ffff, NULL, portMAX_DELAY);
+	// Return status
+	return s;
 }
 
 void srv::Servicer::process_update_cmd(uint8_t cmd) {

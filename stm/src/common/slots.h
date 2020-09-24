@@ -15,7 +15,7 @@ namespace slots {
 		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
 		TIME_STATUS = 0x02,			// BOOL; 0 - waiting for NTP, 1 - NTP in sync
 
-		TIME_OF_DAY = 0x10, 		// UINT64_T; unix timestamp in milliseconds; polled
+		REMOTE_CONTROL = 0x10,      // BOOL; 0 - no remote control is taking place, request_screen and virtual_buttonmap are not valid
 		REQUEST_SCREEN = 0x11, 		// UINT8_T; screen ID to request, sent very infrequently
 		VIRTUAL_BUTTONMAP = 0x12, 	// UINT8_T; bitmap, override of the data on GPIOA for the buttons
 
@@ -185,6 +185,7 @@ namespace slots {
 			ACK_DATA_DEL,
 
 			QUERY_FREE_HEAP = 0x40,
+			QUERY_TIME,
 
 			RESET = 0x50,
 			PING,
@@ -196,6 +197,11 @@ namespace slots {
 			UPDATE_STATUS,
 
 			CONSOLE_MSG = 0x70
+		};
+
+		enum struct TimeStatus : uint8_t {
+			Ok = 0,
+			NotSet = 1
 		};
 
 		enum struct UpdateStatus : uint8_t {

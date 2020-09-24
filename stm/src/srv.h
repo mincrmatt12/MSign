@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <type_traits>
+#include "common/slots.h"
 #include "protocol.h"
 #include "common/bheap.h"
 #include "lru.h"
@@ -71,6 +72,9 @@ namespace srv {
 		// Always writes the entire buffer or times out.
 		bool write_dbg(uint8_t *buf, size_t len, TickType_t timeout, bool should_flush=true);
 
+		// Request time information from the ESP
+		slots::protocol::TimeStatus request_time(uint64_t& reponse, uint64_t &time_when_sent);
+
 	private:
 		bheap::Arena<14284> arena;
 		lru::Cache<8, 4> bcache;
@@ -106,16 +110,25 @@ namespace srv {
 		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
 		// The format of these requests is this struct:
 		struct PendRequest {
+			struct TimeRequest {
+				TaskHandle_t notify;
+				slots::protocol::TimeStatus &status_out;
+				uint64_t &timestamp_out;
+				uint64_t &start_out;
+			};
 			union {
 				struct {
 					uint16_t slotid : 12;
 					uint16_t temperature : 2;
 				};
+
+				TimeRequest * rx_req;
 			};
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
 				TypeChangeTemp,
-				TypeDumpLogOut
+				TypeDumpLogOut,
+				TypeRxTime
 			} type;
 		};
 		QueueHandle_t pending_requests;
