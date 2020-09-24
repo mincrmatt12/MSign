@@ -74,6 +74,7 @@ is limited to around 8k in practice.
 | `ACK_DATA_MOVE` | `0x32` |
 | `ACK_DATA_DEL` | `0x33` |
 | `QUERY_FREE_HEAP` | `0x40` |
+| `QUERY_TIME` | `0x41` |
 | `RESET` | `0x50` |
 | `PING` | `0x51` |
 | `PONG` | `0x52` |
@@ -208,6 +209,25 @@ The protocol uses one message for these:
 ```
 
 It can be sent from either device.
+
+### Time sync
+
+When the STM sends a `QUERY_TIME` message, the ESP should respond with the current time. The payload of the request is empty and the response is
+
+```
+| 0x00 | <time> |
+  |      |
+  |      ---- JS-style millisecond-referenced unix timestamp
+  ---- status code
+```
+
+The time should be as close to as possible the time when the last byte of the header of the request was sent.
+The status code can be one of
+
+| Code | Meaning |
+| ---- | ------- |
+| `0x00` | OK |
+| `0x01` | Time is still being retrieved, try again in a bit |
 
 ### Other commands
 
