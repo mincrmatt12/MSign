@@ -72,10 +72,55 @@ void sntp_task(void *) {
         localtime_r(&now, &timeinfo);
     }
 
-	ESP_LOGI(T_TAG, "Got time!");
+	ESP_LOGI(T_TAG, "Time is %s", asctime(&timeinfo));
 	xEventGroupSetBits(wifi::events, wifi::TimeSynced);
 	ESP_LOGI(T_TAG, "Free heap after connect %d", esp_get_free_heap_size());
 	vTaskDelete(NULL);
+}
+
+namespace {
+	// stolen from stackoverflow
+	int days_from_civil(int y, int m, int d)
+	{
+		y -= m <= 2;
+		int era = y / 400;
+		int yoe = y - era * 400;                                   // [0, 399]
+		int doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;  // [0, 365]
+		int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;           // [0, 146096]
+		return era * 146097 + doe - 719468;
+	}
+
+	time_t timegm(tm const* t)   
+	{
+		int year = t->tm_year + 1900;
+		int month = t->tm_mon;  
+		if (month > 11)
+		{
+			year += month / 12;
+			month %= 12;
+		}
+		else if (month < 0)
+		{
+			int years_diff = (11 - month) / 12;
+			year -= years_diff;
+			month += 12 * years_diff;
+		}
+		int days_since_1970 = days_from_civil(year, month + 1, t->tm_mday);
+
+		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
+	}
+}
+
+uint64_t wifi::get_localtime() {
+	time_t now;
+	struct tm current_time;
+	struct timeval ts;
+	gettimeofday(&ts, NULL);
+	time(&now);
+	localtime_r(&now, &current_time);
+	now = timegm(&current_time);
+	uint64_t millis = ((uint64_t)now * 1000) + ts.tv_usec / 1000;
+	return millis;
 }
 
 bool wifi::init() {
