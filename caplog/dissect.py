@@ -5,6 +5,7 @@ import sys
 import slotlib
 import textwrap
 import struct
+import time
 # dissects capture logs and outputs a list of packets
 datastream = []
 prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
@@ -85,6 +86,7 @@ pnames = {
     0x32: "ACK_DATA_MOVE",
     0x33: "ACK_DATA_DEL",
     0x40: "QUERY_FREE_HEAP",
+    0x41: "QUERY_TIME",
     0x50: "RESET",
     0x51: "PING",
     0x52: "PONG",
@@ -123,9 +125,26 @@ def ack_data_temp(dat, from_esp):
 def data_update(dat, from_esp):
     pass
 
+timestatus = {
+    0: "Ok",
+    1: "NotSet"
+}
+
+def query_time(dat, from_esp):
+    if not from_esp:
+        print(f": request")
+    else:
+        code, t = struct.unpack("<BQ", dat)
+
+        if code == 0:
+            print(f": response of time {t} ({time.asctime(time.gmtime(t // 1000))} +{t % 1000}ms)")
+        else:
+            print(f": response with error code {timestatus[code]}")
+
 phandle = {
     0x20: data_temp,
-    0x30: ack_data_temp
+    0x30: ack_data_temp,
+    0x41: query_time
 }
 
 while (ptr < len(datastream)) if not realtime else True:
