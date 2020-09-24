@@ -38,6 +38,8 @@ void protocol::ProtocolImpl::rx_task() {
 			rx_buf[1] = rx_buf[2];
 			uart_read_bytes(UART_NUM_0, rx_buf + 2, 1, portMAX_DELAY);
 		}
+		// Set last received at
+		last_received_at = xthal_get_ccount();
 		// Read the rest of the packet
 		uart_read_bytes(UART_NUM_0, rx_buf + 3, rx_buf[1], portMAX_DELAY);
 		// Signal packet completed
@@ -48,4 +50,8 @@ void protocol::ProtocolImpl::rx_task() {
 			xTaskNotifyWait(0, 0xffff'ffff, &f, portMAX_DELAY);
 		}
 	}
+}
+
+unsigned protocol::ProtocolImpl::get_processing_delay() {
+	return (xthal_get_ccount() - last_received_at) / (CONFIG_ESP8266_DEFAULT_CPU_FREQ_MHZ * 1000);
 }

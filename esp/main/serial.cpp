@@ -1,8 +1,11 @@
 #include "serial.h"
 #include "util.h"
 #include "debug.h"
+#include "wifitime.h"
 
+#include <ctime>
 #include <esp_log.h>
+#include <sys/time.h>
 
 serial::SerialInterface serial::interface;
 
@@ -101,7 +104,7 @@ void serial::SerialInterface::process_packet() {
 	switch (rx_buf[2]) {
 		case slots::protocol::PING:
 			{
-				ESP_LOGW(TAG, "ping pkt");
+				ESP_LOGI(TAG, "got ping");
 				continue_rx();
 
 				uint8_t resp[3] = {
@@ -109,6 +112,33 @@ void serial::SerialInterface::process_packet() {
 					0x00,
 					slots::protocol::PONG
 				};
+
+				send_pkt(resp);
+			}
+			break;
+		case slots::protocol::QUERY_TIME:
+			{
+				ESP_LOGI(TAG, "got timereq");
+				uint8_t resp[12] = {
+					0xa6,
+					9,
+					slots::protocol::QUERY_TIME,
+					0,
+					0, 0, 0, 0, 0, 0, 0, 0
+				};
+				
+				// Check if the time is set
+				if (xEventGroupGetBits(wifi::events) & wifi::TimeSynced) {
+					uint64_t millis = wifi::get_localtime();
+					millis -= get_processing_delay();
+					continue_rx();
+					resp[3] = 0;
+					memcpy(resp + 4, &millis, sizeof(millis));
+				}
+				else {
+					continue_rx();
+					resp[3] = (uint8_t)slots::protocol::TimeStatus::NotSet;
+				}
 
 				send_pkt(resp);
 			}

@@ -24,10 +24,13 @@ namespace protocol {
 
 		uint8_t rx_buf[257];
 
+		unsigned get_processing_delay(); // return the number of milliseconds (rounded down) from when we received the header of the last packet.
+
 	private:
 		void rx_task();
 
 		TaskHandle_t rx_thread;
+		unsigned last_received_at;
 	};
 }
 
