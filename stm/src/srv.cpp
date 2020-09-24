@@ -428,8 +428,10 @@ void srv::Servicer::run() {
 		uint16_t msgbuf_x16[8];
 	};
 	PendRequest active_request{};
+	int active_request_send_retries = 0;
 	bool is_cleaning = false;
 	uint8_t move_update_errcode = 0;
+	uint8_t active_request_statemachine = 0;
 
 	// Otherwise, begin processing packets/requests
 	while (true) {
@@ -438,13 +440,14 @@ void srv::Servicer::run() {
 		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
 		// Additionally, a queue event will only ever cause a write and "wait" for a read in response.
 
-		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(500)); // every 100 ms we also try and look for cleanup-problems
+		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(600)); // every 100 ms we also try and look for cleanup-problems
 		// Check for a new queue operation if we're not still processing one.
 		if (amount < 3) {
 			if (active_request.type == PendRequest::TypeNone) {
 				// Check for new queue operation
 				if (xQueueReceive(pending_requests, &active_request, 0)) {
 					// Start handling it.
+					active_request_send_retries = 0;
 					start_pend_request(active_request);
 				}
 				// Otherwise, do various random tasks.
@@ -453,6 +456,7 @@ void srv::Servicer::run() {
 
 					if (xStreamBufferBytesAvailable(log_out) > 100) {
 						// Do a flush
+						active_request_send_retries = 0;
 						start_pend_request(PendRequest{
 							.type = PendRequest::TypeDumpLogOut
 						});
@@ -461,6 +465,30 @@ void srv::Servicer::run() {
 					if (!is_cleaning) is_cleaning = do_bheap_cleanup();
 				}
 			}
+			else {
+				check_connection_ping();
+
+				++active_request_statemachine;
+				if (active_request_statemachine == 4) {
+					active_request_statemachine = 0;
+					++active_request_send_retries;
+					if (active_request_send_retries > 2) {
+						// Failed to do a request
+						active_request_send_retries = 0;
+						// Consume this request.
+						active_request.type = PendRequest::TypeNone;
+						// Try tail-chaining it
+						if (xQueueReceive(pending_requests, &active_request, 0)) {
+							start_pend_request(active_request);
+						}
+					}
+					else {
+						// Re-start request
+						start_pend_request(active_request);
+					}
+				}
+			}
+			// TODO: handle request timeouts
 			continue;
 		}
 		// This message will come pre-verified from the protocol layer.
@@ -500,8 +528,11 @@ void srv::Servicer::run() {
 					if (active_request.type == PendRequest::TypeChangeTemp && active_request.slotid == slotid && active_request.temperature == msgbuf[2]) {
 						// Consume this request.
 						active_request.type = PendRequest::TypeNone;
+						active_request_send_retries = 0;
 						// Try tail-chaining it
-						if (xQueueReceive(pending_requests, &active_request, 0)) start_pend_request(active_request);
+						if (xQueueReceive(pending_requests, &active_request, 0)) {
+							start_pend_request(active_request);
+						}
 					}
 				}
 				break;
@@ -712,7 +743,7 @@ void srv::Servicer::run() {
 }
 
 void srv::Servicer::check_connection_ping() {
-	if ((timekeeper.current_time - last_comm) > 1000 && !sent_ping && !is_sending) {
+	if ((timekeeper.current_time - last_comm) > 10000 && !sent_ping && !is_sending) {
 		wait_for_not_sending(); // ensure this is the case although we check earlier to avoid blocking
 		
 		dma_out_buffer[0] = 0xa5;
@@ -722,7 +753,7 @@ void srv::Servicer::check_connection_ping() {
 		sent_ping = true;
 		send();
 	}
-	if ((timekeeper.current_time - last_comm) > 3000) {
+	if ((timekeeper.current_time - last_comm) > 30000) {
 		if (timekeeper.current_time < last_comm) {
 			// ignore if the clock went backwards
 			last_comm = timekeeper.current_time;
