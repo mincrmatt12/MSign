@@ -14,7 +14,7 @@ void tasks::DebugConsole::run() {
 		// TODO: debug stuff
 
 		// rn, just run the timekeeper
-		vTaskDelay(5000);
 		tim.loop();
+		vTaskDelay(5000);
 	}
 }
