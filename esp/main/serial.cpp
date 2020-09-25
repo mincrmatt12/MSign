@@ -89,7 +89,13 @@ check_request:
 				loop_request();
 			}
 			else {
-				// TODO: ping stuff
+				if (xQueueReceive(requests, &active_request, 0)) {
+					ESP_LOGW(TAG, "Forgot about a request, starting it now");
+					start_request();
+				}
+				else {
+					// TODO: ping stuff
+				}
 			}
 		}
 
