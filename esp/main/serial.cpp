@@ -1,4 +1,5 @@
 #include "serial.h"
+#include "esp_system.h"
 #include "util.h"
 #include "debug.h"
 #include "wifitime.h"
@@ -61,6 +62,10 @@ void serial::SerialInterface::run() {
 
 	ESP_LOGI(TAG, "Connected to STM32");
 
+	// Start processing requests
+	if (xQueueReceive(requests, &active_request, 0))
+		start_request();
+
 	while (true) {
 		auto event = wait_for_event(active_request.type == Request::TypeEmpty ? pdMS_TO_TICKS(10000) : pdMS_TO_TICKS(1000));
 		// this should be a switch...
@@ -99,6 +104,7 @@ void serial::SerialInterface::reset() {
 	Request r;
 	r.type = Request::TypeReset;
 	xQueueSend(requests, &r, portMAX_DELAY);
+	xTaskNotify(srv_task, STASK_BIT_REQUEST, eSetBits);
 }
 
 void serial::SerialInterface::process_packet() {
@@ -184,14 +190,14 @@ void serial::SerialInterface::process_packet() {
 							needs_update = true;
 						// If we need to send anything, send it
 						if (needs_update) {
+							ESP_LOGD(TAG, "Queueing block flushes since there were unflushed remote blocks");
 							for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
 								if (it->location == bheap::Block::LocationCanonical && !(it->flags & bheap::Block::FlagFlush)) {
 									it->flags |= bheap::Block::FlagFlush;
 								}
 							}
-							ESP_LOGD(TAG, "Queueing block update since there were unflushed remote blocks");
-							update_blocks();
 						}
+						update_blocks();
 					}
 				}
 
@@ -216,18 +222,108 @@ void serial::SerialInterface::process_packet() {
 }
 
 void serial::SerialInterface::start_request() {
-	ESP_LOGE(TAG, "Not implemented: ignoring request");
-	finish_request();
+	switch (active_request.type) {
+		case Request::TypeReset:
+			{
+				ESP_LOGE(TAG, "System is going down for reset.");
+				uint8_t resp[3] = {
+					0xa6,
+					0x00,
+					slots::protocol::RESET
+				};
+				send_pkt(resp);
+				vTaskDelay(1000);
+				esp_restart();
+			}
+			break;
+		case Request::TypeDataResizeRequest:
+			{
+				ESP_LOGD(TAG, "Set size of %03x to %d", active_request.sparams.slotid, active_request.sparams.newsize);
+				uint16_t current_size = arena.contents_size(active_request.sparams.slotid);
+				if (!arena.contains(active_request.sparams.slotid) || current_size < active_request.sparams.newsize) {
+retry:
+					ESP_LOGD(TAG, "Expanding to fit");
+					if (!arena.add_block(active_request.sparams.slotid, bheap::Block::LocationCanonical, active_request.sparams.newsize - current_size)) {
+						ESP_LOGW(TAG, "Running out of space while expanding slot, starting evict loop");
+						evict_subloop(4 + active_request.sparams.newsize - current_size); // This will spin forever if it can't free
+						goto retry; // this needs a timeout though just in case
+					}
+					finish_request();
+				}
+				else {
+					// Truncate it
+					arena.truncate_contents(active_request.sparams.slotid, active_request.sparams.newsize);
+					if (active_request.sparams.newsize == 0) {
+						// Use DATA_DEL
+						ESP_LOGD(TAG, "Sending DATA_DEL");
+						uint8_t resp[5] = {
+							0xa6,
+							0x02,
+							slots::protocol::DATA_DEL,
+							0, 0
+						};
+						memcpy(resp + 3, &active_request.sparams.slotid, 2);
+						send_pkt(resp);
+						return; // Wait for ack
+					}
+					else finish_request();
+				}
+			}
+			break;
+		case Request::TypeDataUpdateRequest:
+			{
+				ESP_LOGD(TAG, "Updating contents for %03x", active_request.uparams->slotid);
+				// Update the contents in the arena. If that fails, the caller screwed up and we should just log and bail.
+				if (!arena.update_contents(active_request.uparams->slotid, active_request.uparams->offset, active_request.uparams->length, active_request.uparams->data, true)) {
+					ESP_LOGW(TAG, "Failed to update arena contents for %03x; bailing.", active_request.uparams->slotid);
+					xTaskNotify(active_request.uparams->notify, 0xff, eSetValueWithOverwrite);
+					finish_request();
+					return;
+				}
+
+				// Otherwise trigger an update
+				update_blocks();
+				ESP_LOGD(TAG, "Finishing request");
+				// Notify requesting task
+				xTaskNotify(active_request.uparams->notify, 0xee, eSetValueWithOverwrite);
+				finish_request();
+				return;
+			}
+		default:
+			ESP_LOGE(TAG, "Not implemented: ignoring request");
+			finish_request();
+			return;
+	}
 }
 
 bool serial::SerialInterface::packet_request() {
-	ESP_LOGE(TAG, "Not implemented: ignoring request packet");
-	return false;
+	if (active_request.type != Request::TypeDataResizeRequest) {
+		ESP_LOGE(TAG, "Not implemented: ignoring request packet");
+		return false;
+	}
+
+	// Was the packet an ack data del?
+	if (rx_buf[2] == slots::protocol::ACK_DATA_DEL) {
+		// Is this a data delete for the right slot?
+		if (memcmp(rx_buf + 3, &active_request.sparams.slotid, 2) == 0) {
+			ESP_LOGD(TAG, "Finished DATA_DEL");
+			finish_request();
+		}
+		else {
+			ESP_LOGW(TAG, "Got unexpected DATA_DEL msg");
+		}
+		return true;
+	}
+	else return false;
 }
 
 void serial::SerialInterface::loop_request() {
-	ESP_LOGE(TAG, "Not implemented: ignoring request loop");
-	finish_request();
+	if (active_request.type != Request::TypeDataResizeRequest) {
+		ESP_LOGE(TAG, "Not implemented: ignoring request loop");
+		finish_request();
+	}
+	// TODO: some sort of repeater idk
+	return;
 }
 
 void serial::SerialInterface::finish_request() {
@@ -253,6 +349,152 @@ void serial::SerialInterface::on_pkt() {
 }
 
 void serial::SerialInterface::update_blocks() {
-	// TODO:
-	ESP_LOGW(TAG, "Not implemented: update_blocks()");
+	// Prevent recursion
+	if (is_updating) {
+		update_check_dirty = true;
+		return;
+	}
+
+	is_updating = true;
+
+	bool request_occurred = false;
+	uint8_t update_payload[258];
+	memset(update_payload, 0, sizeof(update_payload));
+
+	// TODO: handle flushing
+	
+	// First, we check if there are any dirty blocks with temperature that means we have to send them
+	for (bheap::Block& block : arena) {
+		if (!block) continue;
+		if (block.location == bheap::Block::LocationCanonical && block.temperature & 0b10 && block.datasize && block.flags & bheap::Block::FlagDirty) {
+			// Grab the offset of this block
+			uint16_t offset = arena.block_offset(block);
+
+			ESP_LOGD(TAG, "Updating block %03x (@%04x / %dbytes / temp %d)", block.slotid, offset, block.datasize, block.temperature);
+
+			// Start sending update packets
+			uint16_t current_offset = offset;
+			uint16_t remaining = block.datasize;
+			uint16_t slotsize = arena.contents_size(block.slotid);
+			uint16_t upd_len = block.datasize; // this has to be set here b.c. bitfields
+			while (true) {
+				bool start  = current_offset == offset;
+				bool end    = remaining <= 247;
+				uint16_t sid_frame = (start ? (1 << 15):0) | (end ? (1 << 14):0) | block.slotid;
+
+				update_payload[0] = 0xa6;
+				update_payload[2] = slots::protocol::DATA_UPDATE;
+				memcpy(update_payload + 3, &sid_frame, 2);
+				memcpy(update_payload + 5, &current_offset, 2);
+				memcpy(update_payload + 7, &slotsize, 2);
+				memcpy(update_payload + 9, &upd_len, 2);
+
+				if (remaining > 247) {
+					memcpy(update_payload + 11, (uint8_t *)block.data() + (current_offset - offset), 247);
+					current_offset += 247;
+					remaining -= 247;
+					update_payload[1] = 255;
+					send_pkt(update_payload);
+				}
+				else {
+					memcpy(update_payload + 11, (uint8_t *)block.data() + (current_offset - offset), remaining);
+					update_payload[1] = 8 + remaining;
+					send_pkt(update_payload);
+					break;
+				}
+			}
+
+			int retries;
+			// Wait for a reply
+			for (retries = 0; retries < 3;) {
+				switch (wait_for_event(pdMS_TO_TICKS(2000))) {
+					case EventAll:
+						request_occurred = true;
+					case EventPacket:
+						{
+							// Is this an update ack?
+							if (rx_buf[2] != slots::protocol::ACK_DATA_UPDATE) {
+								// No, process normally
+								process_packet();
+								continue;
+							}
+							uint16_t slotid = block.slotid;
+							// Is this the correct packet?
+							if (!(memcmp(rx_buf + 3, &slotid, 2) == 0 && memcmp(rx_buf + 5, &offset, 2) == 0)) {
+								// TODO: should this mark a thingy not-dirty?
+								ESP_LOGW(TAG, "Unexpected ACK parameters in update, ignoring");
+								continue_rx();
+								++retries;
+								continue;
+							}
+							// Otherwise, was it succesful?
+							if (rx_buf[9]) {
+								ESP_LOGW(TAG, "Failed to update slot");
+							}
+							else {
+								block.flags &= ~bheap::Block::FlagDirty;
+							}
+							continue_rx();
+							goto exit_retryloop1;
+						}
+						continue;
+					case EventQueue:
+						request_occurred = true;
+						continue;
+					case EventTimeout:
+						++retries;
+						continue;
+				}
+			}
+exit_retryloop1:
+			if (retries >= 3) {
+				ESP_LOGW(TAG, "Timed out waiting for update ACK");
+			}
+			else ESP_LOGD(TAG, "Updated block OK");
+		}
+	}
+
+	// If we need to begin processing a request, start processing one
+	if (request_occurred && active_request.type != Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
+		start_request();
+
+	is_updating = false;
+
+	// If we need to continue processing, do a tail call
+	if (update_check_dirty)
+		update_blocks();
+}
+
+void serial::SerialInterface::update_slot(uint16_t slotid, const void *ptr, size_t length) {
+	allocate_slot_size(slotid, length);
+	update_slot_partial(slotid, 0, ptr, length);
+}
+
+void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
+	Request pr;
+	pr.type = Request::TypeDataResizeRequest;
+	pr.sparams.slotid = slotid;
+	pr.sparams.newsize = (uint16_t)size;
+	xQueueSendToBack(requests, &pr, portMAX_DELAY);
+	xTaskNotify(srv_task, STASK_BIT_REQUEST, eSetBits);
+}
+
+void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length) {
+	Request pr;
+	pr.type = Request::TypeDataUpdateRequest;
+	UpdateParams up;
+	up.data = ptr;
+	up.offset = offset;
+	up.slotid = slotid;
+	up.length = length;
+	up.notify = xTaskGetCurrentTaskHandle();
+	pr.uparams = &up;
+	xQueueSendToBack(requests, &pr, portMAX_DELAY);
+	xTaskNotify(srv_task, STASK_BIT_REQUEST, eSetBits);
+	xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
+}
+
+void serial::SerialInterface::evict_subloop(uint16_t amt) {
+	ESP_LOGE(TAG, "Not implemented: evict subloop for %d, returning", amt);
+	return;
 }

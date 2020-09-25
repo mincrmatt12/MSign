@@ -6,6 +6,7 @@
 #include "common/slots.h"
 #include "common/bheap.h"
 #include "protocol.h"
+#include <type_traits>
 
 #include <FreeRTOS.h>
 #include <task.h>
@@ -17,6 +18,31 @@ namespace serial {
 
 		// Reset, informing the STM beforehand.
 		void reset();
+
+		// SLOT UPDATE
+
+		// Replace a slot with the data pointed to by ptr and of length length
+		void update_slot(uint16_t slotid, const void * ptr, size_t length);
+		// Replace a slot with the contents of the object referenced by obj
+		template<typename T>
+		void update_slot(uint16_t slotid, const T& obj) {
+			static_assert(!std::is_pointer<T>::value, "This will not work with pointers, use the ptr/length overload instead.");
+			update_slot(slotid, &obj, sizeof(T));
+		}
+		// Replace a slot with a null-terminated string
+		void update_slot(uint16_t slotid, const char *str) {
+			update_slot(slotid, str, strlen(str));
+		}
+		// Clear out a slot
+		void delete_slot(uint16_t slotid);
+
+		// MANUAL SLOT UPDATE
+
+		// Set the slot slotid's size to size, adding/truncating space if necessary.
+		void allocate_slot_size(uint16_t slotid, size_t size);
+
+		// Update part of a slot
+		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length);
 
 	private:
 		void on_pkt() override;
@@ -31,15 +57,18 @@ namespace serial {
 		// Like with the STM, we use direct to task notifications to select() on requests and packets, except here the packets are stored in an external buffer
 		// so we just notify directly.
 
+		// Update requests also will update the size if required
 		struct UpdateParams {
 			uint16_t slotid;
 			uint16_t offset;
 			uint16_t length;
-			void * data;
+			const void * data;
 			TaskHandle_t notify;
 		};
 
 		// Doesn't notify anything
+		//
+		// Only sends a packet if the size was set to 0, otherwise just truncates the slot.
 		struct SizeParams {
 			uint16_t slotid;
 			uint16_t newsize;
