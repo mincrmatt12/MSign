@@ -5,6 +5,7 @@
 #include "sd.h"
 #include "util.h"
 #include "config.h"
+#include "grabber/grab.h"
 
 #include <esp_log.h>
 #include <esp_system.h>
@@ -41,12 +42,15 @@ extern "C" void app_main() {
 	}
 
 	// Start up the servicer
-	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1792, &serial::interface, 9, NULL);
+	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 2048, &serial::interface, 9, NULL);
 
 	if (!wifi::init()) {
 		ESP_LOGE(TAG, "Not starting data services due to no WIFI.");
 		// TODO: make this setup softap mode for netcfg
 	}
+
+	// Start the grabber
+	xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            5, NULL);
 
 	ESP_LOGI(TAG, "Created tasks");
 	ESP_LOGI(TAG, "Free heap available is %d", esp_get_free_heap_size());
