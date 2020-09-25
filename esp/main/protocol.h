@@ -22,7 +22,7 @@ namespace protocol {
 	protected:
 		virtual void on_pkt() = 0; // Called on reception of a valid packet.
 
-		uint8_t rx_buf[257];
+		uint8_t rx_buf[258];
 
 		unsigned get_processing_delay(); // return the number of milliseconds (rounded down) from when we received the header of the last packet.
 
