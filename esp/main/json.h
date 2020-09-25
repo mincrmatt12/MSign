@@ -48,7 +48,7 @@ namespace json {
 	};
 
 	typedef std::function<void (PathNode **, uint8_t, const Value&)> JSONCallback;
-	typedef std::function<char (void)> TextCallback;
+	typedef std::function<int16_t (void)> TextCallback;
 
 	class JSONParser {
 	public:
