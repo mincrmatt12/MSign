@@ -5,6 +5,11 @@ file(GLOB_RECURSE msign_esp_srcs FOLLOW_SYMLINKS
 
 file(GLOB msign_nmfus ${CMAKE_CURRENT_LIST_DIR}/parser/*.nmfu)
 
+foreach(nmfu_file ${msign_nmfus})
+	get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
+	list(APPEND msign_esp_srcs ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c)
+endforeach(nmfu_file)
+
 idf_component_register(SRCS ${msign_esp_srcs})
 
 if (NOT CMAKE_BUILD_EARLY_EXPANSION)
