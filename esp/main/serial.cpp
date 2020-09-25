@@ -3,6 +3,7 @@
 #include "debug.h"
 #include "wifitime.h"
 
+#include <algorithm>
 #include <ctime>
 #include <esp_log.h>
 #include <sys/time.h>
@@ -104,7 +105,7 @@ void serial::SerialInterface::process_packet() {
 	switch (rx_buf[2]) {
 		case slots::protocol::PING:
 			{
-				ESP_LOGI(TAG, "got ping");
+				ESP_LOGD(TAG, "got ping");
 				continue_rx();
 
 				uint8_t resp[3] = {
@@ -118,7 +119,7 @@ void serial::SerialInterface::process_packet() {
 			break;
 		case slots::protocol::QUERY_TIME:
 			{
-				ESP_LOGI(TAG, "got timereq");
+				ESP_LOGD(TAG, "got timereq");
 				uint8_t resp[12] = {
 					0xa6,
 					9,
@@ -141,6 +142,70 @@ void serial::SerialInterface::process_packet() {
 				}
 
 				send_pkt(resp);
+			}
+			break;
+		case slots::protocol::DATA_TEMP:
+			{
+				// When we receive a temperature message we have to do one of a few things:
+				// If we've never seen this block:
+				// 	- Create an empty placeholder
+				// If we have this block:
+				//  Set the temperature
+				// 	If we're moving from cold -> hot,warm:
+				// 	 If there are remote blocks:
+				// 	  Mark all the blocks as flush
+				//   Queue a block update: blocks are kept updated in terms of dirty but only flushed
+				//                         if temperature is hot enough
+				uint16_t slotid; memcpy(&slotid, rx_buf + 3, 2);
+				uint8_t  reqtemp = rx_buf[5];
+				continue_rx();
+
+				ESP_LOGD(TAG, "Setting %03x to %d", slotid, reqtemp);
+
+				// Check if this is a new block
+				if (!arena.contains(slotid)) {
+					// If it is, just put a placeholder
+					if (!arena.add_block(slotid, bheap::Block::LocationCanonical, 0)) {
+						ESP_LOGW(TAG, "Ran out of space trying to allocate placeholder for %03x", slotid);
+						// Ignore and continue
+						break;
+					}
+					ESP_LOGD(TAG, "Added empty placeholder");
+					arena.set_temperature(slotid, reqtemp);
+				}
+				else {
+					// Update the temperature
+					arena.set_temperature(slotid, reqtemp);
+					// Check if we need to flush "the rest" of the block.
+					if (reqtemp & 0b10) {
+						bool needs_update = false;
+
+						if (std::any_of(arena.begin(slotid), arena.end(slotid), [](const auto &x){return x.location == bheap::Block::LocationRemote;}))
+							needs_update = true;
+						// If we need to send anything, send it
+						if (needs_update) {
+							for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
+								if (it->location == bheap::Block::LocationCanonical && !(it->flags & bheap::Block::FlagFlush)) {
+									it->flags |= bheap::Block::FlagFlush;
+								}
+							}
+							ESP_LOGD(TAG, "Queueing block update since there were unflushed remote blocks");
+							update_blocks();
+						}
+					}
+				}
+
+				// Send a response ack
+				uint8_t response[6] = {
+					0xa6,
+					0x3,
+					slots::protocol::ACK_DATA_TEMP,
+					0,
+					0,
+					reqtemp
+				};
+				memcpy(response + 3, &slotid, 2);
+				send_pkt(response);
 			}
 			break;
 		default:
@@ -185,4 +250,9 @@ rewait:
 void serial::SerialInterface::on_pkt() {
 	// Send a notification
 	xTaskNotify(srv_task, STASK_BIT_PACKET, eSetBits);
+}
+
+void serial::SerialInterface::update_blocks() {
+	// TODO:
+	ESP_LOGW(TAG, "Not implemented: update_blocks()");
 }

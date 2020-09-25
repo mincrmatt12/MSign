@@ -54,7 +54,7 @@ namespace serial {
 			} type = TypeEmpty;
 			union {
 				UpdateParams *uparams;
-				SizeParams   *sparams;
+				SizeParams    sparams;
 			};
 		} active_request;
 
@@ -76,6 +76,12 @@ namespace serial {
 
 		// Data evict loop: called when we're out of space for new data and try to send crap over to the STM
 		void evict_subloop(uint16_t threshold);
+
+		// used for re-entrancy detection, if this is true at the beginning of update_blocks
+		// we just set update_check_dirty to true and exit
+		bool is_updating = false;
+		// if this is true at the end of update_blocks we tail-chain another call
+		bool update_check_dirty = false;
 
 		// Scan through all blocks and update/move dirty/flush blocks.
 		void update_blocks();
