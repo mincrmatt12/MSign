@@ -52,14 +52,11 @@ void screen::TTCScreen::draw() {
 			y = 10 - draw::distorted_ease_wave(rtc_time, 1000, 4500, 18);
 		}
 
-		uint64_t times[6];
-
 		// Check first slot
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
-				memset(times, 0, sizeof times);
-
-				if (draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), times, 
+				if (!servicer.slot(slots::TTC_TIME_1 + slot)) continue;
+				if (draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), *servicer.slot<uint64_t *>(slots::TTC_TIME_1 + slot), 
 							info->flags & (slots::TTCInfo::ALERT_0 << slot),
 							info->flags & (slots::TTCInfo::DELAY_0 << slot)
 							)) {
@@ -140,7 +137,7 @@ void screen::TTCScreen::draw_bus() {
 
 }
 
-bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, uint64_t times[4], bool alert, bool delay) {
+bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64_t times[6], bool alert, bool delay) {
 	if (!name) return false;
 	uint32_t t_pos = ((timekeeper.current_time / 50));
 	uint16_t size = draw::text_size(name, font::tahoma_9::info);

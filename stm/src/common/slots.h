@@ -23,7 +23,7 @@ namespace slots {
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
 		TTC_NAME_3 = 0x23,			// ''
-		TTC_TIME_1 = 0x24,			// STRUCT[]; TTCTime - time of next up to six buses
+		TTC_TIME_1 = 0x24,			// UINT64_T[]; TTCTime - time of next up to six buses
 		TTC_TIME_2 = 0x25,			// ''
 		TTC_TIME_3 = 0x26,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
@@ -56,13 +56,8 @@ namespace slots {
 	};
 
 #pragma pack (push, 1)
-	struct TTCTime {
-		uint64_t tA, tB;
-	};
-
 	struct TTCInfo {
 		uint16_t flags;
-		uint8_t nameLen[3];
 
 		enum Flags : uint16_t {
 			ALERT_0 = 1,
