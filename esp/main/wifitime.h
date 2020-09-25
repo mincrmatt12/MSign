@@ -10,6 +10,7 @@ namespace wifi {
 
 	extern EventGroupHandle_t events;
 	uint64_t get_localtime();
+	uint64_t millis_to_local(uint64_t millis);
 
 	enum Events : EventBits_t {
 		WifiConnected = 1,

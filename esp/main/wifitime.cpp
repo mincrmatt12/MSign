@@ -123,6 +123,14 @@ uint64_t wifi::get_localtime() {
 	return millis;
 }
 
+uint64_t wifi::millis_to_local(uint64_t millis) {
+	time_t now = millis / 1000;
+	struct tm current_time;
+	localtime_r(&now, &current_time);
+	now = timegm(&current_time);
+	return ((uint64_t)now * 1000) + millis % 1000;
+}
+
 bool wifi::init() {
 	// Verify we have ssid/psk
 	
