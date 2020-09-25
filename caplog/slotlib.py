@@ -52,12 +52,12 @@ class DeclaredMember:
     def is_floating_point(self):
         return self.typetoken[0] in ["f", "d"]
 
-    def parse(self, segment_of_struct_args):
+    def parse(self, segment_of_dat):
         if not self.is_array() and not self.is_bitfield():
-            self.data = segment_of_struct_args[0]
+            self.data = struct.unpack("<" + self.typetoken, segment_of_dat)[0]
         elif self.is_bitfield():
             self.data = {}
-            integral_value = segment_of_struct_args[0]
+            integral_value = struct.unpack("<" + self.typetoken, segment_of_dat)[0]
             for i in self.bitfield:
                 if integral_value & self.bitfield[i]:
                     self.data[i] = True
@@ -65,7 +65,7 @@ class DeclaredMember:
                     self.data[i] = False
             self.rawdata = integral_value
         else:
-            self.data = segment_of_struct_args
+            self.data = struct.unpack("<" + self.typetoken, segment_of_dat)
 
     def raw_value(self):
         if self.is_bitfield():
@@ -171,7 +171,7 @@ class SlotTypeString:
             return dat
 
     def get_formatted(self, data):
-        return repr(data)[1:]
+        return repr(data.decode("ascii"))
 
     def get_length(self, dat):
         if b'\x00' in dat:

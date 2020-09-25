@@ -113,17 +113,67 @@ def data_temp(dat, from_esp):
     
     print(f": request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
-phandle = {
-    0x20: data_temp
-}
-
 def ack_data_temp(dat, from_esp):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
+    slot_temps[slotid] = tempcode
     
-    print(f": acknowledgement of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
+    print(f": ack of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
 def data_update(dat, from_esp):
-    pass
+    # always from esp
+    sid_frame, offs, totallen, totalupd = struct.unpack("<HHHH", dat[:8])
+
+    start = bool(sid_frame & (1 << 15))
+    end = bool(sid_frame & (1 << 14))
+
+    slotid = sid_frame & 0xfff
+    if slotid not in slot_databufs:
+        slot_databufs[slotid] = bytearray(totallen)
+    else:
+        if len(slot_databufs[slotid]) > totallen:
+            slot_databufs[slotid] = slot_databufs[slotid][:totallen]
+        else:
+            slot_databufs[slotid] += bytearray(totallen - len(slot_databufs[slotid]))
+
+    # patch in
+    slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
+    endstart = {
+            (True, False): "start",
+            (False, True): "end",
+            (True, True): "whole",
+            (False, False): "middle"
+    }[start, end]
+
+    print(f": data update [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
+    if start:
+        print(" "*header_width + f": total slot length {totallen}; total update length {totalupd}")
+    if end:
+        st = slotlib.slot_types[slotid][1]
+        print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid])), ' ' * (header_width + 2) + '└'))
+
+updrescode = {
+    0: "Ok",
+    1: "NotEnoughSpace",
+    2: "IllegalInternalState",
+    3: "NAK"
+}
+
+def ack_data_update(dat, from_esp):
+    slotid, upds, updl, code = struct.unpack("<HHHB", dat)
+
+    print(f": ack of data update for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {upds:04x} of length {updl} with code {updrescode[code]}")
+
+def data_del(dat, from_esp):
+    slotid = struct.unpack("<H", dat)[0]
+
+    del slot_databufs[slotid]
+    
+    print(f": data delete for {slotid:03x} ({slotlib.slot_types[slotid][0]})")
+
+def ack_data_del(dat, from_esp):
+    slotid = struct.unpack("<H", dat)[0]
+    
+    print(f": ack of data delete for {slotid:03x} ({slotlib.slot_types[slotid][0]})")
 
 timestatus = {
     0: "Ok",
@@ -144,7 +194,11 @@ def query_time(dat, from_esp):
 phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
-    0x41: query_time
+    0x41: query_time,
+    0x21: data_update,
+    0x31: ack_data_update,
+    0x23: data_del,
+    0x33: ack_data_del
 }
 
 while (ptr < len(datastream)) if not realtime else True:
