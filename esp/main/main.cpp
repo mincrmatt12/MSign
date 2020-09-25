@@ -41,7 +41,7 @@ extern "C" void app_main() {
 	}
 
 	// Start up the servicer
-	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1024, &serial::interface, 9, NULL);
+	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 1792, &serial::interface, 9, NULL);
 
 	if (!wifi::init()) {
 		ESP_LOGE(TAG, "Not starting data services due to no WIFI.");
