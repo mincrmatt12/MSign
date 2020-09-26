@@ -166,7 +166,8 @@ def ack_data_update(dat, from_esp):
 def data_del(dat, from_esp):
     slotid = struct.unpack("<H", dat)[0]
 
-    del slot_databufs[slotid]
+    if slotid in slot_databufs:
+        slot_databufs[slotid] = bytearray()
     
     print(f": data delete for {slotid:03x} ({slotlib.slot_types[slotid][0]})")
 
