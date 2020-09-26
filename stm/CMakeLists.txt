@@ -123,3 +123,4 @@ if (${openocd_executable})
 	add_dependencies(upload stm)
 endif()
 
+add_custom_target(stm.bin ALL DEPENDS stm COMMAND ${OBJCOPY_EXECUTABLE} -Obinary $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.bin)
