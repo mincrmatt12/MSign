@@ -10,6 +10,8 @@ extern "C" {
 #include <http_client.h>
 };
 
+#include <esp_tls.h>
+
 #undef connect
 #undef read
 #undef write
@@ -30,7 +32,7 @@ namespace util {
 		namespace adapter {
 			const static char * TAG = "d_adapter";
 			struct HttpAdapter {
-				bool connect(const char *host, const char *port="80") {
+				bool connect(const char *host) {
 					if (is_connected()) return false;
 
 					addrinfo hints{};
@@ -39,7 +41,7 @@ namespace util {
 					hints.ai_socktype = SOCK_STREAM;
 
 					int stat;
-					if ((stat = lwip_getaddrinfo(host, port, &hints, &result))) {
+					if ((stat = lwip_getaddrinfo(host, "80", &hints, &result))) {
 						ESP_LOGE(TAG, "gai fail: %s", lwip_strerr(stat));
 					}
 
@@ -85,18 +87,25 @@ namespace util {
 					}
 				}
 				bool write(const uint8_t *buf, size_t length) {
-					int code = lwip_send(sockno, buf, length, 0);
-					if (code >= 0) return true;
-					else {
-						switch (errno) {
-							default:
-								lwip_close(sockno);
-							case EBADF:
-								sockno = -1;
-								return false;
+					size_t pos = 0;
+					while (pos < length) {
+						int code = lwip_send(sockno, buf + pos, length - pos, 0);
+						if (code >= 0) {
+							pos += code;
+						}
+						else {
+							switch (errno) {
+								default:
+									lwip_close(sockno);
+								case EBADF:
+									sockno = -1;
+									return false;
+							}
 						}
 					}
+					return true;
 				}
+
 				bool write(const char *buf) {
 					return write((const uint8_t *)buf, strlen(buf));
 				}
@@ -109,11 +118,71 @@ namespace util {
 				bool is_connected() {
 					return sockno != -1;
 				}
-				private:
+			private:
 				int sockno = -1;
 			};
 
-			struct HttpsAdapter : HttpAdapter {
+			struct HttpsAdapter {
+				bool connect(const char* host) {
+					if (conn) close();
+					esp_tls_cfg_t cfg {};
+					conn = esp_tls_init();
+					if (esp_tls_conn_new_sync(host, strlen(host), 443, &cfg, conn) == 1) {
+						return true;
+					}
+					else {
+						close();
+						return false;
+					}
+				}
+
+				size_t read(uint8_t *buf, size_t max) {
+					if (!conn) return -1;
+					while (true) {
+						auto code = esp_tls_conn_read(conn, buf, max);
+						if (code == 0) {
+							ESP_LOGD(TAG, "tls_read failed due to close");
+							return -1;
+						}
+						if (code == ESP_TLS_ERR_SSL_WANT_READ || code == ESP_TLS_ERR_SSL_WANT_WRITE) continue;
+						if (code > 0) return code;
+						else {
+							ESP_LOGE(TAG, "tls_read failed %x", (int)code);
+							return -1;
+						}
+					}
+				}
+
+				bool write(const uint8_t *buf, size_t length) {
+					if (!conn) return false;
+					size_t pos = 0;
+					while (pos < length) {
+						auto ret = esp_tls_conn_write(conn, buf + pos, length - pos);
+						if (ret >= 0) {
+							pos += ret;
+						}
+						else if (ret != ESP_TLS_ERR_SSL_WANT_READ && ret != ESP_TLS_ERR_SSL_WANT_WRITE) {
+							ESP_LOGE(TAG, "tls_write failed %x", (int)ret);
+							return false;
+						}
+					}
+					return true;
+				}
+
+				bool write(const char *buf) {
+					return write((const uint8_t *)buf, strlen(buf));
+				}
+
+				void close() {
+					if (conn) esp_tls_conn_delete(conn);
+					conn = nullptr;
+				}
+
+				bool is_connected() {
+					return conn != nullptr && conn->conn_state != ESP_TLS_DONE && conn->conn_state != ESP_TLS_FAIL;
+				}
+			private:
+				esp_tls *conn = nullptr;
 			};
 		}
 
