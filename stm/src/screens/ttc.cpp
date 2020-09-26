@@ -111,7 +111,7 @@ void screen::TTCScreen::draw_alertstr() {
 }
 
 void screen::TTCScreen::draw_bus() {
-	uint16_t pos = ((timekeeper.current_time / 70) % 228) - 45;
+	uint16_t pos = ((timekeeper.current_time / 60) % 228) - 45;
 	if (pos == 227 - 45) {
 		bus_type = rng::get() % 3;
 		bus_type += 1;
