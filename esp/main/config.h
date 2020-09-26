@@ -20,6 +20,7 @@ namespace config {
 		SNAME1,
 		SNAME2,
 		SNAME3,
+		ALERT_SEARCH,
 
 		WEATHER_KEY,
 		WEATHER_LAT,

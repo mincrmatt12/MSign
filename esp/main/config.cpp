@@ -25,6 +25,7 @@ const char * config::entry_names[] = {
 	"shortname1",
 	"shortname2",
 	"shortname3",
+	"alertsrch",
 
 	// WEATHER PARAMETERS
 	"wapikey",
