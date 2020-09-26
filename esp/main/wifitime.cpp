@@ -67,6 +67,7 @@ void sntp_task(void *) {
 
     while (timeinfo.tm_year < (2020 - 1900)) {
         ESP_LOGI(T_TAG, "Still waiting for time (%d/)", retry);
+		++retry;
         vTaskDelay(pdMS_TO_TICKS(2000));
         time(&now);
         localtime_r(&now, &timeinfo);
