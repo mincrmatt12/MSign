@@ -25,16 +25,18 @@ namespace serial {
 		void update_slot(uint16_t slotid, const void * ptr, size_t length);
 		// Replace a slot with the contents of the object referenced by obj
 		template<typename T>
-		void update_slot(uint16_t slotid, const T& obj) {
+		inline void update_slot(uint16_t slotid, const T& obj) {
 			static_assert(!std::is_pointer<T>::value, "This will not work with pointers, use the ptr/length overload instead.");
 			update_slot(slotid, &obj, sizeof(T));
 		}
 		// Replace a slot with a null-terminated string
-		void update_slot(uint16_t slotid, const char *str) {
-			update_slot(slotid, str, strlen(str));
+		inline void update_slot(uint16_t slotid, const char *str) {
+			update_slot(slotid, str, strlen(str) + 1); // include null terminator
 		}
 		// Clear out a slot
-		void delete_slot(uint16_t slotid);
+		inline void delete_slot(uint16_t slotid) {
+			allocate_slot_size(slotid, 0);
+		}
 
 		// MANUAL SLOT UPDATE
 
