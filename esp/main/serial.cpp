@@ -81,7 +81,7 @@ void serial::SerialInterface::run() {
 		}
 		else if (event == EventQueue) {
 check_request:
-			if (xQueueReceive(requests, &active_request, 0))
+			if (active_request.type == Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
 				start_request();
 		}
 		else {
@@ -246,6 +246,11 @@ void serial::SerialInterface::start_request() {
 			{
 				ESP_LOGD(TAG, "Set size of %03x to %d", active_request.sparams.slotid, active_request.sparams.newsize);
 				uint16_t current_size = arena.contents_size(active_request.sparams.slotid);
+				if (current_size == active_request.sparams.newsize) {
+					ESP_LOGD(TAG, "Already at that size, returning.");
+					finish_request();
+					return;
+				}
 				if (!arena.contains(active_request.sparams.slotid) || current_size < active_request.sparams.newsize) {
 retry:
 					ESP_LOGD(TAG, "Expanding to fit");
@@ -318,6 +323,7 @@ bool serial::SerialInterface::packet_request() {
 		else {
 			ESP_LOGW(TAG, "Got unexpected DATA_DEL msg");
 		}
+		continue_rx();
 		return true;
 	}
 	else return false;
