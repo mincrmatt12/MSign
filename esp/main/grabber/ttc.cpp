@@ -31,6 +31,7 @@ namespace ttc {
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
 		int16_t status_code;
+		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
 		auto cb = util::download_with_callback("webservices.nextbus.com", url, status_code);
 
 		if (status_code < 200 || status_code > 299) {

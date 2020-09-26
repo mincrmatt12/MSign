@@ -17,7 +17,7 @@ namespace grabber {
 		bool ssl = false;
 	};
 
-	constexpr Grabber make_http_grabber(void (*_if)(), bool (*_gf)(), TickType_t loop, TickType_t fail=pdMS_TO_TICKS(3000)) {
+	constexpr Grabber make_http_grabber(void (*_if)(), bool (*_gf)(), TickType_t loop, TickType_t fail=pdMS_TO_TICKS(5000)) {
 		Grabber g;
 		g.init_func = _if;
 		g.grab_func = _gf;
@@ -27,7 +27,7 @@ namespace grabber {
 		return g;
 	}
 
-	constexpr Grabber make_https_grabber(void (*_if)(), bool (*_gf)(), TickType_t loop, TickType_t fail=pdMS_TO_TICKS(3000)) {
+	constexpr Grabber make_https_grabber(void (*_if)(), bool (*_gf)(), TickType_t loop, TickType_t fail=pdMS_TO_TICKS(8000)) {
 		Grabber g;
 		g.init_func = _if;
 		g.grab_func = _gf;
