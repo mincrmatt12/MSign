@@ -8,6 +8,10 @@
 #include <algorithm>
 #include <esp_log.h>
 
+extern "C" {
+#include <ttc_rdf.h>
+};
+
 const static char * TAG = "ttc";
 
 namespace ttc {
@@ -126,6 +130,42 @@ namespace ttc {
 		return ok;
 	}
 
+	struct AlertParserState {
+		slots::TTCInfo& info;
+		int offset = 0;
+	};
+
+	void update_alertstr(slots::TTCInfo& info) {
+		ttc_rdf_state_t state;
+		AlertParserState aps_ptr{info};
+
+		int16_t status_code;
+		auto cb = util::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss", status_code);
+
+		if (status_code < 200 || status_code > 299) {
+			util::stop_download();
+			return;
+		}
+
+		ttc_rdf_start(&state);
+		state.userptr = &aps_ptr;
+
+		// Run this through the parser
+		int16_t result;
+		while ((result = cb()) != -1) {
+			switch (ttc_rdf_feed((uint8_t)result, false, &state)) {
+				case TTC_RDF_OK:
+					continue;
+				case TTC_RDF_FAIL:
+					ESP_LOGE(TAG, "RDF parser failed");
+				case TTC_RDF_DONE:
+					goto end_parseloop;
+			}
+		}
+end_parseloop:
+		util::stop_download();
+	}
+
 	bool loop() {
 		slots::TTCInfo x{};
 		for (uint8_t slot = 0; slot < 3; ++slot) {
@@ -141,8 +181,52 @@ namespace ttc {
 				else return false;
 			}
 		}
+		update_alertstr(x);
+		if (!(x.flags & slots::TTCInfo::SUBWAY_ALERT)) {
+			serial::interface.delete_slot(slots::TTC_ALERTSTR);
+		}
 		serial::interface.update_slot(slots::TTC_INFO, x);
-		// TODO: alertstr
 		return true;
+	}
+}
+
+extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
+	ttc::AlertParserState& ps = *reinterpret_cast<ttc::AlertParserState *>(state->userptr);
+
+	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
+
+	// Only run when config is valid
+	if (strcasestr(state->c.advisory, config::manager.get_value(config::ALERT_SEARCH))) {
+		// Ignore if we see the string elevator in there
+		if (strcasestr(state->c.advisory, "elevator")) return;
+
+		// Mark an alert
+		ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
+		ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
+		
+		// If it isn't a regular service...
+		if (!strcasestr(state->c.advisory, "regular service has")) {
+			// Try and guess the type of error:
+			if (strcasestr(state->c.advisory, "delays of")) {
+				ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
+			}
+			if (strcasestr(state->c.advisory, "no service")) {
+				ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
+			}
+		}
+
+		size_t newlength = strlen(state->c.advisory);
+		// Add to the slot data:
+		// If this is the first entry, we don't need to add a ' / ' marker, otherwise we do
+		if (ps.offset != 0) newlength += 3;
+		serial::interface.allocate_slot_size(slots::TTC_ALERTSTR, ps.offset + newlength + 1);
+		if (ps.offset == 0) {
+			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
+		}
+		else {
+			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1);
+			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
+		}
+		ps.offset += newlength;
 	}
 }
