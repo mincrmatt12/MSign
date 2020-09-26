@@ -162,7 +162,7 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 	}
 
 	for (int i = 0; i < 6; ++i) {
-		if (rtc_time > times[i]) break;
+		if (rtc_time > times[i]) continue;
 
 		// Scale is 8 pixels per minute
 		int16_t position = static_cast<int16_t>((times[i] - rtc_time) / (60'000 / scale_v));
@@ -189,8 +189,8 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 20_c, 20_c, 20_c);
 
 	for (int i = 0; i < 6; ++i) {
-		if (write_pos[i] < 0) break;
-		if (times[i] < rtc_time) break;
+		if (write_pos[i] < 0) continue;
+		if (times[i] < rtc_time) continue;
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
