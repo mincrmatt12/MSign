@@ -107,6 +107,22 @@ namespace ttc {
 					if (max_e < 6) {
 						ESP_LOGD(TAG, "Got an entry at %d, idx=%d", (int)(state.epoch/1000), max_e);
 						times[max_e++] = state.epoch;
+						if (max_e == 6) {
+							// Sort here too so that the sorted add will work
+							std::sort(times, times+6);
+						}
+					}
+					else {
+						auto lb = std::lower_bound(times, times+6, state.epoch);
+						if (lb < (times + 5)) {
+							ESP_LOGD(TAG, "Got sorted entry <5 at %d, idx=%d", (int)(state.epoch/1000), (int)std::distance(times, lb));
+							std::move(lb, times+5, lb+1);
+							*lb = state.epoch;
+						}
+						else if (lb != (times + 6)) {
+							ESP_LOGD(TAG, "Got sorted entry =6 at %d", (int)(state.epoch/1000));
+							*lb = state.epoch;
+						}
 					}
 				}
 				state.tag = false;
@@ -119,13 +135,14 @@ namespace ttc {
 
 		if (!parser.parse(std::move(cb))) {
 			ok = false;
-			ESP_LOGD(TAG, "Parse failed");
+			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
 
 		util::stop_download();
 		free(dirtag);
 
-		if (max_e)
+		// Ensure the array is sorted
+		if (max_e && max_e < 6)
 			std::sort(times, times+max_e);
 
 		return ok;

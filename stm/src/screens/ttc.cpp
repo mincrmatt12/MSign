@@ -155,7 +155,8 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 	int16_t min_pos = 0;
 	int64_t scale_v = 8;
 
-	for (int i = 0; i < 6; ++i) {
+	// Only consider the first 4 entries for auto-scaling
+	for (int i = 0; i < 4; ++i) {
 		if (times[i] < rtc_time) continue;
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
 		if (minutes > 15 && minutes < 32) scale_v = 4;
@@ -182,8 +183,6 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 
 		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
 	}
-
-	if (write_pos[0] < 0) return false;
 
 	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c, 255_c, 255_c);
 	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 20_c, 20_c, 20_c);
