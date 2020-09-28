@@ -6,7 +6,9 @@ The SD card structure is then located in the build folder
 
 import os
 import shutil
-from subprocess import Popen, PIPE, call
+from subprocess import Popen, call, PIPE
+from cryptography import x509
+import hashlib
 
 def create_directory():
     if not os.path.exists("build"):
@@ -23,13 +25,13 @@ def copy_all_certificates():
 
     for x in os.listdir("cert"):
         if os.path.splitext(x)[1] == ".der":
-            shutil.copy(os.path.join("cert", x), os.path.join("build", x))
-            res.append(os.path.join("build", x))
+            shutil.copy(os.path.join("cert", x), os.path.join("build", "ca", x))
+            res.append(os.path.join("build", "ca", x))
         else:
-            newname = os.path.join("build", os.path.splitext(x)[0] + ".der")
+            newname = os.path.join("build", "ca", os.path.splitext(x)[0] + ".der")
             ssl = Popen(['openssl','x509','-inform','PEM','-outform','DER','-out', newname], shell = False, stdin = PIPE)
             pipe = ssl.stdin
-            with open(os.path.join("cert", x)) as f:
+            with open(os.path.join("cert", x), "rb") as f:
                 pipe.write(f.read())
             pipe.close()
             ssl.wait()
@@ -38,14 +40,15 @@ def copy_all_certificates():
     return res
 
 
-def create_archive(files):
-    print(files)
-    cmd = ['ar', 'q', 'build/ca/cacert.ar'] + files
-    print(cmd)
-    call(cmd)
-
+def rename_certs(files):
     for i in files:
-        os.unlink(i)
+        with open(i, "rb") as f:
+            cert = x509.load_der_x509_certificate(f.read())
+
+        hsh = hashlib.sha256()
+        hsh.update(cert.subject.public_bytes())
+        print(i, hsh.hexdigest())
+        shutil.move(i, os.path.join("build", "ca", hsh.hexdigest()))
 
 
 def create_page_data():
@@ -56,5 +59,5 @@ def create_page_data():
 
 if __name__ == "__main__":
     create_directory()
-    create_archive(copy_all_certificates())
+    rename_certs(copy_all_certificates())
     create_page_data()

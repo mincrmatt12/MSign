@@ -307,14 +307,15 @@ namespace dwhttp {
 				}
 
 				void close() {
-					if (!is_connected()) return;
-					// Check error for logging
-					int err = br_ssl_engine_last_error(&ssl_cc->eng);
-					if (err) ESP_LOGW(TAG, "ssl closing with error %d", err);
-					// Send a close, but ignore it
-					br_sslio_close(ssl_ic);
-					// Close the underlying socket
-					HttpAdapter::close();
+					if (is_connected()) {
+						// Check error for logging
+						int err = br_ssl_engine_last_error(&ssl_cc->eng);
+						if (err) ESP_LOGW(TAG, "ssl closing with error %d", err);
+						// Send a close, but ignore it
+						br_sslio_close(ssl_ic);
+						// Close the underlying socket
+						HttpAdapter::close();
+					}
 					// Delete all the bearssl objects
 					delete ssl_cc;
 					delete ssl_xc;
@@ -473,8 +474,6 @@ namespace dwhttp {
 					ESP_LOGE(TAG, "Failed to connect to host");
 					return false;
 				}
-
-				ESP_LOGE(TAG, "memory avail = %d", esp_get_free_heap_size());
 				
 				// Send request
 				if (!(socket.write(method) && 
