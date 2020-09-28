@@ -2,6 +2,9 @@
 
 #include <string.h>
 #include <uart.h>
+#include <esp_system.h>
+
+const static char *TAG = "protocol";
 
 void protocol::ProtocolImpl::init_hw() {
 	memset(rx_buf, 0, sizeof rx_buf);
@@ -16,9 +19,13 @@ void protocol::ProtocolImpl::init_hw() {
 	uart_param_config(UART_NUM_0, &cfg);
 
 	// Setup the driver
-	uart_driver_install(UART_NUM_0, 2048, 0, 0, NULL, 0);
+	ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0));
 
-	xTaskCreate((TaskFunction_t)(&protocol::ProtocolImpl::rx_task), "rxST", configMINIMAL_STACK_SIZE, this, 10, &rx_thread);
+	BaseType_t res;
+	if ((res = xTaskCreate((TaskFunction_t)(&protocol::ProtocolImpl::rx_task), "rxST", configMINIMAL_STACK_SIZE, this, 10, &rx_thread)) != pdPASS) {
+		ESP_LOGE(TAG, "failed to create rxST %ld", res);
+		ESP_LOGE(TAG, "had %d bytes", esp_get_free_heap_size());
+	}
 }
 
 void protocol::ProtocolImpl::send_pkt(const void *pkt) {

@@ -41,7 +41,10 @@ extern "C" void app_main() {
 	}
 
 	// Start up the servicer
-	xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 3072, &serial::interface, 9, NULL);
+	if (xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 4096, &serial::interface, 9, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create srv");
+		return;
+	}
 
 	if (!wifi::init()) {
 		ESP_LOGE(TAG, "Not starting data services due to no WIFI.");
@@ -49,10 +52,13 @@ extern "C" void app_main() {
 	}
 
 	// Start the grabber
-	xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            5, NULL);
+	if (xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            5, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create grab");
+		return;
+	}
 
 	ESP_LOGI(TAG, "Created tasks");
-	ESP_LOGI(TAG, "Free heap available is %d", esp_get_free_heap_size());
+	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(pvMALLOC_DRAM));
 }
 
 /*
