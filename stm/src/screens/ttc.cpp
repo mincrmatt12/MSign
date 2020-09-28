@@ -151,7 +151,8 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 		t_pos = draw::scroll(t_pos, size);
 	}
 
-	int16_t write_pos[6] = {-1};
+	int16_t write_pos[6];
+	memset(write_pos, 0xff, sizeof write_pos);
 	int16_t min_pos = 0;
 	int64_t scale_v = 8;
 
