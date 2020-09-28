@@ -1,6 +1,6 @@
+#include <cstring>
 #include <stdlib.h>
 #include "config.h"
-#include "util.h"
 #include <esp_log.h>
 
 #include "sd.h"

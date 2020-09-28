@@ -1,6 +1,5 @@
 #include "serial.h"
 #include "esp_system.h"
-#include "util.h"
 #include "debug.h"
 #include "wifitime.h"
 

@@ -3,7 +3,6 @@
 #include "wifitime.h"
 #include "upd.h"
 #include "sd.h"
-#include "util.h"
 #include "config.h"
 #include "grabber/grab.h"
 

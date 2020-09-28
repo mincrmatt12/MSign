@@ -1,5 +1,4 @@
 #include "wifitime.h"
-#include "util.h"
 #include "common/slots.h"
 #include "config.h"
 #include "serial.h"
