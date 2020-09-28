@@ -8,7 +8,7 @@
 
 #define MAX_LOG_FILE_SIZE 64 * 1024 * 1024
 
-namespace util {
+namespace dwhttp {
 	struct Download {
 		uint32_t status_code;
 		char * buf;
