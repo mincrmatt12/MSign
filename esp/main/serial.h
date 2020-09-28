@@ -50,7 +50,7 @@ namespace serial {
 		void on_pkt() override;
 
 		// ESP-local data-store
-		bheap::Arena<16384> arena;
+		bheap::Arena<16*1024> arena;
 
 		// Request queue; very small (only 2 entries: a few size changes and at most nTasks updateRequests as they block; for you naysayers who think I should just
 		// use a mailbox with a semaphore, do remember that FreeRTOS semaphores are just disguised queues- ha! who's wasting memory now, fools!)

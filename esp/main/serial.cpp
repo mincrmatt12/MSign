@@ -290,13 +290,12 @@ retry:
 					finish_request();
 					return;
 				}
-
-				// Otherwise trigger an update
-				update_blocks();
-				ESP_LOGD(TAG, "Finishing request");
 				// Notify requesting task
 				xTaskNotify(active_request.uparams->notify, 0xee, eSetValueWithOverwrite);
+				ESP_LOGD(TAG, "Finishing request");
 				finish_request();
+				// Otherwise trigger an update
+				update_blocks();
 				return;
 			}
 		default:
