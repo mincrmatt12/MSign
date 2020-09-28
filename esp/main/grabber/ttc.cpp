@@ -1,7 +1,7 @@
 #include "ttc.h"
 #include "../json.h"
 #include "../serial.h"
-#include "../util.h"
+#include "../dwhttp.h"
 #include "../wifitime.h"
 #include "../config.h"
 
@@ -32,10 +32,10 @@ namespace ttc {
 
 		int16_t status_code;
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
-		auto cb = util::download_with_callback("webservices.nextbus.com", url, status_code);
+		auto cb = dwhttp::download_with_callback("webservices.nextbus.com", url, status_code);
 
 		if (status_code < 200 || status_code > 299) {
-			util::stop_download();
+			dwhttp::stop_download();
 			return false;
 		}
 
@@ -138,7 +138,7 @@ namespace ttc {
 			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
 
-		util::stop_download();
+		dwhttp::stop_download();
 		free(dirtag);
 
 		// Ensure the array is sorted
@@ -158,10 +158,10 @@ namespace ttc {
 		AlertParserState aps_ptr{info};
 
 		int16_t status_code;
-		auto cb = util::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss", status_code);
+		auto cb = dwhttp::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss", status_code);
 
 		if (status_code < 200 || status_code > 299) {
-			util::stop_download();
+			dwhttp::stop_download();
 			return;
 		}
 
@@ -181,7 +181,7 @@ namespace ttc {
 			}
 		}
 end_parseloop:
-		util::stop_download();
+		dwhttp::stop_download();
 	}
 
 	bool loop() {
