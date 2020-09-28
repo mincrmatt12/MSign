@@ -2,6 +2,7 @@
 
 // begin grabbers
 #include "ttc.h"
+#include "weather.h"
 // end grabbers
 
 #include "../wifitime.h"
@@ -10,7 +11,8 @@
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
-		&ttc::ttc_grabber
+		&ttc::ttc_grabber,
+		&weather::weather_grabber
 	};
 
 	constexpr size_t grabber_count = sizeof(grabbers) / sizeof(grabbers[0]);
@@ -18,7 +20,9 @@ namespace grabber {
 	TickType_t wants_to_run_at[grabber_count]{};
 
 	void run_grabber(size_t i, const Grabber * const grabber) {
-		wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
+		auto ticks = xTaskGetTickCount();
+		if (ticks < wants_to_run_at[i]) return;
+		wants_to_run_at[i] = ticks + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
 	}
 
 	void run(void*) {
