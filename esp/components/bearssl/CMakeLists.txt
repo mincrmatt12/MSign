@@ -1,9 +1,12 @@
 set(brssl_path ${CMAKE_CURRENT_LIST_DIR}/../../../vendor/BearSSL)
 
 idf_component_register(SRC_DIRS
+	${brssl_path}/src/aead
+	${brssl_path}/src/codec
 	${brssl_path}/src/ec
 	${brssl_path}/src/hash
 	${brssl_path}/src/int
+	${brssl_path}/src/kdf
 	${brssl_path}/src/mac
 	${brssl_path}/src/rand
 	${brssl_path}/src/rsa
