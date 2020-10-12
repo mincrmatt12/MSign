@@ -35,13 +35,12 @@
 /* see https://sourceforge.net/p/predef/wiki/OperatingSystems/ */
 #define LWIP_UNIX_LINUX
 
+#define LWIP_ERRNO_STDINCLUDE	0
+#include <errno.h>
+
 #define LWIP_TIMEVAL_PRIVATE 0
 #include <sys/time.h>
 #include <stdlib.h>
-
-#define LWIP_ERRNO_INCLUDE <errno.h>
-
-#define LWIP_ERRNO_STDINCLUDE	1
 
 #define LWIP_RAND() ((u32_t)rand())
 
