@@ -11,3 +11,6 @@
 [submodule "vendor/BearSSL"]
 	path = vendor/BearSSL
 	url = https://github.com/mincrmatt12/bearssl-dyncert
+[submodule "vendor/lwip"]
+	path = vendor/lwip
+	url = https://git.savannah.nongnu.org/git/lwip.git
