@@ -365,6 +365,8 @@ void serial::SerialInterface::update_blocks() {
 		return;
 	}
 
+	update_check_dirty = false;
+
 	is_updating = true;
 
 	bool request_occurred = false;
