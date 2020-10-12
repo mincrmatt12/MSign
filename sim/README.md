@@ -63,6 +63,7 @@ $ sudo ip link set br0 up
 $ echo 1 > /proc/sys/net/ipv4/ip_forward
 $ sudo iptables -t nat -A POSTROUTING -o <your wifi/ethernet port> -j MASQUERADE
 $ sudo iptables -A FORWARD -i br0 -j ACCEPT
+$ sudo iptables -A FORWARD -o br0 -d <your subnet, e.g 192.168.122.0/24> -m conntrack --ctstate RELATED,ESTABLISHED -j ACCEPT
 $ sudo ip route add <subnet for the bridge, e.g. 192.168.122.0/24> dev br0 proto kernel scope link src <ip of bridge, e.g. 192.168.122.1>
 
 # setup the tap
