@@ -56,8 +56,6 @@ void finished(void *) {
 		netif_set_up(&netif);
 		netif_set_default(&netif);
 
-		//netif_set_addr(&netif, &ipaddr, &netmask, &gw);
-
 		ip4_addr_t dns;
 		IP4_ADDR(&dns, 1, 1, 1, 1);
 		dns_setserver(0, &dns);
