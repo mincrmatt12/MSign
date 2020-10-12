@@ -1,12 +1,13 @@
 #include "dwhttp.h"
 #include "esp_log.h"
+#include <esp_system.h>
 #include <cstdlib>
 #include <string.h>
 #include <bearssl.h>
 
 #include <lwip/sockets.h>
 #include <lwip/sys.h>
-#include <netdb.h>
+#include <lwip/netdb.h>
 #include <vector>
 extern "C" {
 #include <http_client.h>
@@ -45,7 +46,7 @@ namespace dwhttp {
 
 					int stat;
 					if ((stat = lwip_getaddrinfo(host, port, &hints, &result))) {
-						ESP_LOGE(TAG, "gai fail: %s", lwip_strerr(stat));
+						ESP_LOGE(TAG, "gai fail: %s/%d", lwip_strerr(stat), stat);
 					}
 
 					for (rp = result; rp != nullptr; rp = rp->ai_next) {
