@@ -9,9 +9,21 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
 set(SIM_FREERTOS_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
+set(SIM_LWIP_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/lwip/src)
+set(SIM_BRSSL_PATH ${CMAKE_CURRENT_LIST_DIR}/../vendor/BearSSL)
+set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
+
+find_program(NMFU_EXECUTABLE nmfu REQUIRED)
+message(STATUS "Found NMFU: " ${NMFU_EXECUTABLE})
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_compile_options (-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+   add_compile_options (-fcolor-diagnostics)
+endif ()
 
 # This CMake file is responsible for a) creating the source directories from:
 # - the original directory
@@ -32,7 +44,8 @@ file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.[ch]*)
 file(GLOB_RECURSE STM_SRCS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
 
 file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.[ch]*)
-file(GLOB_RECURSE ESP_SRCS ${CMAKE_CURRENT_LIST_DIR}/../esp/src/*.[ch]*)
+file(GLOB_RECURSE ESP_SRCS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/*.[ch]*)
+file(GLOB         ESP_NMFUS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/parser/*.nmfu)
 
 # now, create a new list, called TOTAL_STM_SRCS, from the original list
 set(TOTAL_STM_SRCS ${STM_SRCS})
@@ -46,7 +59,7 @@ list(TRANSFORM TOTAL_STM_SRCS PREPEND ${CMAKE_CURRENT_BINARY_DIR}/)
 
 # do the same for the ESP
 set(TOTAL_ESP_SRCS ${ESP_SRCS})
-list(TRANSFORM TOTAL_ESP_SRCS REPLACE "(.*)/.../src" "espsrc")
+list(TRANSFORM TOTAL_ESP_SRCS REPLACE "(.*)/.../main" "espsrc")
 list(TRANSFORM ESP_OVERRIDE_SRCS REPLACE "(.*)/.../src/esp" "espsrc")
 
 # concatenate the lists
@@ -70,7 +83,7 @@ add_custom_command(TARGET copy_esp_src PRE_BUILD
 	COMMENT "Copying esp sources" 
 	BYPRODUCTS ${TOTAL_ESP_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
-	${CMAKE_CURRENT_LIST_DIR}/../esp/src ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
+	${CMAKE_CURRENT_LIST_DIR}/../esp/main ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
 )
 
 # mark the files as generated
@@ -81,6 +94,18 @@ endforeach()
 foreach(I IN LISTS TOTAL_ESP_SRCS)
 	set_source_files_properties(${I} PROPERTIES GENERATED TRUE)
 endforeach()
+
+# e) setup nmfu
+foreach(nmfu_file ${ESP_NMFUS})
+	get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
+	list(APPEND TOTAL_ESP_SRCS ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c)
+	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.h
+		COMMAND ${NMFU_EXECUTABLE} -O3 ${nmfu_file} -finclude-user-ptr
+		DEPENDS ${nmfu_file}
+		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+	)
+	list(APPEND ESP_NMFU_SRCS ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.h)
+endforeach(nmfu_file)
 
 # ----- section two: compile stm -----
 
@@ -118,108 +143,148 @@ target_link_libraries(stmsim stm_freertos)
 # ----- section three: setup ESP build -----
 # A lot of this is stolen from https://github.com/esp8266/Arduino/blob/master/tests/host/Makefile
 
-# a) find the ESPSim tree
-set(ARDUINO_ESP_PATH "/home/matthew/ESPSimArduino" CACHE PATH "Path to a recent clone of https://github.com/esp8266/Arduino")
-if (NOT IS_DIRECTORY ${ARDUINO_ESP_PATH})
-	message(FATAL_ERROR Could not find ESP sources, please set them with -DARDUINO_ESP_PATH)
-endif()
+# a) add freertos
 
-# a.2) set the list of libraries
-set(ARDUINO_ESP_LIB_PATH "${CMAKE_CURRENT_LIST_DIR}/../esp/.pio/libdeps/msign_board" CACHE PATH "directory where pio libs are stored")
-set(ARDUINO_ESP_LIBS "${ARDUINO_ESP_LIB_PATH}/Time" "${ARDUINO_ESP_LIB_PATH}/Timezone_ID76")
-list(JOIN ARDUINO_ESP_LIBS ":" ARDUINO_ESP_LIBS_CMD)
+add_library(esp_freertos STATIC
+	${SIM_FREERTOS_DIR}/event_groups.c
+	${SIM_FREERTOS_DIR}/list.c
+	${SIM_FREERTOS_DIR}/queue.c
+	${SIM_FREERTOS_DIR}/stream_buffer.c
+	${SIM_FREERTOS_DIR}/tasks.c
 
-# b) create external generation for the fullcore and bearssl static libs
-# note: we check for makefiles so we can do proper parallelism
-if ("${CMAKE_GENERATOR}" STREQUAL "Unix Makefiles")
-	set(ARDUINO_MAKE_COMMAND "$(MAKE)")
-else()
-	set(ARDUINO_MAKE_COMMAND "make")
-endif()
-
-add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
-	COMMAND ${CMAKE_COMMAND} -E env
-		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		${ARDUINO_MAKE_COMMAND} bin/fullcore.a
-	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
-	COMMENT "Building ESP core library..."
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/port.c
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c
+	${SIM_FREERTOS_DIR}/portable/MemMang/heap_3.c 
 )
 
-add_custom_command(OUTPUT "${ARDUINO_ESP_PATH}/tools/sdk/ssl/bearssl/build/libbearssl.a"
-	COMMAND ${CMAKE_COMMAND} -E env
-		ULIBDIRS=${ARDUINO_ESP_LIBS_CMD}
-		${ARDUINO_MAKE_COMMAND} ssl
-	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
-	COMMENT "Building BEARSSL library..."
+target_include_directories(esp_freertos PUBLIC
+	${SIM_FREERTOS_DIR}/include
+	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix
+
+	${CMAKE_CURRENT_SOURCE_DIR}/cfg/esp
 )
 
-# b.2) setup build targets
-add_custom_target(esp_fullcore_lib_build DEPENDS "${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a")
-add_custom_target(esp_bearssl_lib_build DEPENDS "${ARDUINO_ESP_PATH}/tools/sdk/ssl/bearssl/build/libbearssl.a")
+target_link_libraries(esp_freertos Threads::Threads)
 
-# b.3) create 2 imported libraries
-add_library(esp_bearssl STATIC IMPORTED GLOBAL)
-set_target_properties(esp_bearssl
-	PROPERTIES
-	IMPORTED_LOCATION "${ARDUINO_ESP_PATH}/tools/sdk/ssl/bearssl/build/libbearssl.a"
+# b) add lwip
+
+add_library(esp_lwip STATIC
+# COREFILES
+	${SIM_LWIP_DIR}/core/init.c
+	${SIM_LWIP_DIR}/core/def.c
+	${SIM_LWIP_DIR}/core/dns.c
+	${SIM_LWIP_DIR}/core/inet_chksum.c
+	${SIM_LWIP_DIR}/core/ip.c
+	${SIM_LWIP_DIR}/core/mem.c
+	${SIM_LWIP_DIR}/core/memp.c
+	${SIM_LWIP_DIR}/core/netif.c
+	${SIM_LWIP_DIR}/core/pbuf.c
+	${SIM_LWIP_DIR}/core/raw.c
+	${SIM_LWIP_DIR}/core/stats.c
+	${SIM_LWIP_DIR}/core/sys.c
+	${SIM_LWIP_DIR}/core/tcp.c
+	${SIM_LWIP_DIR}/core/tcp_in.c
+	${SIM_LWIP_DIR}/core/tcp_out.c
+	${SIM_LWIP_DIR}/core/timeouts.c
+	${SIM_LWIP_DIR}/core/udp.c
+# CORE4FILES
+	${SIM_LWIP_DIR}/core/ipv4/autoip.c
+	${SIM_LWIP_DIR}/core/ipv4/dhcp.c
+	${SIM_LWIP_DIR}/core/ipv4/etharp.c
+	${SIM_LWIP_DIR}/core/ipv4/icmp.c
+	${SIM_LWIP_DIR}/core/ipv4/igmp.c
+	${SIM_LWIP_DIR}/core/ipv4/ip4_frag.c
+	${SIM_LWIP_DIR}/core/ipv4/ip4.c
+	${SIM_LWIP_DIR}/core/ipv4/ip4_addr.c
+
+    ${SIM_LWIP_DIR}/core/ipv6/dhcp6.c
+	${SIM_LWIP_DIR}/core/ipv6/ethip6.c
+	${SIM_LWIP_DIR}/core/ipv6/icmp6.c
+	${SIM_LWIP_DIR}/core/ipv6/inet6.c
+	${SIM_LWIP_DIR}/core/ipv6/ip6.c
+	${SIM_LWIP_DIR}/core/ipv6/ip6_addr.c
+	${SIM_LWIP_DIR}/core/ipv6/ip6_frag.c
+	${SIM_LWIP_DIR}/core/ipv6/mld6.c
+	${SIM_LWIP_DIR}/core/ipv6/nd6.c
+#APIFILES
+	${SIM_LWIP_DIR}/api/api_lib.c
+	${SIM_LWIP_DIR}/api/api_msg.c
+	${SIM_LWIP_DIR}/api/err.c
+	${SIM_LWIP_DIR}/api/netbuf.c
+	${SIM_LWIP_DIR}/api/netdb.c
+	${SIM_LWIP_DIR}/api/netifapi.c
+	${SIM_LWIP_DIR}/api/sockets.c
+	${SIM_LWIP_DIR}/api/tcpip.c
+#NETIF
+	${SIM_LWIP_DIR}/netif/ethernet.c
+#SNTP
+	${SIM_LWIP_DIR}/apps/sntp/sntp.c
+#ESPLWIP
+	${CMAKE_CURRENT_SOURCE_DIR}/src/esplwip/sys_arch.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/esplwip/netif/tapif.c
 )
-add_dependencies(esp_bearssl esp_bearssl_lib_build)
+	
+target_include_directories(esp_lwip PUBLIC
+	${SIM_LWIP_DIR}/include
+	#${SIM_LWIP_DIR}/include/posix
+	${CMAKE_CURRENT_SOURCE_DIR}/src/esplwip/include
 
-# b.4) find all of the library include directories
-file(GLOB ESP_CORE_LIBS_SRCS_INCLUDES "${ARDUINO_ESP_PATH}/libraries/*/src")
-file(GLOB ESP_CORE_LIBS_INCLUDES "${ARDUINO_ESP_PATH}/libraries/*")
-
-set(ARDUINO_ESP_LIB_INCLUDES ${ARDUINO_ESP_LIBS})
-foreach(I IN LISTS ARDUINO_ESP_LIBS)
-	if (IS_DIRECTORY ${I}/src)
-		list(APPEND ARDUINO_ESP_LIB_INCLUDES ${I}/src)
-	endif()
-endforeach()
-
-# b.5) create a linkable target for the esp8266 core libraries, with the right include dirs
-add_library(esp_fullcore STATIC IMPORTED GLOBAL)
-add_dependencies(esp_fullcore esp_fullcore_lib_build)
-set_target_properties(esp_fullcore
-	PROPERTIES 
-	IMPORTED_LINK_INTERFACE_LIBRARIES
-		esp_bearssl
-	IMPORTED_LOCATION 
-		"${ARDUINO_ESP_PATH}/tests/host/bin/fullcore.a"
-)
-target_include_directories(esp_fullcore INTERFACE
-		"${ARDUINO_ESP_PATH}/tests/host"
-		"${ARDUINO_ESP_PATH}/tests/host/common"
-		"${ARDUINO_ESP_PATH}/cores/esp8266"
-		${ARDUINO_ESP_LIB_INCLUDES}
-		${ESP_CORE_LIBS_SRCS_INCLUDES}
-		${ESP_CORE_LIBS_INCLUDES}
-		"${ARDUINO_ESP_PATH}/tools/sdk/include"
-		"${ARDUINO_ESP_PATH}/tools/sdk/lwip2/include"
+	${CMAKE_CURRENT_SOURCE_DIR}/cfg/esp
 )
 
-target_compile_options(esp_fullcore INTERFACE
-	"SHELL:-include ${ARDUINO_ESP_PATH}/tests/host/common/mock.h"
-	"SHELL:-include ${ARDUINO_ESP_PATH}/tests/host/common/c_types.h"
+target_link_libraries(esp_lwip Threads::Threads esp_freertos)
 
-	-DLWIP_IPV6=0
-	-DHTTPCLIENT_1_1_COMPATIBLE=0
-	-DHOST_MOCK=1
-	-DNONOSDK221=1
-	-DDEBUG_ESP_PORT=Serial1
-	-Wimplicit-fallthrough=2
-	-fno-rtti
+# c) add bearssl
+
+file(GLOB BEARSSL_SRCS
+	${SIM_BRSSL_PATH}/src/aead/*.c
+	${SIM_BRSSL_PATH}/src/codec/*.c
+	${SIM_BRSSL_PATH}/src/ec/*.c
+	${SIM_BRSSL_PATH}/src/hash/*.c
+	${SIM_BRSSL_PATH}/src/int/*.c
+	${SIM_BRSSL_PATH}/src/kdf/*.c
+	${SIM_BRSSL_PATH}/src/mac/*.c
+	${SIM_BRSSL_PATH}/src/rand/*.c
+	${SIM_BRSSL_PATH}/src/rsa/*.c
+	${SIM_BRSSL_PATH}/src/ssl/*.c
+	${SIM_BRSSL_PATH}/src/symcipher/*.c
+	${SIM_BRSSL_PATH}/src/x509/*.c
+	${SIM_BRSSL_PATH}/src/*.c
 )
 
-# c) add target for ESP build
+add_library(esp_bearssl STATIC ${BEARSSL_SRCS})
+
+target_include_directories(esp_bearssl PUBLIC
+	${SIM_BRSSL_PATH}/inc
+)
+
+target_include_directories(esp_bearssl PRIVATE
+	${SIM_BRSSL_PATH}/src
+)
+
+target_compile_definitions(esp_bearssl PUBLIC
+	-DBR_USE_ALT_RAND -DBR_USE_UNIX_TIME
+)
+
+# d) add fatfs
+add_library(esp_fatfs STATIC
+	${SIM_FATFS_PATH}/ff.c
+	${SIM_FATFS_PATH}/ffsystem.c
+	${SIM_FATFS_PATH}/ffunicode.c
+)
+
+target_include_directories(esp_fatfs PUBLIC
+	${SIM_FATFS_PATH}
+)
+
+target_link_libraries(esp_fatfs esp_freertos)
+
+# e) add target for ESP build
+add_custom_target(esp_parsers DEPENDS ${ESP_NMFU_SRCS})
+
 add_executable(espsim ${TOTAL_ESP_SRCS})
-target_compile_options(espsim PRIVATE -DSIM)
-target_link_libraries(espsim esp_fullcore)
-target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc)
-add_dependencies(espsim copy_esp_src)
+target_compile_options(espsim PRIVATE -DSIM -Wno-pmf-conversions)
+target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
+add_dependencies(espsim copy_esp_src esp_parsers)
 
-# d) add target to run clean
-
-add_custom_target(clean_arduino
-	COMMAND ${ARDUINO_MAKE_COMMAND} clean
-	WORKING_DIRECTORY "${ARDUINO_ESP_PATH}/tests/host"
-)
+target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs)
