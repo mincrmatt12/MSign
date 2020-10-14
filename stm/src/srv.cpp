@@ -143,7 +143,7 @@ bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
 }
 
 
-const bheap::Block& srv::Servicer::slot(uint16_t slotid) {
+const bheap::Block& srv::Servicer::_slot(uint16_t slotid) {
 	const bheap::Block* target;
 	if (bcache.contains(slotid)) {
 		target = reinterpret_cast<const bheap::Block*>(&arena.region[bcache.lookup(slotid) * 4]);

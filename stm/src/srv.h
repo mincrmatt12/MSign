@@ -43,11 +43,11 @@ namespace srv {
 			(set_temperature(args, temperature), ...);
 		}
 
+		const bheap::TypedBlock<uint8_t *>& slot(uint16_t slotid) {return slot<uint8_t *>(slotid);}
+		inline const bheap::TypedBlock<uint8_t *>& operator[](uint16_t slotid) {return slot<uint8_t *>(slotid);}
 		// Data access methods
-		const bheap::Block& slot(uint16_t slotid);
-		inline const bheap::Block& operator[](uint16_t slotid) {return slot(slotid);}
 		template<typename T>
-		inline const bheap::TypedBlock<T>& slot(uint16_t slotid) {return slot(slotid).as<T>();}
+		inline const bheap::TypedBlock<T>& slot(uint16_t slotid) {return _slot(slotid).as<T>();}
 
 		// Helpers
 		bool slot_dirty(uint16_t slotid, bool clear=true);
@@ -76,6 +76,8 @@ namespace srv {
 		slots::protocol::TimeStatus request_time(uint64_t& reponse, uint64_t &time_when_sent);
 
 	private:
+
+		const bheap::Block& _slot(uint16_t slotid);
 		bheap::Arena<14284> arena;
 		lru::Cache<8, 4> bcache;
 
