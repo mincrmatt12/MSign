@@ -21,7 +21,7 @@ namespace tasks {
 			draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, 4095, 4095, 4095);
 			char buf[5] = {0};
 			strncpy(buf, bootcmd_get_bl_revision(), 4);
-			draw::text(fb, buf, font::lcdpixel_6::info, draw::text(fb, "BLOAD ", font::lcdpixel_6::info, 0, 14, 4095, 127_c, 0), 14, 4095, 4095, 4095);
+			draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", 14, 4095, 127_c, buf, 4095, 4095, 4095);
 			switch (stage) {
 				case 1:
 					draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 4095, 0, 0);

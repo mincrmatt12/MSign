@@ -244,12 +244,13 @@ void screen::WeatherScreen::draw_currentstats() {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 40_c, 40_c, 255_c);
 	}
 
-	snprintf(disp_buf, 16, "\xfe %.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 19, 30, 127_c, 127_c, 127_c);
+	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp);
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 127_c, 127_c, 240_c, disp_buf, 127_c, 127_c, 127_c);
 
 	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::dejavusans_10::info, 69 - text_size, 30, 127_c, 127_c, 127_c);
+	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 69-text_size, 30, "\xfd ", 255_c, 127_c, 10_c, disp_buf, 127_c, 127_c, 127_c);
 
 	snprintf(disp_buf, 16, "%.01f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp);
 	text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
