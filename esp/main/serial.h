@@ -117,6 +117,9 @@ namespace serial {
 		// Scan through all blocks and update/move dirty/flush blocks.
 		void update_blocks();
 
+		// Send a single update/move packet from a region of a block
+		uint8_t /* status code (or 0xff for timeout) */ update_block_segment(slots::protocol::Command type_of_update, const bheap::Block& block, uint16_t offset, uint16_t length, bool& request_occurred);
+
 		enum Event {
 			EventPacket,
 			EventQueue,
