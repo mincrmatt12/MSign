@@ -430,6 +430,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 			int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
 			x -= sz - 1;
 			y += 3;
+			if (y < 5) y = 5;
 		}
 		else {
 			y += 6;
@@ -449,11 +450,11 @@ void screen::WeatherScreen::draw_graphaxes() {
 	// 	they don't intersect
 	// 	they have at least one pixel gap
 	
-	while (previous_height >= 5.f) {
+	while (previous_height >= diff) {
 		previous_val += 1.f;
 		previous_height -= diff;
 		int16_t target = std::round(previous_height);
-		if (previous - target > 5) {
+		if ((previous + 3) - std::max(5, target + 3) > 5) {
 			previous = target;
 			tickmark(78, previous, previous_val);
 		}
@@ -488,8 +489,8 @@ void screen::WeatherScreen::draw_graph(uint8_t hour) {
 
 	float diff = 23.0 / (max_ - min_);
 
-	int16_t y0 = (tempgraph_data[hour] - min_) * diff;
-	int16_t y1 = (tempgraph_data[hour + 1] - min_) * diff;
+	int16_t y0 = std::round((tempgraph_data[hour] - min_) * diff);
+	int16_t y1 = (hour == 23 ? y0 : std::round((tempgraph_data[hour + 1] - min_) * diff));
 	y0 = 23 - y0;
 	y1 = 23 - y1;
 	if (hour == 23) y1 = y0;
@@ -513,6 +514,9 @@ void screen::WeatherScreen::draw_graph(uint8_t hour) {
 }
 
 void screen::WeatherScreen::draw() {
+	// Lock the contents
+	srv::ServicerLockGuard g(servicer);
+
 	if (servicer.slot(slots::WEATHER_STATUS) && servicer.slot(slots::WEATHER_ICON)) {
 		draw_currentstats();
 		draw_status();
