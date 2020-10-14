@@ -49,6 +49,23 @@ namespace draw {
 	inline uint16_t cvt(uint8_t in) {
 		return gamma_cvt[in];
 	}
+
+	namespace detail {
+		template<typename TextPtr>
+		inline uint16_t multi_text_impl(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t y, uint16_t x, const TextPtr *text, uint16_t r, uint16_t g, uint16_t b) {
+			return ::draw::text(fb, text, font, x, y, r, g, b);
+		}
+		
+		template<typename TextPtr, typename ...Args>
+		inline uint16_t multi_text_impl(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t y, uint16_t x, const TextPtr *text, uint16_t r, uint16_t g, uint16_t b, Args&& ...next_strings) {
+			return multi_text_impl(fb, font, y, multi_text_impl(fb, font, y, x, text, r, g, b), std::forward<Args>(next_strings)...);
+		}
+	}
+
+	template<typename ...Args>
+	inline uint16_t multi_text(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t x, uint16_t y, Args&& ...text_then_colors) {
+		return detail::multi_text_impl(fb, font, y, x, std::forward<Args>(text_then_colors)...);
+	}
 	
 	// Easing/scrolling helper functions.
 	//
