@@ -200,7 +200,10 @@ def _create_member_list(struct_info):
         if declarations.is_integral(i.decl_type):
             try:
                 enumerator = struct_info.enumerations()[0]
-                bitfield = enumerator.get_name2value_dict()
+                if enumerator.byte_size != i.decl_type.byte_size:
+                    bitfield = None
+                else:
+                    bitfield = enumerator.get_name2value_dict()
             except RuntimeError:
                 bitfield = None
 
@@ -229,9 +232,9 @@ def _convert_opaque_to_token(x):
             "FLOAT": "f",
             "DOUBLE": "d"
         }[x.upper()]
-    elif isinstance(x, declarations.declarated_t):
+    elif isinstance(x, declarations.declarated_t) and not declarations.is_enum(x):
         return _convert_opaque_to_token(declarations.remove_alias(x))
-    elif declarations.is_integral(x):
+    elif declarations.is_integral(x) or declarations.is_enum(x):
         basetoken = {
             1: "b",
             2: "h",
@@ -239,11 +242,14 @@ def _convert_opaque_to_token(x):
             8: "q"
         }[int(x.byte_size)]
 
-        if "unsigned" in x.CPPNAME:
-            basetoken = basetoken.upper()
-        
-        if "bool" in x.CPPNAME:
-            basetoken = '?'
+        try:
+            if "unsigned" in x.CPPNAME:
+                basetoken = basetoken.upper()
+            
+            if "bool" in x.CPPNAME:
+                basetoken = '?'
+        except AttributeError:
+            pass
         
         return basetoken
     elif declarations.is_floating_point(x):
