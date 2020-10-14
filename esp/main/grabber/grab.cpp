@@ -1,6 +1,7 @@
 #include "grab.h"
 
 // begin grabbers
+#include "sccfg.h"
 #include "ttc.h"
 #include "weather.h"
 // end grabbers
@@ -12,7 +13,8 @@
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
 		&ttc::ttc_grabber,
-		&weather::weather_grabber
+		&weather::weather_grabber,
+		&sccfg::sccfg_grabber
 	};
 
 	constexpr size_t grabber_count = sizeof(grabbers) / sizeof(grabbers[0]);
