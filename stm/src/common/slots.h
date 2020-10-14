@@ -127,7 +127,15 @@ namespace slots {
 
 	struct ScCfgTime {
 		uint32_t millis_enabled;
-		uint8_t idx_order;
+		enum ScreenId : uint8_t {
+			TTC = 0,
+			WEATHER = 1,
+			MODEL = 2,
+			PERIODS = 3,
+			PARCELS = 4,
+			JENKINS = 5,
+			PRINTER = 6
+		} screen_id;
 	};
 
 	struct Vec3 {
@@ -139,6 +147,7 @@ namespace slots {
 	struct Tri { // effective declaration for ESP only; actual triangle struct is used and declared in threed.h
 		Vec3 p1, p2, p3;
 		uint8_t r, g, b;
+		uint8_t pad; // perhaps something relating to optimizations or some bs at some point, but this needs to align properly
 	};
 
 #pragma pack (pop)

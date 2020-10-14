@@ -4,6 +4,7 @@
 #include "../screens/base.h"
 
 #include "../screens/ttc.h"
+#include "../screens/weather.h"
 
 namespace tasks {
 	struct DispMan {
@@ -11,7 +12,7 @@ namespace tasks {
 
 	private:
 		screen::ScreenSwapper<
-			screen::TTCScreen
+			screen::WeatherScreen
 		> swapper;
 	};
 }
