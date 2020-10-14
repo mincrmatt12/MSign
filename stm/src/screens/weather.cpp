@@ -412,6 +412,10 @@ void screen::WeatherScreen::draw_graphaxes() {
 		min_ = std::min(min_, tempgraph_data[i]);
 		max_ = std::max(max_, tempgraph_data[i]);
 	}
+
+	// The actual min/max is rounded down/up +/- 1
+	min_ = std::floor(min_) - 1.f;
+	max_ = std::floor(max_) + 1.f;
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
 		matrix.get_inactive_buffer().r(x, y) = 34_c;
@@ -424,7 +428,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 		if (x == 78) {
 			int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
 			x -= sz - 1;
-			y += 1;
+			y += 3;
 		}
 		else {
 			y += 6;
@@ -433,12 +437,26 @@ void screen::WeatherScreen::draw_graphaxes() {
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 60_c, 60_c, 60_c);
 	};
 
-	float diff = max_ - min_;
-
 	tickmark(78, 23, min_);
-	tickmark(78, 17, min_ + diff*0.2);
-	tickmark(78, 11, min_ + diff*0.5);
-	tickmark(78, 5,  min_ + diff*0.75);
+
+	int16_t previous = 23;
+	float previous_val = min_, previous_height = 23.f;
+	float diff = 23.0 / (max_ - min_);
+	
+	// Continue adding tickmarks such that:
+	// 	they all have an integer value
+	// 	they don't intersect
+	// 	they have at least one pixel gap
+	
+	while (previous_height >= 5.f) {
+		previous_val += 1.f;
+		previous_height -= diff;
+		int16_t target = std::round(previous_height);
+		if (previous - target > 5) {
+			previous = target;
+			tickmark(78, previous, previous_val);
+		}
+	}
 
 	struct tm timedat;
 	time_t now = rtc_time / 1000;
@@ -459,6 +477,10 @@ void screen::WeatherScreen::draw_graph(uint8_t hour) {
 		min_ = std::min(min_, tempgraph_data[i]);
 		max_ = std::max(max_, tempgraph_data[i]);
 	}
+
+	// The actual min/max is rounded down/up +/- 1
+	min_ = std::floor(min_) - 1.f;
+	max_ = std::floor(max_) + 1.f;
 
 	int16_t begin = hour * 2 + 80;
 	int16_t end   = begin + 2;
