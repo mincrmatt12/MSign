@@ -65,7 +65,7 @@ void bootcmd_service_update() {
 }
 
 const char * bootcmd_get_bl_revision() {
-	return "";
+	return "fake";
 }
 #endif
 
