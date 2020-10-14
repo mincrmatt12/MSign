@@ -203,8 +203,15 @@ void serial::SerialInterface::process_packet() {
 								}
 							}
 						}
-						update_blocks();
 					}
+					if (reqtemp == bheap::Block::TemperatureWarm) {
+						// If we set it to warm, mark all blocks dirty
+						for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
+							if (it->location == bheap::Block::LocationCanonical && it->datasize)
+								it->flags |= bheap::Block::FlagDirty;
+						}
+					}
+					update_blocks();
 				}
 
 				// Send a response ack
