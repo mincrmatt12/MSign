@@ -2,6 +2,7 @@
 #define MSN_SCREEN_BASE_H
 
 #include <utility>
+#include <tuple>
 #include <stdint.h>
 #include <stddef.h>
 
@@ -20,6 +21,30 @@ namespace screen {
 
 		// Does this screen require clearing?
 		constexpr static inline bool require_clearing() { return true; }
+	};
+
+	// A screen which layers multiple other screens
+	template<typename ...Layered>
+	struct LayeredScreen : Screen {
+		static void prepare(bool which_run) {
+			(Layered::prepare(which_run), ...);
+		}
+
+		void draw() {
+			(std::get<Layered>(screens).draw(), ...);
+		}
+
+		constexpr static inline bool require_clearing() {
+			return require_clearing_impl<Layered...>();
+		}
+
+	private:
+		std::tuple<Layered...> screens;
+
+		template<typename Bottom, typename ...Args>
+		constexpr static inline bool require_clearing_impl() {
+			return Bottom::require_clearing();
+		}
 	};
 
 	// Screen IDs are order in template parameters.
@@ -44,17 +69,17 @@ namespace screen {
 
 		template<size_t ...Idx>
 		inline bool _require_clearing(size_t idx, std::index_sequence<Idx...>) {
-			return ((idx == Idx ? Screens::require_clearing() : true) && ...);
+			return ((idx == Idx ? Screens::require_clearing() : true) || ...);
 		}
 
 		template<size_t ...Idx>
 		inline void _notify(size_t idx, bool param, std::index_sequence<Idx...>) {
-			((idx == Idx && (Screens::prepare(param), true)) && ...);
+			((idx == Idx && (Screens::prepare(param), true)) || ...);
 		}
 
 		template<size_t ...Idx>
 		inline void _draw(size_t idx, std::index_sequence<Idx...>) {
-			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) && ...);
+			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) || ...);
 		}
 
 	public:
