@@ -7,6 +7,7 @@
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
+extern uint64_t rtc_time;
 
 #ifndef MSIGN_GIT_REV
 #define MSIGN_GIT_REV "-unk"
@@ -102,10 +103,39 @@ namespace tasks {
 			swapper.draw();
 
 			// Check for screen swaps ... todo ...
+			if (servicer.slot(slots::SCCFG_INFO) && servicer.slot(slots::SCCFG_TIMING)) {
+				srv::ServicerLockGuard g(servicer);
+				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
+					last_swapped_at = rtc_time;
+
+				// Check if the time elapsed is more than the current selection's millis_enabled
+				if ((rtc_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled) {
+					screen_list_idx = next_screen_idx();
+					swapper.notify_before_transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id, true);
+					swapper.transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id);
+					swapper.notify_before_transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id, false);
+					last_swapped_at = rtc_time;
+				}
+			}
 
 			// Sync on swap buffer
 			matrix.swap_buffers();
 		}
 	}
-
+	
+	int DispMan::next_screen_idx() {
+		int retval = screen_list_idx;
+		do {
+			++retval;
+			retval %= (servicer.slot(slots::SCCFG_TIMING).datasize / sizeof(slots::ScCfgTime));
+			if (retval == screen_list_idx) return retval;
+		} while (
+			!(servicer.slot<slots::ScCfgInfo>(slots::SCCFG_INFO)->enabled_mask & (1 << 
+			  servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[retval].screen_id)
+			)
+		);
+		return retval;
+	}
 }
+
+
