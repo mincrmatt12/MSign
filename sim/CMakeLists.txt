@@ -12,6 +12,7 @@ set(SIM_FREERTOS_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 set(SIM_LWIP_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/lwip/src)
 set(SIM_BRSSL_PATH ${CMAKE_CURRENT_LIST_DIR}/../vendor/BearSSL)
 set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs)
+set(SIM_B64_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/libb64)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -279,6 +280,15 @@ target_include_directories(esp_fatfs PUBLIC
 
 target_link_libraries(esp_fatfs esp_freertos)
 
+# e) add b64
+add_library(esp_b64 STATIC
+	${SIM_B64_PATH}/cencode.c
+)
+
+target_include_directories(esp_b64 PUBLIC
+	${SIM_B64_PATH}/include
+)
+
 # e) add target for ESP build
 add_custom_target(esp_parsers DEPENDS ${ESP_NMFU_SRCS})
 
@@ -287,4 +297,4 @@ target_compile_options(espsim PRIVATE -DSIM -Wno-pmf-conversions)
 target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
 add_dependencies(espsim copy_esp_src esp_parsers)
 
-target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs)
+target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64)
