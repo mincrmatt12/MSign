@@ -350,8 +350,9 @@ void serial::SerialInterface::start_request() {
 retry:
 					ESP_LOGD(TAG, "Expanding to fit");
 					if (!arena.add_block(active_request.sparams.slotid, bheap::Block::LocationCanonical, active_request.sparams.newsize - current_size)) {
-						ESP_LOGW(TAG, "Running out of space while expanding slot, starting evict loop");
-						evict_subloop(4 + active_request.sparams.newsize - current_size); // This will spin forever if it can't free
+						ESP_LOGW(TAG, "Running out of space while expanding slot, starting evict loop (%d < %d)", active_request.sparams.newsize, current_size);
+						// Some extra buffer room for alignment
+						evict_subloop(16 + active_request.sparams.newsize - current_size); // This will spin forever if it can't free
 						goto retry; // this needs a timeout though just in case
 					}
 					finish_request();
@@ -620,7 +621,7 @@ tail_call_recurse:
 	}
 
 	// If we need to begin processing a request, start processing one
-	if (request_occurred && active_request.type != Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
+	if (request_occurred && active_request.type == Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
 		start_request();
 
 	is_updating = false;
@@ -671,6 +672,9 @@ void serial::SerialInterface::evict_subloop(uint16_t amt) {
 	if (!is_updating && std::any_of(arena.begin(), arena.end(), [](auto &b){return b && b.flags & bheap::Block::FlagFlush;})) {
 		update_blocks();
 	}
+
+	// Defrag to try and get some more space
+	arena.defrag();
 
 	// Check if we have enough space again after potentially flushing out blocks.
 	if (arena.free_space(arena.FreeSpaceAllocatable) >= amt) {
@@ -811,7 +815,7 @@ break_sendloop:
 	is_evicting = false;
 
 	// If we need to begin processing a request, start processing one
-	if (request_occurred && active_request.type != Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
+	if (request_occurred && active_request.type == Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
 		start_request();
 
 	return;
