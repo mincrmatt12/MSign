@@ -11,7 +11,6 @@ extern srv::Servicer servicer;
 
 namespace threed {
 	constexpr DefaultMeshHolder default_mesh{};
-	size_t tri_count = 0;
 
 	float Vec3::length() const {
 		return sqrtf(
@@ -105,20 +104,14 @@ namespace threed {
 	}
 
 	void Renderer::draw() {
+		int tri_count;
 		{
 			srv::ServicerLockGuard g(servicer);
 			update_matricies();
 			current_tri = 0;
-
-			// TODO: get rid of tri_count
-			if (servicer.slot_dirty(slots::MODEL_INFO)) {
-				if (const auto& x = servicer.slot<uint16_t>(slots::MODEL_INFO); x) {
-					tri_count = *x;
-				}
-			}
+			if (!servicer.slot(slots::MODEL_INFO)) tri_count = default_mesh.tri_count;
+			else tri_count = *servicer.slot<uint16_t>(slots::MODEL_INFO);
 		}
-
-		if (!tri_count) tri_count = default_mesh.tri_count;
 
 		while (current_tri < tri_count) {
 			if (const auto& x = servicer.slot<Tri*>(slots::MODEL_DATA); x) {
@@ -144,7 +137,7 @@ namespace threed {
 			camera_pos = camera_target;
 			camera_look = camera_look_target;
 
-			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<uint16_t>(slots::MODEL_INFO) == 0) {
+			if (!servicer.slot(slots::MODEL_INFO) || *servicer.slot<uint16_t>(slots::MODEL_INFO) == 0) {
 				camera_target = Vec3{
 					rng::getrange(-1.0f, 1.0f),
 					rng::getrange(0, 1.0f),
@@ -234,8 +227,6 @@ namespace threed {
 	}
 	
 	Renderer::Renderer() {
-		tri_count = 0;
-
 		servicer.set_temperature_all(bheap::Block::TemperatureHot, 
 			slots::MODEL_CAM_FOCUS1,
 			slots::MODEL_CAM_FOCUS2,
