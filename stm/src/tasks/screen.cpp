@@ -92,8 +92,6 @@ namespace tasks {
 		// Tell servicer to grab the sccfg
 		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING);
 
-		// set active screen: TODO port back the auto switcher
-
 		swapper.notify_before_transition(0, true);
 		swapper.transition(0);
 
