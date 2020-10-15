@@ -98,7 +98,7 @@ namespace ttc {
 					ESP_LOGD(TAG, "got epochtime %d", (int)(state.epoch / 1000));
 				}
 			}
-			else if (top.is_array() && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
+			else if ((top.is_array() || top.is_obj()) && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
 				if (state.tag && state.e2 < 6) {
 					info.flags |= (slots::TTCInfo::EXIST_0 << slot);
 					if (state.layover) {
