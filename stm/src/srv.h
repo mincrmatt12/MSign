@@ -92,6 +92,7 @@ namespace srv {
 		bool do_bheap_cleanup(bool full_cleanup=true); // returns done
 		void wait_for_not_sending(); // uses notification
 		void check_connection_ping(); // verify we're still connected with last_transmission
+		void update_forgot_statuses(); // send DATA_FORGOT for all "dirty" remote blocks.
 
 		// Logic related to update
 		bool is_updating = false;

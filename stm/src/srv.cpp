@@ -196,6 +196,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 			block.shrink(0);
 			block.location = bheap::Block::LocationRemote;
 			block.datasize = len;
+			block.flags |= bheap::Block::FlagDirty;
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
@@ -225,6 +226,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 			block.shrink(0);
 			block.location = bheap::Block::LocationRemote;
 			block.datasize = len;
+			block.flags |= bheap::Block::FlagDirty;
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
@@ -245,6 +247,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 			block.shrink(0);
 			block.location = bheap::Block::LocationRemote;
 			block.datasize = len;
+			block.flags |= bheap::Block::FlagDirty;
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
@@ -463,6 +466,8 @@ void srv::Servicer::run() {
 						});
 					}
 
+					update_forgot_statuses();
+
 					if (!is_cleaning) is_cleaning = do_bheap_cleanup();
 				}
 			}
@@ -543,7 +548,7 @@ void srv::Servicer::run() {
 					}
 
 					// Check if we need to homogenize
-					if (msgbuf[3] == bheap::Block::TemperatureHot && arena.get(slotid).next()) {
+					if (msgbuf[2] == bheap::Block::TemperatureHot && arena.get(slotid).next()) {
 						ServicerLockGuard g(*this);
 
 						arena.homogenize(slotid);
@@ -787,6 +792,28 @@ void srv::Servicer::check_connection_ping() {
 		}
 		// otherwise, reset
 		nvic::show_error_screen("esp timeout");
+	}
+}
+
+void srv::Servicer::update_forgot_statuses() {
+	ServicerLockGuard g(*this);
+
+	for (auto &block : arena) {
+		if (block.location == bheap::Block::LocationRemote && block.flags & bheap::Block::FlagDirty && block.datasize) {
+			wait_for_not_sending();
+
+			dma_out_buffer[0] = 0xa5;
+			dma_out_buffer[1] = 6;
+			dma_out_buffer[2] = slots::protocol::DATA_FORGOT;
+
+			*reinterpret_cast<uint16_t *>(dma_out_buffer + 3) = block.slotid;
+			*reinterpret_cast<uint16_t *>(dma_out_buffer + 5) = arena.block_offset(block);
+			*reinterpret_cast<uint16_t *>(dma_out_buffer + 7) = block.datasize;
+			
+			send();
+
+			block.flags &= ~bheap::Block::FlagDirty;
+		}
 	}
 }
 

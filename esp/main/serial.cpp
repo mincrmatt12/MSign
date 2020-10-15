@@ -204,13 +204,6 @@ void serial::SerialInterface::process_packet() {
 							}
 						}
 					}
-					if (reqtemp == bheap::Block::TemperatureWarm) {
-						// If we set it to warm, mark all blocks dirty
-						for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
-							if (it->location == bheap::Block::LocationCanonical && it->datasize)
-								it->flags |= bheap::Block::FlagDirty;
-						}
-					}
 					update_blocks();
 				}
 
@@ -225,6 +218,24 @@ void serial::SerialInterface::process_packet() {
 				};
 				memcpy(response + 3, &slotid, 2);
 				send_pkt(response);
+			}
+			break;
+		case slots::protocol::DATA_FORGOT:
+			{
+				// The STM says it deleted its copy of some of our data, so we mark the relevant section as dirty to compensate.
+				uint16_t slotid, offset, length;
+				memcpy(&slotid, rx_buf + 3, 2);
+				memcpy(&offset, rx_buf + 5, 2);
+				memcpy(&length, rx_buf + 7, 2);
+				continue_rx();
+
+				ESP_LOGD(TAG, "Marking region @%04x of length %d in slot %03x as dirty due to DATA_FORGOT", offset, length, slotid);
+
+				for (auto *b = &arena.get(slotid, offset); b && arena.block_offset(*b) < offset + length; b = b->next()) {
+					b->flags |= bheap::Block::FlagDirty;
+				}
+
+				// No ack packet
 			}
 			break;
 		case slots::protocol::DATA_MOVE:
