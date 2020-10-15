@@ -4,6 +4,7 @@
 #include "sccfg.h"
 #include "ttc.h"
 #include "weather.h"
+#include "modelserve.h"
 // end grabbers
 
 #include "../wifitime.h"
@@ -14,7 +15,8 @@ namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
 		&ttc::ttc_grabber,
 		&weather::weather_grabber,
-		&sccfg::sccfg_grabber
+		&sccfg::sccfg_grabber,
+		&modelserve::modelserve_grabber
 	};
 
 	constexpr size_t grabber_count = sizeof(grabbers) / sizeof(grabbers[0]);
