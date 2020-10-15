@@ -69,6 +69,7 @@ is limited to around 8k in practice.
 | `DATA_UPDATE` | `0x21` |
 | `DATA_MOVE` | `0x22` |
 | `DATA_DEL` | `0x23` |
+| `DATA_FORGOT` | `0x24` |
 | `ACK_DATA_TEMP` | `0x30` |
 | `ACK_DATA_UPDATE` | `0x31` |
 | `ACK_DATA_MOVE` | `0x32` |
@@ -188,6 +189,19 @@ The ESP can also send the following message to indicate that a slot has been nul
 ```
 
 This is acknowledged with a copy of the message, and it is illegal to not have this complete succesfully: if the data is not present, silently ignore it.
+
+#### Forgetting
+
+The STM can declare that it has "forgot" a slot id, which tells the ESP to send it next time it is made warm as opposed to assuming it is not dirty.
+There is no acknowledgement for this message as interpretation is optional.
+
+The syntax for this message is:
+
+```
+| 0x090a | 0x000c | 0x0120 |
+  |
+  |
+  --- slot ID
 
 ### Consoles
 

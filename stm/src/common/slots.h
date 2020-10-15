@@ -182,6 +182,7 @@ namespace slots {
 			DATA_UPDATE,
 			DATA_MOVE,
 			DATA_DEL,
+			DATA_FORGOT,
 
 			ACK_DATA_TEMP = 0x30,
 			ACK_DATA_UPDATE,
