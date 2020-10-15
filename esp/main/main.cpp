@@ -1,5 +1,6 @@
 #include "serial.h"
 #include "config.h"
+#include "webui.h"
 #include "wifitime.h"
 #include "upd.h"
 #include "sd.h"
@@ -55,6 +56,10 @@ extern "C" void app_main() {
 	if (xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            5, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create grab");
 		return;
+	}
+
+	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr,           6, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 
 	ESP_LOGI(TAG, "Created tasks");
