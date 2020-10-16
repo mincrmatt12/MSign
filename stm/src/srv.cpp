@@ -558,7 +558,7 @@ void srv::Servicer::run() {
 					}
 
 					// Check if we can process the next req
-					if (active_request.type == PendRequest::TypeChangeTemp && active_request.slotid == slotid && active_request.temperature == msgbuf[2]) {
+					if (active_request.type == PendRequest::TypeChangeTemp) {
 						// Consume this request.
 						active_request.type = PendRequest::TypeNone;
 						active_request_send_retries = 0;
