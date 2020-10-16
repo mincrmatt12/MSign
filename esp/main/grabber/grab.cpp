@@ -26,7 +26,7 @@ namespace grabber {
 		for (size_t i = 0; i < grabber_count; ++i) {
 			md = std::max(md, std::max(grabbers[i]->fail_time, grabbers[i]->loop_time));
 		}
-		return md;
+		return md + 5000;
 	}
 
 	constexpr TickType_t max_delay_between_runs = get_max_delay();
