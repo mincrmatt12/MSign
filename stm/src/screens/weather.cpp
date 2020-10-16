@@ -444,6 +444,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 	int16_t previous = 23;
 	float previous_val = min_, previous_height = 23.f;
 	float diff = 23.0 / (max_ - min_);
+	if (!(diff > 0.05)) return;
 	
 	// Continue adding tickmarks such that:
 	// 	they all have an integer value
