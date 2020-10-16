@@ -446,7 +446,7 @@ void srv::Servicer::run() {
 		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
 		// Additionally, a queue event will only ever cause a write and "wait" for a read in response.
 
-		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(600)); // every 100 ms we also try and look for cleanup-problems
+		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(400)); // every 100 ms we also try and look for cleanup-problems
 		// Check for a new queue operation if we're not still processing one.
 		if (amount < 3) {
 			if (active_request.type == PendRequest::TypeNone) {
@@ -477,7 +477,7 @@ void srv::Servicer::run() {
 				check_connection_ping();
 
 				++active_request_statemachine;
-				if (active_request_statemachine == 4) {
+				if (active_request_statemachine == 2) {
 					active_request_statemachine = 0;
 					++active_request_send_retries;
 					if (active_request_send_retries > 2) {

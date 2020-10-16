@@ -43,9 +43,15 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 		}
 		else if (state == ProtocolState::DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
-				LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
-				start_recv();
-				return;
+				if (dma_buffer[1] == 0xa6) {
+					dma_buffer[0] = dma_buffer[1];
+					dma_buffer[1] = dma_buffer[2];
+					dma_buffer[2] = LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
+				}
+				else {
+					start_recv();
+					return;
+				}
 			}
 			
 			recv_full();
