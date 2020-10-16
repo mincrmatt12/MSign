@@ -124,6 +124,7 @@ namespace modelserve {
 				chunk[triangle].r = buf[0];
 				chunk[triangle].g = buf[1];
 				chunk[triangle].b = buf[2];
+				chunk[triangle].pad = 0;
 			}
 
 			// Send chunk
