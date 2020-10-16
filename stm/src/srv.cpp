@@ -150,8 +150,10 @@ const bheap::Block& srv::Servicer::_slot(uint16_t slotid) {
 	}
 	else {
 		target = &arena.get(slotid);
-		if (*target)
+		if (*target && !target->next())
 			bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<ptrdiff_t>(target - &arena.first)));
+		else
+			target = &arena.get(bheap::Block::SlotEnd);
 	}
 	return *target;
 }
@@ -627,7 +629,7 @@ void srv::Servicer::run() {
 						else if (currsize < total_len) {
 							// The slot has expanded, so we add an extra block at the end.
 							// This doesn't invalidate anything due to how bheap works, so we can just do it.
-							if (!arena.add_block(sid_frame, target_loc, total_len - currsize)) {
+							if (!arena.add_block(sid_frame, bheap::Block::LocationRemote, total_len - currsize)) {
 								move_update_errcode = 0x1;
 
 								// Mark the total clear length
@@ -660,14 +662,30 @@ void srv::Servicer::run() {
 
 								// This also evicts the entire cache
 								bcache.evict();
-								if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) move_update_errcode = 0x1;
+								if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) {
+									move_update_errcode = 0x1;
+
+									// Mark the total clear length
+									last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_upd_len);
+
+									// Try to clean up without sending a packet to recover
+									do_bheap_cleanup(false);
+
+									// If we now have enough space (last_update_failed_delta_size is zero) re-add the block and continue along
+									if (last_update_failed_delta_size == 0) {
+										if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) move_update_errcode = 0x1;
+										else move_update_errcode = 0;
+									}
+								}
 							}
 						}
 					}
 					else if (!move_update_errcode) {
 						// If this isn't the start message we don't do any allocation, but we do still check there is space for the data 
 						// (to avoid locking it again)
-						if (!arena.check_location(sid_frame, offset, packet_length, target_loc)) move_update_errcode = 0x1;
+						if (!arena.check_location(sid_frame, offset, packet_length, target_loc)) {
+							move_update_errcode = 0x1;
+						}
 					}
 
 					// Read (or discard) the remaining packet data
