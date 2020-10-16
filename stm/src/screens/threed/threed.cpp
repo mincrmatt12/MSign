@@ -109,7 +109,7 @@ namespace threed {
 			srv::ServicerLockGuard g(servicer);
 			update_matricies();
 			current_tri = 0;
-			if (!servicer.slot(slots::MODEL_INFO)) tri_count = default_mesh.tri_count;
+			if (!servicer.slot(slots::MODEL_INFO) || *servicer.slot<uint16_t>(slots::MODEL_INFO) == 0) tri_count = default_mesh.tri_count;
 			else tri_count = *servicer.slot<uint16_t>(slots::MODEL_INFO);
 		}
 
