@@ -21,6 +21,16 @@ namespace grabber {
 
 	constexpr size_t grabber_count = sizeof(grabbers) / sizeof(grabbers[0]);
 
+	constexpr TickType_t get_max_delay() {
+		TickType_t md = 0;
+		for (size_t i = 0; i < grabber_count; ++i) {
+			md = std::max(md, std::max(grabbers[i]->fail_time, grabbers[i]->loop_time));
+		}
+		return md;
+	}
+
+	constexpr TickType_t max_delay_between_runs = get_max_delay();
+
 	TickType_t wants_to_run_at[grabber_count]{};
 
 	void run_grabber(size_t i, const Grabber * const grabber) {
@@ -57,7 +67,10 @@ namespace grabber {
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);
 			auto now = xTaskGetTickCount();
 			if (target < now) continue;
-			vTaskDelay(target - now);
+			if (target - now > max_delay_between_runs) {
+				memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
+			}
+			else vTaskDelay(target - now);
 		}
 	}
 };
