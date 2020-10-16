@@ -198,6 +198,8 @@ phandle = {
     0x41: query_time,
     0x21: data_update,
     0x31: ack_data_update,
+    0x22: data_update,
+    0x32: ack_data_update,
     0x23: data_del,
     0x33: ack_data_del
 }
