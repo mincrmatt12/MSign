@@ -416,7 +416,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 
 	// The actual min/max is rounded down/up +/- 1
 	min_ = std::floor(min_) - 1.f;
-	max_ = std::floor(max_) + 1.f;
+	max_ = std::ceil(max_) + 1.f;
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
 		matrix.get_inactive_buffer().r(x, y) = 34_c;
@@ -483,7 +483,7 @@ void screen::WeatherScreen::draw_graph(uint8_t hour) {
 
 	// The actual min/max is rounded down/up +/- 1
 	min_ = std::floor(min_) - 1.f;
-	max_ = std::floor(max_) + 1.f;
+	max_ = std::ceil(max_) + 1.f;
 
 	int16_t begin = hour * 2 + 80;
 	int16_t end   = begin + 2;
