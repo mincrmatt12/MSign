@@ -668,8 +668,10 @@ void srv::Servicer::run() {
 									// Mark the total clear length
 									last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_upd_len);
 
+									this->give_lock();
 									// Try to clean up without sending a packet to recover
 									do_bheap_cleanup(false);
+									this->take_lock();
 
 									// If we now have enough space (last_update_failed_delta_size is zero) re-add the block and continue along
 									if (last_update_failed_delta_size == 0) {
