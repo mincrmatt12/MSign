@@ -43,7 +43,7 @@ namespace slots {
 		CALFIX_PRDH1 = 0x55, 		// STRUCT; PeriodInfo, start time for period 1 & 2
 		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
 
-		MODEL_INFO = 0x900, 		// UINT16_T; number of triangles in the model
+		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
 		MODEL_CAM_MINPOS  = 0x905,  // STRUCT; Vec3; minimum position of the camera 
 		MODEL_CAM_MAXPOS  = 0x906,  // ''; maximum position of the camera 
@@ -136,6 +136,11 @@ namespace slots {
 			JENKINS = 5,
 			PRINTER = 6
 		} screen_id;
+	};
+
+	struct ModelInfo {
+		uint16_t tri_count;
+		bool use_lighting;
 	};
 
 	struct Vec3 {

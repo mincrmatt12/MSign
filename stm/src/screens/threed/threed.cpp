@@ -105,23 +105,28 @@ namespace threed {
 
 	void Renderer::draw() {
 		int tri_count;
+		bool enable_lighting = true;
 		{
 			srv::ServicerLockGuard g(servicer);
 			update_matricies();
 			current_tri = 0;
-			if (!servicer.slot(slots::MODEL_INFO) || *servicer.slot<uint16_t>(slots::MODEL_INFO) == 0) tri_count = default_mesh.tri_count;
-			else tri_count = *servicer.slot<uint16_t>(slots::MODEL_INFO);
+			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0) tri_count = default_mesh.tri_count;
+			else {
+				tri_count = servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count;
+				enable_lighting = servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->use_lighting;
+			}
 		}
+
 
 		while (current_tri < tri_count) {
 			if (const auto& x = servicer.slot<Tri*>(slots::MODEL_DATA); x) {
 				// Lock separately to allow the servicer to respond during a potentially >0.5s frame
 				srv::ServicerLockGuard g(servicer);
-				draw_triangle(x.data()[current_tri]);
+				draw_triangle(x.data()[current_tri], enable_lighting);
 			}
 			else {
 				// don't lock for default mesh
-				draw_triangle(default_mesh.tris[current_tri]);
+				draw_triangle(default_mesh.tris[current_tri], enable_lighting);
 			}
 			++current_tri;
 		}
@@ -137,7 +142,7 @@ namespace threed {
 			camera_pos = camera_target;
 			camera_look = camera_look_target;
 
-			if (!servicer.slot(slots::MODEL_INFO) || *servicer.slot<uint16_t>(slots::MODEL_INFO) == 0) {
+			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0) {
 				camera_target = Vec3{
 					rng::getrange(-1.0f, 1.0f),
 					rng::getrange(0, 1.0f),
@@ -173,7 +178,7 @@ namespace threed {
 		}
 	}
 
-	void Renderer::draw_triangle(const Tri& t) {
+	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {
 		Vec4 a = perpview * Vec4(t.p1, 1.0);
 		Vec4 b = perpview * Vec4(t.p2, 1.0);
 		Vec4 c = perpview * Vec4(t.p3, 1.0);
@@ -197,14 +202,24 @@ namespace threed {
 		int16_t by = round(((b.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
 		int16_t cy = round(((c.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
 
-		float avg = std::min((t.p1 - current_pos).length(), std::min(
-					 (t.p2 - current_pos).length(),
-					 (t.p3 - current_pos).length()));
-		avg = std::min(0.58f, (avg * avg * 0.25f));
+		uint16_t cr;
+        uint16_t cg;
+        uint16_t cb;
 
-		uint16_t cr = powf((float)t.r / 255.0f * (1.f - avg), 2.2f) * 4096.f;
-		uint16_t cg = powf((float)t.g / 255.0f * (1.f - avg), 2.2f) * 4096.f;
-		uint16_t cb = powf((float)t.b / 255.0f * (1.f - avg), 2.2f) * 4096.f;
+		if (enable_lighting) {
+			float avg = std::min((t.p1 - current_pos).length(), std::min(
+						 (t.p2 - current_pos).length(),
+						 (t.p3 - current_pos).length()));
+			avg = std::min(0.58f, (avg * avg * 0.25f));
+			cr = powf((float)t.r / 255.0f * (1.f - avg), 2.2f) * 4096.f;
+			cg = powf((float)t.g / 255.0f * (1.f - avg), 2.2f) * 4096.f;
+			cb = powf((float)t.b / 255.0f * (1.f - avg), 2.2f) * 4096.f;
+		}
+		else {
+			cr = draw::cvt(t.r);
+			cg = draw::cvt(t.g);
+			cb = draw::cvt(t.b);
+		}
 
 		if (1.f > a.z && -1.f < a.z && 1.f > b.z && -1.f < b.z)
 			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);

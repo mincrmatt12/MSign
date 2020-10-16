@@ -10,7 +10,6 @@
 const static char * TAG = "modelserve";
 
 namespace modelserve {
-	uint16_t tricount[2] = {0, 0};
 	uint8_t  modelidx = 0;
 	time_t last_switch_time = 0;
 
@@ -83,7 +82,6 @@ namespace modelserve {
 	}
 
 	void send_model_data() {
-		if (tricount[modelidx] == 0) return;
 
 		// Create blocks of up to 12 triangles.
 		slots::Tri chunk[12] {};
@@ -98,16 +96,19 @@ namespace modelserve {
 			return;
 		}
 
-		f_lseek(&f, 2);
+		uint16_t tricount;
+		UINT x;
+		f_read(&f, &tricount, 2, &x);
 
-		for (int index = 0; index < tricount[modelidx]; index += 12) {
-			size_t remaining_triangles = std::min(tricount[modelidx] - index, 12);
+		if (tricount == 0) return;
+
+		for (int index = 0; index < tricount; index += 12) {
+			size_t remaining_triangles = std::min(tricount - index, 12);
 
 			// Allocate chunk
 			serial::interface.allocate_slot_size(slots::MODEL_DATA, (index + remaining_triangles)*sizeof(slots::Tri));
 
 			for (int triangle = 0; triangle < remaining_triangles; ++triangle) {
-				UINT x;
 				f_read(&f, &buf[0], sizeof(buf), &x); // reads p1
 				chunk[triangle].p1.x = buf[0];
 				chunk[triangle].p1.y = buf[1];
@@ -132,6 +133,11 @@ namespace modelserve {
 		}
 
 		f_close(&f);
+		slots::ModelInfo mi;
+		mi.tri_count = tricount;
+		mi.use_lighting = true;
+		// Finally update INFO
+		serial::interface.update_slot(slots::MODEL_INFO, mi);
 	}
 
 	void init_load_model(int i) {
@@ -143,11 +149,11 @@ namespace modelserve {
 			send_model_parameters(config::MODEL_MAXPOSES);
 			// Send all triangles
 			send_model_data();
-			// Finally update INFO
-			serial::interface.update_slot(slots::MODEL_INFO, tricount[i]);
 		}
 		else {
-			serial::interface.update_slot(slots::MODEL_INFO, 0);
+			slots::ModelInfo mi;
+			mi.tri_count = 0;
+			serial::interface.update_slot(slots::MODEL_INFO, mi);
 			serial::interface.delete_slot(slots::MODEL_DATA);
 		}
 	}
@@ -155,20 +161,12 @@ namespace modelserve {
 	bool init_modeldat(int i) {
 		if (f_stat(modelpaths[i], NULL)) {
 			ESP_LOGW(TAG, "No model bin on disk (%d)", i);
-			tricount[i] = 0;
 			modelspresent[i] = false;
 
 			return false;
 		}
 
-		{
-			FIL f; f_open(&f, modelpaths[i], FA_READ);
-			UINT x;
-			f_read(&f, &tricount[i], 2, &x);
-			f_close(&f);
-		}
-
-		ESP_LOGI(TAG, "Got model of length %d for (%d)", tricount[i], i);
+		ESP_LOGI(TAG, "Got model of for (%d)", i);
 		modelspresent[i] = true;
 
 		return true;

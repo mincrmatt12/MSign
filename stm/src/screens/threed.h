@@ -146,7 +146,7 @@ namespace threed {
 
 		constexpr static inline bool require_clearing() {return false;}
 	private:
-		void draw_triangle(const Tri& t);
+		void draw_triangle(const Tri& t, bool enable_lighting);
 		void update_matricies();
 
 		int current_tri = 0;
