@@ -354,6 +354,8 @@ namespace bheap {
 				}
 			}
 
+			// If we're here, then there isn't a big enough empty block to place this chunk.
+
 			return false; // Broken heap
 		}
 
@@ -394,12 +396,13 @@ namespace bheap {
 		// Check if the range given is stored at the given location.
 		bool check_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) const {
 			if (offset + length > contents_size(slotid)) return false;
-			const Block& start = get(slotid, offset);
-			const Block& end = get(slotid, offset + length);
-
-			for (auto it = nonadj_const_iterator(start); it != end.next() ? nonadj_const_iterator(*end.next()) : nonadj_const_iterator(); ++it) {
-				if (it->location != location) return false;
+			
+			// This isn't particularly fast but probably has less problems than the old implementation
+			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
+				if ((offset+length) <= block_offset(*x) || offset > (block_offset(*x) + x->datasize)) continue;
+				if (x->location != location) return false;
 			}
+
 			return true;
 		}
 
@@ -555,26 +558,27 @@ finish_setting:
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
 							x->next()->location = Block::LocationCanonical;
-							x->next()->slotid = Block::SlotEmpty;
 							x->next()->datasize = 0;
+							x->next()->slotid = Block::SlotEmpty;
 						}
 						else {
 							// Copy the data
 							Block old = *x->next();
-							void * old_dat = x->next()->data();
-							char * append_at = (char *)x->data();
-							uintptr_t old_p = reinterpret_cast<uintptr_t>(x->next()->adjacent());
-							append_at += x->datasize;
-							// Overwrite
-							memmove(append_at, old_dat, old.datasize);
-							// Update status
+							void * append_data = x->next()->data();
+							char * append_data_to = ((char*)x->data()) + x->datasize;
+							Block *should_end_at = x->next()->adjacent();
 							x->datasize += old.datasize;
-							x->flags |= old.flags;
-							// Re-use old
-							old = Block{};
-							old.datasize = (old_p - reinterpret_cast<uintptr_t>(x->adjacent())) - 4;
-							old.slotid = Block::SlotEmpty;
-							*x->adjacent() = old;
+							// Append data
+							memmove(append_data_to, append_data, old.datasize);
+							// If we need to insert a block?
+							if (x->adjacent() != should_end_at) {
+								// Re-update old
+								old.slotid = Block::SlotEmpty;
+								old.location = Block::LocationCanonical;
+								old.temperature = Block::TemperatureCold;
+								old.datasize = (should_end_at - x->adjacent())*sizeof(Block) - 4;
+								*x->adjacent() = old;
+							}
 						}
 
 						if (x->next()) move_left(*x->next(), *x);
@@ -588,7 +592,8 @@ finish_setting:
 		//
 		// Does the following actions:
 		// 	- Homogenizes all slots
-		// 	- Condenses adjacent empties
+		// 	- Condenses adjacent empties and moves all empty space to the end of the arena.
+		// 	   - This can reduce performance but allows for more blocks to be allocated
 		void defrag() {
 			// Remove unnecessary placeholders
 			for (auto& x : *this) {
@@ -602,11 +607,28 @@ finish_setting:
 			for (auto& x : *this) {
 				if (x && x.next()) homogenize(x.slotid);
 			}
-			// Condense empty slots
+			// Condense empty slots (simplifies next section)
 			for (auto& x : *this) {
 				while (x.adjacent() && x.slotid == Block::SlotEmpty && x.adjacent()->slotid == Block::SlotEmpty) {
 					x.datasize += 4 + x.adjacent()->datasize;
 					if (x.datasize % 4) x.datasize += (4 - x.datasize % 4);
+				}
+			}
+			auto last_empty = &last(Block::SlotEmpty);
+			if (last_empty->slotid != Block::SlotEnd) {
+				for (auto& x : *this) {
+					if (x.slotid == Block::SlotEmpty && &x != last_empty) {
+						// Shift everything from x->adjacent() of size (&last_empty - x->adjacent()) over to x, then move the empty header
+						Block *begin_region = x.adjacent();
+						Block *copy_to = &x;
+						Block old_empty =    *last_empty;
+
+						memmove(copy_to, begin_region, (last_empty - begin_region)*sizeof(Block));
+						// Add a new block header
+						last_empty -= (begin_region - copy_to);
+						*last_empty = old_empty;
+						last_empty->datasize += (begin_region - copy_to)*sizeof(Block);
+					}
 				}
 			}
 		}
