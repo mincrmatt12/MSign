@@ -464,7 +464,14 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 	// Grab the offset of this block
 	uint16_t offset = arena.block_offset(block) + offset_of_subupdate;
 
-	ESP_LOGD(TAG, "Updating block %03x (@%04x / %dbytes / temp %d) with %d", block.slotid, offset, block.datasize, block.temperature, type_of_update);
+	ESP_LOGD(TAG, "Updating block %03x (@%04x / %dbytes / temp %d) with %d", block.slotid, offset, length, block.temperature, type_of_update);
+	// sanity checks
+	if (offset_of_subupdate > block.datasize || offset_of_subupdate + length > block.datasize) {
+		ESP_LOGE(TAG, "Update block in invalid location.");
+	}
+	if (block.location == bheap::Block::LocationRemote) {
+		ESP_LOGE(TAG, "Trying to update remote block, random crap will continue");
+	}
 
 	// Start sending update packets
 	uint16_t current_offset = offset;
@@ -484,14 +491,14 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 		memcpy(update_payload + 9, &upd_len, 2);
 
 		if (remaining > 247) {
-			memcpy(update_payload + 11, (uint8_t *)block.data() + (current_offset - offset), 247);
+			memcpy(update_payload + 11, (uint8_t *)block.data() + offset_of_subupdate + (current_offset - offset), 247);
 			current_offset += 247;
 			remaining -= 247;
 			update_payload[1] = 255;
 			send_pkt(update_payload);
 		}
 		else {
-			memcpy(update_payload + 11, (uint8_t *)block.data() + (current_offset - offset), remaining);
+			memcpy(update_payload + 11, (uint8_t *)block.data() + offset_of_subupdate + (current_offset - offset), remaining);
 			update_payload[1] = 8 + remaining;
 			send_pkt(update_payload);
 			break;
@@ -563,7 +570,7 @@ tail_call_recurse:
 	// First, we check if there are any dirty blocks with temperature that means we have to send them
 	for (bheap::Block& block : arena) {
 		if (!block) continue;
-		if (block.location == bheap::Block::LocationCanonical && block.temperature & 0b10 && block.datasize && block.flags & bheap::Block::FlagDirty) {
+		if (block.location == bheap::Block::LocationCanonical && block.temperature & 0b10 && block.datasize && (block.flags & bheap::Block::FlagDirty) && !(block.flags & bheap::Block::FlagFlush)) {
 			auto slotid = block.slotid;
 			auto actual_offset = arena.block_offset(block);
 			// Send this as a DATA_UPDATE packet.
@@ -581,44 +588,52 @@ tail_call_recurse:
 				}
 			}
 		}
+	}
 
-		// Try to flush out blocks
-		//
-		// Important note: this _isn't_ used in the evict loop because that function deals with failures differently
-		if (block.location == bheap::Block::LocationCanonical && block.datasize && block.flags & bheap::Block::FlagFlush) {
-			bool moved_ok = true; bool out_of_space = false;
-			auto slotid = block.slotid;
-			auto actual_offset = arena.block_offset(block);
-			// Flush the entire block
-			for (uint16_t subupdate_offset = 0; subupdate_offset < block.datasize; subupdate_offset += max_single_update_size) {
-				switch (
-					update_block_segment(slots::protocol::DATA_MOVE, arena.get(slotid, actual_offset), subupdate_offset, std::min<uint16_t>(max_single_update_size, arena.get(slotid, actual_offset).datasize - subupdate_offset), request_occurred)
-				) {
-					case 0:
-						break;
-					case 2:
-					case 3:
-					default:
-						moved_ok = false;
-						ESP_LOGW(TAG, "invalid state/timeout while trying to move block");
-						break;
-					case 1:
-						out_of_space = true;
-						ESP_LOGW(TAG, "out of space while trying to move block");
-						break;
+	bool did_something = false;
+	do {
+		did_something = false;
+		for (bheap::Block& block : arena) {
+			// Try to flush out blocks
+			//
+			// Important note: this _isn't_ used in the evict loop because that function deals with failures differently
+			if (block.location == bheap::Block::LocationCanonical && block.datasize && block.flags & bheap::Block::FlagFlush) {
+				bool moved_ok = true; bool out_of_space = false;
+				auto slotid = block.slotid;
+				auto actual_offset = arena.block_offset(block);
+				// Flush the entire block
+				for (uint16_t subupdate_offset = 0; subupdate_offset < block.datasize; subupdate_offset += max_single_update_size) {
+					switch (
+						update_block_segment(slots::protocol::DATA_MOVE, arena.get(slotid, actual_offset), subupdate_offset, std::min<uint16_t>(max_single_update_size, arena.get(slotid, actual_offset).datasize - subupdate_offset), request_occurred)
+					) {
+						case 0:
+							break;
+						case 2:
+						case 3:
+						default:
+							moved_ok = false;
+							ESP_LOGW(TAG, "invalid state/timeout while trying to move block");
+							break;
+						case 1:
+							out_of_space = true;
+							ESP_LOGW(TAG, "out of space while trying to move block");
+							break;
+					}
+				}
+				if (moved_ok || out_of_space) {
+					// Still clear the flag since trying again won't fix it rn.
+					// At some point in the future the STM will probably try evicting stuff, so let it do that.
+					arena.get(slotid, actual_offset).flags &= ~bheap::Block::FlagFlush;
+				}
+				if (moved_ok) {
+					// success; the block is gone: update into a remote block.
+					arena.set_location(slotid, actual_offset, arena.get(slotid, actual_offset).datasize, bheap::Block::LocationRemote);
+					did_something = true;
+					break;
 				}
 			}
-			if (moved_ok || out_of_space) {
-				// Still clear the flag since trying again won't fix it rn.
-				// At some point in the future the STM will probably try evicting stuff, so let it do that.
-				arena.get(slotid, actual_offset).flags &= ~bheap::Block::FlagFlush;
-			}
-			if (moved_ok) {
-				// success; the block is gone: update into a remote block.
-				arena.set_location(slotid, actual_offset, arena.get(slotid, actual_offset).datasize, bheap::Block::LocationRemote);
-			}
 		}
-	}
+	} while (did_something);
 
 	// If we need to begin processing a request, start processing one
 	if (request_occurred && active_request.type == Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
