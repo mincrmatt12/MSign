@@ -109,9 +109,13 @@ namespace tasks {
 				// Check if the time elapsed is more than the current selection's millis_enabled
 				if ((rtc_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled) {
 					screen_list_idx = next_screen_idx();
-					swapper.notify_before_transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id, true);
-					swapper.transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id);
-					swapper.notify_before_transition(servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id, false);
+					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id;
+					int next_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id;
+					servicer.give_lock();
+					swapper.notify_before_transition(about_to_show, true);
+					swapper.transition(about_to_show);
+					swapper.notify_before_transition(next_to_show, false);
+					servicer.take_lock();
 					last_swapped_at = rtc_time;
 				}
 			}
