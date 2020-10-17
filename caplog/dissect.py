@@ -119,7 +119,7 @@ def ack_data_temp(dat, from_esp):
     
     print(f": ack of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
-def data_update(dat, from_esp):
+def data_update(dat, from_esp, is_move):
     # always from esp
     sid_frame, offs, totallen, totalupd = struct.unpack("<HHHH", dat[:8])
 
@@ -135,8 +135,6 @@ def data_update(dat, from_esp):
         else:
             slot_databufs[slotid] += bytearray(totallen - len(slot_databufs[slotid]))
 
-    # patch in
-    slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
     endstart = {
             (True, False): "start",
             (False, True): "end",
@@ -144,12 +142,18 @@ def data_update(dat, from_esp):
             (False, False): "middle"
     }[start, end]
 
-    print(f": data update [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
+    # patch in
+    slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
+
+    print(f": data {'move' if is_move else 'update'} [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
     if start:
         print(" "*header_width + f": total slot length {totallen}; total update length {totalupd}")
     if end:
         st = slotlib.slot_types[slotid][1]
-        print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid])), ' ' * (header_width + 2) + '└'))
+        if totallen >= 1000:
+            print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid]), (offs + len(dat) - 8 - totalupd), (offs + len(dat) - 8)), ' ' * (header_width + 2) + '└'))
+        else:
+            print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid])), ' ' * (header_width + 2) + '└'))
 
 updrescode = {
     0: "Ok",
@@ -158,10 +162,10 @@ updrescode = {
     3: "NAK"
 }
 
-def ack_data_update(dat, from_esp):
+def ack_data_update(dat, from_esp, is_move):
     slotid, upds, updl, code = struct.unpack("<HHHB", dat)
 
-    print(f": ack of data update for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {upds:04x} of length {updl} with code {updrescode[code]}")
+    print(f": ack of data {'move' if is_move else 'update'} for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {upds:04x} of length {updl} with code {updrescode[code]}")
 
 def data_del(dat, from_esp):
     slotid = struct.unpack("<H", dat)[0]
@@ -196,10 +200,10 @@ phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
     0x41: query_time,
-    0x21: data_update,
-    0x31: ack_data_update,
-    0x22: data_update,
-    0x32: ack_data_update,
+    0x21: lambda x, y: data_update(x, y, False),
+    0x31: lambda x, y: ack_data_update(x, y, False),
+    0x22: lambda x, y: data_update(x, y, True),
+    0x32: lambda x, y: ack_data_update(x, y, True),
     0x23: data_del,
     0x33: ack_data_del
 }

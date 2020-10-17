@@ -124,7 +124,7 @@ class SlotType:
             member.parse(dat[idx])
         return member_copy
 
-    def get_formatted(self, data):
+    def get_formatted(self, data, min_pos=0, max_pos=0):
         if len(data) > 1:
             return "\n".join(x.formatted_value() for x in data)
         else:
@@ -149,13 +149,15 @@ class SlotTypeArray:
             remain -= amt
             if remain < 0:
                 raise ValueError("invalid size for varlen")
-            values.append(self.subtype.parse(dat[pos:pos+amt]))
+            values.append((self.subtype.parse(dat[pos:pos+amt]), pos))
             pos += amt
         return values
 
-    def get_formatted(self, data):
+    def get_formatted(self, data, min_pos=0, max_pos=0):
         response = ""
-        for j, val in enumerate(data):
+        for j, (val, position) in enumerate(data):
+            if min_pos and max_pos and not (min_pos <= position <= max_pos):
+                continue
             init_indent = f"[{j}]: "
             text = textwrap.indent(self.subtype.get_formatted(val), " "*len(init_indent))
             text = init_indent + text[len(init_indent):]
@@ -170,7 +172,7 @@ class SlotTypeString:
         else:
             return dat
 
-    def get_formatted(self, data):
+    def get_formatted(self, data, min_pos=0, max_pos=0):
         return repr(data.decode("ascii"))
 
     def get_length(self, dat):
