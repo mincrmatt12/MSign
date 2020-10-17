@@ -249,10 +249,14 @@ void serial::SerialInterface::process_packet() {
 				// This _could_ cause problems but shouldn't if I haven't screwed up somewhere.
 
 				uint16_t slotid; memcpy(&slotid, rx_buf + 3, 2);
+				uint8_t result_code = 0;
+				uint16_t offset; memcpy(&offset, rx_buf + 5, 2);
+				uint16_t total_upd_len; memcpy(&total_upd_len, rx_buf + 9, 2);
+				continue_rx();
+
 				if (is_evicting) {
 					// Send a null ack
 					slotid &= ~0b1100'0000'0000'0000;
-					continue_rx();
 
 					uint8_t resp[5] = {
 						0xa6,
@@ -268,30 +272,27 @@ void serial::SerialInterface::process_packet() {
 					// Completely truncate the slot
 					arena.truncate_contents(slotid, 0);
 					// Ignore any ACKs (will be caught by the unknown whatever)
-					break;
-				}
-
-				uint8_t result_code = 0;
-				uint16_t offset; memcpy(&offset, rx_buf + 5, 2);
-				uint16_t total_upd_len; memcpy(&total_upd_len, rx_buf + 9, 2);
-
-				// Otherwise, we ensure that this is a supported packet
-				if (!(slotid & ((1 << 14) | (1 << 15)))) {
-					ESP_LOGE(TAG, "Ignoring STM move attempt with nonboring framing.");
-					result_code = 3;
 				}
 				else {
-					slotid &= ~0b1100'0000'0000'0000;
-					// Otherwise process the request.
-					if (!arena.set_location(slotid, offset, total_upd_len, bheap::Block::LocationCanonical)) {
-						ESP_LOGE(TAG, "Failed to set locationcanonical for %03x", slotid);
-						result_code = 1;
+					// Otherwise, we ensure that this is a supported packet
+					if (!(slotid & ((1 << 14) | (1 << 15)))) {
+						slotid &= ~0b1100'0000'0000'0000;
+						ESP_LOGE(TAG, "Ignoring STM move attempt with nonboring framing.");
+						result_code = 3;
 					}
 					else {
-						// Just set it
-						if (!arena.update_contents(slotid, offset, total_upd_len, rx_buf + 11, false)) {
-							ESP_LOGE(TAG, "Failed to update contents for move");
-							result_code = 3;
+						slotid &= ~0b1100'0000'0000'0000;
+						// Otherwise process the request.
+						if (!arena.set_location(slotid, offset, total_upd_len, bheap::Block::LocationCanonical)) {
+							ESP_LOGE(TAG, "Failed to set locationcanonical for %03x", slotid);
+							result_code = 1;
+						}
+						else {
+							// Just set it
+							if (!arena.update_contents(slotid, offset, total_upd_len, rx_buf + 11, false)) {
+								ESP_LOGE(TAG, "Failed to update contents for move");
+								result_code = 3;
+							}
 						}
 					}
 				}
@@ -306,8 +307,7 @@ void serial::SerialInterface::process_packet() {
 					0, 0,
 					result_code
 				};
-				memcpy(resp + 3, rx_buf + 3, 2);
-				continue_rx();
+				memcpy(resp + 3, &slotid, 2);
 				memcpy(resp + 5, &offset, 2);
 				memcpy(resp + 7, &total_upd_len, 2);
 				send_pkt(&resp);
@@ -512,7 +512,7 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 	int retries;
 	// Wait for a reply
 	for (retries = 0; retries < 3;) {
-		switch (wait_for_event(pdMS_TO_TICKS(2000))) {
+		switch (wait_for_event(pdMS_TO_TICKS(1000))) {
 			case EventAll:
 				request_occurred = true;
 			case EventPacket:
@@ -620,13 +620,8 @@ tail_call_recurse:
 							break;
 					}
 				}
-				if (moved_ok || out_of_space) {
-					// Still clear the flag since trying again won't fix it rn.
-					// At some point in the future the STM will probably try evicting stuff, so let it do that.
-					arena.get(slotid, actual_offset).flags &= ~bheap::Block::FlagFlush;
-				}
 				if (moved_ok) {
-					// success; the block is gone: update into a remote block.
+					arena.get(slotid, actual_offset).flags &= ~bheap::Block::FlagFlush;
 					arena.set_location(slotid, actual_offset, arena.get(slotid, actual_offset).datasize, bheap::Block::LocationRemote);
 					did_something = true;
 					break;
