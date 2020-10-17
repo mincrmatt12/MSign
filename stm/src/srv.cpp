@@ -195,10 +195,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !bcache.contains(block.slotid)) {
 			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
 			auto len = block.datasize;
-			block.shrink(0);
-			block.location = bheap::Block::LocationRemote;
-			block.datasize = len;
-			block.flags |= bheap::Block::FlagDirty;
+			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
@@ -225,10 +222,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold) {
 			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
 			auto len = block.datasize;
-			block.shrink(0);
-			block.location = bheap::Block::LocationRemote;
-			block.datasize = len;
-			block.flags |= bheap::Block::FlagDirty;
+			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
@@ -247,9 +241,7 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
 			auto len = block.datasize;
 			block.shrink(0);
-			block.location = bheap::Block::LocationRemote;
-			block.datasize = len;
-			block.flags |= bheap::Block::FlagDirty;
+			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
 			to_free -= freed;
