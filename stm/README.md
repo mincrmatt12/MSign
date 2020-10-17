@@ -202,6 +202,7 @@ The syntax for this message is:
   |
   |
   --- slot ID
+```
 
 ### Consoles
 

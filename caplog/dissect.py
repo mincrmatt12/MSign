@@ -142,13 +142,14 @@ def data_update(dat, from_esp, is_move):
             (False, False): "middle"
     }[start, end]
 
-    # patch in
-    slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
+    if from_esp:
+        # patch in
+        slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
 
     print(f": data {'move' if is_move else 'update'} [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
     if start:
         print(" "*header_width + f": total slot length {totallen}; total update length {totalupd}")
-    if end:
+    if end and from_esp:
         st = slotlib.slot_types[slotid][1]
         if totallen >= 1000:
             print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid]), (offs + len(dat) - 8 - totalupd), (offs + len(dat) - 8)), ' ' * (header_width + 2) + '└'))
@@ -196,6 +197,22 @@ def query_time(dat, from_esp):
         else:
             print(f": response with error code {timestatus[code]}")
 
+def data_forgot(dat, from_esp):
+    slotid, offs, size = struct.unpack("<HHH", dat)
+    print(f": notification of data deletion for {slotid:03x} ({slotlib.slot_types[slotid][0]}) at {offs:04x} of length {size}")
+
+consolenames = {
+    1: "DbgIn",
+    2: "DbgOut",
+    3: "Log"
+}
+
+def console_msg(dat, from_esp):
+    idx = dat[0]
+    msg = dat[1:].decode("ascii")
+
+    print(f": console msg to {consolenames[idx]}: {msg!r}")
+
 phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
@@ -205,7 +222,9 @@ phandle = {
     0x22: lambda x, y: data_update(x, y, True),
     0x32: lambda x, y: ack_data_update(x, y, True),
     0x23: data_del,
-    0x33: ack_data_del
+    0x33: ack_data_del,
+    0x24: data_forgot,
+    0x70: console_msg
 }
 
 while (ptr < len(datastream)) if not realtime else True:
