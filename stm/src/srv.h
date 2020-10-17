@@ -78,7 +78,7 @@ namespace srv {
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
-		bheap::Arena<14284> arena;
+		bheap::Arena<14*1024> arena;
 		lru::Cache<8, 4> bcache;
 
 		// Called from ISR and populates queue.
