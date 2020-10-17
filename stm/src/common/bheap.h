@@ -233,6 +233,8 @@ namespace bheap {
 	// An arena of blocks (fight!)
 	template<size_t Size>
 	struct Arena {
+		static_assert(Size % 4 == 0, "Arena must have a size aligned to 4 bytes");
+
 		template<typename T, bool Adjacent>
 		struct Iterator {
 			static_assert(!(Adjacent && !std::is_same<typename std::decay<T>::type, Block>::value), "Using Arena::Iterator in adjacent mode on TypedBlocks is invalid.");
@@ -668,7 +670,7 @@ finish_setting:
 
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty; // Free space for new allocations
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral; // Free space after removing stuff
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceHomogenizeable; // Free space after defrag()
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceAllocatable | FreeSpaceHomogenizeable; // Free space after defrag()
 
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) const {
 			return free_space(first, mode);
