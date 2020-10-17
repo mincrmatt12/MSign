@@ -451,6 +451,7 @@ void srv::Servicer::run() {
 				// Otherwise, do various random tasks.
 				else {
 					check_connection_ping();
+					update_forgot_statuses();
 
 					if (xStreamBufferBytesAvailable(log_out) > 100) {
 						// Do a flush
@@ -459,8 +460,6 @@ void srv::Servicer::run() {
 							.type = PendRequest::TypeDumpLogOut
 						});
 					}
-
-					update_forgot_statuses();
 
 					if (!is_cleaning) is_cleaning = do_bheap_cleanup();
 				}
