@@ -572,7 +572,7 @@ void srv::Servicer::run() {
 							 len    = msgbuf_x16[2];
 					uint8_t  code   = msgbuf    [6];
 
-					if (!code && arena.check_location(slotid, start, len, bheap::Block::LocationCanonical)) {
+					if (!code) {
 						// Acquire lock
 						ServicerLockGuard g(*this);
 
@@ -624,15 +624,22 @@ void srv::Servicer::run() {
 								move_update_errcode = 0x1;
 
 								// Mark the total clear length
-								last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_len - currsize);
+								last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, (total_len - currsize) + 8);
 
 								// Try to clean up without sending a packet to recover
 								do_bheap_cleanup(false);
 
 								// If we now have enough space (last_update_failed_delta_size is zero) re-add the block and continue along
 								if (last_update_failed_delta_size == 0) {
-									if (!arena.add_block(sid_frame, target_loc, total_len - currsize)) move_update_errcode = 0x1;
+									if (!arena.add_block(sid_frame, target_loc, total_len - currsize)) {
+										move_update_errcode = 0x1;
+										last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, (total_len - currsize) + 8);
+										is_cleaning = do_bheap_cleanup();
+									}
 									else move_update_errcode = 0;
+								}
+								else {
+									is_cleaning = do_bheap_cleanup();
 								}
 							}
 						}
@@ -657,7 +664,7 @@ void srv::Servicer::run() {
 									move_update_errcode = 0x1;
 
 									// Mark the total clear length
-									last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_upd_len);
+									last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_upd_len + 8);
 
 									this->give_lock();
 									// Try to clean up without sending a packet to recover
@@ -666,8 +673,18 @@ void srv::Servicer::run() {
 
 									// If we now have enough space (last_update_failed_delta_size is zero) re-add the block and continue along
 									if (last_update_failed_delta_size == 0) {
-										if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) move_update_errcode = 0x1;
+										if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) {
+											move_update_errcode = 0x1;
+											last_update_failed_delta_size = std::max<uint16_t>(last_update_failed_delta_size, total_upd_len + 8);
+											goto failed_again;
+										}
 										else move_update_errcode = 0;
+									}
+									else {
+failed_again:
+										this->give_lock();
+										is_cleaning = do_bheap_cleanup();
+										this->take_lock();
 									}
 								}
 							}
@@ -677,7 +694,7 @@ void srv::Servicer::run() {
 						// If this isn't the start message we don't do any allocation, but we do still check there is space for the data 
 						// (to avoid locking it again)
 						if (!arena.check_location(sid_frame, offset, packet_length, target_loc)) {
-							move_update_errcode = 0x1;
+							move_update_errcode = 0x2;
 						}
 					}
 
@@ -807,8 +824,6 @@ void srv::Servicer::check_connection_ping() {
 }
 
 void srv::Servicer::update_forgot_statuses() {
-	ServicerLockGuard g(*this);
-
 	for (auto &block : arena) {
 		if (block.location == bheap::Block::LocationRemote && block.flags & bheap::Block::FlagDirty && block.datasize) {
 			wait_for_not_sending();
