@@ -841,6 +841,13 @@ void srv::Servicer::update_forgot_statuses() {
 			block.flags &= ~bheap::Block::FlagDirty;
 		}
 	}
+
+	// Also mark unsent hot blocks as dirty too.
+	for (auto &block : arena) {
+		if (block.location == bheap::Block::LocationRemote && block.datasize && block.temperature == bheap::Block::TemperatureHot) {
+			block.flags |= bheap::Block::FlagDirty;
+		}
+	}
 }
 
 void srv::Servicer::do_update_logic() {
