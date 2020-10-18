@@ -100,6 +100,7 @@ namespace {
 }
 
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
+	if (!xPortIsInsideInterrupt()) vTaskSuspendAll();
 	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 	// there was a hardfault... delay for a while so i know
 	for (int j = 0; j < 128; ++j) {
