@@ -561,11 +561,15 @@ tail_call_recurse:
 		return;
 	}
 
-	update_check_dirty = false;
+	bool request_occurred;
+	int out_of_space_tries = 0;
+	bool out_of_space = false;
 
 	is_updating = true;
+	update_check_dirty = false;
 
-	bool request_occurred = false;
+do_out_of_space_retry:
+	request_occurred = false;
 
 	// First, we check if there are any dirty blocks with temperature that means we have to send them
 	for (bheap::Block& block : arena) {
@@ -582,6 +586,8 @@ tail_call_recurse:
 						// success
 						arena.get(slotid, actual_offset).flags &= ~bheap::Block::FlagDirty;
 						break;
+					case 1:
+						out_of_space = true;
 					default:
 						// error; just give up and try again alter
 						break;
@@ -598,7 +604,7 @@ tail_call_recurse:
 			//
 			// Important note: this _isn't_ used in the evict loop because that function deals with failures differently
 			if (block.location == bheap::Block::LocationCanonical && block.datasize && block.flags & bheap::Block::FlagFlush) {
-				bool moved_ok = true; bool out_of_space = false;
+				bool moved_ok = true;
 				auto slotid = block.slotid;
 				auto actual_offset = arena.block_offset(block);
 				// Flush the entire block
@@ -629,6 +635,12 @@ tail_call_recurse:
 			}
 		}
 	} while (did_something);
+
+	// Try to send again in case out of out_of_space
+	if (out_of_space && (++out_of_space_tries < 2)) {
+		out_of_space = false;
+		goto do_out_of_space_retry;
+	}
 
 	// If we need to begin processing a request, start processing one
 	if (request_occurred && active_request.type == Request::TypeEmpty && xQueueReceive(requests, &active_request, 0))
