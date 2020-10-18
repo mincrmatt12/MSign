@@ -81,6 +81,7 @@ pnames = {
     0x21: "DATA_UPDATE",
     0x22: "DATA_MOVE",
     0x23: "DATA_DEL",
+    0x24: "DATA_FORGOT",
     0x30: "ACK_DATA_TEMP",
     0x31: "ACK_DATA_UPDATE",
     0x32: "ACK_DATA_MOVE",
