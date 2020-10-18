@@ -27,3 +27,6 @@ Essentially just the bitmap converter in fnter -- takes a png, searches for area
 Small program to interact with the fonts from fnter
 When configuring tell it the font to use with `-DTESTFNT_FONT_FILE=/some/font/file -DTESTFNT_FONT_SIZE=12`.
 
+# obj2bin
+
+Converts `obj` and `mtl` pairs to the binary format the sign uses for its internal 3d renderer.
