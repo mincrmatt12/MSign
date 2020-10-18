@@ -239,6 +239,7 @@ namespace led {
 		}
 
 		void swap_buffers_from_isr() {
+			notify_when_swapped = nullptr;
 			should_swap = true;
 			while (should_swap) {;}
 		}
