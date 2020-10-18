@@ -50,10 +50,7 @@ namespace webui {
 			}
 			else {
 				ESP_LOGE(TAG, "Failed to write to client %s b.c. (%d)", buf, errno);
-				switch (errno) {
-					case EINTR:
-						return -1;
-				}
+				return -1;
 			}
 		}
 		return pos;
