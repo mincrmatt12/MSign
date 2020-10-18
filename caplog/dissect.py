@@ -11,6 +11,11 @@ datastream = []
 prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
 realtime = False
 
+ignored_dataids = []
+ignored_datastr = os.getenv("CAPLOG_INGORE_IDS")
+if ignored_datastr:
+    ignored_dataids = [int(x, 16) for x in ignored_datastr.split()]
+
 if len(sys.argv) < 3:
     print("usage: {} [logicexport,simlog] <in>")
     exit(1)
@@ -151,8 +156,11 @@ def data_update(dat, from_esp, is_move):
     if start:
         print(" "*header_width + f": total slot length {totallen}; total update length {totalupd}")
     if end and from_esp:
+        if slotid in ignored_dataids:
+            print(textwrap.indent("(data supressed due to environment var)", ' '*(header_width + 3)))
+            return
         st = slotlib.slot_types[slotid][1]
-        if totallen >= 1000:
+        if totallen >= 512:
             print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid]), (offs + len(dat) - 8 - totalupd), (offs + len(dat) - 8)), ' ' * (header_width + 2) + '└'))
         else:
             print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid])), ' ' * (header_width + 2) + '└'))
@@ -235,7 +243,7 @@ while (ptr < len(datastream)) if not realtime else True:
         elif pkt[0] == 0xa5:
             print('S->E ', end='')
         else:
-            print('UNK  ', end='')
+            print(' UNK ', end='')
 
         if pkt[2] not in pnames:
             print(f": {pkt[0]:02x}{pkt[1]:02x}{pkt[2]:02x} <invalid packet>")
