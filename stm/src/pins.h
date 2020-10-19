@@ -14,7 +14,7 @@
 #define SIGN_GPIO_PERIPH LL_AHB1_GRP1_PERIPH_GPIOD
 
 #define UART_DMA DMA2
-#define UART_DMA_TX_Stream LL_DMA_STREAM_2
+#define UART_DMA_TX_Stream LL_DMA_STREAM_7
 #define UART_DMA_RX_Stream LL_DMA_STREAM_1
 #define UART_DMA_Channel LL_DMA_CHANNEL_5
 
@@ -24,19 +24,19 @@
 #define UART_ENABLE_CALL LL_APB2_GRP1_EnableClock
 #define UART_Af LL_GPIO_AF_8
 
-#define NVIC_SRV_RX_IRQ_NAME DMA2_Stream2_IRQn
-#define NVIC_SRV_TX_IRQ_NAME DMA2_Stream1_IRQn
+#define NVIC_SRV_RX_IRQ_NAME DMA2_Stream1_IRQn
+#define NVIC_SRV_TX_IRQ_NAME DMA2_Stream7_IRQn
 
-#define NVIC_SRV_RX_IRQ_HANDLER DMA2_Stream2_IRQHandler
-#define NVIC_SRV_TX_IRQ_HANDLER DMA2_Stream1_IRQHandler
+#define NVIC_SRV_RX_IRQ_HANDLER DMA2_Stream1_IRQHandler
+#define NVIC_SRV_TX_IRQ_HANDLER DMA2_Stream7_IRQHandler
 
 #define NVIC_SRV_RX_ACTV LL_DMA_IsActiveFlag_TC1
 #define NVIC_SRV_RXE_ACTV LL_DMA_IsActiveFlag_TE1
-#define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC2
+#define NVIC_SRV_TX_ACTV LL_DMA_IsActiveFlag_TC7
 
 #define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC1
 #define NVIC_SRV_RXE_CLRF LL_DMA_ClearFlag_TE1
-#define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC2
+#define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC7
 
 #endif
 
