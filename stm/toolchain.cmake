@@ -13,5 +13,5 @@ set(OBJCOPY_EXECUTABLE ${TOOLCHAIN_DIR}/arm-none-eabi-objcopy)
 set(CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs")
 set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
 
-set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3")
-set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -fno-exceptions -fno-rtti -Wno-register")
+set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft")
+set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -fno-exceptions -fno-rtti -Wno-register")
