@@ -47,11 +47,13 @@ void serial::SerialInterface::run() {
 
 		send_pkt(buf_reply);
 
+got_another_start:
 		// Wait for another packet
 		while (wait_for_event() == EventQueue) {;}
 		// Check what packet we received
 		cmd = rx_buf[2];
 		continue_rx();
+		if (cmd == slots::protocol::HANDSHAKE_INIT) goto got_another_start;
 		if (cmd != slots::protocol::HANDSHAKE_OK) {
 			ESP_LOGW(TAG, "Invalid handshake response");
 			continue;
