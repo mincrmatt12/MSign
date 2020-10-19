@@ -1,6 +1,8 @@
 #include <sys/stat.h>
 #include <errno.h>
 #include <sys/types.h>
+#include <FreeRTOSConfig.h>
+#include <reent.h>
 
 int __attribute__((used)) _close(int file) {return -1;}
 int __attribute__((used)) _fstat(int file, struct stat *st) {
@@ -59,3 +61,8 @@ int __attribute__((used)) _kill(int a, int b) {
 int __attribute__((used)) _getpid() {
 	return 1;
 }
+
+// Make debugging work with rtos
+const int __attribute__((used)) uxTopUsedPriority = configMAX_PRIORITIES - 1;
+
+void __cxa_pure_virtual() {}
