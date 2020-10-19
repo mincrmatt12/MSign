@@ -403,8 +403,11 @@ retry_handshake:
 				is_updating = true; // Mark update mode.
 				start_recv(); // Begin recieveing messages
 			}
-		default:
 			return;
+		default:
+			++retries;
+			vTaskDelay(pdMS_TO_TICKS(500));
+			goto retry_handshake;
 	}
 }
 
