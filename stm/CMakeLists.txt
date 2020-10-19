@@ -85,12 +85,13 @@ add_executable(stm ${stm_srcs})
 target_link_libraries(stm
 	cube_ll
 	freertos
+
 	c m gcc
 )
 
 target_compile_options(stm
 	PUBLIC
-	-Og
+	-O3
 	-ffast-math
 	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
 )
