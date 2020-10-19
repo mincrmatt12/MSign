@@ -20,20 +20,17 @@ extern tasks::Timekeeper timekeeper;
 void nvic::init() {
 	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
 
-	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
+	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
+	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,1)); // sequence after each other
 	NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
-	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
+	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6,0));
 	NVIC_EnableIRQ(NVIC_SRV_TX_IRQ_NAME);
 
-	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5,0));
 	NVIC_EnableIRQ(NVIC_SRV_RX_IRQ_NAME);
-
-	NVIC_SetPriority(SysTick_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));
-	NVIC_EnableIRQ(SysTick_IRQn);
 
 	NVIC_SetPriority(UsageFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(UsageFault_IRQn);
@@ -102,6 +99,9 @@ namespace {
 [[noreturn]] void nvic::show_error_screen(const char * errcode) {
 	if (!xPortIsInsideInterrupt()) vTaskSuspendAll();
 	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
+	// boost priority of timer/dma
+	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
+	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
 	// there was a hardfault... delay for a while so i know
 	for (int j = 0; j < 128; ++j) {
 		draw_hardfault_screen(j);
@@ -116,6 +116,29 @@ namespace {
 extern "C" void UsageFault_Handler() {
 	nvic::show_error_screen("UsageFault");
 }
+extern "C" void BusFault_Handler() __attribute__((naked));
 extern "C" void BusFault_Handler() {
-	nvic::show_error_screen("BusFault");
+	// Put onto the running stack (this'll break probably but we're already resetting so eh)
+	asm volatile (
+			"tst lr, #4\n"
+			"ite eq \n"
+			"mrseq r0, msp\n"
+			"mrsne r0, psp\n"
+			"mov sp, r0\n"
+			"bkpt #1\n"
+	);
+	//nvic::show_error_screen("BusFault");
+}
+
+extern "C" void HardFault_Handler() __attribute__((naked));
+extern "C" void HardFault_Handler() {
+	// Put onto the running stack and bkpt
+	asm volatile (
+			"tst lr, #4\n"
+			"ite eq \n"
+			"mrseq r0, msp\n"
+			"mrsne r0, psp\n"
+			"mov sp, r0\n"
+			"bkpt #1\n"
+	);
 }
