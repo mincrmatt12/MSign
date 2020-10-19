@@ -13,7 +13,11 @@ set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'boa
 find_program(openocd_executable
 	openocd
 	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
+	NO_DEFAULT_PATH
+	REQUIRED
 )
+
+message(STATUS "Found OPENOCD " ${openocd_executable})
 
 find_package(Python 3 COMPONENTS Interpreter)
 
@@ -81,15 +85,14 @@ add_executable(stm ${stm_srcs})
 target_link_libraries(stm
 	cube_ll
 	freertos
-
 	c m gcc
 )
 
 target_compile_options(stm
 	PUBLIC
-	-O3
+	-Og
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics>
+	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
 )
 
 # Get the current version
@@ -110,17 +113,19 @@ endif()
 target_link_options(stm
 	PUBLIC
 	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/f207zg.ld
+	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic
+	-Wl,-u 
+	-Wl,_printf_float
+	--specs=nano.specs
 )
 
 # add upload target
-if (${openocd_executable})
-	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit"
-	)
-	
-	add_dependencies(upload stm)
-endif()
+add_custom_target(upload
+	COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit"
+)
+
+add_dependencies(upload stm)
 
 add_custom_target(stm.bin ALL DEPENDS stm COMMAND ${OBJCOPY_EXECUTABLE} -Obinary $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.bin)
