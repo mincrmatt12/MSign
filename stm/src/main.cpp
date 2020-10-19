@@ -23,6 +23,11 @@ tasks::Timekeeper   timekeeper{rtc_time};
 tasks::DispMan      dispman{};
 tasks::DebugConsole dbgtim{timekeeper};
 
+void out_of_memory() {
+	matrix.start_display();
+	nvic::show_error_screen("no memory for tasks");
+}
+
 int main() {
 	rcc::init();
 	nvic::init();
@@ -31,9 +36,9 @@ int main() {
 	matrix.init();
 	servicer.init();
 
-	xTaskCreate((TaskFunction_t)&srv::Servicer::run, "srvc", 256, &servicer, 5, nullptr);
-	xTaskCreate((TaskFunction_t)&tasks::DispMan::run, "screen", 512, &dispman, 4, nullptr);
-	xTaskCreate((TaskFunction_t)&tasks::DebugConsole::run, "dbgtim", 176, &dbgtim, 2, nullptr);
+	if (xTaskCreate((TaskFunction_t)&srv::Servicer::run, "srvc", 256, &servicer, 5, nullptr) != pdPASS) out_of_memory();
+	if (xTaskCreate((TaskFunction_t)&tasks::DispMan::run, "screen", 512, &dispman, 4, nullptr) != pdPASS) out_of_memory();
+	if (xTaskCreate((TaskFunction_t)&tasks::DebugConsole::run, "dbgtim", 176, &dbgtim, 2, nullptr) != pdPASS) out_of_memory();
 
 	matrix.start_display();
 	vTaskStartScheduler();
