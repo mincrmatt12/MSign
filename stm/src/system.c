@@ -2,7 +2,6 @@
 #include <errno.h>
 #include <sys/types.h>
 #include <FreeRTOSConfig.h>
-#include <reent.h>
 
 int __attribute__((used)) _close(int file) {return -1;}
 int __attribute__((used)) _fstat(int file, struct stat *st) {
