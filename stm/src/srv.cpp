@@ -386,7 +386,6 @@ retry_handshake:
 
 				// clear the overrun flag
 				LL_USART_ClearFlag_ORE(ESP_USART); // this should really be moved elsewhere
-				LL_USART_ClearFlag_PE(ESP_USART);
 				start_recv();
 				return;
 			}
@@ -1117,6 +1116,17 @@ void srv::Servicer::wait_for_not_sending() {
 		this->notify_on_send_done = xTaskGetCurrentTaskHandle();
 		xTaskNotifyWait(0, 0xFFFF'FFFFul, nullptr, portMAX_DELAY);
 	}
+}
+
+void srv::Servicer::send_update_status(slots::protocol::UpdateStatus us) {
+	wait_for_not_sending();
+
+	dma_out_buffer[0] = 0xa5;
+	dma_out_buffer[1] = 0x01;
+	dma_out_buffer[2] = slots::protocol::UPDATE_STATUS;
+	dma_out_buffer[3] = static_cast<uint8_t>(us);
+
+	send();
 }
 
 slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint64_t &time_when_sent) {
