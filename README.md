@@ -11,7 +11,8 @@ Code for an LED sign display board powered by an STM32 and ESP8266. Make sure yo
 - `espweb`: ESP8266 web-based configuration page source
 - `bmap`: Tools for generating graphics resources
 - `caplog`: Tools for debugging
-- `vendor`: Various dependencies in source form.
+- `vendor`: Various dependencies in source form (everything not listed below)
+- `sim`: Stubs/shims for running the `esp` and `stm` codebases under linux.
 
 ## Dependencies
 
@@ -26,3 +27,4 @@ For building the `espweb` you need:
 
 - yarn
 - node 
+- the python `cryptography` package.
