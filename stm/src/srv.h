@@ -84,7 +84,8 @@ namespace srv {
 		// Called from ISR and populates queue.
 
 		void process_command() override;
-		void process_update_cmd(uint8_t cmd);
+		void process_update_packet(uint8_t cmd, uint8_t len);
+		void process_update_cmd(slots::protocol::UpdateCmd cmd);
 		void do_update_logic();
 		void do_handshake();
 
@@ -93,6 +94,7 @@ namespace srv {
 		void wait_for_not_sending(); // uses notification
 		void check_connection_ping(); // verify we're still connected with last_transmission
 		void update_forgot_statuses(); // send DATA_FORGOT for all "dirty" remote blocks.
+		void send_update_status(slots::protocol::UpdateStatus status);
 
 		// Logic related to update
 		bool is_updating = false;
@@ -100,11 +102,11 @@ namespace srv {
 
 		char update_status_buffer[16];
 		uint8_t update_pkg_buffer[256];
-		uint32_t update_pkg_size;
+		uint32_t update_pkg_size = 0;
 
-		uint32_t update_total_size;
-		uint16_t update_checksum;
-		uint16_t update_chunks_remaining;
+		uint32_t update_total_size = 0;
+		uint16_t update_checksum = 0;
+		uint16_t update_chunks_remaining = 0;
 		int16_t last_update_failed_delta_size = 0;
 
 		// Sync primitives + log buffers + dma buffer

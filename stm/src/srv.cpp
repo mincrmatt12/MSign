@@ -861,7 +861,7 @@ void srv::Servicer::do_update_logic() {
 					CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
 					// Report readiness for bytes
 					this->update_state = USTATE_WAITING_FOR_PACKET;
-					//this->pending_operations[pending_count++] = 0x60'0000'12;
+					send_update_status(slots::protocol::UpdateStatus::READY_FOR_IMAGE);
 				}
 				break;
 			}
@@ -889,8 +889,7 @@ void srv::Servicer::do_update_logic() {
 
 					if (util::compute_crc((uint8_t *)(0x0808'0000), this->update_total_size) != this->update_checksum) {
 						this->update_state = USTATE_FAILED;
-						//this->pending_operations[pending_count++] = 0x60'0000'40;
-
+						send_update_status(slots::protocol::UpdateStatus::ABORT_CSUM);
 						break;
 					}
 
@@ -908,33 +907,112 @@ void srv::Servicer::do_update_logic() {
 
 					// Send out final message
 					
-					//do_send_operation(0x60'0000'20);
+					send_update_status(slots::protocol::UpdateStatus::BEGINNING_COPY);
 
-					// Wait a bit for DMA
-					
-					for (int i = 0; i < 400000; ++i) {
-						asm volatile ("nop");
-					}
+					// Wait for DMA
+					wait_for_not_sending();
 
 					// Reset
-					
 					NVIC_SystemReset();
 
 					// At this point the bootloader will update us.
 				}
 
 				this->update_state = USTATE_WAITING_FOR_PACKET;
-				//this->pending_operations[pending_count++] = 0x60'0000'13;
+				send_update_status(slots::protocol::UpdateStatus::READY_FOR_CHUNK);
 				break;
 			}
 		case USTATE_PACKET_WRITE_FAIL_CSUM:
 			{
 				this->update_state = USTATE_WAITING_FOR_PACKET;
-				//this->pending_operations[pending_count++] = 0x60'0000'30;
+				send_update_status(slots::protocol::UpdateStatus::RESEND_LAST_CHUNK_CSUM);
 				break;
 			}
-		default:
+		case USTATE_WAITING_FOR_PACKET:
+		case USTATE_WAITING_FOR_FINISH:
+		case USTATE_WAITING_FOR_FINISH_SECTORCOUNT:
+		case USTATE_WAITING_FOR_FINISH_WRITE:
+		case USTATE_WAITING_FOR_READY:
+			{
+				// Wait for a packet
+				uint8_t hdr[3];
+				if (xStreamBufferReceive(dma_rx_queue, &hdr, 3, portMAX_DELAY) != 3) return;
+				
+			}
 			break;
+		default:
+			vTaskDelay(10);
+			break;
+	}
+}
+
+void srv::Servicer::process_update_packet(uint8_t cmd, uint8_t len) {
+	using namespace slots::protocol;
+
+	switch (cmd) {
+		case PING:
+			{
+				// ping is one of the few packets valid in both update/nonupdate mode, so we handle it here
+				wait_for_not_sending();
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0;
+				dma_out_buffer[2] = PONG;
+
+				send();
+			}
+			break;
+		case slots::protocol::RESET:
+			{
+				// same with reset
+				NVIC_SystemReset();
+			}
+		case UPDATE_CMD:
+			{
+				// delegate further
+				UpdateCmd subcmd;
+				xStreamBufferReceive(dma_rx_queue, &subcmd, 1, portMAX_DELAY);
+				process_update_cmd(subcmd);
+			}
+			break;
+		case UPDATE_IMG_START:
+			{
+				uint8_t msgbuf[8];
+				if (len != 8) {
+					send_update_status(UpdateStatus::PROTOCOL_ERROR);
+					update_state = USTATE_FAILED;
+					return;
+				}
+
+				this->update_chunks_remaining = *reinterpret_cast<uint16_t *>(msgbuf + 6);
+				this->update_total_size = *reinterpret_cast<uint32_t *>(msgbuf + 2);
+				this->update_checksum = *reinterpret_cast<uint16_t *>(msgbuf);
+
+				send_update_status(UpdateStatus::READY_FOR_CHUNK);
+			}
+			break;
+		case UPDATE_IMG_DATA:
+			{
+				uint16_t crc;
+				xStreamBufferReceive(dma_rx_queue, &crc, 2, portMAX_DELAY);
+
+				this->update_pkg_size = len-2;
+				xStreamBufferReceive(dma_rx_queue, this->update_pkg_buffer, this->update_pkg_size, portMAX_DELAY);
+				this->update_checksum = crc;
+
+				append_data(update_state, update_pkg_buffer, update_pkg_size);
+				break;
+			}
+			break;
+		default:
+			{
+				// unhandled command in update mode
+				uint8_t msgbuf[16];
+				while (len) {
+					len -= xStreamBufferReceive(dma_rx_queue, msgbuf, std::min<size_t>(16, len), portMAX_DELAY);
+				}
+				break;
+			}
 	}
 }
 
@@ -1059,14 +1137,15 @@ slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint
 	return s;
 }
 
-void srv::Servicer::process_update_cmd(uint8_t cmd) {
+void srv::Servicer::process_update_cmd(slots::protocol::UpdateCmd cmd) {
+	using namespace slots::protocol;
 	switch (cmd) {
-		case 0x10:
+		case UpdateCmd::CANCEL_UPDATE:
 			{
 				// Cancel updates
 				NVIC_SystemReset();
 			}
-		case 0x11:
+		case UpdateCmd::PREPARE_FOR_IMAGE:
 			{
 				// Prepare to read byte
 				begin_update(this->update_state);
@@ -1074,20 +1153,20 @@ void srv::Servicer::process_update_cmd(uint8_t cmd) {
 				// When BSY bit is 0 the loop will send us to the right state.
 				break;
 			}
-		case 0x40:
+		case UpdateCmd::UPDATE_COMPLETED_OK:
 			{
 				// update done!
 				NVIC_SystemReset();
 			}
 			break;
-		case 0x50:
+		case UpdateCmd::ESP_WROTE_SECTOR:
 			{
 				// sector count up
 				++update_chunks_remaining;
 				this->update_state = USTATE_WAITING_FOR_FINISH_SECTORCOUNT;
 				break;
 			}
-		case 0x51:
+		case UpdateCmd::ESP_COPYING:
 			{
 				// writing
 				this->update_state = USTATE_WAITING_FOR_FINISH_WRITE;

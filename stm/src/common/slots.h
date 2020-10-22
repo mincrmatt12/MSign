@@ -224,7 +224,8 @@ namespace slots {
 
 			RESEND_LAST_CHUNK_CSUM = 0x30,
 
-			ABORT_CSUM = 0x40
+			ABORT_CSUM = 0x40,
+			PROTOCOL_ERROR
 		};
 
 		enum struct UpdateCmd : uint8_t {

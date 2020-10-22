@@ -300,13 +300,14 @@ The STM can respond with `UPDATE_STATUS` messages, with the same format.
 | `0x21` | Copy process completed |
 | `0x30` | Resend last chunk, csum error |
 | `0x40` | Checksum error on entire thing, abort procedure |
+| `0x41` | Unexpected protocol error, abort |
 
 Note there are no errors for copy process as if it fails the code won't run. If the ESP doesn't get anything for a few minutes it can report failure and ask for manual reflashing.
 
 ```
 | 0xCC CC | 0xSS SS SS SS | 0xCNCN |
   |          |               |
-  |          |               ------ chunck count, little endian 16bits
+  |          |               ------ chunk count, little endian 16bits
   |          ---- size of new image, bytes, little endian 32bits
   ---- checksum, little endian 16bits, CRC16
 ```
