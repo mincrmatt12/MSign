@@ -936,7 +936,7 @@ void srv::Servicer::do_update_logic() {
 				// Wait for a packet
 				uint8_t hdr[3];
 				if (xStreamBufferReceive(dma_rx_queue, &hdr, 3, portMAX_DELAY) != 3) return;
-				
+				process_update_packet(hdr[2], hdr[1]);
 			}
 			break;
 		default:
@@ -983,6 +983,8 @@ void srv::Servicer::process_update_packet(uint8_t cmd, uint8_t len) {
 					return;
 				}
 
+				xStreamBufferReceive(dma_rx_queue, msgbuf, 8, portMAX_DELAY);
+
 				this->update_chunks_remaining = *reinterpret_cast<uint16_t *>(msgbuf + 6);
 				this->update_total_size = *reinterpret_cast<uint32_t *>(msgbuf + 2);
 				this->update_checksum = *reinterpret_cast<uint16_t *>(msgbuf);
@@ -997,7 +999,7 @@ void srv::Servicer::process_update_packet(uint8_t cmd, uint8_t len) {
 
 				this->update_pkg_size = len-2;
 				xStreamBufferReceive(dma_rx_queue, this->update_pkg_buffer, this->update_pkg_size, portMAX_DELAY);
-				this->update_checksum = crc;
+				memcpy(update_pkg_buffer + update_pkg_size, &crc, 2);
 
 				append_data(update_state, update_pkg_buffer, update_pkg_size);
 				break;
