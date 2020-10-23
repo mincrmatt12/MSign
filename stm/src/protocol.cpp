@@ -21,7 +21,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 			// it also "reads" a byte off of the serial port but eh.
 			LL_USART_ClearFlag_ORE(ESP_USART);
 
-			start_recv();
+			start_recv(state);
 			return;
 		}
 
@@ -186,7 +186,11 @@ void srv::ProtocolImpl::start_recv(srv::ProtocolState target_state) {
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
 	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_RX_Stream);
 
+	NVIC_SRV_RXE_CLRF(UART_DMA);
+	NVIC_SRV_RX_CLRF(UART_DMA);
+
 	LL_USART_ClearFlag_RXNE(ESP_USART);
+	LL_USART_ClearFlag_LBD(ESP_USART);
 	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
