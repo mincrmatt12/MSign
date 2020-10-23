@@ -3,7 +3,10 @@
 #include <esp_log.h>
 #include "config.h"
 #include "common/util.h"
+#include "esp_system.h"
 #include "sd.h"
+#include "uart.h"
+#include "common/slots.h"
 
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
@@ -174,7 +177,7 @@ failure: // clean up
 	// routines for doing update
 	void send_update_chunk(uint8_t * buffer, size_t length) {
 		if (length > 253) {
-			ESP_LOGD(TAG, "invalid chunk length > 253");
+			ESP_LOGE(TAG, "invalid chunk length > 253");
 		}
 
 		uint16_t chksum = util::compute_crc(buffer, length);
@@ -204,58 +207,69 @@ failure: // clean up
 		memcpy(&send_buffer[5], &length, 4);
 		memcpy(&send_buffer[9], &chunk_count, 2);
 
-		Serial.write(send_buffer, sizeof(send_buffer));
+		uart_write_bytes(UART_NUM_0, (char*)send_buffer, sizeof(send_buffer));
 		return chunk_count;
 	}
 
-	void send_update_status(uint8_t status) {
+	void send_update_status(slots::protocol::UpdateCmd status) {
 		uint8_t send_buffer[11] = {
 			0xa6,
 			0x08,
 			0x60,
-			status
+			(uint8_t)status
 		};
 
-		Serial.write(send_buffer, sizeof(send_buffer));
+		uart_write_bytes(UART_NUM_0, (char*)send_buffer, sizeof(send_buffer));
 	}
 
 	bool retrieve_update_status(uint8_t& status_out) {
 		uint8_t recv_buffer[4];
-		if (Serial.available() >= 4) {
-			Serial.readBytes(recv_buffer, 4);
-			if (recv_buffer[0] == 0xa5 && recv_buffer[1] == 0x01 && recv_buffer[2] == 0x63) {
-				status_out = recv_buffer[3];
-				return true;
-			}
+		uart_read_bytes(UART_NUM_0, recv_buffer, sizeof(recv_buffer), portMAX_DELAY);
+		if (recv_buffer[0] == 0xa5 && recv_buffer[1] == 0x01 && recv_buffer[2] == 0x63) {
+			status_out = recv_buffer[3];
+			return true;
 		}
 		return false;
 	}
 
 	void set_update_state(uint8_t update_new_state) {
-		File state_F = sd.open("/upd/state.txt", O_WRITE | O_TRUNC);
-		state_F.print(update_new_state);
-		state_F.flush();
-		state_F.close();
+		FIL f; f_open(&f, "/upd/state", FA_WRITE | FA_CREATE_ALWAYS);
+		f_putc(update_new_state, &f);
+		f_close(&f);
 	}
 
 
 	// full system update
 
-	void upd::update_system() {
+	void update_system() {
 		// check the files are present
 		uint16_t crc_esp, crc_stm;
-		if (!sd.exists("/upd/stm.bin") || !sd.exists("/upd/chck.sum")) {
-			ESP_LOGD(TAG, "missing files.");
+		if (f_stat("/upd/stm.bin", NULL) || f_stat("/upd/chck.sum", NULL)) {
+			ESP_LOGE(TAG, "missing files.");
 
-			sd.remove("/upd/state.txt");
+			f_unlink("/upd/state");
 			return;
 		}
 
 		{
-			File csum_F = sd.open("/upd/chck.sum");
-			crc_esp = csum_F.parseInt();
-			crc_stm = csum_F.parseInt();
-			csum_F.close();
+			FIL f; f_open(&f, "/upd/chck.sum", FA_READ);
+			UINT br;
+			f_read(&f, &crc_esp, 2, &br);
+			f_read(&f, &crc_stm, 2, &br);
+			f_close(&f);
+		}
+
+		// setup uart
+		{
+			uart_config_t cfg;
+			cfg.baud_rate = 115200;
+			cfg.data_bits = UART_DATA_8_BITS;
+			cfg.stop_bits = UART_STOP_BITS_1;
+			cfg.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
+			cfg.parity = UART_PARITY_EVEN;
+			uart_param_config(UART_NUM_0, &cfg);
+
+			ESP_ERROR_CHECK(uart_driver_install(UART_NUM_0, 1024, 0, 0, NULL, 0));
 		}
 
 		// check what to do based on the state
@@ -269,7 +283,7 @@ failure: // clean up
 					set_update_state(USTATE_READY_TO_START);
 
 					// restart
-					ESP.restart();
+					esp_restart();
 				}
 				break; // ?
 			case USTATE_READY_TO_START:
@@ -277,21 +291,20 @@ failure: // clean up
 					// wait for the incoming HANDSHAKE_INIT command
 					uint8_t buf[4] = {0};
 				try_again:
-					Serial.readBytes(buf, 3);
+					uart_read_bytes(UART_NUM_0, buf, 3, portMAX_DELAY);
 				check_again:
 					if (buf[0] != 0xa5 || buf[1] != 0x00 || buf[2] != 0x10) {
 						if (buf[1] == 0xa5) {
 							// Offset
 							buf[0] = buf[1];
 							buf[1] = buf[2];
-							buf[2] = Serial.read();
+							uart_read_bytes(UART_NUM_0, &buf[2], 1, portMAX_DELAY);
 							goto check_again;
 						}
 						else if (buf[2] == 0xa5) {
 							// Offset
 							buf[0] = buf[2];
-							buf[1] = Serial.read();
-							buf[2] = Serial.read();
+							uart_read_bytes(UART_NUM_0, &buf[1], 2, portMAX_DELAY);
 							goto check_again;
 						}
 						else goto try_again;
@@ -300,23 +313,22 @@ failure: // clean up
 					buf[0] = 0xa6;
 					buf[2] = 0x13;
 
-					Serial.write(buf, 3);
-					Serial.readBytes(buf, 4);
+					uart_write_bytes(UART_NUM_0, (char*)buf, 3);
 
-					if (buf[0] != 0xa5 || buf[1] != 0x01 || buf[2] != 0x63 || buf[3] != 0x10) goto try_again;
+					if (buf[0] != 0xa5 || buf[1] != 0x01 || buf[2] != slots::protocol::UPDATE_STATUS || buf[3] != 0x10) goto try_again;
 
-					ESP_LOGD(TAG, "Connected to STM32 for update.");
+					ESP_LOGI(TAG, "Connected to STM32 for update.");
 
 					set_update_state(USTATE_CURRENT_SENDING_STM);  // mark current state
 
 					// tell to prepare for image
-					send_update_status(0x11); // preapre for image
+					send_update_status(slots::protocol::UpdateCmd::PREPARE_FOR_IMAGE); // preapre for image
 
 					// wait for command
 					uint8_t status;
 					while (!retrieve_update_status(status)) delay(5);
 
-					if (status != 0x12 / * ready for image * /) {
+					if (status != 0x12) {
 						ESP_LOGD(TAG, "invalid command for readyimg");
 						ESP.restart();
 					}
