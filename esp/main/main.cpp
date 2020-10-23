@@ -42,6 +42,11 @@ extern "C" void app_main() {
 	}
 
 	switch (upd::needed()) {
+		case upd::FULL_SYSTEM:
+			upd::update_system();
+			ESP_LOGW(TAG, "somehow returned from update_system? restarting anyways.");
+			esp_restart();
+			break;
 		default:
 			break;
 	}
@@ -63,7 +68,7 @@ extern "C" void app_main() {
 		return;
 	}
 
-	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr,           6, NULL) != pdPASS) {
+	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr            ,6, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 

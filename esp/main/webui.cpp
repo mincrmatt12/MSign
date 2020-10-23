@@ -4,6 +4,7 @@
 #include "serial.h"
 #include "common/util.h"
 #include "ff.h"
+#include "upd.h"
 #include "wifitime.h"
 
 extern "C" {
@@ -472,18 +473,27 @@ flush_buf:
 			esp_restart();
 		}
 		else if (strcasecmp(tgt, "updatefirm") == 0) {
-			goto notfound;
-			/* TODO
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
-			File out_file;
+			FIL out_file;
 			int gotcount = 0;
+			bool ok = false;
 
 			uint16_t stm_csum = 0, esp_csum = 0;
 
 			// Make the update directory
-			if (!sd.exists("/upd"))
-				sd.mkdir("/upd");
+			
+			switch (f_mkdir("0:/upd")) {
+				case FR_OK:
+				case FR_EXIST:
+					break;
+				default:
+					goto notfound;
+			}
+
+			// Remove files
+			f_unlink("/upd/stm.bin");
+			f_unlink("/upd/esp.bin");
 
 			// Temp.
 			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
@@ -494,13 +504,20 @@ flush_buf:
 
 				if (len == -1) {
 					if (strcasecmp(state->c.name, "stm") == 0) {
-						out_file = sd.open("/upd/stm.bin", O_WRITE | O_CREAT | O_TRUNC);
+						ok = true;
+						if (f_open(&out_file, "/upd/stm.bin", FA_WRITE | FA_CREATE_ALWAYS)) {
+							ok = false;
+							return false;
+						}
 						ESP_LOGD(TAG, "Writing the stm bin");
 						stm_csum = 0;
 						return true;
 					}
 					if (strcasecmp(state->c.name, "esp") == 0) {
-						out_file = sd.open("/upd/esp.bin", O_WRITE | O_CREAT | O_TRUNC);
+						if (f_open(&out_file, "/upd/esp.bin", FA_WRITE | FA_CREATE_ALWAYS)) {
+							ok = false;
+							return false;
+						}
 						ESP_LOGD(TAG, "Writing the esp bin");
 						esp_csum = 0;
 						return true;
@@ -511,19 +528,19 @@ flush_buf:
 					}
 				}
 				else if (len == -2) {
-					out_file.flush();
-					out_file.close();
+					f_close(&out_file);
 					++gotcount;
 				}
 				else {
 					// Write the buffer
-					out_file.write(buf, len);
+					UINT bw;
+					f_write(&out_file, buf, len, &bw);
 
 					// Update the checksum
 					if (strcasecmp(state->c.name, "stm") == 0) 
-						stm_csum = util::compute_crc(buf, len, stm_csum);
+						stm_csum = util::compute_crc(buf, bw, stm_csum);
 					else 												
-						esp_csum = util::compute_crc(buf, len, esp_csum);
+						esp_csum = util::compute_crc(buf, bw, esp_csum);
 				}
 				return true;
 			})) {
@@ -544,116 +561,31 @@ flush_buf:
 					return;
 			}
 
-			if (gotcount < 2) {
+			if (gotcount < 1 || !ok) {
 				send_static_response(400, "Bad Request", "Not enough files were provided");
 				return;
 			}
 
 			// Alright we've got stuff. Write the csum file now.
-			out_file = sd.open("/upd/chck.sum", O_WRITE | O_CREAT | O_TRUNC);
-			out_file.print(esp_csum);
-			out_file.print(' ');
-			out_file.print(stm_csum);
-			out_file.flush();
-			out_file.close();
+			f_open(&out_file, "/upd/chck.sum", FA_WRITE | FA_CREATE_ALWAYS);
+			UINT bw;
+			f_write(&out_file, &esp_csum, 2, &bw);
+			f_write(&out_file, &stm_csum, 2, &bw);
+			f_close(&out_file);
 
 			// Set the update state for update
-			out_file = sd.open("/upd/state.txt", O_WRITE | O_CREAT | O_TRUNC);
-			out_file.print(0); // Update system (state 0 in upd.cpp)
-			out_file.flush();
-			out_file.close();
+			f_open(&out_file, "/upd/state", FA_WRITE | FA_CREATE_ALWAYS);
+			f_putc(0, &out_file);
+			f_close(&out_file);
 
-			send_static_response(200, "OK", "Starting the update.");
-			delay(100); // give it some time to send it
-			serial::interface.reset(); */
+			send_static_response(200, "OK", gotcount == 2 ? "Updating stm+esp" : "Updating stm only");
+			serial::interface.reset();
 		}
 		else if (strcasecmp(tgt, "reboot") == 0) {
 			// Just reboot
 			send_static_response(204, "No Content", "");
 			lwip_close(client_sock);
 			serial::interface.reset();
-		}
-		else if (strcasecmp(tgt, "updatestm") == 0) {
-			goto notfound;
-			/*
-			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
-
-			File out_file = sd.open("/upd/stm.bin", O_WRITE | O_CREAT | O_TRUNC);
-			bool ok = false;
-
-			uint16_t stm_csum = 0;
-
-			// Make the update directory
-			if (!sd.exists("/upd"))
-				sd.mkdir("/upd");
-
-			// Temp.
-			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
-				if (!state->name_counter) {
-					ESP_LOGD(TAG, "no name");
-					return false;
-				}
-
-				if (len == -1) {
-					return strcasecmp(state->c.name, "stm") == 0;
-				}
-				else if (len == -2) {
-					out_file.flush();
-					out_file.close();
-					ok = true;
-				}
-				else {
-					// Write the buffer
-					out_file.write(buf, len);
-
-					// Update the checksum
-					stm_csum = util::compute_crc(buf, len, stm_csum);
-				}
-				return true;
-			})) {
-				case MultipartStatus::EOF_EARLY:
-					return;
-				case MultipartStatus::INVALID_HEADER:
-					send_static_response(400, "Bad Request", "The server was unable to interpret the header area of the form data request.");
-					return;
-				case MultipartStatus::HOOK_ABORT:
-					send_static_response(400, "Bad Request", "You have sent invalid files.");
-					return;
-				case MultipartStatus::NO_CONTENT_DISP:
-					send_static_response(400, "Bad Request", "You are missing a Content-Disposition header in your request.");
-					return;
-				case MultipartStatus::OK:
-					break;
-				default:
-					return;
-			}
-
-			if (!ok) {
-				send_static_response(400, "Bad Request", "The stm firmware was not provided");
-				return;
-			}
-
-			// Alright we've got stuff. Write the csum file now.
-			out_file = sd.open("/upd/chck.sum", O_WRITE | O_CREAT | O_TRUNC);
-			out_file.print(0);
-			out_file.print(' ');
-			out_file.print(stm_csum);
-			out_file.flush();
-			out_file.close();
-
-			// Ensure there isn't an errant /upd/esp.bin
-			if (sd.exists("/upd/esp.bin")) sd.remove("/upd/esp.bin");
-
-			// Set the update state for update
-			out_file = sd.open("/upd/state.txt", O_WRITE | O_CREAT | O_TRUNC);
-			out_file.print(0); // Update system (state 0 in upd.cpp)
-			out_file.flush();
-			out_file.close();
-
-			send_static_response(200, "OK", "Starting the update.");
-			delay(100); // give it some time to send it
-			serial::interface.reset();
-			*/
 		}
 		else {
 			// Temp.
@@ -807,6 +739,11 @@ notfound:
 	}
 
 	void run(void*) {
+		if (upd::needed() == upd::WEB_UI) {
+			ESP_LOGI(TAG, "Running webui update");
+			upd::update_website();
+		}
+
 		ESP_LOGI(TAG, "Starting webui");
 		xEventGroupWaitBits(wifi::events, wifi::WifiConnected, 0, true, portMAX_DELAY);
 		// check if an etag file exists on disk (deleted during updates)
