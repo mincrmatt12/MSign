@@ -222,6 +222,43 @@ def console_msg(dat, from_esp):
 
     print(f": console msg to {consolenames[idx]}: {msg!r}")
 
+updcmds = {
+    0x10: "CancelUpdate",
+    0x11: "PepareForImage",
+    0x30: "ImgReadError",
+    0x31: "ImgCsumError",
+    0x32: "InvalidStateError",
+    0x40: "UpdateCompletedOk",
+    0x50: "EspWroteSector",
+    0x51: "EspCopying"
+}
+
+updstatuses = {
+    0x10: "EnteredUpdMode",
+    0x12: "ReadyForImage",
+    0x13: "ReadyForChunk",
+    0x20: "BeginningCopy",
+    0x21: "CopyOk",
+    0x30: "ResendLastChunkCsum",
+    0x40: "AbortCsum",
+    0x41: "AbortProtocol"
+}
+
+def update_statcmd(dat, from_esp, typ):
+    code = dat[0]
+    if typ:
+        print(f": {'' if not from_esp else 'unexpected '} update status {updstatuses[code]}")
+    else:
+        print(f": {'' if from_esp else 'unexpected '} update command {updcmds[code]}")
+
+def update_img_data(dat, from_esp):
+    csum = struct.unpack("<H", dat[:2])[0]
+    print(f": {len(dat)-2} bytes of image data with checksum {csum:04x}")
+
+def update_img_start(dat, from_esp):
+    csum, sz, cnt = struct.unpack("<HIH", dat)
+    print(f": image header of length {sz} in {cnt} chunks with checksum {csum:04x} ")
+
 phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
@@ -233,7 +270,11 @@ phandle = {
     0x23: data_del,
     0x33: ack_data_del,
     0x24: data_forgot,
-    0x70: console_msg
+    0x70: console_msg,
+    0x60: lambda x, y: update_statcmd(x, y, False),
+    0x63: lambda x, y: update_statcmd(x, y, True),
+    0x61: update_img_data,
+    0x62: update_img_start
 }
 
 while (ptr < len(datastream)) if not realtime else True:
