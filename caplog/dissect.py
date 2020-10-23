@@ -48,16 +48,19 @@ if not realtime:
     def read_buf(x):
         global ptr
         ptr += x
-        if ptr >= len(datastream):
+        if ptr > len(datastream):
             exit()
-        return datastream[ptr-x:ptr]
+        return bytes(datastream[ptr-x:ptr])
 
     def read():
         header = bytearray(read_buf(3))
         while header[0] not in (0xa5, 0xa6):
             header[0:1] = header[1:2]
             header[2] = read_buf(1)[0]
-        yield bytes(header) + read_buf(header[1])
+        if header[1]:
+            yield bytes(header) + read_buf(header[1])
+        else:
+            yield bytes(header)
 else:
     files = [open(x, 'rb') for x in sys.argv[2:]]
     import select
@@ -277,7 +280,7 @@ phandle = {
     0x62: update_img_start
 }
 
-while (ptr < len(datastream)) if not realtime else True:
+while True:
     for pkt in read():
         if pkt[0] == 0xa6:
             print('E->S ', end='')
