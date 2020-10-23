@@ -27,6 +27,8 @@ class UpdatePane extends React.Component {
 				alert("update not sent.");
 			}
 		});
+
+		alert("sending update... (this will take a while)");
 	}
 
 	submitFirm(e) {
@@ -34,7 +36,8 @@ class UpdatePane extends React.Component {
 
 		let file_in = new FormData(e.target);
 
-		if (!file_in.has("stm")) return;
+		if (!e.target['stm'].files.length) return;
+		if (!e.target['esp'].files.length) file_in.delete("esp");
 
 		fetch('/a/updatefirm', {
 			method: 'POST',
