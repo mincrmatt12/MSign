@@ -7,6 +7,11 @@
 #include "sd.h"
 #include "uart.h"
 #include "common/slots.h"
+#include <FreeRTOS.h>
+#include <task.h>
+
+#include <esp_partition.h>
+#include <esp_ota_ops.h>
 
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
@@ -182,15 +187,14 @@ failure: // clean up
 
 		uint16_t chksum = util::compute_crc(buffer, length);
 
-		uint8_t send_buffer[length + 5];
+		uint8_t send_buffer[5];
 		send_buffer[0] = 0xa6;
 		send_buffer[1] = length + 2;
 		send_buffer[2] = 0x62;
 
 		memcpy(&send_buffer[3], &chksum, 2);
-		memcpy(&send_buffer[5], buffer, length);
-
-		Serial.write(send_buffer, length + 5);
+		uart_write_bytes(UART_NUM_0, (char*)send_buffer, 5);
+		uart_write_bytes(UART_NUM_0, (char*)buffer, length);
 	}
 
 	uint16_t send_update_start(uint16_t checksum, uint32_t length) {
@@ -222,11 +226,11 @@ failure: // clean up
 		uart_write_bytes(UART_NUM_0, (char*)send_buffer, sizeof(send_buffer));
 	}
 
-	bool retrieve_update_status(uint8_t& status_out) {
+	bool retrieve_update_status(slots::protocol::UpdateStatus& status_out) {
 		uint8_t recv_buffer[4];
 		uart_read_bytes(UART_NUM_0, recv_buffer, sizeof(recv_buffer), portMAX_DELAY);
 		if (recv_buffer[0] == 0xa5 && recv_buffer[1] == 0x01 && recv_buffer[2] == 0x63) {
-			status_out = recv_buffer[3];
+			status_out = (slots::protocol::UpdateStatus)recv_buffer[3];
 			return true;
 		}
 		return false;
@@ -277,7 +281,7 @@ failure: // clean up
 			case USTATE_CURRENT_SENDING_STM:
 				{
 					// send a reset code
-					send_update_status(0x10);
+					send_update_status(slots::protocol::UpdateCmd::CANCEL_UPDATE);
 
 					// reset update state:
 					set_update_state(USTATE_READY_TO_START);
@@ -325,56 +329,56 @@ failure: // clean up
 					send_update_status(slots::protocol::UpdateCmd::PREPARE_FOR_IMAGE); // preapre for image
 
 					// wait for command
-					uint8_t status;
-					while (!retrieve_update_status(status)) delay(5);
+					slots::protocol::UpdateStatus status;
+					while (!retrieve_update_status(status)) vTaskDelay(pdMS_TO_TICKS(5));
 
-					if (status != 0x12) {
-						ESP_LOGD(TAG, "invalid command for readyimg");
-						ESP.restart();
+					if (status != slots::protocol::UpdateStatus::READY_FOR_IMAGE) {
+						ESP_LOGE(TAG, "invalid command for readyimg");
+						esp_restart();
 					}
 
 					// image is ready, send the image command
 					
-					File stm_firmware = sd.open("/upd/stm.bin");
-					auto chunk = send_update_start(crc_stm, stm_firmware.size());
+					FIL stm_firmware; f_open(&stm_firmware, "/upd/stm.bin", FA_READ);
+					auto chunk = send_update_start(crc_stm, f_size(&stm_firmware));
 					uint8_t current_chunk_buffer[253];
 					uint8_t current_chunk_size = 0;
-					Serial1.printf_P("sending image to STM in %d chunks: ", chunk);
+					ESP_LOGI(TAG, "Sending image to STM32 in %d chunks", chunk);
+					UINT br;
 					
 					while (true) {
-						while (!retrieve_update_status(status)) delay(1);
+						while (!retrieve_update_status(status)) vTaskDelay(1);
 
 						switch (status) {
-							case 0x12:
+							case slots::protocol::UpdateStatus::READY_FOR_IMAGE:
 								continue;
-							case 0x13:
+							case slots::protocol::UpdateStatus::READY_FOR_CHUNK:
 								{
-									Serial1.print('.');
 									--chunk;
 
-									if (chunk == 0) current_chunk_size = stm_firmware.size() - stm_firmware.position();
+									if (chunk == 0) current_chunk_size = f_size(&stm_firmware) - f_tell(&stm_firmware);
 									else 			current_chunk_size = 253;
 									memset(current_chunk_buffer, 0, 253);
-									stm_firmware.read(current_chunk_buffer, current_chunk_size);
+									f_read(&stm_firmware, current_chunk_buffer, current_chunk_size, &br);
 									break;
 								}
-							case 0x30:
+							case slots::protocol::UpdateStatus::RESEND_LAST_CHUNK_CSUM:
 								{
-									Serial1.print('e');
 									break;
 								}
-							case 0x40:
+							case slots::protocol::UpdateStatus::ABORT_CSUM:
 								{
 									ESP_LOGD(TAG, "stm failed csum check, stopping update.");
-									sd.remove("/upd/state.txt");
-									ESP.restart();
+									f_close(&stm_firmware);
+									f_unlink("/upd/state");
+									esp_restart();
 								}
-							case 0x20:
+							case slots::protocol::UpdateStatus::BEGINNING_COPY:
 								{
 									goto loopover;
 								}
 							default:
-								Serial1.printf_P("unknown status code %02x\n", status);
+								ESP_LOGW(TAG, "unknown status code %02x", (int)status);
 								continue;
 						}
 						if (current_chunk_size == 0) continue;
@@ -384,97 +388,105 @@ failure: // clean up
 					}
 	loopover:
 				ESP_LOGD(TAG, "done.\nwaiting for finished update");
+				f_close(&stm_firmware);
 
-				while (!retrieve_update_status(status)) delay(50);
+				while (!retrieve_update_status(status)) vTaskDelay(pdMS_TO_TICKS(50));
 
-				if (status != 0x21) {
+				if (status != slots::protocol::UpdateStatus::COPY_COMPLETED) {
 					ESP_LOGD(TAG, "huh? ignoring invalid status.");
 				}
 
 				// setting update status accordingly and resetting
-				if (sd.exists("/upd/esp.bin")) {
+				if (!f_stat("/upd/esp.bin", NULL)) {
 					set_update_state(USTATE_READY_TO_DO_ESP);
 				}
 				else {
 					set_update_state(USTATE_JUST_DID_ESP);
 				}
-				ESP.restart();
+				esp_restart();
 			}
 		case USTATE_READY_TO_DO_ESP:
 			{
 				// comes back here after a restart
-				ESP_LOGD(TAG, "continuing update; flashing to ESP: ");
+				ESP_LOGI(TAG, "Continuing update; flashing to ESP.");
 
-				File esp_firmware = sd.open("/upd/esp.bin");
-				uintptr_t flash_addr_ptr = 0x300000;
 				uint8_t data_buffer[256];
 				bool has_finished = false;
-				int sectors = 0;
+				uint16_t calculated_csum = 0;
+				UINT last_size;
+
+				esp_ota_handle_t updater;
+
+				auto part = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_APP_OTA_1, nullptr);
+				if (!part) {
+					ESP_LOGE(TAG, "missing partition for ota update; spinning");
+					while (1) {vTaskDelay(5);}
+				}
+
+				FIL esp_firmware; f_open(&esp_firmware, "/upd/esp.bin", FA_READ);
+				ESP_ERROR_CHECK(esp_ota_begin(part, f_size(&esp_firmware), &updater));
 				
 				// write the contents of esp.bin to flash at _FS_start, taking advantage of the _Helpfully_ allocated symbols :)
 				while (!has_finished) {
-					if (flash_addr_ptr % 4096 == 0) {
-						++sectors;
-						Serial1.print('e');
-						ESP.flashEraseSector(flash_addr_ptr / 4096);
-					}
-					Serial1.print('.');
-					send_update_status(0x50);
-
+					send_update_status(slots::protocol::UpdateCmd::ESP_WROTE_SECTOR);
 					memset(data_buffer, 0, 256);
 
-					if (esp_firmware.size() - esp_firmware.position() >= 256) {
-						esp_firmware.read(data_buffer, 256);
-					}
-					else {
-						esp_firmware.read(data_buffer, esp_firmware.size() - esp_firmware.position());
-						has_finished = true;
-					}
-
-					ESP.flashWrite(flash_addr_ptr, (uint32_t *)data_buffer, 256);
-					flash_addr_ptr += 256;
+					f_read(&esp_firmware, data_buffer, 256, &last_size);
+					has_finished = f_eof(&esp_firmware) || last_size < 256;
+					calculated_csum = util::compute_crc(data_buffer, last_size, calculated_csum);
+					
+					esp_ota_write(updater, data_buffer, last_size);
 				}
 
-				send_update_status(0x51);
+				f_close(&esp_firmware);
+
+				if (calculated_csum != crc_esp) {
+					ESP_LOGW(TAG, "unexpected checkum -- this might fuck up");
+				}
+
+				ESP_ERROR_CHECK(esp_ota_end(updater));
+
+				send_update_status(slots::protocol::UpdateCmd::ESP_COPYING);
 				// THE FLASH... HAS.. BEEN WRITTEN
-				ESP_LOGD(TAG, "ok.");
+				ESP_LOGI(TAG, "Wrote image.");
 
 				set_update_state(USTATE_JUST_DID_ESP);
 
 				// send eboot command
+				/*
 				eboot_command ebcmd;
 				ebcmd.action = ACTION_COPY_RAW;
 				ebcmd.args[0] = 0x300000;
 				ebcmd.args[1] = 0x00000;
-				ebcmd.args[2] = sectors * 4096;
 				eboot_command_write(&ebcmd);
+				*/
 
-				delay(25);
-				ESP_LOGD(TAG, "eboot setup... HOLD ON TO YOUR BUTTS!");
-				ESP.restart();
+				ESP_LOGD(TAG, "setting ota_1 as boot image (will copy in bootloader)");
+				esp_ota_set_boot_partition(part);
+				ESP_LOGD(TAG, "restarting");
+				esp_restart();
 			}
 		case USTATE_JUST_DID_ESP:
 			{
 				// update finished, returns here
-				ESP_LOGD(TAG, "just did an update!");
+				ESP_LOGI(TAG, "Just returned from update OK!");
 
 				// clean up
-				sd.remove("/upd/state.txt");
-				sd.remove("/upd/stm.bin");
-				sd.remove("/upd/chck.sum");
-				if (sd.exists("/upd/esp.bin"))
-					sd.remove("/upd/esp.bin");
+				f_unlink("/upd/state");
+				f_unlink("/upd/stm.bin");
+				f_unlink("/upd/chck.sum");
+				f_unlink("/upd/esp.bin");
+				f_rmdir("/upd");
 
-				delay(1000);
+				vTaskDelay(pdMS_TO_TICKS(1000));
 
 				// send command
-				send_update_status(0x40);
-				send_update_status(0x40);
-				send_update_status(0x40);
-				delay(25);
+				send_update_status(slots::protocol::UpdateCmd::UPDATE_COMPLETED_OK);
+				send_update_status(slots::protocol::UpdateCmd::UPDATE_COMPLETED_OK);
+				send_update_status(slots::protocol::UpdateCmd::UPDATE_COMPLETED_OK);
 
 				// restart
-				ESP.restart();
+				esp_restart();
 			}
 		}
 	}
