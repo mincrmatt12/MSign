@@ -114,7 +114,7 @@ namespace upd {
 			}
 			fileHeader[58] = 0;
 
-			int iH, iC, iJ, iHc, iCc, iJc;
+			int iH = 0, iC = 0, iJ = 0, iHc = 0, iCc = 0, iJc = 0;
 			// check the filename
 			if ((iH = memcmp(fileHeader, "page.html/", 10))
 				&& (iC = memcmp(fileHeader, "page.css/", 9)) && (iJ = memcmp(fileHeader, "page.js/ ", 9)) && 
@@ -143,6 +143,8 @@ namespace upd {
 
 			FIL target; f_open(&target, tfname, FA_WRITE | FA_CREATE_ALWAYS);
 
+			int bytes_since_last_yield = 0;
+
 			ESP_LOGD(TAG, "copying to %s: ", tfname);
 
 			{ 
@@ -157,6 +159,11 @@ namespace upd {
 						f_close(&arF);
 						ESP_LOGE(TAG, "failed to copy");
 						goto failure;
+					}
+					bytes_since_last_yield += bw;
+					if (bytes_since_last_yield > 8192) {
+						vTaskDelay(2);
+						bytes_since_last_yield = 0;
 					}
 				}
 			}
@@ -425,6 +432,8 @@ failure: // clean up
 
 				FIL esp_firmware; f_open(&esp_firmware, "/upd/esp.bin", FA_READ);
 				ESP_ERROR_CHECK(esp_ota_begin(part, f_size(&esp_firmware), &updater));
+
+				int bytes_since_last_yield = 0;
 				
 				// write the contents of esp.bin to flash at _FS_start, taking advantage of the _Helpfully_ allocated symbols :)
 				while (!has_finished) {
@@ -436,6 +445,12 @@ failure: // clean up
 					calculated_csum = util::compute_crc(data_buffer, last_size, calculated_csum);
 					
 					esp_ota_write(updater, data_buffer, last_size);
+					bytes_since_last_yield += last_size;
+
+					if (bytes_since_last_yield > 32768) {
+						vTaskDelay(2);
+						bytes_since_last_yield = 0;
+					}
 				}
 
 				f_close(&esp_firmware);
