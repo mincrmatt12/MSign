@@ -469,8 +469,7 @@ flush_buf:
 
 			send_static_response(200, "OK", "Updating UI.");
 			lwip_close(client_sock);
-			vTaskDelay(pdMS_TO_TICKS(100));
-			esp_restart();
+			serial::interface.reset(); // reset both systems
 		}
 		else if (strcasecmp(tgt, "updatefirm") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
@@ -579,6 +578,7 @@ flush_buf:
 			f_close(&out_file);
 
 			send_static_response(200, "OK", gotcount == 2 ? "Updating stm+esp" : "Updating stm only");
+			lwip_close(client_sock);
 			serial::interface.reset();
 		}
 		else if (strcasecmp(tgt, "reboot") == 0) {

@@ -63,12 +63,12 @@ extern "C" void app_main() {
 	}
 
 	// Start the grabber
-	if (xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            5, NULL) != pdPASS) {
+	if (xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            6, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create grab");
 		return;
 	}
 
-	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr            ,6, NULL) != pdPASS) {
+	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr            ,5, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 

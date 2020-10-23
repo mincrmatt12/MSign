@@ -89,6 +89,7 @@ namespace upd {
 		FIL arF; f_open(&arF, "/upd/webui.ar", FA_READ);
 	 	uint8_t magic[8];
 		UINT br;
+		int files_read = 0;
 		if ((f_read(&arF, magic, sizeof(magic), &br), br) != sizeof(magic) ||
 				memcmp(magic, "!<arch>\n", sizeof(magic)) ) {
 			f_close(&arF);
@@ -97,7 +98,6 @@ namespace upd {
 			goto failure;
 		}
 
-		int files_read = 0;
 		while (files_read < 6) {
 			uint8_t fileHeader[60];
 			do {
