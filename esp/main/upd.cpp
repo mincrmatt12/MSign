@@ -197,7 +197,7 @@ failure: // clean up
 		uint8_t send_buffer[5];
 		send_buffer[0] = 0xa6;
 		send_buffer[1] = length + 2;
-		send_buffer[2] = 0x62;
+		send_buffer[2] = slots::protocol::UPDATE_IMG_DATA;
 
 		memcpy(&send_buffer[3], &chksum, 2);
 		uart_write_bytes(UART_NUM_0, (char*)send_buffer, 5);
@@ -210,7 +210,7 @@ failure: // clean up
 		uint8_t send_buffer[11] = {
 			0xa6,
 			0x08,
-			0x61,
+			slots::protocol::UPDATE_IMG_START,
 			0, 0, 0, 0, 0, 0, 0, 0
 		};
 
@@ -223,10 +223,10 @@ failure: // clean up
 	}
 
 	void send_update_status(slots::protocol::UpdateCmd status) {
-		uint8_t send_buffer[11] = {
+		uint8_t send_buffer[4] = {
 			0xa6,
-			0x08,
-			0x60,
+			0x01,
+			slots::protocol::UPDATE_CMD,
 			(uint8_t)status
 		};
 
@@ -326,7 +326,9 @@ failure: // clean up
 
 					uart_write_bytes(UART_NUM_0, (char*)buf, 3);
 
-					if (buf[0] != 0xa5 || buf[1] != 0x01 || buf[2] != slots::protocol::UPDATE_STATUS || buf[3] != 0x10) goto try_again;
+					slots::protocol::UpdateStatus status;
+
+					if (!retrieve_update_status(status)) goto try_again;
 
 					ESP_LOGI(TAG, "Connected to STM32 for update.");
 
@@ -336,7 +338,6 @@ failure: // clean up
 					send_update_status(slots::protocol::UpdateCmd::PREPARE_FOR_IMAGE); // preapre for image
 
 					// wait for command
-					slots::protocol::UpdateStatus status;
 					while (!retrieve_update_status(status)) vTaskDelay(pdMS_TO_TICKS(5));
 
 					if (status != slots::protocol::UpdateStatus::READY_FOR_IMAGE) {
@@ -363,10 +364,10 @@ failure: // clean up
 								{
 									--chunk;
 
-									if (chunk == 0) current_chunk_size = f_size(&stm_firmware) - f_tell(&stm_firmware);
-									else 			current_chunk_size = 253;
 									memset(current_chunk_buffer, 0, 253);
-									f_read(&stm_firmware, current_chunk_buffer, current_chunk_size, &br);
+									f_read(&stm_firmware, current_chunk_buffer, 253, &br);
+									current_chunk_size = br;
+									ESP_LOGD(TAG, "sending chunk %d", chunk);
 									break;
 								}
 							case slots::protocol::UpdateStatus::RESEND_LAST_CHUNK_CSUM:
@@ -388,7 +389,7 @@ failure: // clean up
 								ESP_LOGW(TAG, "unknown status code %02x", (int)status);
 								continue;
 						}
-						if (current_chunk_size == 0) continue;
+						if (current_chunk_size == 0) break;
 
 						// send the chunk
 						send_update_chunk(current_chunk_buffer, current_chunk_size);
