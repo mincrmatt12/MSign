@@ -316,6 +316,12 @@ void serial::SerialInterface::process_packet() {
 				ESP_LOGD(TAG, "Moved packet back to esp.");
 			}
 			break;
+		case slots::protocol::HANDSHAKE_INIT:
+			{
+				ESP_LOGW(TAG, "Got handshake init in main loop; resetting");
+				esp_restart();
+			}
+			break;
 		default:
 			ESP_LOGW(TAG, "Unknown packet type %02x", rx_buf[2]);
 			continue_rx();
