@@ -116,18 +116,8 @@ namespace {
 extern "C" void UsageFault_Handler() {
 	nvic::show_error_screen("UsageFault");
 }
-extern "C" void BusFault_Handler() __attribute__((naked));
 extern "C" void BusFault_Handler() {
-	// Put onto the running stack (this'll break probably but we're already resetting so eh)
-	asm volatile (
-			"tst lr, #4\n"
-			"ite eq \n"
-			"mrseq r0, msp\n"
-			"mrsne r0, psp\n"
-			"mov sp, r0\n"
-			"bkpt #1\n"
-	);
-	//nvic::show_error_screen("BusFault");
+	nvic::show_error_screen("BusFault");
 }
 
 extern "C" void HardFault_Handler() __attribute__((naked));
