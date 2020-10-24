@@ -17,7 +17,7 @@ if ignored_datastr:
     ignored_dataids = [int(x, 16) for x in ignored_datastr.split()]
 
 if len(sys.argv) < 3:
-    print("usage: {} [logicexport,simlog] <in>")
+    print("usage: {} [logicexport,simlog,realtime] <in>")
     exit(1)
 
 if sys.argv[1] in prefixes("logicexport"):
@@ -29,7 +29,7 @@ if sys.argv[1] in prefixes("logicexport"):
             i = i.rstrip('\n')
             row = i.split(',')
 
-            v = int(row[1][2:], base=16)
+            v = int(row[-1][2:], base=16)
             if not flag and v not in (0xa6, 0xa5):
                 continue
             flag = True
