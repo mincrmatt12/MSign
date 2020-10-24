@@ -5,7 +5,11 @@
 #include "stm32f2xx_ll_bus.h"
 #include "rcc.h"
 
+#include <reent.h>
+
 extern "C" {
+	extern void (*__preinit_array_start [])(void);
+	extern void (*__preinit_array_end [])(void);
 	extern void (*__init_array_start [])(void);
 	extern void (*__init_array_end [])(void);
 
@@ -48,8 +52,12 @@ void rcc::init() {
 	// Let FREERTOS init the systick, we just leech off of it
 
 	// Initialize the cpp runtime
-
-	int cpp_size = &(__init_array_end[0]) - &(__init_array_start[0]);
+	int cpp_size = &(__preinit_array_end[0]) - &(__preinit_array_start[0]);
+	for (int cpp_count = 0; cpp_count < cpp_size; ++cpp_count) {
+		__preinit_array_start[cpp_count]();
+	} 
+	
+	cpp_size = &(__init_array_end[0]) - &(__init_array_start[0]);
 	for (int cpp_count = 0; cpp_count < cpp_size; ++cpp_count) {
 		__init_array_start[cpp_count]();
 	} 
