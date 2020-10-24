@@ -145,7 +145,7 @@ namespace upd {
 
 			int bytes_since_last_yield = 0;
 
-			ESP_LOGD(TAG, "copying to %s: ", tfname);
+			ESP_LOGI(TAG, "updating: %s", tfname);
 
 			{ 
 				uint8_t buf[256];
@@ -173,7 +173,7 @@ namespace upd {
 		}
 		f_close(&arF);
 
-		ESP_LOGD(TAG, "finished ui update.");
+		ESP_LOGI(TAG, "finished ui update.");
 failure: // clean up
 		f_unlink("/upd/state");
 		f_unlink("/upd/webui.ar");
