@@ -46,7 +46,7 @@ class App extends React.Component {
 				stopids: [],
 				names: [],
 				dirtags: [],
-				alert: ""
+				alert: "",
 			},
 			
 			global: {
@@ -54,7 +54,8 @@ class App extends React.Component {
 				psk: "",
 				ntpserver: "",
 				configuser: "",
-				configpass: ""
+				configpass: "",
+				timezone: ""
 			},
 
 			apikeys: {
@@ -96,6 +97,8 @@ class App extends React.Component {
 		// optional global params
 		if (this.state.global.ntpserver !== "")
 			result += "ntpserver=" + this.state.global.ntpserver + "\n";
+		if (this.state.global.timezone !== "")
+			result += "timezone=" + this.state.global.timezone + "\n";
 		if (this.state.global.configuser !== "")
 			result += "configuser=" + this.state.global.configuser + "\n";
 		if (this.state.global.configpass !== "")
@@ -198,6 +201,7 @@ class App extends React.Component {
 					case 'ssid':
 					case 'psk':
 					case 'ntpserver':
+					case 'timezone':
 					case 'configuser':
 					case 'configpass':
 						this.setState((s, _) => {s.global[key] = value; return s});

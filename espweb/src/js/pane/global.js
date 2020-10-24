@@ -36,6 +36,10 @@ class GlobalPane extends React.Component {
 					<FormControl type='text' value={this.props.configState.ntpserver} onChange={(e) => {this.upload('ntpserver', e.target.value);}} placeholder='pool.ntp.org'/>
 				</InputGroup>
 			</Form.Group>
+			<Form.Group controlId="timezone_ctrl">
+				<Form.Label>posix timezone</Form.Label>
+				<FormControl type='text' value={this.props.configState.timezone} onChange={(e) => {this.upload('timezone', e.target.value);}} placeholder="EST5EDT,M3.2.0/2:00:00,M11.1.0/2:00:00" />
+			</Form.Group>
 
 			<hr className="hr-gray" />
 
