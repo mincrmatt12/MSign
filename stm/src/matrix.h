@@ -191,7 +191,7 @@ namespace led {
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
-			tim_init.Prescaler  = 2;
+			tim_init.Prescaler  = 3;
 			tim_init.Autoreload = 1;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM9, &tim_init);
@@ -337,8 +337,8 @@ namespace led {
 		}
 
 		void do_next() {
-			// set address pins
-			if (pos == 12) {
+			// Are we finished vblank?
+			if (pos == 13) {
 				// We have finished clocking out a row, process buffer swaps
 				if (should_swap) {
 					active_buffer = !active_buffer;
@@ -348,10 +348,19 @@ namespace led {
 				start_display();
 				return;
 			}
+			// Have we finished the last line?
+			if (pos == 12) {
+				pos = 13;
+				oe = true;
+				show = true;
+				wait(/*vlbank*/10000);
+				return;
+			}
+			// Stop drawing
 			oe = true;
 			strobe = true;
 			show = false;
-			// Thing
+			// set address pins
 			GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 			const static uint16_t draw_ticks_table[] = {3,6,12,24,48,96,192,384,768,1536,3072,6144};
 			uint16_t drawn_pos = draw_ticks_table[pos];
@@ -375,7 +384,7 @@ namespace led {
 				wait(drawn_pos);		
 				return;
 			}
-			else {
+			else if (pos != 13) {
 				strobe = false;
 				// Alright, pos == 12, so run the wait code
 				// Just wait, but force it to run us again.
