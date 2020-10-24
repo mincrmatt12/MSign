@@ -28,7 +28,7 @@ Reset_Handler:
 copy_data_loop:
 	ldr r2, [r3], #4
 	str r2, [r0], #4
-	cmp r2, r1
+	cmp r0, r1
 	bcc copy_data_loop
 
 	/* zero out bss */
