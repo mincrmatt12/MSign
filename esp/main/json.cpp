@@ -274,7 +274,7 @@ bool json::JSONParser::parse_object() {
 		parse_value();
 		pop();
 		free(n);
-		if (!advance_whitespace()) {free(n); return false;}
+		if (!advance_whitespace()) {return false;}
 		if (peek() == ',') continue;
 		else if (peek() == '}') break;
 		else return false;
