@@ -55,7 +55,7 @@ namespace crash {
 		//draw::text(matrix, errcode, 0, 6, mkcolor(0, 3, 3));
 
 		// Start display again
-		matrix.start_display();
+		//matrix.start_display();
 
 		// Loop forever
 		while (1) {
