@@ -343,6 +343,7 @@ namespace led {
 				if (should_swap) {
 					active_buffer = !active_buffer;
 					if (notify_when_swapped) xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+					should_swap = false;
 				}
 				// Start the display again
 				start_display();
