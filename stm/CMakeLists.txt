@@ -91,7 +91,7 @@ target_link_libraries(stm
 
 target_compile_options(stm
 	PUBLIC
-	-Og
+	-O3
 	-ffast-math
 	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
 )
