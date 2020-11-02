@@ -91,7 +91,7 @@ target_link_libraries(stm
 
 target_compile_options(stm
 	PUBLIC
-	-O3
+	-Og
 	-ffast-math
 	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
 )
@@ -113,12 +113,13 @@ endif()
 
 target_link_options(stm
 	PUBLIC
-	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/f207zg.ld
+	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/app.ld
 	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic
 	-Wl,-u 
 	-Wl,_printf_float
+	-Wl,-Map=stm.map
 	--specs=nano.specs
 )
 

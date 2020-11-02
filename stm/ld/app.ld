@@ -1,33 +1,3 @@
-/*
-*****************************************************************************
-**
-
-**  File        : stm32_flash.ld
-**
-**  Abstract    : Linker script for STM32F207ZG Device with
-**                1024KByte FLASH, 128KByte RAM
-**
-**                Set heap size, stack size and stack location according
-**                to application requirements.
-**
-**                Set memory bank area and size if external memory is used.
-**
-**  Target      : STMicroelectronics STM32
-**
-**  Environment : Atollic TrueSTUDIO(R)
-**
-**  Distribution: The file is distributed as is, without any warranty
-**                of any kind.
-**
-**  (c)Copyright Atollic AB.
-**  You may use this file as-is or modify it according to the needs of your
-**  project. This file may only be built (assembled or compiled and linked)
-**  using the Atollic TrueSTUDIO(R) product. The use of this file together
-**  with other tools than Atollic TrueSTUDIO(R) is not permitted.
-**
-*****************************************************************************
-*/
-
 /* Entry Point */
 ENTRY(Reset_Handler)
 
@@ -63,7 +33,6 @@ SECTIONS
     *(.text*)          /* .text* sections (code) */
     *(.glue_7)         /* glue arm to thumb code */
     *(.glue_7t)        /* glue thumb to arm code */
-    *(.eh_frame)
 
     KEEP (*(.init))
     KEEP (*(.fini))
@@ -78,15 +47,14 @@ SECTIONS
     . = ALIGN(4);
     *(.rodata)         /* .rodata sections (constants, strings, etc.) */
     *(.rodata*)        /* .rodata* sections (constants, strings, etc.) */
-    . = ALIGN(4);
+    . = ALIGN(0x200);
+	KEEP(*(.isr_vector_crash)) /* crash handler isr vector */
   } >FLASH
 
-  .ARM.extab   : { *(.ARM.extab* .gnu.linkonce.armextab.*) } >FLASH
   .ARM : {
     __exidx_start = .;
-    *(.ARM.exidx*)
     __exidx_end = .;
-  } >FLASH
+  } >FLASH   /* we provide our own exception handling stuff */
 
   .preinit_array     :
   {
@@ -109,6 +77,34 @@ SECTIONS
     PROVIDE_HIDDEN (__fini_array_end = .);
   } >FLASH
 
+  /* setup VRAM/crashRAM area */
+  .vram (NOLOAD) :
+  {
+	. = ALIGN(4);
+	_svram = .;
+	*(.vram .vram*)
+	. = ALIGN(4);
+	_evram = .;
+	_ecstack = .;
+  } >RAM
+
+  .crash_bss (_svram) : 
+  {
+	*crash/*(.bss .bss* COMMON) /* crash bss */
+	. = ALIGN(4);
+	_ecbss = .;
+  }
+
+  _scidata = LOADADDR(.crash_data);
+
+  .crash_data (_svram + SIZEOF(.crash_bss)) :
+  {
+	. = ALIGN(4);
+	_scdata = .;
+	*crash/*(.data .data*) /* data sections for crash handler code */
+	_ecdata = .;
+  } AT> FLASH
+
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
 
@@ -117,8 +113,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
-    *(.data)           /* .data sections */
-    *(.data*)          /* .data* sections */
+    EXCLUDE_FILE(*crash/*) *(.data .data*)           /* .data sections */
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
@@ -132,9 +127,7 @@ SECTIONS
     /* This is used by the startup in order to initialize the .bss secion */
     _sbss = .;         /* define a global symbol at bss start */
     __bss_start__ = _sbss;
-    *(.bss)
-    *(.bss*)
-    *(COMMON)
+    EXCLUDE_FILE(*crash/*) *(.bss .bss* COMMON) /* ignore crash */
 
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
@@ -152,6 +145,12 @@ SECTIONS
     . = ALIGN(4);
   } >RAM
 
+  /* debug data region; filled out by build scripts manually with objcopy */
+  .fw_dbg :
+  {
+	  . = ALIGN(4);
+	  _dbg_data_begin = .;
+  } >FLASH
   
 
   /* Remove information from the standard libraries */
@@ -160,6 +159,7 @@ SECTIONS
     libc.a ( * )
     libm.a ( * )
     libgcc.a ( * )
+	*(.ARM.ex*)
   }
 
   .ARM.attributes 0 : { *(.ARM.attributes) }
