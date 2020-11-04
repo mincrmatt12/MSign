@@ -23,6 +23,14 @@ namespace crash {
 		);
 		call_crash_main(errcode, sp, pc, lr);
 	}
+
+	// Transfer control to the crash handler but don't show a backtrace / debug screen, just show a short message and reboot automatically.
+	//
+	// This is the same as setting PC to 0xffff ffff and SP to 0
+	[[noreturn]] void panic_nonfatal(const char* errcode);
+
+	// Transfer control the interrupt handler, getting the state from the stacked registers in an interrupt handler.
+	[[noreturn]] void panic_from_isr(const char* errcode, uint32_t *SP_at_ISR_entry);
 };
 
 #endif

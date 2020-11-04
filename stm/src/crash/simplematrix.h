@@ -113,7 +113,7 @@ namespace crash {
 			strobe = true;
 
 			// Configure timer 9 (and give panels a bit to respond to the strobe signal)
-			LL_TIM_SetAutoReload(TIM9, bitplane ? 1200 : 600);
+			LL_TIM_SetAutoReload(TIM9, bitplane ? 1800 : 800);
 			LL_TIM_SetCounter(TIM9, 0);
 			
 			// Finish strobe

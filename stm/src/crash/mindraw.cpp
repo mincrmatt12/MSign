@@ -16,6 +16,7 @@ namespace crash::draw {
 				pen += 2;
 				continue;
 			}
+			if (pen + *(metrics + (c * 6) + 4) + *(metrics + (c * 6)) >= 128) break;
 			bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), color);
 			pen += *(metrics + (c * 6) + 3);
 		}
