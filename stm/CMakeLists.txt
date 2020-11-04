@@ -96,6 +96,11 @@ target_compile_options(stm
 	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
 )
 
+target_include_directories(stm
+	PRIVATE
+	${CMAKE_CURRENT_LIST_DIR}/../vendor/TinyDeflate
+)
+
 # Get the current version
 if (${Python_FOUND})
 	execute_process(COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/get_ver.py
@@ -121,6 +126,15 @@ target_link_options(stm
 	-Wl,_printf_float
 	-Wl,-Map=stm.map
 	--specs=nano.specs
+)
+
+# add debug generation code
+add_custom_command(TARGET stm
+	POST_BUILD
+	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/dbg/create_blob.py $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin
+	COMMAND ${OBJCOPY_EXECUTABLE} --set-section-flags .fw_dbg=ALLOC,LOAD,CONTENTS,READONLY,DATA --update-section .fw_dbg=${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin $<TARGET_FILE:stm> > ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.log 2>&1
+	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.log
+	COMMENT Generating and appending debug blob
 )
 
 # add upload target

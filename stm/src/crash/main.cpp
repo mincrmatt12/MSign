@@ -1,8 +1,11 @@
 #include "../matrix.h"
+#include "decode.h"
 #include "main.h"
 #include "mindraw.h"
 #include "simplematrix.h"
 #include "stm32f2xx_ll_system.h"
+#include <alloca.h>
+#include <cstdio>
 
 extern "C" {
 	extern uint32_t _ecstack;
@@ -23,6 +26,11 @@ namespace crash {
 	}
 
 	void cmain(const char* errcode, uint32_t SP, uint32_t PC, uint32_t LR) {
+		// Mask out all application interrupts
+		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
+		// Change VTOR to our VTOR
+		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
+
 		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
 		LL_TIM_DisableCounter(TIM1);
 		LL_TIM_DisableCounter(TIM9);
@@ -30,17 +38,13 @@ namespace crash {
 		LL_FLASH_DisableDataCache();
 		LL_FLASH_DisableInstCache();
 
+		// Disable the matrix interrupts
 		NVIC_DisableIRQ(DMA2_Stream5_IRQn);
 		NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
-
-		// Mask out all application interrupts
-		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 		// Zero our BSS
 		bzero(&_svram, &_ecbss - &_svram);
 		// Load our constant data
 		memcpy(&_scdata, &_scidata, &_ecdata - &_scdata);
-		// Change VTOR to our VTOR
-		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
 
 		__DSB();
 		__ISB();
@@ -55,10 +59,27 @@ namespace crash {
 		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
 		NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
-		matrix.color(5, 5) = 0xff;
-
 		draw::text(matrix, "MSign crashed!", 0, 6, mkcolor(3, 0, 0));
 		draw::text(matrix, errcode, 0, 12, mkcolor(3, 3, 3));
+
+		// Create a backtrace
+		uint32_t backtrace[32];
+		uint16_t bt_len = 32;
+
+		decode::fill_backtrace(backtrace, bt_len, PC, LR, SP);
+
+		char symbols[bt_len][decode::max_length_size];
+
+		decode::resolve_symbols(symbols, backtrace, bt_len);
+
+		for (int y = 18, i = 0; y < 64 && i < bt_len; y+=12, ++i){ 
+			char buf[16];
+			snprintf(buf, 16, "[%d] - ", i);
+			uint16_t indent = draw::text(matrix, buf, 0, y, mkcolor(3, 2, 0));
+			snprintf(buf, 16, "0x%08x", backtrace[i]);
+			draw::text(matrix, buf, indent, y, mkcolor(1, 1, 3));
+			draw::text(matrix, symbols[i], indent, y+6, mkcolor(3, 3, 3));
+		}
 
 		// Start display again
 		matrix.start_display();

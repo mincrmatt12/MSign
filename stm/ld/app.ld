@@ -79,6 +79,7 @@ SECTIONS
 
   /* setup VRAM/crashRAM area */
   .vram (NOLOAD) :
+  AT (0x32000000) /* ugly hack to get openocd to ignore this section */
   {
 	. = ALIGN(4);
 	_svram = .;
@@ -89,6 +90,7 @@ SECTIONS
   } >RAM
 
   .crash_bss (_svram) : 
+  AT (0x34000000) /* ugly hack to get openocd to ignore this section */
   {
 	*crash/*(.bss .bss* COMMON) /* crash bss */
 	. = ALIGN(4);
@@ -122,7 +124,7 @@ SECTIONS
   
   /* Uninitialized data section */
   . = ALIGN(4);
-  .bss :
+  .bss : AT (0x30000000) /* ugly hack to get openocd to ignore this section */
   {
     /* This is used by the startup in order to initialize the .bss secion */
     _sbss = .;         /* define a global symbol at bss start */
@@ -132,17 +134,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM
-
-  /* User_heap_stack section, used to check that there is enough RAM left */
-  ._user_heap_stack :
-  {
-    . = ALIGN(4);
-    PROVIDE ( end = . );
-    PROVIDE ( _end = . );
-    . = . + _Min_Heap_Size;
-    . = . + _Min_Stack_Size;
-    . = ALIGN(4);
+	end = .;
   } >RAM
 
   /* debug data region; filled out by build scripts manually with objcopy */
@@ -150,6 +142,7 @@ SECTIONS
   {
 	  . = ALIGN(4);
 	  _dbg_data_begin = .;
+	  . = . + 4;
   } >FLASH
   
 
