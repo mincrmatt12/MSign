@@ -1,3 +1,4 @@
+#include "crash/main.h"
 #include "stm32f2xx.h"
 #include "stm32f2xx_ll_rcc.h"
 #include "nvic.h"
@@ -19,13 +20,15 @@ matrix_type matrix __attribute__((section(".vram")));
 srv::Servicer servicer{};
 uint64_t rtc_time;
 
+bool finished_init_ok = false;
+
 tasks::Timekeeper   timekeeper{rtc_time};
 tasks::DispMan      dispman{};
 tasks::DebugConsole dbgtim{timekeeper};
 
 void out_of_memory() {
 	matrix.start_display();
-	nvic::show_error_screen("no memory for tasks");
+	crash::panic("no memory for tasks");
 }
 
 int main() {
@@ -41,5 +44,6 @@ int main() {
 	if (xTaskCreate((TaskFunction_t)&tasks::DebugConsole::run, "dbgtim", 176, &dbgtim, 2, nullptr) != pdPASS) out_of_memory();
 
 	matrix.start_display();
+	finished_init_ok = true;
 	vTaskStartScheduler();
 }

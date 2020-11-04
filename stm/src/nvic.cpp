@@ -1,4 +1,5 @@
 #include "nvic.h"
+#include "crash/main.h"
 #include "pins.h"
 
 #include "stm32f2xx.h"
@@ -38,7 +39,10 @@ void nvic::init() {
 	NVIC_SetPriority(BusFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(BusFault_IRQn);
 
-	SCB->SHCSR |= SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_USGFAULTENA_Msk;
+	NVIC_SetPriority(MemoryManagement_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_EnableIRQ(MemoryManagement_IRQn);
+
+	SCB->SHCSR |= SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_MEMFAULTENA_Msk;
 
 	__set_BASEPRI(0U);
 }
@@ -66,7 +70,7 @@ extern "C" void NVIC_SRV_RX_IRQ_HANDLER() {
 		servicer.dma_finish(true);
 	}
 	else {
-		nvic::show_error_screen("RxNoHandle");
+		crash::panic("RxNoHandle");
 	}
 }
 
@@ -84,40 +88,51 @@ extern "C" void SysTick_Handler() {
 	xPortSysTickHandler();
 }
 
-// hard fault handler renderer...
+extern "C" void MemManage_Handler() __attribute__((naked));
+extern "C" void MemManage_Handler() {
+	asm volatile (
+		"ldr r0, =%0\n\t" // load the string into the first parameter
 
-namespace {
-	void draw_hardfault_screen(int remain_loop) {
-		draw::fill(matrix.get_inactive_buffer(), 0, 0, 0);
-		draw::text(matrix.get_inactive_buffer(), "MSign crashed!", font::lcdpixel_6::info, 0, 6, 4095, 1, 1);
-		draw::text(matrix.get_inactive_buffer(), "rebooting in:", font::lcdpixel_6::info, 0, 20, 128_c, 128_c, 128_c);
+		"tst lr, #4\n\t"  // check bit 3 of the LR to see which stack is in use
+		"ite eq\n\t"
+		"mrseq r1, msp\n\t" // if it's clear, use the main stack
+		"mrsne r1, psp\n\t" // otherwise, use the process stack
 
-		draw::rect(matrix.get_inactive_buffer(), 0, 24, remain_loop / 2, 32, 100_c, 100_c, 4095);
-	}
+		"ldr r3, =%1\n\t"   // load the address of the crash routine
+		"bx r3\n\t" :       // jump to it
+		: "i" ("MemManage (xn fail)"), "i" (&crash::panic_from_isr)
+		: "memory"
+	);
 }
 
-[[noreturn]] void nvic::show_error_screen(const char * errcode) {
-	if (!xPortIsInsideInterrupt()) vTaskSuspendAll();
-	__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
-	// boost priority of timer/dma
-	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
-	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
-	// there was a hardfault... delay for a while so i know
-	for (int j = 0; j < 128; ++j) {
-		draw_hardfault_screen(j);
-		draw::text(matrix.get_inactive_buffer(), errcode, font::lcdpixel_6::info, 0, 12, 4095, 128_c, 0);
-		matrix.swap_buffers_from_isr();
-	}
-
-	NVIC_SystemReset();
-	while(1) {;}
-}
-
+extern "C" void UsageFault_Handler() __attribute__((naked));
 extern "C" void UsageFault_Handler() {
-	nvic::show_error_screen("UsageFault");
+	asm volatile (
+		"ldr r0, =%0\n\t"
+		"tst lr, #4\n\t"
+		"ite eq\n\t"
+		"mrseq r1, msp\n\t"
+		"mrsne r1, psp\n\t"
+		"ldr r3, =%1\n\t" 
+		"bx r3\n\t" :
+		: "i" ("UsageFault"), "i" (&crash::panic_from_isr)
+		: "memory"
+	);
 }
+
+extern "C" void BusFault_Handler() __attribute__((naked));
 extern "C" void BusFault_Handler() {
-	nvic::show_error_screen("BusFault");
+	asm volatile (
+		"ldr r0, =%0\n\t"
+		"tst lr, #4\n\t"
+		"ite eq\n\t"
+		"mrseq r1, msp\n\t"
+		"mrsne r1, psp\n\t"
+		"ldr r3, =%1\n\t" 
+		"bx r3\n\t" :
+		: "i" ("BusFault"), "i" (&crash::panic_from_isr)
+		: "memory"
+	);
 }
 
 extern "C" void HardFault_Handler() __attribute__((naked));

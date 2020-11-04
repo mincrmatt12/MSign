@@ -3,7 +3,6 @@
 
 namespace nvic {
 	void init();
-    [[noreturn]] void show_error_screen(const char * errcode);
 }
 
 #endif

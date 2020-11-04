@@ -1,6 +1,7 @@
 #include "srv.h"
 
 #include "common/slots.h"
+#include "crash/main.h"
 #include "tasks/timekeeper.h"
 #include <string.h>
 #include "stm32f2xx_ll_usart.h"
@@ -821,7 +822,7 @@ void srv::Servicer::check_connection_ping() {
 			return;
 		}
 		// otherwise, reset
-		nvic::show_error_screen("esp timeout");
+		crash::panic_nonfatal("esp timeout");
 	}
 }
 
