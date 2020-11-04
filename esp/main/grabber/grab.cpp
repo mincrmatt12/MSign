@@ -66,8 +66,7 @@ namespace grabber {
 			// Wait for minimum element
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);
 			auto now = xTaskGetTickCount();
-			if (target < now) continue;
-			if (target - now > max_delay_between_runs) {
+			if (target < now || target - now > max_delay_between_runs) {
 				memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 			}
 			else vTaskDelay(target - now);
