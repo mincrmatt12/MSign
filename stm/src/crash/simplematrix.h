@@ -30,7 +30,7 @@ namespace crash {
 	};
 
 	constexpr MatrixBitLookupTable<0> mblt0{};
-	constexpr MatrixBitLookupTable<0> mblt1{};
+	constexpr MatrixBitLookupTable<1> mblt1{};
 
 	// Minimal version of the real matrix code, only supporting 2-bit color and single-buffered.
 	struct Matrix {
@@ -171,8 +171,8 @@ namespace crash {
 		void start_dmaing_row() {
 			// Set up the dma buffer
 			for (int i = 0, j = 0; i < 256; ++i, j+=2) {
-				dma_buffer[j] = (bitplane ? mblt1 : mblt0).table[frame[row*256 + i]] |
-						 ((bitplane ? mblt1 : mblt0).table[frame[(row+16)*256 + i]]) << 3;
+				dma_buffer[j] = (bitplane ? mblt1.table : mblt0.table)[frame[row*256 + i]] |
+						 ((bitplane ? mblt1.table : mblt0.table)[frame[(row+16)*256 + i]]) << 3;
 				dma_buffer[j+1] = dma_buffer[j] | 64; // set clock
 			}
 
