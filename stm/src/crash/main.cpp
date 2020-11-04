@@ -3,7 +3,9 @@
 #include "main.h"
 #include "mindraw.h"
 #include "simplematrix.h"
+#include "stm32f2xx_ll_cortex.h"
 #include "stm32f2xx_ll_system.h"
+#include "stm32f2xx_ll_utils.h"
 #include <alloca.h>
 #include <cstdio>
 
@@ -23,6 +25,18 @@ namespace crash {
 
 	inline constexpr uint8_t mkcolor(uint8_t r, uint8_t g, uint8_t b) {
 		return r | (g << 2) | (b << 4);
+	}
+
+	void delay_ms(uint32_t delay) {
+		volatile uint32_t dummyread = SysTick->CTRL;  // get rid of countflag
+
+		while (delay)
+		{
+			if((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) != 0)
+			{
+				--delay;
+			}
+		}
 	}
 
 	void cmain(const char* errcode, uint32_t SP, uint32_t PC, uint32_t LR) {
@@ -52,6 +66,10 @@ namespace crash {
 		// Initialize our matrix
 		matrix.init();
 
+		// Setup systick
+		LL_SYSTICK_DisableIT();
+		LL_Init1msTick(SystemCoreClock);
+
 		// Turn on interrupts
 		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
 		NVIC_EnableIRQ(DMA2_Stream5_IRQn);
@@ -68,24 +86,36 @@ namespace crash {
 
 		decode::fill_backtrace(backtrace, bt_len, PC, LR, SP);
 
+		// Create function name list (ironically using VLA here breaks the backtracer, but whatever)
 		char symbols[bt_len][decode::max_length_size];
 
 		decode::resolve_symbols(symbols, backtrace, bt_len);
 
-		for (int y = 18, i = 0; y < 64 && i < bt_len; y+=12, ++i){ 
-			char buf[16];
-			snprintf(buf, 16, "[%d] - ", i);
-			uint16_t indent = draw::text(matrix, buf, 0, y, mkcolor(3, 2, 0));
-			snprintf(buf, 16, "0x%08x", backtrace[i]);
-			draw::text(matrix, buf, indent, y, mkcolor(1, 1, 3));
-			draw::text(matrix, symbols[i], indent, y+6, mkcolor(3, 3, 3));
-		}
-
 		// Start display again
 		matrix.start_display();
 
-		// Loop forever
-		while (1) {
+		while (true) {
+			int y = 18;
+			int i = 0;
+			while (i < bt_len) {
+				char buf[16];
+				snprintf(buf, 16, "[%d] - ", i);
+				uint16_t indent = draw::text(matrix, buf, 0, y, mkcolor(3, 2, 0));
+				snprintf(buf, 16, "0x%08x", backtrace[i]);
+				draw::text(matrix, buf, indent, y, mkcolor(1, 1, 3));
+				draw::text(matrix, symbols[i], indent, y+6, mkcolor(3, 3, 3));
+				++i; y += 12;
+
+				if (y > 64) {
+					// Wait for a while
+					delay_ms(2500);
+					draw::rect(matrix, 0, 12, 128, 64, 0);
+					y = 18;
+				}
+			}
+			delay_ms(4000);
+			draw::rect(matrix, 0, 12, 128, 64, 0);
+			// TODO: show rect
 		}
 	}
 	
