@@ -198,7 +198,6 @@ namespace led {
 
 			LL_TIM_DisableARRPreload(TIM9);
 			LL_TIM_DisableDMAReq_UPDATE(TIM1);
-			LL_TIM_EnableIT_UPDATE(TIM1);
 
 			// setup gpios
 			LL_GPIO_InitTypeDef gpio_init = {0};
@@ -250,6 +249,7 @@ namespace led {
 		void dma_finish() {
 			// blast is finished, stop dma + timer output
 			LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
+			LL_DMA_ClearFlag_TC5(DMA2);
 			LL_TIM_DisableCounter(TIM1);
 			LL_TIM_DisableDMAReq_UPDATE(TIM1);
 			// check show
@@ -258,6 +258,7 @@ namespace led {
 		}
 
 		void tim_elapsed() {
+			LL_TIM_ClearFlag_UPDATE(TIM9);
 			LL_TIM_DisableCounter(TIM9);
 			LL_TIM_DisableIT_UPDATE(TIM9);
 			if (!delaying) return;

@@ -12,9 +12,27 @@ extern "C" void HardFault_Handler_Crash() {
 }
 
 extern "C" void DMA2_Stream5_IRQHandler_Crash() {
-	//crash::matrix.dma_finish();
+	if (LL_DMA_IsActiveFlag_TC5(DMA2)) {
+		LL_DMA_ClearFlag_TC5(DMA2);
+		crash::matrix.dma_finished();
+	}
+	if (LL_DMA_IsActiveFlag_TE5(DMA2)) {
+		LL_DMA_ClearFlag_TE5(DMA2);
+		crash::matrix.dma_finished();
+	}
 }
 
 extern "C" void TIM1_BRK_TIM9_IRQHandler_Crash() {
-	//crash::matrix.tim_elapsed();
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM9)) {
+		LL_TIM_ClearFlag_UPDATE(TIM9);
+		crash::matrix.timer_finished();
+	}
+}
+
+extern "C" void SVC_Handler_Crash() __attribute__((naked));
+extern "C" void SVC_Handler_Crash() {
+	asm volatile (
+		"mov lr, 0xFFFFFFF1\n\t"
+		"bx lr\n\t"
+	);
 }

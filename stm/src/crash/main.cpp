@@ -2,7 +2,7 @@
 #include "main.h"
 #include "mindraw.h"
 #include "simplematrix.h"
-#include "stm32f2xx_hal_cortex.h"
+#include "stm32f2xx_ll_system.h"
 
 extern "C" {
 	extern uint32_t _ecstack;
@@ -27,6 +27,12 @@ namespace crash {
 		LL_TIM_DisableCounter(TIM1);
 		LL_TIM_DisableCounter(TIM9);
 
+		LL_FLASH_DisableDataCache();
+		LL_FLASH_DisableInstCache();
+
+		NVIC_DisableIRQ(DMA2_Stream5_IRQn);
+		NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
+
 		// Mask out all application interrupts
 		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 		// Zero our BSS
@@ -35,6 +41,9 @@ namespace crash {
 		memcpy(&_scdata, &_scidata, &_ecdata - &_scdata);
 		// Change VTOR to our VTOR
 		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
+
+		__DSB();
+		__ISB();
 
 		// Initialize our matrix
 		matrix.init();
@@ -46,16 +55,13 @@ namespace crash {
 		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
 		NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
-		// Show error screen
-		for (int i = 0; i < 256; ++i) matrix.frame[i] = i;
+		matrix.color(5, 5) = 0xff;
 
-		//matrix.color(5, 5) = 0xff;
-
-		//draw::text(matrix, "MSign crashed!", 0, 6, mkcolor(3, 0, 0));
-		//draw::text(matrix, errcode, 0, 6, mkcolor(0, 3, 3));
+		draw::text(matrix, "MSign crashed!", 0, 6, mkcolor(3, 0, 0));
+		draw::text(matrix, errcode, 0, 12, mkcolor(3, 3, 3));
 
 		// Start display again
-		//matrix.start_display();
+		matrix.start_display();
 
 		// Loop forever
 		while (1) {

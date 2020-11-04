@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <cmath>
 
-matrix_type matrix;
+matrix_type matrix __attribute__((section(".vram")));
 srv::Servicer servicer{};
 uint64_t rtc_time;
 
