@@ -326,7 +326,7 @@ namespace led {
 			LL_TIM_EnableCounter(TIM1);
 		}
 		void wait(uint16_t ticks) {
-			if (delaying) while (1) {;}
+			if (delaying) return;
 			// set the counter
 			delaying = true;
 			delay_counter = (ticks + 2);
