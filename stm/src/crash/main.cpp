@@ -23,6 +23,8 @@ namespace crash {
 	// Smaller matrix to give more space for our private data
 	Matrix matrix;
 
+	constexpr inline uint32_t page_delay = 5000;
+
 	inline constexpr uint8_t mkcolor(uint8_t r, uint8_t g, uint8_t b) {
 		return r | (g << 2) | (b << 4);
 	}
@@ -36,6 +38,29 @@ namespace crash {
 			{
 				--delay;
 			}
+		}
+	}
+
+	int y = 18;
+
+	uint16_t print_line(const char* txt, uint8_t color, uint16_t indent, bool advance=true) {
+		if (y > 64) {
+			delay_ms(page_delay);
+			draw::rect(matrix, 0, 12, 128, 64, 0);
+			y = 18;
+		}
+		auto result = draw::text(matrix, txt, indent, y, color);
+		if (advance) y += 6;
+		return result;
+	}
+
+	void print_wrapped_lines(const char *txt, uint8_t color, uint16_t indent) {
+		int remaining = strlen(txt), pos = 0;
+		while (remaining > 0) {
+			size_t printed = draw::break_line(txt + pos, indent);
+			print_line(txt + pos, color, indent);
+			pos += printed;
+			remaining -= printed;
 		}
 	}
 
@@ -95,27 +120,22 @@ namespace crash {
 		matrix.start_display();
 
 		while (true) {
-			int y = 18;
-			int i = 0;
-			while (i < bt_len) {
+			// DRAW STACKTRACE
+			print_line("Traceback (most recent call first):", mkcolor(3, 3, 3), 0);
+			for (int i = 0; i < bt_len; ++i) {
 				char buf[16];
-				snprintf(buf, 16, "[%d] - ", i);
-				uint16_t indent = draw::text(matrix, buf, 0, y, mkcolor(3, 2, 0));
+				snprintf(buf, 16, "%d - ", i);
+				uint16_t indent = print_line(buf, mkcolor(3, 2, 0), 0, false);
 				snprintf(buf, 16, "0x%08x", backtrace[i]);
-				draw::text(matrix, buf, indent, y, mkcolor(1, 1, 3));
-				draw::text(matrix, symbols[i], indent, y+6, mkcolor(3, 3, 3));
-				++i; y += 12;
-
-				if (y > 64) {
-					// Wait for a while
-					delay_ms(2500);
-					draw::rect(matrix, 0, 12, 128, 64, 0);
-					y = 18;
-				}
+				print_line(buf, mkcolor(1, 1, 3), indent);
+				print_wrapped_lines(symbols[i], mkcolor(3, 3, 3), indent);
 			}
-			delay_ms(4000);
+			delay_ms(page_delay);
 			draw::rect(matrix, 0, 12, 128, 64, 0);
-			// TODO: show rect
+			// TODO: show registers
+
+			// Reset printer
+			y = 18;
 		}
 	}
 	
@@ -145,16 +165,5 @@ namespace crash {
 			: "i" (&cmain)
 			: "memory"
 		);
-	}
-
-	[[noreturn]] void panic(const char* errcode) {
-		uint32_t pc, lr, sp;
-		asm volatile (
-			"mov %0, pc\n\t"
-			"mov %1, lr\n\t"
-			"mov %2, sp\n\t" :
-			"=r" (pc), "=r" (lr), "=r" (sp)
-		);
-		call_crash_main(errcode, sp, pc, lr);
 	}
 }

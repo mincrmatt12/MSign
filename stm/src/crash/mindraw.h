@@ -13,6 +13,9 @@ namespace crash::draw {
 	uint16_t text(Matrix &fb, const uint8_t *text, uint16_t x, uint16_t y, uint8_t color); 
 	uint16_t text(Matrix &fb, const char * text, uint16_t x, uint16_t y, uint8_t color); 
 
+	// Get number of characters printed until end of line
+	size_t break_line(const char* text, uint16_t start);
+
 	// Draw a filled rectangle using exclusive coordinates (occupies x0 to x1 but not including x1)
 	void rect(Matrix &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint8_t color); 
 }
