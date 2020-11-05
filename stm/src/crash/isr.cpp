@@ -28,11 +28,3 @@ extern "C" void TIM1_BRK_TIM9_IRQHandler_Crash() {
 		crash::matrix.timer_finished();
 	}
 }
-
-extern "C" void SVC_Handler_Crash() __attribute__((naked));
-extern "C" void SVC_Handler_Crash() {
-	asm volatile (
-		"mov lr, 0xFFFFFFF1\n\t"
-		"bx lr\n\t"
-	);
-}
