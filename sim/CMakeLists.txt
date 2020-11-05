@@ -42,10 +42,10 @@ message(STATUS "Generating source trees...")
 
 # b) glob for files
 file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.[ch]*)
-file(GLOB_RECURSE STM_SRCS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
+file(GLOB_RECURSE STM_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
 
 file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.[ch]*)
-file(GLOB_RECURSE ESP_SRCS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/*.[ch]*)
+file(GLOB_RECURSE ESP_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/*.[ch]*)
 file(GLOB         ESP_NMFUS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/parser/*.nmfu)
 
 # now, create a new list, called TOTAL_STM_SRCS, from the original list
