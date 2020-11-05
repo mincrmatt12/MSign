@@ -57,8 +57,10 @@ namespace crash::decode {
 								  // 	3 - getting unwind amt
 								  // )
 								  // where index is the byte into the value
-		uint32_t lower_PC = 0, upper_PC = 0;
+		bool signalDone;
 		int16_t  unwind_amt = 0;
+
+		uint32_t lower_PC = 0, upper_PC = 0;
 		
 		uint32_t PC;
 		uint32_t LR;
@@ -68,7 +70,6 @@ namespace crash::decode {
 		uint16_t   bt_len;
 		uint16_t   bt_maxlen;
 
-		bool signalDone;
 		const uint8_t *pos;
 	};
 
@@ -176,19 +177,21 @@ namespace crash::decode {
 							 //    01 - reading address
 							 //    02 - reading name
 
+		uint16_t bt_len;
+
 		char *currname;
 		uint32_t curraddr;
 
 		char *prevname;
 		uint32_t prevaddr;
 
-		char namebuf1[max_length_size];
-		char namebuf2[max_length_size];
 		const uint8_t *pos;
 
 		char (*resolved)[max_length_size];
 		const uint32_t *backtrace;
-		uint16_t bt_len;
+
+		char namebuf1[max_length_size];
+		char namebuf2[max_length_size];
 	};
 
 	SymbolParseState *sps;
