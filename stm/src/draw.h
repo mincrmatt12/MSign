@@ -90,7 +90,7 @@ namespace draw {
 	//
 	// Creates a wave of the above pattern. Generally used to show two "screens" of data at once.
 	inline int16_t distorted_ease_wave(int64_t timebase, int64_t tT, int64_t tS, int16_t U) {
-		static const int64_t period = (tT + tS), twoperiod = 2*(tT + tS);
+		const int64_t period = (tT + tS), twoperiod = 2*(tT + tS);
 		bool isU = (timebase % twoperiod) < period;
 
 		if (timebase % period < tS) return isU * U;
