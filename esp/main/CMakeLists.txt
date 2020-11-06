@@ -20,6 +20,9 @@ macro(add_nmfu_target nmfu_target_name extra_flags)
 	)
 endmacro()
 
+find_program(NMFU_EXECUTABLE nmfu REQUIRED)
+message(STATUS "Found NMFU: " ${NMFU_EXECUTABLE})
+
 if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	foreach(nmfu_file ${msign_nmfus})
 		get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
@@ -33,9 +36,6 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(http_serve "")
 	add_nmfu_target(multipart_header "")
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
-
-	find_program(NMFU_EXECUTABLE nmfu REQUIRED)
-	message(STATUS "Found NMFU: " ${NMFU_EXECUTABLE})
 
 	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 14)
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
