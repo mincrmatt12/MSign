@@ -329,7 +329,7 @@ namespace led {
 			if (delaying) return;
 			// set the counter
 			delaying = true;
-			delay_counter = (ticks + 2);
+			delay_counter = (ticks);
 			// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
 			LL_TIM_SetAutoReload(TIM9, ticks);
 			LL_TIM_SetCounter(TIM9, 0);
