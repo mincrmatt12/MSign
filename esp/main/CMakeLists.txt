@@ -35,6 +35,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(http_client "")
 	add_nmfu_target(http_serve "")
 	add_nmfu_target(multipart_header "")
+	add_nmfu_target(tdsb_logintoken "")
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
 
 	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 14)
