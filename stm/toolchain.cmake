@@ -11,7 +11,7 @@ set(OBJCOPY_EXECUTABLE ${TOOLCHAIN_DIR}/arm-none-eabi-objcopy)
 
 # make cmake build check happy
 set(CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs")
-set(CMAKE_CXX_FLAGS_DEBUG "-ggdb3")
 
-set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft")
-set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -fno-exceptions -fno-rtti -Wno-register")
+# we always build with debug info because of the crash handler
+set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -ggdb3")
+set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -fno-exceptions -fno-rtti -Wno-register -ggdb3")

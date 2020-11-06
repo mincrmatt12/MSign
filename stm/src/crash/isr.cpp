@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include <stm32f205xx.h>
+#include <stm32f2xx.h>
 #include "simplematrix.h"
 
 namespace crash {
