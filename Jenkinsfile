@@ -11,34 +11,40 @@ pipeline {
 		stage ("Build") {
 			parallel {
 				stage("Build STM") {
-					// build for board
-					dir("stm/build_board") {
-						sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board"
-						sh "ninja"
-					}
-					// build for nucleo
-					dir("stm/build_nucleo") {
-						sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo"
-						sh "ninja"
-					}
+					steps {
+						// build for board
+						dir("stm/build_board") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board"
+							sh "ninja"
+						}
+						// build for nucleo
+						dir("stm/build_nucleo") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo"
+							sh "ninja"
+						}
 
-					// archive
-					archiveArtifacts artifacts: 'stm/build_*/stm.bin', fingerprint: true
+						// archive
+						archiveArtifacts artifacts: 'stm/build_*/stm.bin', fingerprint: true
+					}
 				}
 				stage("Build ESP") {
-					dir("esp/build") {
-						sh "cmake .. -GNinja"
-						sh "ninja"
-					}
+					steps {
+						dir("esp/build") {
+							sh "cmake .. -GNinja"
+							sh "ninja"
+						}
 
-					archiveArtifacts artifacts: 'esp/build/msign-esp.bin', fingerprint: true
+						archiveArtifacts artifacts: 'esp/build/msign-esp.bin', fingerprint: true
+					}
 				}
 				stage("Build STMboot") {
-					dir("stmboot") {
-						sh "pio run"
-					}
+					steps {
+						dir("stmboot") {
+							sh "pio run"
+						}
 
-					archiveArtifacts artifacts: 'stmboot/.pio/build/*/firmware.bin', fingerprint: true
+						archiveArtifacts artifacts: 'stmboot/.pio/build/*/firmware.bin', fingerprint: true
+					}
 				}
 			}
 		}
