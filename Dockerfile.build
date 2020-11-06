@@ -31,7 +31,7 @@ ADD vendor/ESP8266_RTOS_SDK/requirements.txt py2-requirements.txt
 RUN python2 -m pip install -r py2-requirements.txt && python3 -m pip install -r py3-requirements.txt
 
 # platformio
-RUN python3 -m pip install platformio && pio platform install ststm32 --with-package framework-stm32cube && mkdir /home/jenkins && chmod -R 777 /home/jenkins
+RUN python3 -m pip install platformio && mkdir /home/jenkins && chmod -R 777 /home/jenkins
 ENV HOME /home/jenkins
 
 # copy toolchains

@@ -70,7 +70,7 @@ for fname, (csvname, flashs, rams) in cfg.items():
     f = open(fname, "rb")
     ef = ELFFile(f)
     with open(csvname, "w") as fout:
-        fout.write('"flash","ram"\n')
+        fout.write('"flash","ram"\\n')
         fout.write("{},{}".format(
             sum(ef.get_section_by_name(x).data_size for x in flashs),
             sum(ef.get_section_by_name(x).data_size for x in rams)
