@@ -176,13 +176,13 @@ char * json::JSONParser::parse_string_text() {
 	char * tbuf = (char *)malloc(16);
 
 	auto append = [&tbuf, &bufsize, &idx](char c) {
-		if (bufsize > 512) return; // Max length
+		if (bufsize > 2048) return; // Max length
 		if (idx < bufsize) {
 add:
 			tbuf[idx++] = c;
 		}
 		else {
-			bufsize += (bufsize / 2);
+			bufsize += 16;
 			tbuf = (char *)realloc(tbuf, bufsize);
 			goto add;
 		}
