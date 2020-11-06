@@ -82,7 +82,7 @@ void screen::TTCScreen::draw_alertstr() {
 
 	const auto& info = servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
 
-	int16_t alertstr_size = 40 + draw::text_size(*servicer.slot<uint8_t *>(slots::TTC_ALERTSTR), font::tahoma_9::info);
+	int16_t alertstr_size = 40 + draw::text_size(*servicer[slots::TTC_ALERTSTR], font::tahoma_9::info);
 	int16_t pos = 64 - (alertstr_size / 2);
 	if (alertstr_size >= 120) {
 		pos = draw::scroll(rtc_time / 9, alertstr_size);
@@ -107,7 +107,7 @@ void screen::TTCScreen::draw_alertstr() {
 	}
 
 	draw::bitmap(matrix.get_inactive_buffer(), bitmap::subway, 18, 8, 3, pos, 1, 4095, 4095, 4095, true);
-	draw::bitmap(matrix.get_inactive_buffer(), bitmap::subway, 18, 8, 3, draw::text(matrix.get_inactive_buffer(), *servicer.slot<uint8_t *>(slots::TTC_ALERTSTR), font::tahoma_9::info, pos + 20, 8, r, g, b) + 2, 1, 4095, 4095, 4095);
+	draw::bitmap(matrix.get_inactive_buffer(), bitmap::subway, 18, 8, 3, draw::text(matrix.get_inactive_buffer(), *servicer[slots::TTC_ALERTSTR], font::tahoma_9::info, pos + 20, 8, r, g, b) + 2, 1, 4095, 4095, 4095);
 }
 
 void screen::TTCScreen::draw_bus() {

@@ -258,7 +258,7 @@ void screen::WeatherScreen::draw_currentstats() {
 
 	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 3));
 
-	const char * icon = *servicer.slot<char *>(slots::WEATHER_ICON);
+	const char * icon = (char*)*servicer[slots::WEATHER_ICON];
 
 	if (strcmp(icon, "cloudy") == 0 || strcmp(icon, "partly-cloudy") == 0) {
 		draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 235_c, 235_c, 235_c);
@@ -293,13 +293,13 @@ void screen::WeatherScreen::draw_currentstats() {
 
 void screen::WeatherScreen::draw_status() {
 	if (servicer.slot(slots::WEATHER_STATUS)) {
-		uint16_t text_size = draw::text_size(*servicer.slot<char *>(slots::WEATHER_STATUS), font::tahoma_9::info);
+		uint16_t text_size = draw::text_size(*servicer[slots::WEATHER_STATUS], font::tahoma_9::info);
 		if (text_size < 128) {
-			draw::text(matrix.get_inactive_buffer(), *servicer.slot<char *>(slots::WEATHER_STATUS), font::tahoma_9::info, 64 - text_size / 2, 61, 240_c, 240_c, 240_c);
+			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, 64 - text_size / 2, 61, 240_c, 240_c, 240_c);
 		}
 		else {
-			int16_t t_pos = draw::scroll(timekeeper.current_time / (40 - (strlen(*servicer.slot<char *>(slots::WEATHER_STATUS)) / 7)), text_size);
-			draw::text(matrix.get_inactive_buffer(), *servicer.slot<char *>(slots::WEATHER_STATUS), font::tahoma_9::info, t_pos, 61, 240_c, 240_c, 240_c);
+			int16_t t_pos = draw::scroll(timekeeper.current_time / std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7)), text_size);
+			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, t_pos, 61, 240_c, 240_c, 240_c);
 		}
 	}
 }
