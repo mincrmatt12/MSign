@@ -85,7 +85,7 @@ void screen::TTCScreen::draw_alertstr() {
 	int16_t alertstr_size = 40 + draw::text_size(*servicer[slots::TTC_ALERTSTR], font::tahoma_9::info);
 	int16_t pos = 64 - (alertstr_size / 2);
 	if (alertstr_size >= 120) {
-		pos = draw::scroll(rtc_time / 9, alertstr_size);
+		pos = draw::scroll(rtc_time / 8, alertstr_size);
 	}
 
 	uint16_t r = 4095, g = 4095, b = 4095;
