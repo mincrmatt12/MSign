@@ -4,7 +4,7 @@ pipeline {
 		dockerfile {
 			label 'linux && docker'
 			args "-u 1001:1001"
-			filename 'Dockerfile.build"
+			filename 'Dockerfile.build'
 		}
 	}
 	stages {
