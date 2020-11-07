@@ -173,7 +173,7 @@ int main(int argc, char ** argv) {
 	const char * to_draw = (argc == 2) ? argv[1] : "T!est /string\\ abc_123.";
 
 	FrameBuffer<128, 64> fb;
-	text(fb, (const uint8_t *)to_draw, genfont::info, 0, 20, 255, 255, 255);
+	int result = text(fb, (const uint8_t *)to_draw, genfont::info, 0, 20, 255, 255, 255);
 	std::cout << std::endl;
 	std::cout << std::endl;
 
@@ -182,5 +182,5 @@ int main(int argc, char ** argv) {
 	std::cout << std::endl;
 	std::cout << std::endl;
 
-	return 0;
+	return result;
 }
