@@ -35,13 +35,15 @@ namespace slots {
 		WEATHER_TEMP_GRAPH = 0x41,  // FLOAT[]; temp data per hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
-		CALFIX_INFO = 0x50,			// STRUCT; CalfixInfo, current school day and schedule as int
-		CALFIX_CLS1 = 0x51,			// STRUCT; ClassInfo, name and room
-		CALFIX_CLS2 = 0x52,			// ''
-		CALFIX_CLS3 = 0x53,			// ''
-		CALFIX_CLS4 = 0x54,			// ''
-		CALFIX_PRDH1 = 0x55, 		// STRUCT; PeriodInfo, start time for period 1 & 2
-		CALFIX_PRDH2 = 0x56, 		// '', 3 & 4
+        TIMETABLE_HEADER = 0x90,    // STRUCT; TimetableHeader; header info for timetable screen
+        TIMETABLE_AM_CODE = 0x91,   // STRING; name of am course (if applicable)
+        TIMETABLE_AM_ROOM = 0x92,   // STRING; room of am course (if applicable)
+        TIMETABLE_AM_NAME = 0x93,   // STRING; full course name of am course
+        TIMETABLE_AM_TEACHER = 0x94,// STRING; teacher name of am course
+        TIMETABLE_PM_CODE = 0x95,   // STRING; name of am course (if applicable)
+        TIMETABLE_PM_ROOM = 0x96,   // STRING; room of am course (if applicable)
+        TIMETABLE_PM_NAME = 0x97,   // STRING; full course name of am course
+        TIMETABLE_PM_TEACHER = 0x98,// STRING; teacher name of am course
 
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
@@ -95,20 +97,19 @@ namespace slots {
 		uint8_t data[14];
 	};
 
-	struct CalfixInfo {
-		uint8_t day;
-		bool active;
-		bool abnormal;
-	};
+    struct TimetableHeader {
+        uint8_t current_day;
+        uint8_t next_day;
 
-	struct ClassInfo {
-		uint8_t name[11];
-		uint16_t room;
-	};
-
-	struct PeriodInfo {
-		uint64_t ps1, ps2;
-	};
+        enum LayoutStyle : uint8_t {
+            EMPTY,
+            AM_ONLY,
+            AM_INCLASS_ONLY,
+            AM_PM,
+            AM_INCLASS_PM,
+            PM_ONLY
+        } current_layout, next_layout;
+    };
 
 	struct ScCfgInfo {
 		uint16_t enabled_mask;
