@@ -41,6 +41,10 @@ namespace config {
 		MODEL_MAXPOSES,
 		MODEL_ENABLE,
 
+        TDSB_USER,
+        TDSB_PASS,
+		TDSB_SCHOOLID,
+
 		// leave me
 		ENTRY_COUNT
 	};

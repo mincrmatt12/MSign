@@ -43,6 +43,10 @@ const char * config::entry_names[] = {
 	"sctimes",
 	"sccalfix",
 
+    "tdsbuser", // should be url-encoded
+    "tdsbpass",
+	"tdsbid",
+
 	"modelnames",
 	"modelfocuses",
 	"modelminposes",
