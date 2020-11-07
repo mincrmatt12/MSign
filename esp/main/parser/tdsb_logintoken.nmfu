@@ -18,6 +18,7 @@ parser {
             /"access_token":/ -> {
                 login_ok = true;
                 /\s*"/;
+				access_token = "Bearer ";
                 access_token += /[^"]+/;
                 /"/;
             }
