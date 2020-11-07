@@ -22,6 +22,7 @@ import ApiPane from "./pane/apikeys"
 import ScCfgPane from "./pane/sc"
 import UpdatePane from "./pane/upd"
 import ModelPane from "./pane/model"
+import TdsbPane from "./pane/tdsb"
 
 class App extends React.Component {
 	constructor(props) {
@@ -73,6 +74,12 @@ class App extends React.Component {
 				model: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 				calfix: {mode: 0, startTime: NaN, endTime: NaN, duration: 12000},
 			},
+
+            tdsb: {
+                user: "",
+				pass: "",
+				code: ""
+            },
 
 			model: {
 				names: ["", ""],
@@ -185,6 +192,9 @@ class App extends React.Component {
 		if (this.state.model.enabled != [false, false, true]) {
 			result += "modelenable=" + this.state.model.enabled.map((x) => x ? "1" : "0").join(",") + "\n";
 		}
+        if (this.state.tdsb.user != "" && this.state.tdsb.pass != "" && this.state.tdsb.code != "") {
+            result += "tdsbuser=" + encodeURIComponent(this.state.tdsb.user) + "\ntdsbpass=" + encodeURIComponent(this.state.tdsb.pass) + "\ntdsbid=" + this.state.tdsb.code + "\n";
+        }
 
 		return result;
 	}
@@ -308,6 +318,14 @@ class App extends React.Component {
 							s.model.enabled = value.split(",").map((x) => Number.parseInt(x) == 1);
 							return s;
 						});
+                        break;
+                    case 'tdsbuser':
+                    case 'tdsbpass':
+                    case 'tdsbid':
+                        this.setState((s, _) => {
+                            s.tdsb[key == 'tdsbid' ? 'code' : key.substr(4)] = decodeURIComponent(value);
+                            return s;
+                        });
 						break;
 				}
 			}
@@ -393,14 +411,11 @@ class App extends React.Component {
 									<LinkContainer to="/model">
 										<Nav.Link>model</Nav.Link>
 									</LinkContainer>
+									<LinkContainer to="/tdsb">
+										<Nav.Link>timetable</Nav.Link>
+									</LinkContainer>
 									<LinkContainer to="/upd">
 										<Nav.Link>sysupdate</Nav.Link>
-									</LinkContainer>
-									<LinkContainer to="/log">
-										<Nav.Link>logs</Nav.Link>
-									</LinkContainer>
-									<LinkContainer to="/debug">
-										<Nav.Link>debug</Nav.Link>
 									</LinkContainer>
 								</Nav>
 							</Card>
@@ -425,6 +440,9 @@ class App extends React.Component {
 								}} />
 								<Route path="/model"      render={(props) => {
 									return <ModelPane   configState={this.state.model  } updateState={this.createUpdateFunc('model')} />
+								}} />
+								<Route path="/tdsb"        render={(props) => {
+									return <TdsbPane    configState={this.state.tdsb   } updateState={this.createUpdateFunc('tdsb')} />
 								}} />
 								<Route path="/upd" component={UpdatePane} />
 							</div>}
