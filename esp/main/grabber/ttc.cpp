@@ -218,9 +218,13 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 		// Ignore if we see the string elevator in there
 		if (strcasestr(state->c.advisory, "elevator")) return;
 
-		// Mark an alert
-		ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
-		ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
+		// Is the first alert?
+		if (!(ps.info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
+			// Clear the type flags
+			ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
+			// Mark this alert.
+			ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
+		}
 		
 		// If it isn't a regular service...
 		if (!strcasestr(state->c.advisory, "regular service has")) {
