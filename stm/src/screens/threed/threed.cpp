@@ -117,11 +117,13 @@ namespace threed {
 			}
 		}
 
+		servicer.take_lock();
+		const auto& x = servicer.slot<Tri*>(slots::MODEL_DATA);
+		servicer.give_lock();
 
 		while (current_tri < tri_count) {
-			if (const auto& x = servicer.slot<Tri*>(slots::MODEL_DATA); x) {
+			if (x) {
 				// Lock separately to allow the servicer to respond during a potentially >0.5s frame
-				srv::ServicerLockGuard g(servicer);
 				draw_triangle(x.data()[current_tri], enable_lighting);
 			}
 			else {
