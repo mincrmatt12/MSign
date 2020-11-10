@@ -179,9 +179,9 @@ namespace threed {
 			int D = 2*dy - dx;
 			int16_t y = y0;
 
-			for (int16_t x = x0; x <= x1; ++x) {
-				float d = d1 + (d2 - d1) * (float(x - x0) / float(x1 - x0));
+			float d = d1, d_off = (d2 - d1) / (float)dx;
 
+			for (int16_t x = x0; x <= x1; ++x) {
 				if (fb.on_screen(x, y) && d * 410.f < z_buf_at(fb, x, y)) {
 					set_color_and_z(fb, x, y, r, g, b, d * 410.f);
 				}
@@ -190,6 +190,7 @@ namespace threed {
 					D -= 2*dx;
 				}
 				D += 2*dy;
+				d += d_off;
 			}
 		}
 
@@ -205,8 +206,8 @@ namespace threed {
 			int D = 2*dx - dy;
 			int16_t x = x0;
 
+			float d = d1, d_off = (d2 - d1) / (float)dy;
 			for (int16_t y = y0; y <= y1; ++y) {
-				float d = d1 + (d2 - d1) * (float(y - y0) / float(y1 - y0));
 				if (fb.on_screen(x, y) && d * 410.f < z_buf_at(fb, x, y)) {
 					set_color_and_z(fb, x, y, r, g, b, d * 410.f);
 				}
@@ -215,6 +216,7 @@ namespace threed {
 					D -= 2*dy;
 				}
 				D += 2*dx;
+				d += d_off;
 			}
 		}
 

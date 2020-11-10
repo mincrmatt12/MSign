@@ -169,7 +169,7 @@ namespace threed {
 		current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
 		current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
 
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
+		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0.f, 1.f, 0.f});
 
 		for (int i = 0; i < matrix_type::framebuffer_type::width; ++i) {
 			for (int j = 0; j < matrix_type::framebuffer_type::height; ++j) {
@@ -179,9 +179,9 @@ namespace threed {
 	}
 
 	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {
-		Vec4 a = perpview * Vec4(t.p1, 1.0);
-		Vec4 b = perpview * Vec4(t.p2, 1.0);
-		Vec4 c = perpview * Vec4(t.p3, 1.0);
+		Vec4 a = perpview * Vec4(t.p1, 1.f);
+		Vec4 b = perpview * Vec4(t.p2, 1.f);
+		Vec4 c = perpview * Vec4(t.p3, 1.f);
 
 		a = a / a.w;
 		b = b / b.w;
@@ -192,11 +192,11 @@ namespace threed {
 		c.y = -c.y;
 
 		Vec3 projnormal = (Vec3{b} - Vec3{a}).cross(Vec3{c} - Vec3{a});
-		if (projnormal.z < 0) return;
+		if (projnormal.z < 0.f) return;
 
-		int16_t ax = round(((a.x + 1) / 2.f) * matrix_type::framebuffer_type::width);
-		int16_t bx = round(((b.x + 1) / 2.f) * matrix_type::framebuffer_type::width);
-		int16_t cx = round(((c.x + 1) / 2.f) * matrix_type::framebuffer_type::width);
+		int16_t ax = round(((a.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
+		int16_t bx = round(((b.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
+		int16_t cx = round(((c.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
 
 		int16_t ay = round(((a.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
 		int16_t by = round(((b.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
