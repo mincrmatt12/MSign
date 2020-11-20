@@ -101,7 +101,7 @@ namespace tasks {
 			swapper.draw();
 
 			// Check for screen swaps ... todo ...
-			if (servicer.slot(slots::SCCFG_INFO) && servicer.slot(slots::SCCFG_TIMING)) {
+			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING]) {
 				srv::ServicerLockGuard g(servicer);
 				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
 					last_swapped_at = rtc_time;
@@ -129,7 +129,7 @@ namespace tasks {
 		int retval = screen_list_idx;
 		do {
 			++retval;
-			retval %= (servicer.slot(slots::SCCFG_TIMING).datasize / sizeof(slots::ScCfgTime));
+			retval %= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime));
 			if (retval == screen_list_idx) return retval;
 		} while (
 			!(servicer.slot<slots::ScCfgInfo>(slots::SCCFG_INFO)->enabled_mask & (1 << 

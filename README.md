@@ -22,7 +22,7 @@ Code for an LED sign display board powered by an STM32 and ESP8266. Make sure yo
   - If you aren't building the `espweb` directory you do not require the `cryptography` package listed
 - PlatformIO (for building the STM bootloader)
 - OpenOCD (for flashing)
-  - If you have PlatformIO installed we use it's OpenOCD by default, so you may not need to install it system-wide.
+  - If you have PlatformIO installed we use its OpenOCD by default, so you may not need to install it system-wide.
 - CMake (version 3.13 or later is recommended)
 
 and everything checked out in the `vendor` directory. The ESP8266 SDK also usually requests you have a Python 2 installed with it's requirements (`vendor/ESP8266_RTOS_SDK/requirements.txt`)
