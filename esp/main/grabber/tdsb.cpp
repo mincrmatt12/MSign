@@ -330,6 +330,9 @@ namespace tdsb {
 		// Stop any outstanding downloads
 		dwhttp::stop_download();
 
+		// Update the header
+		serial::interface.update_slot(slots::TIMETABLE_HEADER, hdr);
+
 		return true;
 	}
 
