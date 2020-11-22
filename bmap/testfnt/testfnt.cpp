@@ -143,7 +143,9 @@ uint16_t text(FB &fb, const uint8_t *text, const void * const font[], uint16_t x
 	}
 
 	while ((c = *(text++)) != 0) {
+#ifdef TESTFNT_METRICS
 		fb.r(pen, y) = 255;
+#endif
 		if (c == ' ') {
 			c_prev = ' ';
 			pen += 2;
@@ -153,14 +155,19 @@ uint16_t text(FB &fb, const uint8_t *text, const void * const font[], uint16_t x
 			auto offset = search_kern_table(c_prev, c, kern, kern_table_size);
 			std::cout << c_prev << c << "of: " << offset << std::endl;
 			pen += offset;
+#ifdef TESTFNT_METRICS
 			fb.b(pen, y + 1) = 255;
+#endif
 		}
+
+#ifdef TESTFNT_METRICS
 		// show yTop
 		fb.g(pen, y - metrics[(c*6) + 5]) = 255;
 		fb.b(pen, y - metrics[(c*6) + 5]) = 127;
 		// show xTop
 		fb.g(pen + metrics[(c*6) + 4], y+2) = 127;
 		fb.r(pen + metrics[(c*6) + 4], y+2) = 255;
+#endif
 		c_prev = c;
 		if (data[c] == nullptr) continue; // invalid character
 		bitmap(fb, data[c], metrics[(c*6) + 0], metrics[(c*6) + 1], metrics[(c*6) + 2], pen + metrics[(c*6) + 4], y - metrics[(c*6) + 5], r, g, b);
