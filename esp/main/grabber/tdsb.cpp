@@ -266,7 +266,7 @@ namespace tdsb {
 							serial::interface.update_slot(pm ? slots::TIMETABLE_PM_ROOM : slots::TIMETABLE_AM_ROOM, jv.str_val);
 						}
 						// Otherwise, delete the slot
-						serial::interface.delete_slot(pm ? slots::TIMETABLE_PM_ROOM : slots::TIMETABLE_AM_ROOM);
+						else serial::interface.delete_slot(pm ? slots::TIMETABLE_PM_ROOM : slots::TIMETABLE_AM_ROOM);
 					}
 					else if (!strcmp(stack[3]->name, "ClassName")) {
 						serial::interface.update_slot(pm ? slots::TIMETABLE_PM_NAME : slots::TIMETABLE_AM_NAME, jv.str_val);
