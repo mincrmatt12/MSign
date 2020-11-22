@@ -1,7 +1,7 @@
-#ifndef FONT_LATO_BOLD_10_H
-#define FONT_LATO_BOLD_10_H
+#ifndef FONT_LATO_BOLD_11_H
+#define FONT_LATO_BOLD_11_H
 
-namespace font::lato_bold_10 {
+namespace font::lato_bold_11 {
 extern const void * const info[4]; // metrics, data, pointer to kern_size, kerning
 }
 
