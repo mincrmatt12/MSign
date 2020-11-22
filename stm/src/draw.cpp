@@ -60,26 +60,17 @@ namespace draw {
 
 	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1) {
 		for (uint16_t x = x0; x < x1; ++x) {
-			for (uint16_t y = y0; y < y1; y += 2) {
-				if (x % 2 == 0) {
+			for (uint16_t y = y0; y < y1; ++y) {
+				bool color = static_cast<uint16_t>((x % 4) - (y % 4)) % 4 < 2;
+				if (color) {
 					fb.r(x, y) = r0;
 					fb.g(x, y) = g0;
 					fb.b(x, y) = b0;
-					if (y+1 < y1) {
-						fb.r(x, y+1) = r1;
-						fb.g(x, y+1) = g1;
-						fb.b(x, y+1) = b1;
-					}
 				}
 				else {
 					fb.r(x, y) = r1;
 					fb.g(x, y) = g1;
 					fb.b(x, y) = b1;
-					if (y+1 < y1) {
-						fb.r(x, y+1) = r0;
-						fb.g(x, y+1) = g0;
-						fb.b(x, y+1) = b0;
-					}
 				}
 			}
 		}
