@@ -213,42 +213,56 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 
 	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
 
-	// Only run when config is valid
-	if (strcasestr(state->c.advisory, config::manager.get_value(config::ALERT_SEARCH))) {
-		// Ignore if we see the string elevator in there
-		if (strcasestr(state->c.advisory, "elevator")) return;
-
-		// Is the first alert?
-		if (!(ps.info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
-			// Clear the type flags
-			ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
-			// Mark this alert.
-			ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
-		}
-		
-		// If it isn't a regular service...
-		if (!strcasestr(state->c.advisory, "regular service has")) {
-			// Try and guess the type of error:
-			if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
-				ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
+	// Check all semicolon separated entries
+	{
+		char * search_query = strdup(config::manager.get_value(config::ALERT_SEARCH, ""));
+		char * token = strtok(search_query, ";");
+		bool found = false;
+		while (token && strlen(token)) {
+			if (!strcasestr(state->c.advisory, token)) {
+				ESP_LOGD(TAG, "matched on %s", token);
+				found = true;
+				break;
 			}
-			if (strcasestr(state->c.advisory, "no service")) {
-				ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
-			}
+			token = strtok(NULL, ";");
 		}
-
-		size_t newlength = strlen(state->c.advisory);
-		// Add to the slot data:
-		// If this is the first entry, we don't need to add a ' / ' marker, otherwise we do
-		if (ps.offset != 0) newlength += 3;
-		serial::interface.allocate_slot_size(slots::TTC_ALERTSTR, ps.offset + newlength + 1);
-		if (ps.offset == 0) {
-			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
-		}
-		else {
-			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1);
-			serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
-		}
-		ps.offset += newlength;
+		free(search_query);
+		if (!found) return;
 	}
+
+	// Ignore if we see the string elevator in there
+	if (strcasestr(state->c.advisory, "elevator")) return;
+
+	// Is the first alert?
+	if (!(ps.info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
+		// Clear the type flags
+		ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
+		// Mark this alert.
+		ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
+	}
+	
+	// If it isn't a regular service...
+	if (!strcasestr(state->c.advisory, "regular service has")) {
+		// Try and guess the type of error:
+		if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
+			ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
+		}
+		if (strcasestr(state->c.advisory, "no service")) {
+			ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
+		}
+	}
+
+	size_t newlength = strlen(state->c.advisory);
+	// Add to the slot data:
+	// If this is the first entry, we don't need to add a ' / ' marker, otherwise we do
+	if (ps.offset != 0) newlength += 3;
+	serial::interface.allocate_slot_size(slots::TTC_ALERTSTR, ps.offset + newlength + 1);
+	if (ps.offset == 0) {
+		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
+	}
+	else {
+		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1);
+		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
+	}
+	ps.offset += newlength;
 }
