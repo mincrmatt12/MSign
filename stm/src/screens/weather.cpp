@@ -16,7 +16,7 @@ extern tasks::Timekeeper timekeeper;
 extern matrix_type matrix;
 extern srv::Servicer servicer;
 
-namespace bitmap {
+namespace bitmap::weather {
 // w=20, h=20, stride=3, color=202, 252, 17
 const uint8_t clear_day[] = {
         0b00000000,0b00000000,0b00000000,
@@ -261,32 +261,32 @@ void screen::WeatherScreen::draw_currentstats() {
 	const char * icon = (char*)*servicer[slots::WEATHER_ICON];
 
 	if (strcmp(icon, "cloudy") == 0 || strcmp(icon, "partly-cloudy") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 235_c, 235_c, 235_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 235_c, 235_c, 235_c);
 	}
 	else if (strcmp(icon, "sleet") == 0 || strcmp(icon, "snow") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::snow, 20, 20, 3, 1, y, 255_c, 255_c, 255_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::snow, 20, 20, 3, 1, y, 255_c, 255_c, 255_c);
 	}
 	else if (strcmp(icon, "clear-day") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::clear_day, 20, 20, 3, 1, y, 220_c, 250_c, 0_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::clear_day, 20, 20, 3, 1, y, 220_c, 250_c, 0_c);
 	}
 	else if (strcmp(icon, "clear-night") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::night, 20, 20, 3, 1, y, 79_c, 78_c, 79_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::night, 20, 20, 3, 1, y, 79_c, 78_c, 79_c);
 	}
 	else if (strcmp(icon, "wind") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::wind, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::wind, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
 	}
 	else if (strcmp(icon, "fog") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::fog, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::fog, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
 	}
 	else if (strcmp(icon, "rain") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::rain, 20, 20, 3, 1, y, 43_c, 182_c, 255_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::rain, 20, 20, 3, 1, y, 43_c, 182_c, 255_c);
 	}
 	else {
 		if (icon[15] != 0 && icon[14] == 'd') {
-			draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 245_c, 245_c, 245_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 245_c, 245_c, 245_c);
 		}
 		else if (icon[15] != 0) {
-			draw::bitmap(matrix.get_inactive_buffer(), bitmap::cloudy, 20, 20, 3, 1, y, 79_c, 79_c, 79_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 79_c, 79_c, 79_c);
 		}
 	}
 }
@@ -298,7 +298,7 @@ void screen::WeatherScreen::draw_status() {
 			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, 64 - text_size / 2, 61, 240_c, 240_c, 240_c);
 		}
 		else {
-			int16_t t_pos = draw::scroll(timekeeper.current_time / std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7)), text_size);
+			int16_t t_pos = draw::scroll(timekeeper.current_time / std::min<uint64_t>(10, std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7))), text_size);
 			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, t_pos, 61, 240_c, 240_c, 240_c);
 		}
 	}
