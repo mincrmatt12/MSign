@@ -87,6 +87,9 @@ void screen::TTCScreen::draw_alertstr() {
 	if (alertstr_size >= 120) {
 		pos = draw::scroll(rtc_time / 8, alertstr_size);
 	}
+	if (alertstr_size >= 290) {
+		pos = draw::scroll(rtc_time / 6, alertstr_size);
+	}
 
 	uint16_t r = 4095, g = 4095, b = 4095;
 	bool f = false;
