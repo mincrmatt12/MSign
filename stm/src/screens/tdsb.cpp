@@ -3,11 +3,16 @@
 #include "../common/slots.h"
 #include "../srv.h"
 #include "../fonts/latob_11.h"
+#include "../fonts/tahoma_9.h"
 #include "../rng.h"
 
 extern uint64_t rtc_time;
 extern matrix_type matrix;
 extern srv::Servicer servicer;
+
+namespace bitmap::tdsb {
+
+}
 
 namespace screen {
 	void TDSBScreen::prepare(bool) {
@@ -70,11 +75,15 @@ namespace screen {
 
 		// party colors
 		int16_t activecolor[3];
-		memcpy(activecolor, colorbeat[0], 3);
-
-		for (int i = 0; i < 3; ++i) {
-			activecolor[i] += 
-				draw::distorted_ease_wave(rtc_time - last_colorbeat, 200, 800, colorbeat[1][i] - colorbeat[0][i]);
+		if (rtc_time - last_colorbeat > 900) {
+			float scale = (rtc_time - last_colorbeat - 900) / 100.f;
+			scale = scale*scale;
+			for (int i = 0; i < 3; ++i) {
+				activecolor[i] = colorbeat[0][i] + static_cast<int16_t>(static_cast<float>(colorbeat[1][i] - colorbeat[0][i]) * scale);
+			}
+		}
+		else {
+			memcpy(activecolor, colorbeat[0], 3);
 		}
 
 		draw::hatched_rect(matrix.get_inactive_buffer(), x0, y0, x1, y1, activecolor[0], activecolor[1], activecolor[2], 0, 0, 0);
@@ -112,7 +121,7 @@ namespace screen {
 				
 				int16_t pos = 96 / 2 - 
 					draw::text_size(buf, font::lato_bold_11::info) / 2 + 
-					static_cast<int16_t>(6 * std::sin((static_cast<float>(rtc_time % 2000) / 2000.f) * static_cast<float>(M_PI)));
+					static_cast<int16_t>(6 * std::sin((static_cast<float>(rtc_time % 2000) / 2000.f) * 2.f * static_cast<float>(M_PI)));
 
 				draw::text(matrix.get_inactive_buffer(), buf, font::lato_bold_11::info, pos, 9, 255_c, 255_c, 255_c);
 			}
@@ -137,6 +146,9 @@ namespace screen {
 			}
 
 			// Draw "AM" stamp
+			
+			// Draw divider
+			draw::rect(matrix.get_inactive_buffer(), 0, 38, 96, 39, 255_c, 255_c, 255_c);
 
 			// Draw bottom area
 			switch (hdr->current_layout) {
@@ -154,21 +166,38 @@ namespace screen {
 
 			// Draw PM stamp
 		}
+		else {
+			// Draw noschool
+			draw_noschool(0, 13, 96, 64);
+		}
 
 		// Fill right hand section (simplifies scrolling design) + draw vertical divider
 		draw::rect(matrix.get_inactive_buffer(), 96, 0, 128, 64, 0, 0, 0);
 		draw::rect(matrix.get_inactive_buffer(), 96, 0, 97, 64,  255_c, 255_c, 255_c);
+		// Draw vertical divider
+		draw::rect(matrix.get_inactive_buffer(), 0, 12, 128, 13, 255_c, 255_c, 255_c);
 
 		// Is there school setup for tommorow?
 		if (hdr->next_day) {
 			// Draw next_day header text
+			{
+				// TODO: cool "rightwards moving" animation on this
+				char buf[16];
+				snprintf(buf, 16, "> D%d", hdr->next_day);
+				
+				int16_t pos = 96 + 32 / 2 - 
+					draw::text_size(buf, font::tahoma_9::info) / 2 + 
+					static_cast<int16_t>(2 * std::cos((static_cast<float>(rtc_time % 2000) / 2000.f) * 2.f * static_cast<float>(M_PI)));
 
+				draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, pos, 9, 200_c, 200_c, 200_c);
+			}
 			// Draw top area
 
 			// Draw bottom area
 		}
 		else {
 			// Draw noschool (shrunk size)
+			draw_noschool(97, 13, 128, 64);
 		}
 	}
 }
