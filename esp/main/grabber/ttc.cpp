@@ -219,7 +219,7 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 		char * token = strtok(search_query, ";");
 		bool found = false;
 		while (token && strlen(token)) {
-			if (!strcasestr(state->c.advisory, token)) {
+			if (strcasestr(state->c.advisory, token)) {
 				ESP_LOGD(TAG, "matched on %s", token);
 				found = true;
 				break;
