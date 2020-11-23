@@ -31,14 +31,16 @@ namespace tdsb {
 
 		json::JSONParser jp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value &val){
 			if (stack_ptr >= 3 && stack[1]->is_array() && !strcmp(stack[1]->name, "CourseTable") && !strcmp(stack[2]->name, "StudentCourse")) {
-				if (stack_ptr == 4 && strcmp(stack[3]->name, "Period") && val.type == val.STR) {
+				if (stack_ptr == 4 && !strcmp(stack[3]->name, "Period") && val.type == val.STR) {
 					am = val.str_val[0] == '1';
 				}
-				else if (stack_ptr == 4 && strcmp(stack[3]->name, "RoomNo") && val.type == val.STR) {
+				else if (stack_ptr == 4 && !strcmp(stack[3]->name, "RoomNo") && val.type == val.STR) {
 					at_home = !strcmp(val.str_val, "*AT HOME");
 				}
 				else if (stack_ptr == 3 && val.type == val.OBJ) {
 					// AM is always before PM, so if we see AM we just set directly
+					
+					ESP_LOGD(TAG, "got course at_home=%d am=%d curr_layout=%d", at_home, am, layout_out);
 
 					if (am) {
 						if (at_home) layout_out = slots::TimetableHeader::AM_ONLY;
@@ -278,9 +280,8 @@ namespace tdsb {
 				if (status_code != 200) {
 					ESP_LOGE(TAG, "failed to get course data");
 				}
-				else if (!check_layout_for(
-					std::move(cb), 
-					hdr.current_layout
+				else if (!tp.parse(
+					std::move(cb)
 				)) {
 					ESP_LOGE(TAG, "failed to parse course data");
 				}
