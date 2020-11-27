@@ -242,7 +242,7 @@ screen::TTCScreen::TTCScreen() {
 	);
 	bus_type = rng::get() % 3;
 	bus_type += 1;
-	bus_state = ((rng::get() % 30) == 0);
+	bus_state = ((rng::get() % 10) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
