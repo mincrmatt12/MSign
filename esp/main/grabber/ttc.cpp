@@ -208,6 +208,25 @@ end_parseloop:
 	}
 }
 
+const static char * xml_entities[] = {
+	"&amp;", "&",
+	"&apos;", "'",
+	nullptr
+};
+
+bool replace_xml_ent(char *in, const char* search, const char* repl) {
+	char * pos = strstr(in, search);
+	if (pos) {
+		char * newoff = pos + strlen(repl);
+		char * oldoff = pos + strlen(search);
+		char * end = in + strlen(in) + 1;
+
+		memmove(newoff, oldoff, end-oldoff);
+		memcpy(pos, repl, strlen(repl));
+	}
+	return pos;
+}
+
 extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
 	ttc::AlertParserState& ps = *reinterpret_cast<ttc::AlertParserState *>(state->userptr);
 
@@ -250,6 +269,15 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 		if (strcasestr(state->c.advisory, "no service")) {
 			ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
 		}
+	}
+
+	// Try and replace all known xml entities
+	while (true) {
+		bool any = false;
+		for (const char ** i = &xml_entities[0]; i[0] != nullptr; i += 2) {
+			any |= replace_xml_ent(state->c.advisory, i[0], i[1]);
+		}
+		if (!any) break;
 	}
 
 	size_t newlength = strlen(state->c.advisory);
