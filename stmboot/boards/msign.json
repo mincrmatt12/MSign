@@ -5,6 +5,7 @@
 		"extra_flags": "-DSTM32F205xx",
 		"f_cpu": "120000000L",
 		"mcu": "stm32f205rgt6",
+		"product_line": "STM32F205xx",
 		"variant": "MSIGN_F205RG"
 	},
 	"debug": {
