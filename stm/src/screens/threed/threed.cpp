@@ -123,8 +123,10 @@ namespace threed {
 
 		while (current_tri < tri_count) {
 			if (x) {
-				// Lock separately to allow the servicer to respond during a potentially >0.5s frame
-				draw_triangle(x.data()[current_tri], enable_lighting);
+				if (sizeof(Tri)*current_tri < x.datasize) {
+					// Lock separately to allow the servicer to respond during a potentially >0.5s frame
+					draw_triangle(x.data()[current_tri], enable_lighting);
+				}
 			}
 			else {
 				// don't lock for default mesh
