@@ -517,6 +517,7 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 	uint16_t slotid = block.slotid;
 
 	int retries;
+	int invalids = 0;
 	// Wait for a reply
 	for (retries = 0; retries < 3;) {
 		switch (wait_for_event(pdMS_TO_TICKS(1000))) {
@@ -528,6 +529,9 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 					if (rx_buf[2] != (type_of_update | 0x30)) {
 						// No, process normally
 						process_packet();
+						if (++invalids >= 25) {
+							retries = 3;
+						}
 						continue;
 					}
 					// Is this the correct packet?
