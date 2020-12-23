@@ -165,7 +165,7 @@ bool weather::loop() {
 				suntimes.sunset = (wifi::millis_to_local(v.int_val * 1000) % (86400*1000));
 			}
 		}
-	});
+	}, true); // use utf8 fixup
 
 	use_next_hour_summary = false;
 	if (!w_parser.parse(std::move(cb))) {

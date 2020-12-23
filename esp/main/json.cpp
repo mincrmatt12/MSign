@@ -1,7 +1,8 @@
 #include "json.h"
+#include "utf.h"
 #include <string.h>
 
-json::JSONParser::JSONParser(JSONCallback && c) : cb(std::move(c)) {
+json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : is_utf8(is_utf8), cb(std::move(c)) {
 	this->stack_ptr = 0;
 	push();
 }
@@ -289,6 +290,7 @@ bool json::JSONParser::parse_string() {
 	char * b = parse_string_text();
 	if (b == nullptr) return false;
 	else {
+		if (is_utf8) utf8::process(b);
 		Value v{b};
 		cb(stack, stack_ptr, v);
 		free(b);

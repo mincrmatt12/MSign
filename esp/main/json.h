@@ -52,7 +52,7 @@ namespace json {
 
 	class JSONParser {
 	public:
-		JSONParser(JSONCallback && c);
+		JSONParser(JSONCallback && c, bool is_utf8=false);
 		~JSONParser();
 
 		bool parse(const char * text);
@@ -89,6 +89,7 @@ namespace json {
 
 		char temp = 0;
 		bool need = true;
+		bool is_utf8 = false;
 
 		PathNode * stack[32];
 		uint8_t    stack_ptr;
