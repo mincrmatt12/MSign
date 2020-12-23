@@ -281,7 +281,7 @@ bool json::JSONParser::parse_object() {
 		else return false;
 	}
 
-	next();
+	if (stack_ptr > 1) next();
 	cb(stack, stack_ptr, Value{Value::OBJ});
 	return true;
 }
