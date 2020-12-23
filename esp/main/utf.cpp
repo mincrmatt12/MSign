@@ -6,8 +6,12 @@ namespace utf8 {
 
 	// TODO: make this use a binary search.
 	const uint32_t lookup[][2] = {
-		{ 0x2013 /* – (EN DASH) */, (uint32_t)'-' },
-		{ 0x2014 /* — (EM DASH) */, (uint32_t)'-' },
+		{ 0x2013 /* EN DASH */, (uint32_t)'-' },
+		{ 0x2014 /* EM DASH */, (uint32_t)'-' },
+		{ 0x2018 /* LEFT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
+		{ 0x2019 /* RIGHT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
+		{ 0x201C /* LEFT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
+		{ 0x201D /* RIGHT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
 		{0, 0}
 	};
 
