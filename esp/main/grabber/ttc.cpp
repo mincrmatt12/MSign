@@ -263,7 +263,7 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 	// If it isn't a regular service...
 	if (!strcasestr(state->c.advisory, "regular service has")) {
 		// Try and guess the type of error:
-		if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
+		if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "major delays") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
 			ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
 		}
 		if (strcasestr(state->c.advisory, "no service")) {
