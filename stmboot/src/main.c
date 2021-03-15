@@ -13,11 +13,21 @@ extern void * _srtext, *_ertext;
 #define FLASH_KEY1 0x45670123U
 #define FLASH_KEY2 0xCDEF89ABU
 
+#ifdef STM32F205xx
+// board
+#define LED_DATA_PORT GPIOC
+#define LED_DATA_BLOCK RCC_AHB1ENR_GPIOCEN
+#else
+// nucleo
+#define LED_DATA_PORT GPIOD
+#define LED_DATA_BLOCK RCC_AHB1ENR_GPIODEN
+#endif
+
 // BASIC SCREEN DRIVER
 //
 // Only controls one row of monochrome pixels
 void init_scrn() {
-	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN | RCC_AHB1ENR_GPIOCEN;
+	RCC->AHB1ENR |= RCC_AHB1ENR_GPIOBEN | LED_DATA_BLOCK;
 	asm volatile ("nop");
 	asm volatile ("nop");
 	asm volatile ("nop");
@@ -31,7 +41,7 @@ void init_scrn() {
 		GPIO_MODER_MODE3_0
 	);
 
-	GPIOC->MODER = (
+	LED_DATA_PORT->MODER = (
 		GPIO_MODER_MODE6_0 |
 		GPIO_MODER_MODE0_0 |
 		GPIO_MODER_MODE1_0 |
@@ -43,7 +53,7 @@ void init_scrn() {
 
 	GPIOB->PUPDR = 0;
 	GPIOB->ODR = (1 << 6);
-	GPIOC->ODR = 0;
+	LED_DATA_PORT->ODR = 0;
 }
 
 void show_line(bool data[64]) {

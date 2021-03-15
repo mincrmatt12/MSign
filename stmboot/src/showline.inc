@@ -1,4 +1,4 @@
-GPIOC->ODR = 0;
+LED_DATA_PORT->ODR = 0;
 GPIOB->ODR = (1 << 6); // OE off
 
 asm volatile ("nop");
@@ -7,25 +7,25 @@ asm volatile ("nop");
 
 for (int i = 0; i < 256; ++i) {
 	if (i < 64) 
-		GPIOC->ODR = (data[i] ? 7 : 0); // WHITE/BLACK
+		LED_DATA_PORT->ODR = (data[i] ? 7 : 0); // WHITE/BLACK
 	else
-		GPIOC->ODR = 0;
+		LED_DATA_PORT->ODR = 0;
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
-	GPIOC->ODR |= (1 << 6);
+	LED_DATA_PORT->ODR |= (1 << 6);
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
-	GPIOC->ODR &= ~(1 << 6);
+	LED_DATA_PORT->ODR &= ~(1 << 6);
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
 	asm volatile("nop");
 }
-GPIOC->ODR = 0;
+LED_DATA_PORT->ODR = 0;
 
 // LATCH
 GPIOB->ODR |= (1 << 5);
