@@ -10,6 +10,9 @@ extern const void * _sirtext;
 extern void * _srtext, *_ertext;
 #define RAMFUNC __attribute__((section(".rtext")))
 
+#define FLASH_KEY1 0x45670123U
+#define FLASH_KEY2 0xCDEF89ABU
+
 // BASIC SCREEN DRIVER
 //
 // Only controls one row of monochrome pixels
@@ -246,7 +249,7 @@ RAMFUNC void do_update_bootloader() {
 	while (1) {;}
 }
 
-int main() {
+int __attribute__((noreturn)) main() {
 	bootcmd_init();
 	MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_3WS);
 
@@ -292,5 +295,6 @@ int main() {
 	sp[6] = 1;
 	sp[7] = 1;
 	show_line(sp); // 0, 0, 1, 1 - returned from update handler
-
+	
+	while(1) {;} // spin forever
 }

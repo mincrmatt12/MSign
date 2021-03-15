@@ -1,7 +1,7 @@
 #include "bootcmd.h"
 
 // really just present here to check for STM and i couldn't be bothered to add a define
-#ifdef USE_FULL_LL_DRIVER
+#if (defined(STM32F205xx) || defined(STM32F207xx)) && !defined(SIM)
 #include "stm32f2xx_ll_rtc.h"
 #include "stm32f2xx_ll_pwr.h"
 #include "stm32f2xx_ll_rcc.h"
