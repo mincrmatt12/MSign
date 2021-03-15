@@ -39,11 +39,19 @@ pipeline {
 				}
 				stage("Build STMboot") {
 					steps {
-						dir("stmboot") {
-							sh "pio run"
+						// build for board
+						dir("stmboot/build_board") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board"
+							sh "ninja"
+						}
+						// build for nucleo
+						dir("stmboot/build_nucleo") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo"
+							sh "ninja"
 						}
 
-						archiveArtifacts artifacts: 'stmboot/.pio/build/*/firmware.bin', fingerprint: true
+						// archive
+						archiveArtifacts artifacts: 'stmboot/build_*/stmboot.bin', fingerprint: true
 					}
 				}
 			}
