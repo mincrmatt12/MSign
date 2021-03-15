@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!DOCTYPE eagle SYSTEM "eagle.dtd">
-<eagle version="9.4.0">
+<eagle version="9.6.2">
 <drawing>
 <settings>
 <setting alwaysvectorfont="no"/>
@@ -20490,7 +20490,7 @@ The STM and ESP</description>
 <net name="DEBUG_TX" class="0">
 <segment>
 <wire x1="30.48" y1="30.48" x2="7.62" y2="30.48" width="0.1524" layer="91"/>
-<label x="5.08" y="30.48" size="1.778" layer="95" rot="MR0"/>
+<label x="6.858" y="30.48" size="1.778" layer="95" rot="MR0"/>
 <pinref part="R2" gate="G$1" pin="2"/>
 <wire x1="7.62" y1="30.48" x2="-5.08" y2="30.48" width="0.1524" layer="91"/>
 <junction x="7.62" y="30.48"/>
