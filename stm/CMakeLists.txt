@@ -14,10 +14,7 @@ find_program(openocd_executable
 	openocd
 	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
 	NO_DEFAULT_PATH
-	REQUIRED
 )
-
-message(STATUS "Found OPENOCD " ${openocd_executable})
 
 find_package(Python 3 COMPONENTS Interpreter)
 
@@ -137,11 +134,17 @@ add_custom_command(TARGET stm
 	COMMENT Generating and appending debug blob
 )
 
-# add upload target
-add_custom_target(upload
-	COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit"
-)
+if (EXISTS ${openocd_executable})
+	message(STATUS "Found OPENOCD " ${openocd_executable})
 
-add_dependencies(upload stm)
+	# add upload target
+	add_custom_target(upload
+		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit"
+	)
+
+	add_dependencies(upload stm)
+else()
+	message(STATUS "Disabling upload target due to no OpenOCD")
+endif()
 
 add_custom_target(stm.bin ALL DEPENDS stm COMMAND ${OBJCOPY_EXECUTABLE} -Obinary $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.bin)
