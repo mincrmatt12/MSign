@@ -51,6 +51,9 @@ extern "C" void app_main() {
 			break;
 	}
 
+	// Install logger
+	sd::install_log();
+
 	// Start up the servicer
 	if (xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 4096, &serial::interface, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
