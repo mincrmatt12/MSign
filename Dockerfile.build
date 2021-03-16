@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
 	cmake ninja-build git \
 	curl wget \
 	libncurses-dev build-essential flex bison gperf \
-	gcc make python-serial
+	gcc make 
 
 # copy toolchains
 WORKDIR /opt/toolchaintemp
