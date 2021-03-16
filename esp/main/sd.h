@@ -15,6 +15,9 @@ namespace sd {
 	// Sets up FatFS with this.
 	InitStatus init();
 
+	// Try to install log
+	void install_log();
+
 	extern FATFS fs;
 }
 

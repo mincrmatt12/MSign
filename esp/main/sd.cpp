@@ -726,7 +726,7 @@ namespace sd {
 		return 1;
 	}
 
-	void setup_sd_log() {
+	void install_log() {
 		f_mkdir("/log");
 		{
 			// Try and rotate log files, storing up to 2 previous entries
@@ -966,8 +966,6 @@ retry:
 		ESP_LOGI(TAG, "Initialized FAT on sd card");
 
 		// Initialize SD card logging
-		setup_sd_log();
-
 		return InitStatus::Ok;
 	}
 }
