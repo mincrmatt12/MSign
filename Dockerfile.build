@@ -15,18 +15,18 @@ FROM python:3.8-buster
 # make directories
 WORKDIR /opt/work
 
+# copy toolchains
+WORKDIR /opt/toolchaintemp
+COPY --from=toolchains /opt/toolchains/gcc-arm-none-eabi-10-2020-q4-major arm
+COPY --from=toolchains /opt/toolchains/xtensa-lx106-elf esp
+RUN cp -r arm/* /usr/local && cp -r esp/* /usr/local && rm -rf arm esp
+
 # system dependencies
 RUN apt-get update && apt-get install -y \
 	cmake ninja-build git \
 	curl wget \
 	libncurses-dev build-essential flex bison gperf \
 	gcc make 
-
-# copy toolchains
-WORKDIR /opt/toolchaintemp
-COPY --from=toolchains /opt/toolchains/gcc-arm-none-eabi-10-2020-q4-major arm
-COPY --from=toolchains /opt/toolchains/xtensa-lx106-elf esp
-RUN cp -r arm/* /usr/local && cp -r esp/* /usr/local && rm -rf arm esp
 
 # copy python deps
 ADD requirements.txt py-requirements.txt
