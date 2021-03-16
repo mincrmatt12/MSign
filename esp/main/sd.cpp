@@ -731,24 +731,26 @@ namespace sd {
 		{
 			// Try and rotate log files, storing up to 2 previous entries
 			DIR logdir; FILINFO fno;
+			int maxn = 0;
 			f_opendir(&logdir, "/log");
 			while (f_readdir(&logdir, &fno) == FR_OK && fno.fname[0] != 0) {
 				int num;
 				if (sscanf(fno.fname, "log.%d", &num) != 1) continue;
-				char newname[32], oldname[32];
-				// rename file
-				snprintf(oldname, 32, "/log/log.%d", num);
-				if (num <= 2) {
-					snprintf(newname, 32, "/log/log.%d", num+1);
-					ESP_LOGI("sdlog", "moving old log %s to %s", oldname, newname);
-					f_rename(oldname, newname);
-				}
-				else {
-					ESP_LOGI("sdlog", "clearing old log %s", oldname);
-					f_unlink(oldname);
-				}
+				if (num > maxn) maxn = num;
 			}
 			f_closedir(&logdir);
+			// rename files
+			for (int i = 0; i <= maxn; ++i) {
+				char oldname[32], newname[32];
+				snprintf(oldname, 32, "/log/log.%d", i);
+				snprintf(newname, 32, "/log/log.%d", i+1);
+				if (i > 3) {
+					f_unlink(oldname);
+				}
+				else {
+					f_rename(oldname, newname);
+				}
+			}
 		}
 		// Open `log.0` for writing + truncation
 		if (f_open(&logtarget, "/log/log.0", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
