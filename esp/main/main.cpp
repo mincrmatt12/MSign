@@ -36,11 +36,7 @@ extern "C" void app_main() {
 			break;
 	}
 
-	// Load the config from the SD card
-	if (!config::manager.load_from_sd()) {
-		return;
-	}
-
+	// check for updates
 	switch (upd::needed()) {
 		case upd::FULL_SYSTEM:
 			upd::update_system();
@@ -53,6 +49,11 @@ extern "C" void app_main() {
 
 	// Install logger
 	sd::install_log();
+
+	// Load the config from the SD card
+	if (!config::manager.load_from_sd()) {
+		return;
+	}
 
 	// Start up the servicer
 	if (xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 4096, &serial::interface, 9, NULL) != pdPASS) {
