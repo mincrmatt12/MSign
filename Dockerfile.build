@@ -18,20 +18,20 @@ WORKDIR /opt/work
 # system dependencies
 RUN apt-get update && apt-get install -y \
 	cmake ninja-build git \
-	curl wget python \
-	python-pip \
+	curl wget \
 	libncurses-dev build-essential flex bison gperf \
 	gcc make python-serial
-
-# copy python deps
-ADD requirements.txt py3-requirements.txt
-ADD vendor/ESP8266_RTOS_SDK/requirements.txt py2-requirements.txt
-
-# python dependencies
-RUN python2 -m pip install -r py2-requirements.txt && python3 -m pip install -r py3-requirements.txt
 
 # copy toolchains
 WORKDIR /opt/toolchaintemp
 COPY --from=toolchains /opt/toolchains/gcc-arm-none-eabi-10-2020-q4-major arm
 COPY --from=toolchains /opt/toolchains/xtensa-lx106-elf esp
 RUN cp -r arm/* /usr/local && cp -r esp/* /usr/local && rm -rf arm esp
+
+# copy python deps
+ADD requirements.txt py-requirements.txt
+ADD vendor/ESP8266_RTOS_SDK/requirements.txt py-requirements2.txt
+
+# python dependencies
+RUN python -m pip install -r py-requirements2.txt && python -m pip install -r py-requirements.txt
+

@@ -24,7 +24,7 @@ Code for an LED sign display board powered by an STM32 and ESP8266. Make sure yo
   - If you have PlatformIO installed we use its OpenOCD by default, so you may not need to install it system-wide.
 - CMake (version 3.13 or later is recommended)
 
-and everything checked out in the `vendor` directory. The ESP8266 SDK also usually requests you have a Python 2 installed with it's requirements (`vendor/ESP8266_RTOS_SDK/requirements.txt`)
+and everything checked out in the `vendor` directory. The ESP8266 SDK also usually requests you have python (specifically _system_ python, whatever runs from `python`) installed with it's requirements (`vendor/ESP8266_RTOS_SDK/requirements.txt`)
 
 A Docker file with these is provided as `Dockerfile.build`.
 
