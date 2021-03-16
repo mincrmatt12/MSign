@@ -11,6 +11,7 @@
 #include "../wifitime.h"
 #include <cstring>
 #include <algorithm>
+#include "../sd.h"
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
@@ -72,6 +73,9 @@ namespace grabber {
 				memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 			}
 			else vTaskDelay(target - now);
+
+			// Right before re-grabbing, flush logs; this should happen at a fairly unbusy time usually.
+			sd::flush_logs();
 		}
 	}
 };

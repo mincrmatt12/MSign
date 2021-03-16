@@ -691,13 +691,29 @@ namespace sd {
 	char logbuf[300];
 	int logptr = 0;
 	putchar_like_t oldlogputchar;
+	bool is_masking_code = false;
 
 	int log_putc(int c) {
 		oldlogputchar(c);
+		if (c == 0x1b) {
+			is_masking_code = true;
+		}
+		if (is_masking_code) {
+			if (c == 'm') is_masking_code = false;
+			return 1;
+		}
 		logbuf[logptr++] = c;
 		if (logptr == sizeof(logbuf)) {
+			flush_logs();
+		}
+		return 1;
+	}
+
+	void flush_logs() {
+		if (logptr) {
 			UINT bw;
 			FRESULT res = f_write(&logtarget, logbuf, logptr, &bw);
+			f_sync(&logtarget);
 
 			if (res == FR_OK && bw == logptr) {
 				// all is ok
@@ -723,7 +739,6 @@ namespace sd {
 				ESP_LOGE("sdlog", "fail log, %d", res);
 			}
 		}
-		return 1;
 	}
 
 	void install_log() {
@@ -740,14 +755,16 @@ namespace sd {
 			}
 			f_closedir(&logdir);
 			// rename files
-			for (int i = 0; i <= maxn; ++i) {
+			for (int i = maxn; i >= 0; --i) {
 				char oldname[32], newname[32];
 				snprintf(oldname, 32, "/log/log.%d", i);
 				snprintf(newname, 32, "/log/log.%d", i+1);
 				if (i > 3) {
+					ESP_LOGW("sdlog", "deleting old log %s", oldname);
 					f_unlink(oldname);
 				}
 				else {
+					ESP_LOGI("sdlog", "moving old log %s -> %s", oldname, newname);
 					f_rename(oldname, newname);
 				}
 			}

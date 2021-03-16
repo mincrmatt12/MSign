@@ -18,6 +18,9 @@ namespace sd {
 	// Try to install log
 	void install_log();
 
+	// Flush logs (call periodically)
+	void flush_logs();
+
 	extern FATFS fs;
 }
 
