@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y tar bzip2
 RUN tar xf arm.tar.bz2 && tar xf esp.tar.gz
 
 # actual image
-FROM debian:buster
+FROM python:3.8-buster
 
 # make directories
 WORKDIR /opt/work
@@ -18,8 +18,8 @@ WORKDIR /opt/work
 # system dependencies
 RUN apt-get update && apt-get install -y \
 	cmake ninja-build git \
-	curl wget python python3 \
-	python-pip python3-pip \
+	curl wget python \
+	python-pip \
 	libncurses-dev build-essential flex bison gperf \
 	gcc make python-serial
 
