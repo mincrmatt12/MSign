@@ -29,6 +29,14 @@ namespace sd {
 
 		return InitStatus::Ok;
 	}
+
+	void flush_logs() {
+		ESP_LOGD("fakesdlog", "would've flushed logs; sim");
+	}
+
+	void install_log() {
+		ESP_LOGD("fakesdlog", "would've installed logs; sim");
+	}
 }
 
 std::fstream sd_bigblob;
