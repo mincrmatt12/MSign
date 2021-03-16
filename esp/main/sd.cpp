@@ -687,6 +687,79 @@ namespace sd {
 		}
 	}
 
+	FIL logtarget{};
+	char logbuf[300];
+	int logptr = 0;
+	putchar_like_t oldlogputchar;
+
+	int log_putc(int c) {
+		oldlogputchar(c);
+		logbuf[logptr++] = c;
+		if (logptr == sizeof(logbuf)) {
+			UINT bw;
+			FRESULT res = f_write(&logtarget, logbuf, logptr, &bw);
+
+			if (res == FR_OK && bw == logptr) {
+				// all is ok
+				logptr = 0;
+			}
+			else if (res == FR_OK && bw < logptr) {
+				// drive full; clear out
+				f_unlink("/log/log.1");
+				f_unlink("/log/log.2");
+				f_unlink("/log/log.3");
+				f_close(&logtarget);
+				f_rename("/log/log.0", "/log/log.1");
+				if (f_open(&logtarget, "/log/log.0", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+					esp_log_set_putchar(oldlogputchar);
+					ESP_LOGE("sdlog", "failed to cleanup; resetting to stdout only");
+				}
+				// dump old buffer
+				logptr = 0;
+				ESP_LOGW("sdlog", "flushed log");
+			}
+			else {
+				esp_log_set_putchar(oldlogputchar);
+				ESP_LOGE("sdlog", "fail log, %d", res);
+			}
+		}
+		return 1;
+	}
+
+	void setup_sd_log() {
+		f_mkdir("/log");
+		{
+			// Try and rotate log files, storing up to 2 previous entries
+			DIR logdir; FILINFO fno;
+			f_opendir(&logdir, "/log");
+			while (f_readdir(&logdir, &fno) == FR_OK && fno.fname[0] != 0) {
+				int num;
+				if (sscanf(fno.fname, "log.%d", &num) != 1) continue;
+				char newname[32], oldname[32];
+				// rename file
+				snprintf(oldname, 32, "/log/log.%d", num);
+				if (num <= 2) {
+					snprintf(newname, 32, "/log/log.%d", num+1);
+					ESP_LOGI("sdlog", "moving old log %s to %s", oldname, newname);
+					f_rename(oldname, newname);
+				}
+				else {
+					ESP_LOGI("sdlog", "clearing old log %s", oldname);
+					f_unlink(oldname);
+				}
+			}
+			f_closedir(&logdir);
+		}
+		// Open `log.0` for writing + truncation
+		if (f_open(&logtarget, "/log/log.0", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
+			oldlogputchar = esp_log_set_putchar(log_putc);
+			ESP_LOGI("sdlog", "started sd logging");
+		}
+		else {
+			ESP_LOGW("sdlog", "unable to open log file");
+		}
+	}
+
 	InitStatus init() {
 		ESP_LOGI(TAG, "Starting SDFAT layer");
 
@@ -891,6 +964,10 @@ retry:
 		}
 
 		ESP_LOGI(TAG, "Initialized FAT on sd card");
+
+		// Initialize SD card logging
+		setup_sd_log();
+
 		return InitStatus::Ok;
 	}
 }
@@ -919,7 +996,7 @@ extern "C" DRESULT disk_read(BYTE, BYTE* buff, LBA_t sector, UINT count) {
 	portEXIT_CRITICAL();
 retry:
 	auto x = sd::read(buff, sector, count);
-	ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
+	//ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::read_status::Ok) {
 		++tries;
 		if (tries < 3) goto retry;
@@ -949,7 +1026,7 @@ extern "C" DRESULT disk_write(BYTE, const BYTE* buff, LBA_t sector, UINT count) 
 	portEXIT_CRITICAL();
 retry:
 	auto x = sd::write(buff, sector, count);
-	ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
+	//ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::write_status::Ok) {
 		++tries;
 		if (tries < 3) goto retry;
