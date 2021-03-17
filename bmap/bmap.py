@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import math
+import os
 from PIL import Image
 
 if len(sys.argv) != 2:
@@ -29,7 +30,8 @@ for y in range(h):
             color = img.getpixel((x, y))[:3]
 
 print(f"// w={w}, h={h}, stride={stride}, color={color[0]}, {color[1]}, {color[2]}")
-print("const uint8_t data = {")
+bitmapname = os.path.splitext(os.path.basename(sys.argv[1]))[0]
+print(f"const uint8_t {bitmapname}[] = {{")
 
 for pos in range(0, len(data), stride):
     print("\t", end="")
