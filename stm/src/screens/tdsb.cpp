@@ -145,7 +145,7 @@ namespace screen {
 			int16_t x = draw::scroll(rtc_time / 11, draw::text_size(bottomtext, font::tahoma_9::info), 71);
 			// draw text
 			draw::rect(matrix.get_inactive_buffer(), 0, y + 13, 96, y + 26, 0, 0, 0);
-			draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, x + 25, y + 23, course_title, 224_c, 126_c, 0, " / ", 127_c, 127_c, 127_c, teacher_name, 255_c, 255_c, 255_c);
+			draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, x + 25, y + 22, course_title, 224_c, 126_c, 0, " / ", 127_c, 127_c, 127_c, teacher_name, 255_c, 255_c, 255_c);
 		}
 
 		// Display static top screen text
@@ -168,13 +168,13 @@ namespace screen {
 			case AsynchronousSchool:
 				{
 					// Draw bed icon
-					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::bed, 14, 9, 2, 1, y + 15, 200_c, 255_c, 200_c);
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::bed, 14, 9, 2, 3, y + 15, 200_c, 255_c, 200_c);
 				}
 				break;
 			case SynchronousSchool:
 				{
 					// Draw monitor icon
-					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::monitor, 14, 9, 2, 1, y + 15, 204_c, 205_c, 255_c);
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::monitor, 14, 9, 2, 3, y + 15, 204_c, 205_c, 255_c);
 				}
 			default:
 				break;
