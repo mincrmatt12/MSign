@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.12)
 project(signsim)
 
-if (${CMAKE_BUILD_TYPE} STREQUAL "Asan")
-	set(CMAKE_CXX_OPTIONS "${CMAKE_CXX_OPTIONS} -fsanitize=address")
-	set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+if (${CMAKE_BUILD_TYPE})
+	if(${CMAKE_BUILD_TYPE} STREQUAL "Asan")
+		set(CMAKE_CXX_OPTIONS "${CMAKE_CXX_OPTIONS} -fsanitize=address")
+		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
+	endif()
 endif()
 
 set(CMAKE_CXX_STANDARD 17)
