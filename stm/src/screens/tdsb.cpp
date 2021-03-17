@@ -131,7 +131,7 @@ namespace screen {
 
 	void TDSBScreen::draw_current_segment(int16_t y, SegmentType type, const uint8_t * course_code, const uint8_t * course_title, const uint8_t * teacher_name, const uint8_t * room_text) {
 		// Show stripey pattern
-		draw::hatched_rect(matrix.get_inactive_buffer(), 0, y, 96, y+26,
+		draw::hatched_rect_unaligned(matrix.get_inactive_buffer(), 0 - ((rtc_time / 200) % 4), y, 96, y+26,
 				y == 13 ? 65_c  : 39_c,
 				y == 13 ? 119_c : 140_c,
 				y == 13 ? 145_c : 223_c,
