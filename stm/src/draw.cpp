@@ -76,6 +76,25 @@ namespace draw {
 		}
 	}
 
+	void hatched_rect_unaligned(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1) {
+		uint16_t i = 0;
+		for (int16_t x = x0; x < x1; ++x, ++i) {
+			uint16_t j = 0;
+			for (int16_t y = y0; y < y1; ++y, ++j) {
+				bool color = static_cast<uint16_t>((i % 4) - (j % 4)) % 4 < 2;
+				if (color) {
+					fb.r(x, y) = r0;
+					fb.g(x, y) = g0;
+					fb.b(x, y) = b0;
+				}
+				else {
+					fb.r(x, y) = r1;
+					fb.g(x, y) = g1;
+					fb.b(x, y) = b1;
+				}
+			}
+		}
+	}
 	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool kern_on) {
 		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, r, g, b, kern_on);
 	}

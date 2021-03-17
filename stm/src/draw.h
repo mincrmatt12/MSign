@@ -31,6 +31,9 @@ namespace draw {
 	// Draw a hatched rectangle using exclusive coordinates. Hatching will create a checkerboard pattern between the two colors provided.
 	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1);
 
+	// Like, hatched_rect, but with the coordinate grid unaligned so you can animate it.
+	void hatched_rect_unaligned(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1);
+
 	// Fill the entire screen.
 	void fill(matrix_type::framebuffer_type &fb, uint16_t r, uint16_t g, uint16_t b); 
 
