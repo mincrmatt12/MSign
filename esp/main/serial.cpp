@@ -523,6 +523,7 @@ uint8_t serial::SerialInterface::update_block_segment(slots::protocol::Command t
 		switch (wait_for_event(pdMS_TO_TICKS(1000))) {
 			case EventAll:
 				request_occurred = true;
+				[[fallthrough]];
 			case EventPacket:
 				{
 					// Is this an update ack?
@@ -819,6 +820,7 @@ xfer_block:
 			) {
 				default:
 					ESP_LOGE(TAG, "Unknown status code, treating as OK");
+					[[fallthrough]];
 				case 0:
 					ESP_LOGD(TAG, "Moved subblock ok, freeing up space");
 					if (!arena.set_location(slotid, offset, sent_size, bheap::Block::LocationRemote)) {

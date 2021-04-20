@@ -84,6 +84,7 @@ namespace dwhttp {
 						switch (errno) {
 							default:
 								lwip_close(sockno);
+								[[fallthrough]];
 							case EBADF:
 								sockno = -1;
 								return -1;
@@ -101,6 +102,7 @@ namespace dwhttp {
 							switch (errno) {
 								default:
 									lwip_close(sockno);
+									[[fallthrough]];
 								case EBADF:
 									sockno = -1;
 									return false;

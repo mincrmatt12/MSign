@@ -29,9 +29,11 @@ pipeline {
 				}
 				stage("Build ESP") {
 					steps {
+						dir("vendor/ESP8266_RTOS_SDK") {
+							sh "git apply ../ESP8266_RTOS_SDK.patch"
+						}
 						dir("esp/build") {
-							sh "cmake .. -GNinja"
-							sh "ninja"
+							sh ". ../idf_export.sh; cmake .. -GNinja; ninja"
 						}
 
 						archiveArtifacts artifacts: 'esp/build/msign-esp.bin', fingerprint: true

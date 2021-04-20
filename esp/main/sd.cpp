@@ -52,8 +52,13 @@ namespace sd {
 		}
 
 		inline reg_bit& operator=(const access_type& other) {
+			// I have no idea why gcc thinks "argument" is unitialized given that nothing named that exists here, but uh ok.
+			// I think it's complaining about me using this somewhere else in the code and getting confused from inlining but uh no idea.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) &= ~(((1U << LocalSize) - 1) << (Index % 8));
 			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) |= (static_cast<uint32_t>(other) << (Index % 8));
+#pragma GCC diagnostic pop 
 			return *this;
 		}
 		

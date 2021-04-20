@@ -164,12 +164,12 @@ namespace tdsb {
 
 			snprintf(url, 90, "/api/TimeTable/GetDayNameDayCycle/%s/20202021/Regular/%02d%02d%04d/%02d%02d%04d", 
 				config::manager.get_value(config::TDSB_SCHOOLID),
-				timinfo_now.tm_mday,
-				timinfo_now.tm_mon + 1,
-				timinfo_now.tm_year + 1900,
-				timinfo_tommorow.tm_mday,
-				timinfo_tommorow.tm_mon + 1,
-				timinfo_tommorow.tm_year + 1900
+				(timinfo_now.tm_mday) % 100,
+				(timinfo_now.tm_mon + 1) % 100,
+				(timinfo_now.tm_year + 1900) % 10000,
+				(timinfo_tommorow.tm_mday) % 100,
+				(timinfo_tommorow.tm_mon + 1) % 100,
+				(timinfo_tommorow.tm_year + 1900) % 10000
 			);
 
 		}

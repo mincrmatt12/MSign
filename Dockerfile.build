@@ -4,7 +4,7 @@ FROM debian:buster as toolchains
 WORKDIR /opt/toolchains
 
 ADD https://armkeil.blob.core.windows.net/developer/Files/downloads/gnu-rm/10-2020q4/gcc-arm-none-eabi-10-2020-q4-major-x86_64-linux.tar.bz2 arm.tar.bz2
-ADD https://dl.espressif.com/dl/xtensa-lx106-elf-linux64-1.22.0-100-ge567ec7-5.2.0.tar.gz esp.tar.gz
+ADD https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz esp.tar.gz
 
 RUN apt-get update && apt-get install -y tar bzip2
 RUN tar xf arm.tar.bz2 && tar xf esp.tar.gz
@@ -34,4 +34,3 @@ ADD vendor/ESP8266_RTOS_SDK/requirements.txt py-requirements2.txt
 
 # python dependencies
 RUN python -m pip install -r py-requirements2.txt -r py-requirements.txt
-

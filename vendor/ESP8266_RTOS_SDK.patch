@@ -1,0 +1,79 @@
+diff --git a/components/freertos/port/esp8266/include/freertos/portmacro.h b/components/freertos/port/esp8266/include/freertos/portmacro.h
+index b546cd7b..5443fb33 100644
+--- a/components/freertos/port/esp8266/include/freertos/portmacro.h
++++ b/components/freertos/port/esp8266/include/freertos/portmacro.h
+@@ -43,6 +43,7 @@ extern "C" {
+ 
+ #if defined(configUSE_NEWLIB_REENTRANT) && configUSE_NEWLIB_REENTRANT == 1
+ #include "esp_newlib.h"
++#define _impure_ptr _global_impure_ptr
+ 
+ #undef _REENT_INIT_PTR
+ #define _REENT_INIT_PTR(p) esp_reent_init(p)
+diff --git a/components/log/log.c b/components/log/log.c
+index d69e2533..7b295d11 100644
+--- a/components/log/log.c
++++ b/components/log/log.c
+@@ -42,7 +42,7 @@ static const uint32_t s_log_color[ESP_LOG_MAX] = {
+     0,  //  ESP_LOG_NONE
+     31, //  ESP_LOG_ERROR
+     33, //  ESP_LOG_WARN
+-    32, //  ESP_LOG_INFO
++    34, //  ESP_LOG_INFO
+     0,  //  ESP_LOG_DEBUG
+     0,  //  ESP_LOG_VERBOSE
+ };
+diff --git a/components/wpa_supplicant/CMakeLists.txt b/components/wpa_supplicant/CMakeLists.txt
+index 3300647e..f0a3d3dd 100644
+--- a/components/wpa_supplicant/CMakeLists.txt
++++ b/components/wpa_supplicant/CMakeLists.txt
+@@ -3,9 +3,7 @@ set(srcs "port/os_xtensa.c"
+     "src/ap/ieee802_1x.c"
+     "src/ap/wpa_auth.c"
+     "src/ap/wpa_auth_ie.c"
+-    "src/common/sae.c"
+     "src/common/wpa_common.c"
+-    "src/common/dpp.c"
+     "src/utils/bitfield.c"
+     "src/crypto/aes-ctr.c"
+     "src/crypto/aes-siv.c"
+@@ -21,14 +19,10 @@ set(srcs "port/os_xtensa.c"
+     "src/crypto/aes-omac1.c"
+     "src/crypto/bignum.c"
+     "src/crypto/ccmp.c"
+-    "src/crypto/crypto_mbedtls.c"
+-    "src/crypto/crypto_mbedtls-bignum.c"
+-    "src/crypto/crypto_mbedtls-ec.c"
+     "src/crypto/crypto_ops.c"
+     "src/crypto/crypto_internal-cipher.c"
+     "src/crypto/crypto_internal-modexp.c"
+     "src/crypto/crypto_internal-rsa.c"
+-    "src/crypto/crypto_mbedtls-rsa.c"
+     "src/crypto/crypto_internal.c"
+     "src/crypto/des-internal.c"
+     "src/crypto/dh_group5.c"
+@@ -150,8 +144,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
+     ESP8266_WORKAROUND
+     CONFIG_ECC
+     CONFIG_IEEE80211W
+-    CONFIG_WPA3_SAE
++	#CONFIG_WPA3_SAE
+     #CONFIG_SHA256
+-    CONFIG_DPP
++	#CONFIG_DPP
+     CONFIG_WNM
+     )
+diff --git a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c b/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
+index 7b37a6c0..46929125 100644
+--- a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
++++ b/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
+@@ -193,7 +193,9 @@ static void wpa_sta_disconnected_cb(uint8_t reason_code)
+         case WIFI_REASON_ASSOC_FAIL:
+         case WIFI_REASON_CONNECTION_FAIL:
+         case WIFI_REASON_HANDSHAKE_TIMEOUT:
++#ifdef CONFIG_WPA3_SAE
+             esp_wpa3_free_sae_data();
++#endif
+             wpa_sta_clear_curr_pmksa();
+             break;
+         default:

@@ -71,7 +71,7 @@ namespace grabber {
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);
 			auto now = xTaskGetTickCount();
 			if (target < now || target - now > max_delay_between_runs) {
-				ESP_LOGW("grab", "got out of sync in grabber sched (wanted to delay from %lu to %lu)", now, target);
+				ESP_LOGW("grab", "got out of sync in grabber sched (wanted to delay from %u to %u)", now, target);
 				if (!(target < now)) {
 					vTaskDelay(max_delay_between_runs);
 				}

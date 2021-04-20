@@ -23,7 +23,7 @@ void protocol::ProtocolImpl::init_hw() {
 
 	BaseType_t res;
 	if ((res = xTaskCreate((TaskFunction_t)(&protocol::ProtocolImpl::rx_task), "rxST", configMINIMAL_STACK_SIZE, this, 10, &rx_thread)) != pdPASS) {
-		ESP_LOGE(TAG, "failed to create rxST %ld", res);
+		ESP_LOGE(TAG, "failed to create rxST %d", res);
 		ESP_LOGE(TAG, "had %d bytes", esp_get_free_heap_size());
 	}
 }
