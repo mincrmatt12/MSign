@@ -53,7 +53,7 @@ def rename_certs(files):
 
 def create_page_data():
     call(['yarn', 'build'])
-    call(['gzip', '-k', '-f', '-8', 'web/page.html', 'web/page.js', 'web/page.css'])
+    call(['gzip', '-k', '-f', '-9', 'web/page.html', 'web/page.js', 'web/page.css'])
     shutil.copytree("web", "build/web")
 
 
