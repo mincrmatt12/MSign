@@ -45,6 +45,7 @@ endif()
 
 target_compile_options(stmboot PRIVATE
 	-O2
+	-ffreestanding
 )
 
 target_link_options(stmboot PRIVATE
