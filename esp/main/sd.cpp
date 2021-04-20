@@ -703,7 +703,7 @@ namespace sd {
 			return 1;
 		}
 		logbuf[logptr++] = c;
-		if (logptr == sizeof(logbuf)) {
+		if (logptr == sizeof(logbuf) || (c == '\n' && logptr > 50)) {
 			flush_logs();
 		}
 		return 1;
@@ -711,32 +711,22 @@ namespace sd {
 
 	void flush_logs() {
 		if (logptr) {
-			UINT bw;
+			UINT bw = 0;
 			FRESULT res = f_write(&logtarget, logbuf, logptr, &bw);
 			f_sync(&logtarget);
 
-			if (res == FR_OK && bw == logptr) {
+			if (res == FR_OK) {
 				// all is ok
 				logptr = 0;
 			}
-			else if (res == FR_OK && bw < logptr) {
-				// drive full; clear out
-				f_unlink("/log/log.1");
-				f_unlink("/log/log.2");
-				f_unlink("/log/log.3");
-				f_close(&logtarget);
-				f_rename("/log/log.0", "/log/log.1");
-				if (f_open(&logtarget, "/log/log.0", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
-					esp_log_set_putchar(oldlogputchar);
-					ESP_LOGE("sdlog", "failed to cleanup; resetting to stdout only");
-				}
-				// dump old buffer
-				logptr = 0;
-				ESP_LOGW("sdlog", "flushed log");
-			}
 			else {
-				esp_log_set_putchar(oldlogputchar);
-				ESP_LOGE("sdlog", "fail log, %d", res);
+				memmove(logbuf, logbuf + bw, logptr - bw);
+				logptr -= bw;
+			}
+
+			if (logptr >= sizeof(logbuf)) {
+				// dump logs
+				logptr = 0;
 			}
 		}
 	}

@@ -12,6 +12,7 @@
 #include <cstring>
 #include <algorithm>
 #include "../sd.h"
+#include "esp_log.h"
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
@@ -39,7 +40,7 @@ namespace grabber {
 	void run_grabber(size_t i, const Grabber * const grabber) {
 		auto ticks = xTaskGetTickCount();
 		if (ticks < wants_to_run_at[i]) return;
-		wants_to_run_at[i] = ticks + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
+		wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
 	}
 
 	void run(void*) {
@@ -70,7 +71,10 @@ namespace grabber {
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);
 			auto now = xTaskGetTickCount();
 			if (target < now || target - now > max_delay_between_runs) {
-				memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
+				ESP_LOGW("grab", "got out of sync in grabber sched (wanted to delay from %lu to %lu)", now, target);
+				if (!(target < now)) {
+					vTaskDelay(max_delay_between_runs);
+				}
 			}
 			else vTaskDelay(target - now);
 

@@ -28,12 +28,12 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			break;
 		case SYSTEM_EVENT_STA_DISCONNECTED:
 			ESP_LOGW(TAG, "Disconnected from AP (%d)", info.disconnected.reason);
+			xEventGroupClearBits(wifi::events, wifi::WifiConnected);
 			if (info.disconnected.reason == WIFI_REASON_BASIC_RATE_NOT_SUPPORT) {
 				esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
 			}
 			ESP_LOGW(TAG, "Trying to reconnect...");
 			esp_wifi_connect();
-			xEventGroupClearBits(wifi::events, wifi::WifiConnected);
 			break;
 		default:
 			break;
