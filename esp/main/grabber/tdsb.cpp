@@ -257,7 +257,17 @@ namespace tdsb {
 
 					// Actually load data
 					if (!strcmp(stack[3]->name, "ClassCode")) {
-						serial::interface.update_slot(pm ? slots::TIMETABLE_PM_CODE : slots::TIMETABLE_AM_CODE, jv.str_val);
+						// Hack for AMV course code because it is very long
+						if (strstr(jv.str_val, "AMV1/2O/3/4M1") == jv.str_val) {
+							char fixedcode[10];
+							snprintf(fixedcode, 10, "AMV4M1-%s", jv.str_val + 14);
+
+							ESP_LOGD(TAG, "fixing %s to %s", jv.str_val, fixedcode);
+
+							serial::interface.update_slot(pm ? slots::TIMETABLE_PM_CODE : slots::TIMETABLE_AM_CODE, fixedcode);
+						}
+						else
+							serial::interface.update_slot(pm ? slots::TIMETABLE_PM_CODE : slots::TIMETABLE_AM_CODE, jv.str_val);
 					}
 					else if (!strcmp(stack[3]->name, "TeacherName")) {
 						serial::interface.update_slot(pm ? slots::TIMETABLE_PM_TEACHER : slots::TIMETABLE_AM_TEACHER, jv.str_val);

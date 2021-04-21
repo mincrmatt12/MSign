@@ -127,6 +127,40 @@ namespace screen {
 		}
 
 		draw::hatched_rect(matrix.get_inactive_buffer(), x0, y0, x1, y1, activecolor[0], activecolor[1], activecolor[2], 0, 0, 0);
+		
+		int16_t noschool_size = draw::text_size("no school", font::dejavusans_12::info) + /* padding */ 2;
+
+		// pick graphic colours based on party
+		for (int i = 0; i < 3; ++i) {
+			// offset
+			float offset = colorbeat[0][i] - colorbeat[1][i];
+
+			// scale offset by pos 
+			float pos = (rtc_time - last_colorbeat) / 1000.f;
+			pos = powf(pos, 20.f);
+
+			offset *= pos;
+			activecolor[i] = colorbeat[1][i] + (int16_t)offset;
+		}
+
+		// can we fit the graphic and the text?
+		if ((x1 - x0) > noschool_size && (y1 - y0) > (12 /* font height */ + 9 /* bed height */ + 2 /* padding */)) {
+				
+			// fill empty space for padding
+			//   bed
+			draw::rect(matrix.get_inactive_buffer(), (x0 + x1) / 2 - ((14 / 2) + 1), (y0 + y1) / 2 - 10, (x0 + x1) / 2 + ((14 / 2) + 1), (y0 + y1) / 2, 0, 0, 0);
+			//   text
+			draw::rect(matrix.get_inactive_buffer(), (x0 + x1) / 2 - ((noschool_size / 2) + 1), (y0 + y1) / 2, (x0 + x1) / 2 + ((noschool_size / 2) + 1), (y0 + y1) / 2 + 12, 0, 0, 0);
+
+			// actual graphics
+			draw::text(matrix.get_inactive_buffer(), "no school", font::dejavusans_12::info, (x0 + x1) / 2 - ((noschool_size / 2)), (y0 + y1) / 2 + 11, 127_c, 127_c, 127_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::bed, 14, 9, 2, (x0 + x1) / 2 - (14 / 2), (y0 + y1) / 2 - 9, activecolor[0], activecolor[1], activecolor[2]);
+		}
+		// can we fit the graph
+		else if ((x1 - x0) > (14 + 2) && (y1 - y0) > (9 + 2)) {
+			draw::rect(matrix.get_inactive_buffer(), (x0 + x1) / 2 - ((14 / 2) + 1), (y0 + y1) / 2 - 5, (x0 + x1) / 2 + ((14 / 2) + 1), (y0 + y1) / 2 + 5, 0, 0, 0);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::bed, 14, 9, 2, (x0 + x1) / 2 - (14 / 2), (y0 + y1) / 2 - 4, activecolor[0], activecolor[1], activecolor[2]);
+		}
 	}
 
 	void TDSBScreen::draw_current_segment(int16_t y, SegmentType type, const uint8_t * course_code, const uint8_t * course_title, const uint8_t * teacher_name, const uint8_t * room_text) {
@@ -181,7 +215,29 @@ namespace screen {
 		}
 	}
 	void TDSBScreen::draw_next_segment(int16_t y, SegmentType type) {
-		// TODO
+		// Only draw ideographs 
+
+		switch (type) {
+			case InPersonSchool:
+				{
+					// Draw door icon
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::door, 6, 9, 1, 109, y + 15, 255_c, 180_c, 175_c);
+				}
+				break;
+			case AsynchronousSchool:
+				{
+					// Draw bed icon
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::bed, 14, 9, 2, 105, y + 15, 200_c, 255_c, 200_c);
+				}
+				break;
+			case SynchronousSchool:
+				{
+					// Draw monitor icon
+					draw::bitmap(matrix.get_inactive_buffer(), bitmap::tdsb::monitor, 14, 9, 2, 105, y + 15, 204_c, 205_c, 255_c);
+				}
+			default:
+				break;
+		}
 	}
 
 	void TDSBScreen::draw() {
@@ -259,14 +315,14 @@ namespace screen {
 		}
 		else {
 			// Draw noschool
-			draw_noschool(0, 13, 96, 64);
+			draw_noschool(0, 0, 96, 64);
 		}
 
 		// Fill right hand section (simplifies scrolling design) + draw vertical divider
 		draw::rect(matrix.get_inactive_buffer(), 96, 0, 128, 64, 0, 0, 0);
 		draw::rect(matrix.get_inactive_buffer(), 96, 0, 97, 64,  255_c, 255_c, 255_c);
 		// Draw vertical divider
-		draw::rect(matrix.get_inactive_buffer(), 0, 12, 128, 13, 255_c, 255_c, 255_c);
+		draw::rect(matrix.get_inactive_buffer(), (hdr->current_day ? 0 : 96), 12, 128, 13, 255_c, 255_c, 255_c);
 
 		// Is there school setup for tommorow?
 		if (hdr->next_day) {
@@ -281,12 +337,48 @@ namespace screen {
 				draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, pos, 9, 200_c, 200_c, 200_c);
 			}
 			// Draw top area
+			switch (hdr->next_layout) {
+				case slots::TimetableHeader::AM_INCLASS_ONLY:
+				case slots::TimetableHeader::AM_INCLASS_PM:
+					draw_next_segment(13, InPersonSchool);
+					break;
+				case slots::TimetableHeader::AM_ONLY:
+				case slots::TimetableHeader::AM_PM:
+					draw_next_segment(13, AsynchronousSchool);
+					break;
+				default:
+					draw_noschool(97, 13, 128, 38);
+					break;
+			}
 
+			// Draw "AM" stamp (if not already drawn for left side)
+			if (!hdr->current_day) {
+				draw::text(matrix.get_inactive_buffer(), "AM", font::lcdpixel_6::info, 98, 19, 255_c, 255_c, 255_c);
+			}
+			
+			// Draw divider
+			draw::rect(matrix.get_inactive_buffer(), 96, 38, 128, 39, 255_c, 255_c, 255_c);
+			
 			// Draw bottom area
+			switch (hdr->next_layout) {
+				case slots::TimetableHeader::AM_PM:
+				case slots::TimetableHeader::AM_INCLASS_PM:
+				case slots::TimetableHeader::PM_ONLY:
+					draw_next_segment(39, SynchronousSchool);
+					break;
+				default:
+					draw_noschool(97, 39, 128, 64);
+					break;
+			}
+
+			// Draw PM stamp (if not already drawn for left side)
+			if (!hdr->current_day) {
+				draw::text(matrix.get_inactive_buffer(), "PM", font::lcdpixel_6::info, 98, 45, 255_c, 255_c, 255_c);
+			}
 		}
 		else {
 			// Draw noschool (shrunk size)
-			draw_noschool(97, 13, 128, 64);
+			draw_noschool(97, 0, 128, 64);
 		}
 	}
 }
