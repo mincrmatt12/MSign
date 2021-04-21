@@ -47,8 +47,8 @@ extern "C" void app_main() {
 			break;
 	}
 
-	// Install logger
-	sd::install_log();
+	// Install logger (disabled for now)
+	// sd::install_log();
 
 	// Load the config from the SD card
 	if (!config::manager.load_from_sd()) {
