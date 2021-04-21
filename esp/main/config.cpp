@@ -41,6 +41,7 @@ const char * config::entry_names[] = {
 	"scweather",
 	"sc3d",
 	"sctimes",
+	"scorder",
 	"sccalfix",
 
 	"modelnames",

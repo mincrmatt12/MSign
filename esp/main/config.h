@@ -33,6 +33,7 @@ namespace config {
 		SC_WEATHER,
 		SC_3D,
 		SC_TIMES,
+		SC_ORDER,
 		SC_CFIX,
 
 		MODEL_NAMES,

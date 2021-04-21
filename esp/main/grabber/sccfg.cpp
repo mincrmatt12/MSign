@@ -91,11 +91,20 @@ namespace sccfg {
 
 		slots::ScCfgTime times[number_of_screens];
 
-		// TODO: implement ordering
-		times[0].screen_id = slots::ScCfgTime::TTC;
-		times[1].screen_id = slots::ScCfgTime::WEATHER;
-		times[2].screen_id = slots::ScCfgTime::MODEL;
-		times[3].screen_id = slots::ScCfgTime::PERIODS;
+		if (config::manager.get_value(config::SC_ORDER)) {
+			int indices[4];
+			sscanf(config::manager.get_value(config::SC_ORDER), "%d,%d,%d,%d", &indices[0], &indices[1], &indices[2], &indices[3]);
+
+			for (int i = 0; i < 4; ++i) {
+				times[i].screen_id = static_cast<slots::ScCfgTime::ScreenId>(indices[i]);
+			}
+		}
+		else {
+			times[0].screen_id = slots::ScCfgTime::TTC;
+			times[1].screen_id = slots::ScCfgTime::WEATHER;
+			times[2].screen_id = slots::ScCfgTime::MODEL;
+			times[3].screen_id = slots::ScCfgTime::PERIODS;
+		}
 
 		if (config::manager.get_value(config::SC_TIMES) != nullptr) {
 			int tTTC, tWEA, t3D, tCFIX = 12000;
