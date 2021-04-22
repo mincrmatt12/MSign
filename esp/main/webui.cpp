@@ -247,6 +247,9 @@ endloop:
 						pos = 0;
 					}
 					auto inval = read_from_req_body();
+					if (inval == -1) {
+						return MultipartStatus::EOF_EARLY;
+					}
 					if (inval == '\r') break;
 					else {buf[pos++] = inval;}
 				}
@@ -414,6 +417,7 @@ flush_buf:
 				goto notfound;
 			}
 			bool ok = false;
+			int progress = 0;
 			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
 				if (!state->name_counter) {
 					ESP_LOGD(TAG, "no name");
@@ -429,6 +433,12 @@ flush_buf:
 				}
 				else {
 					UINT x;
+					// this slows down the recv but it lets the watchdog run
+					progress += len;
+					if (progress > 16384) {
+						vTaskDelay(1); // delay every 16384 bytes
+						progress = 0;
+					}
 					return !f_write(&out_ui, buf, len, &x) && x == len;
 				}
 			})) {
@@ -476,6 +486,7 @@ flush_buf:
 
 			FIL out_file;
 			int gotcount = 0;
+			int progress = 0;
 			bool ok = false;
 
 			uint16_t stm_csum = 0, esp_csum = 0;
@@ -533,7 +544,13 @@ flush_buf:
 				else {
 					// Write the buffer
 					UINT bw;
+					// this slows down the recv but it lets the watchdog run
 					f_write(&out_file, buf, len, &bw);
+					progress += bw;
+					if (progress > 16384) {
+						vTaskDelay(1); // delay every 16384 bytes
+						progress = 0;
+					}
 
 					// Update the checksum
 					if (strcasecmp(state->c.name, "stm") == 0) 
