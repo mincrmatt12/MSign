@@ -1008,7 +1008,7 @@ extern "C" DRESULT disk_read(BYTE, BYTE* buff, LBA_t sector, UINT count) {
 	portEXIT_CRITICAL();
 retry:
 	auto x = sd::read(buff, sector, count);
-	//ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
+	ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::read_status::Ok) {
 		++tries;
 		if (tries < 3) goto retry;
@@ -1038,7 +1038,7 @@ extern "C" DRESULT disk_write(BYTE, const BYTE* buff, LBA_t sector, UINT count) 
 	portEXIT_CRITICAL();
 retry:
 	auto x = sd::write(buff, sector, count);
-	//ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
+	ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::write_status::Ok) {
 		++tries;
 		if (tries < 3) goto retry;
