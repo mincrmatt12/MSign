@@ -43,15 +43,18 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 		}
 		else if (state == ProtocolState::DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
 			if (dma_buffer[0] != 0xa6) {
-				if (dma_buffer[1] == 0xa6 || dma_buffer[2] == 0xa6) {
+				int offset = 0;
+				while (dma_buffer[1] == 0xa6 || dma_buffer[2] == 0xa6) {
 					dma_buffer[0] = dma_buffer[1];
 					dma_buffer[1] = dma_buffer[2];
-					dma_buffer[2] = LL_USART_ReceiveData8(ESP_USART); // just for fun, i mean it might fix something?
+					dma_buffer[2] = 0; 
+					++offset;
 				}
-				else {
-					start_recv();
-					return;
+				if (offset) {
+					offset = 3 - offset;
 				}
+				start_recv(ProtocolState::DMA_WAIT_SIZE, offset);
+				return;
 			}
 			
 			recv_full();
@@ -107,6 +110,8 @@ void srv::ProtocolImpl::setup_uart_dma() {
 
 	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_USART_EnableDMAReq_TX(ESP_USART);
+
+	LL_USART_EnableIT_ERROR(ESP_USART);
 
 	// Setup DMA channels
 
@@ -172,16 +177,16 @@ void srv::ProtocolImpl::send() {
 	LL_USART_EnableDMAReq_TX(ESP_USART);
 }
 
-void srv::ProtocolImpl::start_recv(srv::ProtocolState target_state) {
+void srv::ProtocolImpl::start_recv(srv::ProtocolState target_state, int offset) {
 	state = target_state;
 	// setup a receieve of 3 bytes
 
 	LL_DMA_ConfigAddresses(UART_DMA, UART_DMA_RX_Stream, 
 			LL_USART_DMA_GetRegAddr(ESP_USART),
-			(uint32_t)(this->dma_buffer),
+			(uint32_t)(this->dma_buffer + offset),
 			LL_DMA_DIRECTION_PERIPH_TO_MEMORY);
 
-	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, 3);
+	LL_DMA_SetDataLength(UART_DMA, UART_DMA_RX_Stream, 3 - offset);
 
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
 	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_RX_Stream);

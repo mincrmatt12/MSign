@@ -25,7 +25,7 @@ namespace srv {
 		// Implementation
 		void setup_uart_dma();
 		void send();
-		void start_recv(srv::ProtocolState target_state=ProtocolState::DMA_WAIT_SIZE);
+		void start_recv(srv::ProtocolState target_state=ProtocolState::DMA_WAIT_SIZE, int offset=0);
 		void recv_full();
 
 		// State

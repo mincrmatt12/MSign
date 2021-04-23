@@ -3,10 +3,10 @@
 #include "pins.h"
 
 #include "stm32f2xx.h"
-#include "stm32f2xx_hal.h"
-#include "stm32f2xx_hal_tim.h"
 
 #include "srv.h"
+#include "stm32f2xx_hal.h"
+#include "stm32f2xx_ll_usart.h"
 #include "tasks/timekeeper.h"
 #include "matrix.h"
 #include "draw.h"
@@ -32,6 +32,9 @@ void nvic::init() {
 
 	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5,0));
 	NVIC_EnableIRQ(NVIC_SRV_RX_IRQ_NAME);
+
+	NVIC_SetPriority(ESP_USART_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6,0));
+	NVIC_EnableIRQ(ESP_USART_IRQ_NAME);
 
 	NVIC_SetPriority(UsageFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
 	NVIC_EnableIRQ(UsageFault_IRQn);
@@ -72,6 +75,14 @@ extern "C" void NVIC_SRV_RX_IRQ_HANDLER() {
 	else {
 		crash::panic("RxNoHandle");
 	}
+}
+
+extern "C" void ESP_USART_IRQ_HANDLER() {
+	// just clears error flags
+	if (LL_USART_IsActiveFlag_FE(ESP_USART)) LL_USART_ClearFlag_FE(ESP_USART);
+	if (LL_USART_IsActiveFlag_PE(ESP_USART)) LL_USART_ClearFlag_PE(ESP_USART);
+	if (LL_USART_IsActiveFlag_ORE(ESP_USART)) LL_USART_ClearFlag_ORE(ESP_USART);
+	if (LL_USART_IsActiveFlag_NE(ESP_USART)) LL_USART_ClearFlag_NE(ESP_USART);
 }
 
 extern "C" void NVIC_SRV_TX_IRQ_HANDLER() {
