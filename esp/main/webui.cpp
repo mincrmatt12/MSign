@@ -189,6 +189,8 @@ namespace webui {
 	MultipartStatus do_multipart(MultipartHook hook) {
 		multipart_header_state_t header_state;
 
+		errno = 0;
+
 continuewaiting:
 		// Try to read the start of a header block
 		while (true) {
@@ -246,45 +248,76 @@ endloop:
 				is_skipping = true;
 			}
 
-			uint8_t buf[64];
+			uint8_t buf[75];
+			int readcount = strlen(reqstate->c.multipart_boundary);
 			errno = 0;
 			while (true) {
-				if (errno) return MultipartStatus::EOF_EARLY;
+				if (errno && errno != EINTR) {
+					ESP_LOGE(TAG, "errno = %d; %s", errno, strerror(errno));
+					return MultipartStatus::EOF_EARLY;
+				}
 				// Try to read
-				int pos = 0;
+				int pos = 0, ovf = 0;
 				while (true) {
-					if (pos == 64) {
-						// Send that buffer into the hook
-						if (!is_skipping) {
-							if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
-						}
-						pos = 0;
-					}
-					auto inval = read_from_req_body();
+					// Read at most strlen boundary bytes from the request.
+					//
+					// This will never overflow into the next boundary because:
+					//   textext\rendend
+					//           |      | we only ever read this much, and if we've gone past the
+					//                    start we're already out of this loop.
+					//
+					// In fact, we could read a bit more but may as well be conservative.
+					auto inval = read_from_req_body(buf, readcount);
 					if (inval == -1) {
 						return MultipartStatus::EOF_EARLY;
 					}
-					if (inval == '\r') break;
-					else {buf[pos++] = inval;}
+					
+					// otherwise, check if there's a newline
+					for (int o = 0; o < inval; ++o) {
+						if (buf[o] == '\r') {
+							ovf = inval - o - 1;
+							pos = o + 1;
+							goto end_innerloop;		
+						}
+					}
+
+					if (!is_skipping) {
+						if (!hook(buf, inval, &header_state)) return MultipartStatus::HOOK_ABORT;
+					}
 				}
+end_innerloop:
 				// Send that buffer into the hook
 				if (pos && !is_skipping) {
 					if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
 				}
-				buf[0] = '\r';
+				// Move the end of the buffer into the beginning
+				memmove(buf + 1, buf + pos, ovf);
 				pos = 1;
 				// Try to read the rest of the boundary
-				if ((buf[pos++] = read_from_req_body()) != '\n') goto flush_buf;
-				if ((buf[pos++] = read_from_req_body()) != '-') goto flush_buf;
-				if ((buf[pos++] = read_from_req_body()) != '-') goto flush_buf;
-				for (int i = 0; i < strlen(reqstate->c.multipart_boundary); ++i) {
-					if ((buf[pos++] = read_from_req_body()) != reqstate->c.multipart_boundary[i]) goto flush_buf;
+				for (const char *o = "\n--"; *o; ++o) {
+					if (pos < ovf+1) {
+						if (buf[pos++] != *o) goto flush_buf;
+					}
+					else {
+						if ((buf[pos++] = read_from_req_body()) != *o) goto flush_buf;
+					}
+					ESP_LOGD(TAG, "check %c", *o);
+				}
+				// try to read the actual boundary
+				for (const char *o = reqstate->c.multipart_boundary; *o; ++o) {
+					if (pos < ovf+1) {
+						if (buf[pos++] != *o) goto flush_buf;
+					}
+					else {
+						if ((buf[pos++] = read_from_req_body()) != *o) goto flush_buf;
+					}
+					ESP_LOGD(TAG, "check %c", *o);
 				}
 				// We have read an entire boundary delimiter, break out of this loop
 				break;
 flush_buf:
 				if (!is_skipping) {
-					if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
+					if (!hook(buf, pos < ovf ? ovf : pos, &header_state)) return MultipartStatus::HOOK_ABORT;
 				}
 			}
 
