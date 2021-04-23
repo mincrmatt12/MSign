@@ -44,7 +44,7 @@ SECTIONS
   {
 	  . = ALIGN(4);
 	  _srtext = .;
-	  *(.rtxet)
+	  *(.rtext)
 	  *(.rtext*)
 	  . = ALIGN(4);
 	  _ertext = .;
