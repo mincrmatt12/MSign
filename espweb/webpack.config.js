@@ -51,7 +51,14 @@ module.exports = (env, options) => {
 		optimization: {
 			minimize: options.mode == 'production',
 			minimizer: [
-				new TerserJSPlugin(),
+				new TerserJSPlugin({
+					terserOptions: {
+						format: {
+							comments: false,
+						},
+					},
+					extractComments: false,
+				}),
 				new CssMinimizerPlugin()
 			]
 		},
