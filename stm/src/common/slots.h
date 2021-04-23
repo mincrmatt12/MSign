@@ -13,7 +13,7 @@ namespace slots {
 	// the structs with flags must be in the form uint<>_t something_bla, enum SomethingBla
 	enum DataID : uint16_t {
 		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
-		TIME_STATUS = 0x02,			// BOOL; 0 - waiting for NTP, 1 - NTP in sync
+		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
 
 		REMOTE_CONTROL = 0x10,      // BOOL; 0 - no remote control is taking place, request_screen and virtual_buttonmap are not valid
 		REQUEST_SCREEN = 0x11, 		// UINT8_T; screen ID to request, sent very infrequently
@@ -58,6 +58,18 @@ namespace slots {
 	};
 
 #pragma pack (push, 1)
+	struct WebuiStatus {
+		uint16_t flags;
+
+		enum Flags : uint16_t {
+			RECEIVING_SYSUPDATE = 1,
+			RECEIVING_WEBUI_PACK = 2,
+			RECEIVING_CERT_PACK = 4,
+
+			LAST_RX_FAILED = 16,
+		};
+	};
+
 	struct TTCInfo {
 		uint16_t flags;
 

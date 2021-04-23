@@ -44,6 +44,46 @@ namespace tasks {
 					break;
 			}
 		}
+
+		void show_overlays() {
+			slots::WebuiStatus status;
+			{
+				srv::ServicerLockGuard g(servicer);
+				auto& blk = servicer.slot<slots::WebuiStatus>(slots::WEBUI_STATUS);
+				if (blk) {
+					status = *blk;
+				}
+				else return;
+			}
+
+			int x = 128;
+			
+			// try to draw sysupgrade
+			if (status.flags & slots::WebuiStatus::RECEIVING_SYSUPDATE) {
+				// compute size
+				int width = draw::text_size("\xfe sys", font::dejavusans_10::info) + 2;
+
+				// blank
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0, 0, 0);
+				x -= width;
+
+				// draw
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x + 1, 9, "\xfe ", 10_c, 245_c, 30_c, "sys", 128_c, 128_c, 128_c);
+			}
+
+			// try to draw failed
+			if (status.flags & slots::WebuiStatus::LAST_RX_FAILED) {
+				// compute size
+				int width = draw::text_size("\xfe err", font::dejavusans_10::info) + 2;
+
+				// blank
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0, 0, 0);
+				x -= width;
+
+				// draw
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x + 1, 9, "\xfe ", 255_c, 5_c, 5_c, "err", 255_c, 255_c, 255_c);
+			}
+		}
 	}
 
 	void DispMan::run() {
@@ -90,7 +130,7 @@ namespace tasks {
 		}
 
 		// Tell servicer to grab the sccfg
-		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING);
+		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING, slots::WEBUI_STATUS);
 
 		swapper.notify_before_transition(0, true);
 		swapper.transition(0);
@@ -100,7 +140,7 @@ namespace tasks {
 			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();
 			swapper.draw();
 
-			// Check for screen swaps ... todo ...
+			// Check for screen swaps 
 			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING]) {
 				srv::ServicerLockGuard g(servicer);
 				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
@@ -119,6 +159,9 @@ namespace tasks {
 					last_swapped_at = rtc_time;
 				}
 			}
+
+			// show overlays
+			show_overlays();
 
 			// Sync on swap buffer
 			matrix.swap_buffers();

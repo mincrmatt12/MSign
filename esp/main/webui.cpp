@@ -41,6 +41,20 @@ namespace webui {
 
 	http_serve_state_t * reqstate = nullptr;
 
+	slots::WebuiStatus current_status;
+
+	template<typename ...Args>
+	inline void set_status_flag(Args&& ...args) {
+		current_status.flags |= (args || ...);
+		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+	}
+
+	template<typename ...Args>
+	inline void clear_status_flag(Args&& ...args) {
+		current_status.flags &= ~(args || ...);
+		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+	}
+
 	int print_to_client(const char* buf) {
 		size_t pos = 0;
 		size_t length = strlen(buf);
@@ -167,7 +181,7 @@ namespace webui {
 	int read_from_req_body() {
 		// TODO: make me handle chunked encoding
 		uint8_t buf;
-		read_from_req_body(&buf, 1);
+		if (read_from_req_body(&buf, 1) == -1) return -1;
 		return buf;
 	}
 
@@ -425,6 +439,7 @@ flush_buf:
 				}
 				
 				if (len == -1) {
+					set_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 					return true;
 				}
 				else if (len == -2) {
@@ -444,17 +459,23 @@ flush_buf:
 			})) {
 				case MultipartStatus::EOF_EARLY:
 				default:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
+					clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::INVALID_HEADER:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					send_static_response(400, "Bad Request", "The server was unable to interpret the header area of the form data request.");
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::HOOK_ABORT:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
+					clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 					send_static_response(400, "Bad Request", "You have sent invalid files.");
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::NO_CONTENT_DISP:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					send_static_response(400, "Bad Request", "You are missing a Content-Disposition header in your request.");
 					f_close(&out_ui);
 					return;
@@ -462,6 +483,7 @@ flush_buf:
 					break;
 			}
 
+			clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 			f_close(&out_ui);
 
 			if (!ok) {
@@ -504,6 +526,8 @@ flush_buf:
 			// Remove files
 			f_unlink("/upd/stm.bin");
 			f_unlink("/upd/esp.bin");
+
+			set_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 
 			// Temp.
 			switch (do_multipart([&](uint8_t * buf, int len, multipart_header_state_t *state){
@@ -561,19 +585,25 @@ flush_buf:
 				return true;
 			})) {
 				case MultipartStatus::EOF_EARLY:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					return;
 				case MultipartStatus::INVALID_HEADER:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					send_static_response(400, "Bad Request", "The server was unable to interpret the header area of the form data request.");
 					return;
 				case MultipartStatus::HOOK_ABORT:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					send_static_response(400, "Bad Request", "You have sent invalid files.");
 					return;
 				case MultipartStatus::NO_CONTENT_DISP:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					send_static_response(400, "Bad Request", "You are missing a Content-Disposition header in your request.");
 					return;
 				case MultipartStatus::OK:
+					clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 					break;
 				default:
+					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					return;
 			}
 

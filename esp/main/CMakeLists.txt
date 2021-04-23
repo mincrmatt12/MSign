@@ -38,7 +38,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(tdsb_logintoken "")
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
 
-	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 14)
+	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 17)
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
 	add_dependencies(${COMPONENT_LIB} msign_parsers)
 
