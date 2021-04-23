@@ -1,12 +1,5 @@
-cmake_minimum_required(VERSION 3.12)
+cmake_minimum_required(VERSION 3.15)
 project(signsim)
-
-if (${CMAKE_BUILD_TYPE})
-	if(${CMAKE_BUILD_TYPE} STREQUAL "Asan")
-		set(CMAKE_CXX_OPTIONS "${CMAKE_CXX_OPTIONS} -fsanitize=address")
-		set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
-	endif()
-endif()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_BUILD_TYPE Debug)
@@ -27,6 +20,9 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
    add_compile_options (-fcolor-diagnostics)
 endif ()
+
+add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
+add_link_options(-fno-omit-frame-pointer -fsanitize=address)
 
 # This CMake file is responsible for a) creating the source directories from:
 # - the original directory
