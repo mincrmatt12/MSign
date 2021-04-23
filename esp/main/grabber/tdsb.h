@@ -11,7 +11,7 @@ namespace tdsb {
 	// delay to like 15 minutes.
 	//
 	// The unrecoverable error timeout (which we send with invalid config) is set extra high since it usually means the user/pass is wrong.
-	constexpr static auto tdsb_grabber = grabber::make_https_grabber(init, loop, pdMS_TO_TICKS(60*15*1000), pdMS_TO_TICKS(60*200*1000));
+	constexpr static auto tdsb_grabber = grabber::make_https_grabber(init, loop, pdMS_TO_TICKS(60*5*1000), pdMS_TO_TICKS(30*1000));
 }
 
 #endif

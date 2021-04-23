@@ -185,6 +185,7 @@ namespace tdsb {
 		slots::TimetableHeader hdr{};
 
 		{
+			bool ok = false;
 			json::JSONParser dp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 				if (stack[0]->array) { // don't use is_array because it's at the root
 					if (v.type != json::Value::STR) return;
@@ -194,6 +195,7 @@ namespace tdsb {
 					else {
 						(stack[0]->index ? hdr.next_day : hdr.current_day) = v.str_val[5] - '0';
 					}
+					if (stack[0]->index == 1) ok = true;
 				}
 			});
 
@@ -207,7 +209,7 @@ namespace tdsb {
 			}
 
 			// Parse
-			if (!dp.parse(std::move(cb))) {
+			if (!dp.parse(std::move(cb)) || !ok) {
 				ESP_LOGW(TAG, "failed to parse daycycle");
 				dwhttp::stop_download();
 				return false;
