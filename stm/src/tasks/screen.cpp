@@ -68,7 +68,7 @@ namespace tasks {
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x - 1, 9, "\xfe ", 10_c, 245_c, 30_c, "sys", 128_c, 128_c, 128_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 10_c, 245_c, 30_c, "sys", 128_c, 128_c, 128_c);
 			}
 			
 			// try to draw webui
@@ -81,7 +81,7 @@ namespace tasks {
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x - 1, 9, "\xfe ", 10_c, 245_c, 30_c, "ui", 128_c, 128_c, 128_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 10_c, 245_c, 30_c, "ui", 128_c, 128_c, 128_c);
 			}
 
 			// try to draw failed
@@ -94,7 +94,7 @@ namespace tasks {
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x - 1, 9, "\xfe ", 255_c, 5_c, 5_c, "err", 255_c, 255_c, 255_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 255_c, 5_c, 5_c, "err", 255_c, 255_c, 255_c);
 			}
 		}
 	}

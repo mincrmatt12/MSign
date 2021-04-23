@@ -828,7 +828,9 @@ notfound:
 	void run(void*) {
 		if (upd::needed() == upd::WEB_UI) {
 			ESP_LOGI(TAG, "Running webui update");
+			set_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 			upd::update_website();
+			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 		}
 
 		ESP_LOGI(TAG, "Starting webui");
