@@ -75,7 +75,7 @@ class TTCPane extends React.Component {
 				</Card>)
 			)}
 			<hr className="hr-gray" />
-			<Button variant="light" disabled={this.props.configState.dirtags.length == 3} onClick={() => {this.add()}} className="w-100">+</Button>
+			<Button variant="dark" disabled={this.props.configState.dirtags.length == 3} onClick={() => {this.add()}} className="w-100">+</Button>
 			<hr className="hr-gray" />
 			
 			<Form.Group controlId="alert_ctrl">

@@ -1,15 +1,14 @@
 const path = require('path');
-const CleanWebpackPlugin = require('clean-webpack-plugin');
+const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const TerserJSPlugin = require("terser-webpack-plugin");
 const MiniCssExtractPlugin  = require("mini-css-extract-plugin")
-const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin");
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = (env, options) => {
 	const config = {
 		entry: {
-			page: ['react-hot-loader/patch',
-				'whatwg-fetch',
+			page: ['whatwg-fetch',
 				'./src/js/page.js',
 				'./src/html/page.html']},
 		output: {
@@ -33,12 +32,8 @@ module.exports = (env, options) => {
 					use: {
 						loader: 'babel-loader',
 						options: {
-							presets: ['@babel/preset-env', '@babel/preset-react'],
-							plugins: [
-								'react-hot-loader/babel',
-								["@babel/plugin-proposal-decorators", {"legacy": true}],
-								["@babel/plugin-proposal-class-properties", {"loose": true}]
-							]
+							presets: ['@babel/env', '@babel/react'],
+							plugins: ['@babel/plugin-proposal-class-properties']
 						}
 					}
 				},
@@ -54,26 +49,25 @@ module.exports = (env, options) => {
 			]
 		},
 		optimization: {
+			minimize: options.mode == 'production',
 			minimizer: [
-				new TerserJSPlugin({}),
-				new OptimizeCSSAssetsPlugin({})
+				new TerserJSPlugin(),
+				new CssMinimizerPlugin()
 			]
-		}
+		},
+		devtool: options.mode == 'development' ? 'eval-source-map' : false,
+		plugins: [
+			new MiniCssExtractPlugin({
+				filename: "[name].css",
+				chunkFilename: "[id].[chunkhash].css"
+			})
+		]
 	}
 
-	config.plugins = [
-		new MiniCssExtractPlugin({
-			filename: "[name].css",
-			chunkFilename: "[id].[chunkhash].css"
-		}),
-	]
 
 	if (options.mode == 'development') {
 		config.output.publicPath = 'http://localhost:8001/';
-		config.plugins.push(new webpack.HotModuleReplacementPlugin());
-		config.devtool = 'inline-source-map';
 		config.devServer = {
-			hot: true,
 			inline: true,
 			port: 8001,
 			contentBase: path.join(__dirname, './web'),
@@ -87,7 +81,7 @@ module.exports = (env, options) => {
 		}
 
 	} else {
-		config.plugins.push(new CleanWebpackPlugin());
+		config.plugins.push(new CleanWebpackPlugin({}));
 	}
 
 	return config;

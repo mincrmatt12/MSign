@@ -12,7 +12,7 @@ import Card from 'react-bootstrap/Card'
 import Alert from 'react-bootstrap/Alert'
 import {BrowserRouter as Router, Route} from 'react-router-dom'
 import {LinkContainer} from 'react-router-bootstrap'
-import "core-js/stable";
+
 import "regenerator-runtime/runtime";
 
 import GlobalPane from "./pane/global"
@@ -380,7 +380,7 @@ class App extends React.Component {
 	render() {
 		return (
 			<Router basename="/">
-				<Navbar bg="light">
+				<Navbar variant="dark" bg="dark">
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">
 						<Nav.Link eventKey={1} href="#" disabled={!this.state.dirty} active={false} onSelect={() => {this.saveConfig();}}>save</Nav.Link>
@@ -391,7 +391,7 @@ class App extends React.Component {
 				<Container className="contbrd">
 					<Row>
 						<Col xs="5" sm="4" md="3" lg="2">
-							<Card bg="light">
+							<Card bg="dark">
 								<Nav variant="pills" className="flex-column">
 									<LinkContainer to="/" exact>
 										<Nav.Link>global</Nav.Link>

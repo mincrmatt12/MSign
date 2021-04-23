@@ -12,7 +12,6 @@ import Alert from 'react-bootstrap/Alert'
 import Modal from 'react-bootstrap/Modal'
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import ResizeObserver from 'resize-observer-polyfill';
 
 function ModelPaneListEntry(props) {
 	return (<ListGroup.Item active={props.modelPresent && props.selected ? true : null} onClick={props.onClick} action disabled={!props.modelPresent}>
@@ -21,7 +20,7 @@ function ModelPaneListEntry(props) {
 				<Form.Check.Input checked={props.enabled} onChange={(e) => {props.onChangeState(e.target.checked);}}/>
 				<Form.Check.Label>{props.name ? props.name : "<none>"}</Form.Check.Label>
 				</Form.Check>
-				{props.builtin ? null : (<Button className="force-enabled ml-2" variant="dark" onClick={props.onChangeModel}>add model</Button>)}
+				{props.builtin ? null : (<Button className="force-enabled ml-2" variant="light" onClick={props.onChangeModel}>add model</Button>)}
 			</Form>
 		</ListGroup.Item>);
 }
