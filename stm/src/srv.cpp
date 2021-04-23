@@ -815,6 +815,7 @@ void srv::Servicer::check_connection_ping() {
 		sent_ping = true;
 		send();
 	}
+#ifndef SIM
 	if ((timekeeper.current_time - last_comm) > 30000) {
 		if (timekeeper.current_time < last_comm) {
 			// ignore if the clock went backwards
@@ -824,6 +825,7 @@ void srv::Servicer::check_connection_ping() {
 		// otherwise, reset
 		crash::panic_nonfatal("esp timeout");
 	}
+#endif
 }
 
 void srv::Servicer::update_forgot_statuses() {
