@@ -539,6 +539,8 @@ reachedend:
 
 			send_static_response(200, "OK", "Updating UI.");
 			lwip_close(client_sock);
+			// wait a bit for connection to close
+			vTaskDelay(pdMS_TO_TICKS(500));
 			serial::interface.reset(); // reset both systems
 		}
 		else if (strcasecmp(tgt, "updatefirm") == 0) {
@@ -666,6 +668,7 @@ reachedend:
 
 			send_static_response(200, "OK", gotcount == 2 ? "Updating stm+esp" : "Updating stm only");
 			lwip_close(client_sock);
+			vTaskDelay(pdMS_TO_TICKS(500));
 			serial::interface.reset();
 		}
 		else if (strcasecmp(tgt, "reboot") == 0) {
