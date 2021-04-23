@@ -89,11 +89,11 @@ void srv::ProtocolImpl::send() {
 	is_sending = false;
 }
 
-void srv::ProtocolImpl::start_recv(srv::ProtocolState s) {
+void srv::ProtocolImpl::start_recv(srv::ProtocolState s, int offset) {
 	state = s;
 	
-	faux_dma_ptr = dma_buffer;
-	faux_dma_counter = 3;
+	faux_dma_ptr = dma_buffer + offset;
+	faux_dma_counter = 3 - offset;
 }
 
 void srv::ProtocolImpl::recv_full() {
