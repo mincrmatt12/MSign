@@ -45,13 +45,13 @@ namespace webui {
 
 	template<typename ...Args>
 	inline void set_status_flag(Args&& ...args) {
-		current_status.flags |= (args || ...);
+		current_status.flags |= (args | ...);
 		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
 	}
 
 	template<typename ...Args>
 	inline void clear_status_flag(Args&& ...args) {
-		current_status.flags &= ~(args || ...);
+		current_status.flags &= ~(args | ...);
 		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
 	}
 
@@ -162,7 +162,7 @@ namespace webui {
 				ESP_LOGE(TAG, "Failed to read client b.c. timeout");
 				return -1;
 			}
-			int bytes_read = lwip_recv(client_sock, tgt + i, size - i, 0);
+			int bytes_read = lwip_recv(client_sock, tgt, size - i, 0);
 			if (bytes_read < 0) {
 				ESP_LOGE(TAG, "Failed to read from client %d", errno);
 				return -1;
@@ -170,6 +170,7 @@ namespace webui {
 			tgt += bytes_read;
 			i += bytes_read;
 		}
+		errno = 0;
 		return i;
 	}
 
@@ -183,6 +184,26 @@ namespace webui {
 		uint8_t buf;
 		if (read_from_req_body(&buf, 1) == -1) return -1;
 		return buf;
+	}
+
+	bool match_against(uint8_t *buf, const char *matchto, int &position, int remaining) {
+		char c;
+		while ((c = *matchto++) != 0) {
+			if (position >= remaining) {
+				// Append to the buffer
+				int newc = read_from_req_body();
+				if (newc == -1) {
+					errno = EINVAL;
+					return false;
+				}
+				if ((buf[position++] = newc) != c) return false;
+			}
+			else {
+				// Check in buffer
+				if (buf[position++] != c) return false;
+			}
+		}
+		return true;
 	}
 
 	template<typename MultipartHook>
@@ -250,77 +271,60 @@ endloop:
 
 			uint8_t buf[75];
 			int readcount = strlen(reqstate->c.multipart_boundary);
+			ESP_LOGD(TAG, "rc=%d", readcount);
 			errno = 0;
 			while (true) {
 				if (errno && errno != EINTR) {
 					ESP_LOGE(TAG, "errno = %d; %s", errno, strerror(errno));
 					return MultipartStatus::EOF_EARLY;
 				}
-				// Try to read
-				int pos = 0, ovf = 0;
-				while (true) {
-					// Read at most strlen boundary bytes from the request.
-					//
-					// This will never overflow into the next boundary because:
-					//   textext\rendend
-					//           |      | we only ever read this much, and if we've gone past the
-					//                    start we're already out of this loop.
-					//
-					// In fact, we could read a bit more but may as well be conservative.
-					auto inval = read_from_req_body(buf, readcount);
-					if (inval == -1) {
-						return MultipartStatus::EOF_EARLY;
-					}
-					
-					// otherwise, check if there's a newline
-					for (int o = 0; o < inval; ++o) {
-						if (buf[o] == '\r') {
-							ovf = inval - o - 1;
-							pos = o + 1;
-							goto end_innerloop;		
-						}
-					}
+				
+				// Receive readcount bytes
+				if (read_from_req_body(buf, readcount) != readcount) {
+					// error
+					return MultipartStatus::EOF_EARLY;
+				}
 
-					if (!is_skipping) {
-						if (!hook(buf, inval, &header_state)) return MultipartStatus::HOOK_ABORT;
+				int remaining = readcount;
+				// scan for possible starts
+notyet:
+				for (int i = 0; i < remaining; ++i) {
+					if (buf[i] == '\r') {
+						// Flush the last `i` bytes to the hook
+						if (!is_skipping) if (!hook(buf, i, &header_state)) return MultipartStatus::HOOK_ABORT;
+						// Move the bytes from i to the end of the buffer to the beginning:
+						// <junk>\r<potential end>{not yet read}
+						// to
+						// \r<potential end>{overflow}
+						memmove(buf, buf + i, remaining - i);
+						// Move remaining back
+						remaining -= i;
+						// Check if there is a match
+						int parsed = 0;
+						if (!match_against(buf, "\r\n--", parsed, remaining) || !match_against(buf, reqstate->c.multipart_boundary, parsed, remaining)) {
+							// There was no match, flush up `parsed` bytes and move it back
+							if (!is_skipping) if (!hook(buf, parsed, &header_state)) return MultipartStatus::HOOK_ABORT;
+							// If we've parsed more than remaining, just continue reading
+							if (remaining <= parsed) goto emptybuffer;
+							// Move them back
+							memmove(buf, buf + parsed, remaining - parsed);
+							// Shrink remain
+							remaining -= parsed;
+							// Try again
+							goto notyet;
+						}
+						// We have reached the end of the buffer, break out of the big loop.
+						goto reachedend;
 					}
 				}
-end_innerloop:
-				// Send that buffer into the hook
-				if (pos && !is_skipping) {
-					if (!hook(buf, pos, &header_state)) return MultipartStatus::HOOK_ABORT;
-				}
-				// Move the end of the buffer into the beginning
-				memmove(buf + 1, buf + pos, ovf);
-				pos = 1;
-				// Try to read the rest of the boundary
-				for (const char *o = "\n--"; *o; ++o) {
-					if (pos < ovf+1) {
-						if (buf[pos++] != *o) goto flush_buf;
-					}
-					else {
-						if ((buf[pos++] = read_from_req_body()) != *o) goto flush_buf;
-					}
-					ESP_LOGD(TAG, "check %c", *o);
-				}
-				// try to read the actual boundary
-				for (const char *o = reqstate->c.multipart_boundary; *o; ++o) {
-					if (pos < ovf+1) {
-						if (buf[pos++] != *o) goto flush_buf;
-					}
-					else {
-						if ((buf[pos++] = read_from_req_body()) != *o) goto flush_buf;
-					}
-					ESP_LOGD(TAG, "check %c", *o);
-				}
-				// We have read an entire boundary delimiter, break out of this loop
-				break;
-flush_buf:
-				if (!is_skipping) {
-					if (!hook(buf, pos < ovf ? ovf : pos, &header_state)) return MultipartStatus::HOOK_ABORT;
-				}
+
+				// Nothing was found in the array, flush `remaining` bytes
+				if (!is_skipping) if (!hook(buf, remaining, &header_state)) return MultipartStatus::HOOK_ABORT;
+emptybuffer:
+				;
 			}
 
+reachedend:
 			if (!is_skipping) hook(nullptr, -2, &header_state); // it's invalid to error in this case
 
 			ESP_LOGD(TAG, "got end");
@@ -472,7 +476,8 @@ flush_buf:
 				}
 				
 				if (len == -1) {
-					set_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
+					clear_status_flag(slots::WebuiStatus::LAST_RX_FAILED, slots::WebuiStatus::RECEIVING_SYSUPDATE);
+					set_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					return true;
 				}
 				else if (len == -2) {
@@ -493,7 +498,7 @@ flush_buf:
 				case MultipartStatus::EOF_EARLY:
 				default:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
+					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::INVALID_HEADER:
@@ -503,7 +508,7 @@ flush_buf:
 					return;
 				case MultipartStatus::HOOK_ABORT:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
+					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					send_static_response(400, "Bad Request", "You have sent invalid files.");
 					f_close(&out_ui);
 					return;
@@ -560,6 +565,7 @@ flush_buf:
 			f_unlink("/upd/stm.bin");
 			f_unlink("/upd/esp.bin");
 
+			clear_status_flag(slots::WebuiStatus::LAST_RX_FAILED, slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 			set_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
 
 			// Temp.
