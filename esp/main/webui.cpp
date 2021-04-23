@@ -585,6 +585,7 @@ flush_buf:
 				return true;
 			})) {
 				case MultipartStatus::EOF_EARLY:
+					f_close(&out_file);
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
 					return;
 				case MultipartStatus::INVALID_HEADER:
