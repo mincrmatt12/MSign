@@ -90,7 +90,7 @@ target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
+	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register>
 )
 
 target_include_directories(stm

@@ -53,7 +53,9 @@ void protocol::ProtocolImpl::init_hw() {
 	fcntl(0, F_SETFL, fcntl(0, F_GETFL) | O_NONBLOCK);
 
 	BaseType_t res;
-	if ((res = xTaskCreate((TaskFunction_t)(&protocol::ProtocolImpl::rx_task), "rxST", configMINIMAL_STACK_SIZE, this, 13, &rx_thread)) != pdPASS) {
+	if ((res = xTaskCreate([](void *ptr){
+		((protocol::ProtocolImpl *)ptr)->rx_task();
+	}, "rxST", configMINIMAL_STACK_SIZE, this, 13, &rx_thread)) != pdPASS) {
 		ESP_LOGE(TAG, "failed to create rxST %ld", res);
 	}
 }

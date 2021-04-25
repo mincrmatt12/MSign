@@ -112,7 +112,7 @@ namespace led {
 
 			void start_display() {                                                             
 				should_swap = false;
-				xTaskCreate((TaskFunction_t)&Matrix<FB>::disptask, "dispint", 1024, this, 6, &me);
+				xTaskCreate([](void *arg){((Matrix<FB> *)arg)->disptask();}, "dispint", 1024, this, 6, &me);
 			}
 
 			// This should only be called from an RTOS task
