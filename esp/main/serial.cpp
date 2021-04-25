@@ -497,7 +497,7 @@ again:
 
 			return other_tasks_match([&](const SerialSubtask& s){
 				return s.subtask_type() == FreeSpaceTask::TYPE ||
-					((s.subtask_type() == BlockInTask::TYPE || s.subtask_type() == BlockOutTask::TYPE) && s.slotid == this->slotid);
+					((s.subtask_type() == BlockInTask::TYPE || s.subtask_type() == BlockOutTask::TYPE || s.subtask_type() == UpdateSizeTask::TYPE) && s.slotid == this->slotid);
 			});
 		}
 
@@ -593,7 +593,7 @@ again:
 
 			return other_tasks_match([&](const SerialSubtask& s){
 				return s.subtask_type() == FreeSpaceTask::TYPE ||
-					((s.subtask_type() == BlockInTask::TYPE || s.subtask_type() == BlockOutTask::TYPE || s.subtask_type() == UpdateSizeTask::TYPE) && s.slotid == this->slotid);
+					((s.subtask_type() == BlockInTask::TYPE || s.subtask_type() == BlockOutTask::TYPE || s.subtask_type() == UpdateSizeTask::TYPE || s.subtask_type() == DataUpdateTask::TYPE) && s.slotid == this->slotid);
 			});
 		}
 		
@@ -1148,10 +1148,10 @@ void serial::SerialInterface::reset() {
 	xQueueSend(events, &r, portMAX_DELAY);
 }
 
-void serial::SerialInterface::update_slot(uint16_t slotid, const void *ptr, size_t length) {
+void serial::SerialInterface::update_slot(uint16_t slotid, const void *ptr, size_t length, bool should_sync) {
 	// TODO: syncing options
 	allocate_slot_size(slotid, length);
-	update_slot_partial(slotid, 0, ptr, length);
+	update_slot_partial(slotid, 0, ptr, length, should_sync);
 }
 
 void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
@@ -1163,7 +1163,7 @@ void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
 	xQueueSendToBack(events, &pr, portMAX_DELAY);
 }
 
-void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length) {
+void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync) {
 	SerialEvent pr;
 	pr.event_type = SerialEvent::EventTypeRequest;
 	pr.event_subtype = SerialEvent::EventSubtypeDataUpdate;
@@ -1171,11 +1171,13 @@ void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offs
 	pr.d.data_update.length = (uint16_t)length;
 	pr.d.data_update.offset = offset;
 	pr.d.data_update.data = ptr;
-	// TODO: temp sync will be split out
 	xQueueSendToBack(events, &pr, portMAX_DELAY);
-	pr.event_subtype = SerialEvent::EventSubtypeSync;
-	pr.d.sync.slotid = slotid;
-	pr.d.sync.tonotify = xTaskGetCurrentTaskHandle();
-	xQueueSendToBack(events, &pr, portMAX_DELAY);
-	xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
+
+	if (should_sync) {
+		pr.event_subtype = SerialEvent::EventSubtypeSync;
+		pr.d.sync.slotid = slotid;
+		pr.d.sync.tonotify = xTaskGetCurrentTaskHandle();
+		xQueueSendToBack(events, &pr, portMAX_DELAY);
+		xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
+	}
 }

@@ -26,7 +26,7 @@ namespace serial {
 		// SLOT UPDATE
 
 		// Replace a slot with the data pointed to by ptr and of length length
-		void update_slot(uint16_t slotid, const void * ptr, size_t length);
+		void update_slot(uint16_t slotid, const void * ptr, size_t length, bool should_sync=true);
 		// Replace a slot with the contents of the object referenced by obj
 		template<typename T>
 		inline void update_slot(uint16_t slotid, const T& obj) {
@@ -36,6 +36,16 @@ namespace serial {
 		// Replace a slot with a null-terminated string
 		inline void update_slot(uint16_t slotid, const char *str) {
 			update_slot(slotid, str, strlen(str) + 1); // include null terminator
+		}
+		// Replace a slot with the contents of the object referenced by obj, without syncing
+		template<typename T>
+		inline void update_slot_nosync(uint16_t slotid, const T& obj) {
+			static_assert(!std::is_pointer<T>::value, "This will not work with pointers, use the ptr/length overload instead.");
+			update_slot(slotid, &obj, sizeof(T), false);
+		}
+		// Replace a slot with a null-terminated string
+		inline void update_slot_nosync(uint16_t slotid, const char *str) {
+			update_slot(slotid, str, strlen(str) + 1, false); // include null terminator
 		}
 		// Clear out a slot
 		inline void delete_slot(uint16_t slotid) {
@@ -48,7 +58,7 @@ namespace serial {
 		void allocate_slot_size(uint16_t slotid, size_t size);
 
 		// Update part of a slot
-		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length);
+		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync=true);
 
 	private:
 		void on_pkt() override;
