@@ -410,7 +410,7 @@ namespace sd {
 		// Setup start bit + trans bit + index
 		command_out[0] = 0x40U | index;
 
-		if (!std::is_empty<Argument>::value) {
+		if constexpr (!std::is_empty<Argument>::value) {
 			static_assert(sizeof(Argument) == 4, "argument must be a 32-bit value");
 
 			uint32_t argument_u32 = *reinterpret_cast<uint32_t *>(&argument);
@@ -457,7 +457,7 @@ namespace sd {
 			spi::rx_byte(fillresp[-i]);
 		}
 
-		if (B) {
+		if constexpr (B) {
 			uint8_t busy = 0;
 			TickType_t t0 = xTaskGetTickCount();
 
