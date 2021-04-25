@@ -24,6 +24,8 @@
 #include <string.h>
 
 #include "esp_log.h"
+#include <FreeRTOS.h>
+#include <semphr.h>
 
 #define LOG_COLOR_HEAD      "\033[0;%dm"
 #define LOG_BOLD_HEAD       "\033[1;%dm"
@@ -47,8 +49,16 @@ static const char s_log_prefix[ESP_LOG_MAX] = {
     'V', //  ESP_LOG_VERBOSE
 };
 
+static SemaphoreHandle_t semaphore = NULL;
+
 static int log_putchar(int c) {
+	if (semaphore == NULL) {
+		semaphore = xSemaphoreCreateMutex();
+	}
+	xSemaphoreTake(semaphore, portMAX_DELAY);
 	fputc(c, stderr);
+	xSemaphoreGive(semaphore);
+	return 1;
 }
 
 static putchar_like_t s_putchar_func = &log_putchar;
