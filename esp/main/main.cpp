@@ -14,6 +14,12 @@
 
 const static char * TAG = "app_main";
 
+#ifdef SIM
+#define STACK_MULT 8
+#else
+#define STACK_MULT 1
+#endif
+
 extern "C" void app_main() {
 	ESP_LOGI(TAG, "Starting MSign...");
 
@@ -56,7 +62,9 @@ extern "C" void app_main() {
 	}
 
 	// Start up the servicer
-	if (xTaskCreate((TaskFunction_t)&serial::SerialInterface::run, "srv", 4096, &serial::interface, 9, NULL) != pdPASS) {
+	if (xTaskCreate([](void *ptr){
+		((serial::SerialInterface *)ptr)->run();
+	}, "srv", 4096 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;
 	}
@@ -67,12 +75,12 @@ extern "C" void app_main() {
 	}
 
 	// Start the grabber
-	if (xTaskCreate(                                grabber::run, "grab", 7680, nullptr,            6, NULL) != pdPASS) {
+	if (xTaskCreate(grabber::run, "grab", 7680 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create grab");
 		return;
 	}
 
-	if (xTaskCreate(                                  webui::run, "webUI", 4096, nullptr            ,5, NULL) != pdPASS) {
+	if (xTaskCreate(webui::run, "webUI", 4096 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 
