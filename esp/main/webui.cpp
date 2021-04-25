@@ -46,13 +46,13 @@ namespace webui {
 	template<typename ...Args>
 	inline void set_status_flag(Args&& ...args) {
 		current_status.flags |= (args | ...);
-		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+		serial::interface.update_slot_nosync(slots::WEBUI_STATUS, current_status);
 	}
 
 	template<typename ...Args>
 	inline void clear_status_flag(Args&& ...args) {
 		current_status.flags &= ~(args | ...);
-		serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+		serial::interface.update_slot_nosync(slots::WEBUI_STATUS, current_status);
 	}
 
 	int print_to_client(const char* buf) {
