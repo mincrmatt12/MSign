@@ -7,10 +7,11 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 set(CMAKE_C_COMPILER ${TOOLCHAIN_DIR}/arm-none-eabi-gcc)
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_DIR}/arm-none-eabi-g++)
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN_DIR}/arm-none-eabi-gcc)
+set(CMAKE_LINKER ${TOOLCHAIN_DIR}/arm-none-eabi-ld)
+set(CMAKE_AR ${TOOLCHAIN_DIR}/arm-none-eabi-ar)
 set(OBJCOPY_EXECUTABLE ${TOOLCHAIN_DIR}/arm-none-eabi-objcopy)
 
-# make cmake build check happy
-set(CMAKE_EXE_LINKER_FLAGS "--specs=nosys.specs")
+set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
 # we always build with debug info because of the crash handler
 set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -ggdb3")
