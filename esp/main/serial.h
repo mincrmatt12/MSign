@@ -60,6 +60,15 @@ namespace serial {
 		// Update part of a slot
 		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync=true);
 
+		// Sync on a set of slotids.
+		template<typename ...Slots>
+		void sync_slots(Slots&& ...slots) {
+			uint16_t sid_list[] = {std::forward<Slots>(slots)...};
+			sync_slots_array(sid_list, sizeof...(Slots));
+		}
+
+		void sync_slots_array(uint16_t * sid_list, uint16_t sid_size);
+
 	private:
 		void on_pkt() override;
 
@@ -106,7 +115,8 @@ namespace serial {
 				} size_update;
 				struct {
 					TaskHandle_t tonotify;
-					uint16_t slotid;
+					uint16_t * slotids;
+					uint16_t amt;
 				} sync;
 				struct {
 					uint16_t slotid;
@@ -118,6 +128,21 @@ namespace serial {
 					const char * resetreason; // null for normal reset, string for unexpected error reset.
 				} system_reset;
 			} d;
+		};
+
+		struct DeferGuard {
+			DeferGuard(SerialInterface *interface) :
+				interface(interface) {
+				interface->defer_arena_updates = true;
+			}
+
+			~DeferGuard() {
+				interface->defer_arena_updates = false;
+				if (interface->arena_dirty) interface->mark_arena_dirty();
+			}
+
+		private:
+			SerialInterface *interface;
 		};
 
 		// The servicer uses _subtasks_, which are like little async state machine things for handling packet sequences efficiently.
@@ -144,14 +169,14 @@ namespace serial {
 
 		// Last time we received comms with the STM (for autoreset)
 		TickType_t last_comms = 0;
-		bool waiting_for_ping = false, arena_dirty = false;
+		bool waiting_for_ping = false, arena_dirty = false, defer_arena_updates = false;
 
 		// Try to start a task, returning its id if succesful or -1 if not enough space.
 		template<typename TaskType, typename ...Args>
 		inline int try_start_task(Args&& ...args);
 
 		// Mark arena dirty and re-update
-		void mark_arena_dirty();
+		void mark_arena_dirty(bool ignore_defer=false);
 	};
 
 	extern SerialInterface interface;
@@ -218,7 +243,7 @@ namespace serial {
 		}
 
 		// Mark arena dirty
-		inline void mark_arena_dirty() { interface.mark_arena_dirty(); }
+		inline void mark_arena_dirty(bool ignore_defer=false) { interface.mark_arena_dirty(ignore_defer); }
 	};
 
 }

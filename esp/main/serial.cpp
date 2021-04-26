@@ -31,11 +31,99 @@ static const char * TASK_TAGS[9] = {
 
 namespace serial::st {
 
+	// BlockIn is a bit of a weird task; it doesn't do any of its initialization, instead it pretty 
+	// much only handles receiving packets -- if there isn't enough space to hold an update we don't
+	// bother starting this task in the first place.
 	struct BlockInTask final : public serial::SerialSubtask {
 		const static inline int TYPE = 4;
 
-		void start() override {}
+		BlockInTask(const uint8_t *current_pkt, uint8_t status_code=0) :
+			current_pkt(current_pkt), status_code(status_code) {
+
+			uint16_t sid_frame;
+			memcpy(&sid_frame, current_pkt + 3, 2);
+
+			slotid = sid_frame & 0xfff;
+		}
+
+		void start() override {
+			// TODO: add a timeout for waiting for packets.
+
+			if (current_pkt == nullptr) {
+				ST_LOGW("current pkt is nullptr; exiting now -- may be stuck");
+				return;
+			}
+
+			uint16_t hdr[4]; memcpy(hdr, current_pkt + 3, sizeof(hdr));
+			bool end   = hdr[0] & (1 << 14);
+
+			if (!end && status_code) {
+				// we've flagged an error, ignore this packet
+				ST_LOGD("logged err, ignoring");
+				return;
+			}
+			
+			if (!status_code) {
+				// Try to move this data into the heap
+				if (!get_arena().update_contents(slotid, hdr[1], current_pkt[1] - sizeof(hdr), current_pkt + 3 + sizeof(hdr))) {
+					// We failed to update contents; this task wouldn't be running if there was no space so the logical
+					// error is invalid state
+					status_code = 0x02;
+
+					ST_LOGW("error in updating contents");
+				}
+
+				// Ensure this section of the heap is not dirty
+				for (auto a = get_arena().begin(slotid); a != get_arena().end(slotid); ++a) {
+					if (auto off = get_arena().block_offset(*a); off >= hdr[1] && off < hdr[1] + (current_pkt[1] - sizeof(hdr))) {
+						a->flags = 0;
+					}
+				}
+			}
+
+			if (end) {
+				uint8_t pkt[10] = {
+					0xa6,
+					0x7,
+					slots::protocol::ACK_DATA_MOVE,
+					0, 0,
+					0, 0,
+					0, 0,
+					status_code
+				};
+
+				hdr[0] &= 0xfff;
+				hdr[1] = hdr[1] + (current_pkt[1] - sizeof(hdr)) - hdr[3];
+				hdr[2] = hdr[3];
+
+				memcpy(pkt + 3, hdr, sizeof(uint16_t) * 3);
+
+				ST_LOGD("finishing data move with code %d", status_code);
+
+				send_packet(pkt);
+				finish();
+				return;
+			}
+
+			ST_LOGD("waiting for next packet");
+		}
+
 		int subtask_type() const override {return TYPE;}
+
+		bool on_packet(uint8_t *pkt) override {
+			if (pkt[2] != slots::protocol::DATA_MOVE) return false;
+			uint16_t sid_frame; memcpy(&sid_frame, pkt + 3, 2);
+			if ((sid_frame & 0xfff) != slotid) return false;
+
+			current_pkt = pkt;
+			start();
+			current_pkt = nullptr;
+			return true;
+		}
+
+	private:
+		const uint8_t *current_pkt = nullptr;
+		uint8_t status_code = 0;
 	};
 
 	// Sends out blocks corresponding to a single slotid
@@ -279,7 +367,7 @@ again:
 						newtarget.flags |= bheap::Block::FlagFlush;
 					}
 
-					mark_arena_dirty();
+					mark_arena_dirty(true);
 					state = StWaitForBlockToBeSent;
 					return;
 			}
@@ -291,7 +379,7 @@ again:
 			}
 			else if (state == StWaitForBlockToBeSent && task.subtask_type() == BlockOutTask::TYPE) {
 				// Check if the block was actually sent out
-				if (get_arena().get(chosen_slotid, chosen_offset).location == bheap::Block::LocationRemote) {
+				if (auto& blk = get_arena().get(chosen_slotid, chosen_offset); !blk || blk.location == bheap::Block::LocationRemote) {
 					start();
 				}
 			}
@@ -302,7 +390,7 @@ again:
 		}
 
 	private:
-		const static inline size_t buffer = 8;
+		const static inline size_t buffer = 16;
 		static const inline size_t max_single_move_size = 256;
 
 		template<typename Pred>
@@ -382,17 +470,19 @@ again:
 
 			switch (state) {
 				case StStart:
-					// Do we even need to do anything?
-					if (current_size == new_size) {
-						// no, we don't
-						finish();
-						return;
-					}
 					if (blocked()) {
 						state = StWaitUnblocked;
 						return;
 				case StWaitUnblocked:
 						;
+					}
+
+					// Do we even need to do anything? (this happens after the blocked check
+					// so multiple size updates don't cause big problems)
+					if (current_size == new_size) {
+						// no, we don't
+						finish();
+						return;
 					}
 
 					ST_LOGD("updating %03x to size %04x from %04x", slotid, new_size, current_size);
@@ -525,6 +615,7 @@ again:
 		void start() override {
 			switch (state) {
 				case StStart:
+				recheck_blocked:
 					if (blocked()) {
 						ST_LOGD("data update blocked");
 						state = StWaitUnblocked;
@@ -538,6 +629,18 @@ again:
 				again:
 					// Try to update
 					if (!get_arena().update_contents(slotid, offset, length, data, true)) {
+						// Check if we've correctly set the size
+						if (offset + length > get_arena().contents_size(slotid)) {
+							ST_LOGW("invalid slotid size during update, scheduling update");
+				case StWaitingForEmptySlotToUpdateSize:
+							state = StStart;
+							if (try_start_task<UpdateSizeTask>(slotid, offset + length) == -1) {
+								ST_LOGD("delaying for empty slot (size)");
+								state = StWaitingForEmptySlotToUpdateSize;
+								return;
+							}
+							goto recheck_blocked;
+						}
 						// Out of space
 						ST_LOGD("out of space updating contents, will cleanup.");
 				case StWaitingForEmptySlotToFreeSpace:
@@ -571,7 +674,7 @@ again:
 					start();
 				}
 			}
-			else if (state == StWaitingForEmptySlotToFreeSpace) 
+			else if (state == StWaitingForEmptySlotToFreeSpace || state == StWaitingForEmptySlotToUpdateSize) 
 				start();
 		}
 
@@ -605,16 +708,16 @@ again:
 			StStart,
 			StWaitUnblocked,
 			StWaitingForEmptySlotToFreeSpace,
-			StWaitingForFreedSpace
+			StWaitingForFreedSpace,
+			StWaitingForEmptySlotToUpdateSize
 		} state = StStart;
 	};
 
 	struct SyncTask final : public SerialSubtask {
 		static const inline int TYPE = 6;
 
-		SyncTask(uint16_t slotid, TaskHandle_t target) :
-			to_notify(target) {
-			this->slotid = slotid;
+		SyncTask(uint16_t *slotids, uint16_t amt, TaskHandle_t target) :
+			to_notify(target), slotids(slotids), amt(amt) {
 		}
 
 		void on_task_end(const SerialSubtask&) override {
@@ -644,10 +747,13 @@ again:
 		}
 	private:
 		TaskHandle_t to_notify;
+		uint16_t *slotids;
+		uint16_t amt;
 
 		bool waiting() {
 			return other_tasks_match([&](const SerialSubtask& s){
-				return ((s.subtask_type() == DataUpdateTask::TYPE || s.subtask_type() == UpdateSizeTask::TYPE) && s.slotid == this->slotid);
+				return ((s.subtask_type() == DataUpdateTask::TYPE || s.subtask_type() == UpdateSizeTask::TYPE) && 
+				std::find(slotids, slotids + amt, s.slotid) != slotids + amt);
 			});
 		}
 
@@ -691,7 +797,7 @@ int serial::SerialInterface::try_start_task(Args&& ...args) {
 	return -1;
 }
 
-void serial::SerialInterface::mark_arena_dirty() {
+void serial::SerialInterface::mark_arena_dirty(bool ignore_defer) {
 	// This function is perhaps a bit of a misnomer (at least in terms of what it actually does) -- _functionally_ it marks
 	// the arena dirty and queues up block outs, but in reality it just does the queueing and/or tells the finish_subtask function
 	// that it needs to call this again since it ran out of slots (or didn't want to make more than 3 block out tasks at once)
@@ -699,6 +805,12 @@ void serial::SerialInterface::mark_arena_dirty() {
 	const static int max_out_tasks = 3;
 
 	arena_dirty = false;
+
+	// If defer_arena_updates is set, though, we treat it as _if_ it just marked the arena dirty
+	if (defer_arena_updates && !ignore_defer) {
+		arena_dirty = true;
+		return;
+	}
 
 	// Go through all blocks and schedule their slots
 	for (auto& blk : arena) {
@@ -767,22 +879,25 @@ void serial::SerialInterface::finish_subtask(int i) {
 	if (arena_dirty)
 		mark_arena_dirty(); // sets back to false if finished
 
-	// If there are any empty slots, try to handle stuff in the overflow queue
-	while (std::any_of(subtasks, subtasks + i, [](auto x){return !x;})) {
-		SerialEvent evt;
-		if (xQueuePeek(request_overflow, &evt, 0)) {
-			// Handle the request
-			if (!handle_request(evt)) {
-				ESP_LOGW(TAG, "despite there being an empty spot in the task list, request still failed -- keeping it in the queue");
-				return;
+	{
+		DeferGuard g(this); // defer updates until all requests are handled
+		// If there are any empty slots, try to handle stuff in the overflow queue
+		while (std::any_of(subtasks, subtasks + i, [](auto x){return !x;})) {
+			SerialEvent evt;
+			if (xQueuePeek(request_overflow, &evt, 0)) {
+				// Handle the request
+				if (!handle_request(evt)) {
+					ESP_LOGW(TAG, "despite there being an empty spot in the task list, request still failed -- keeping it in the queue");
+					return;
+				}
+				else {
+					xQueueReceive(request_overflow, &evt, 0);
+				}
 			}
 			else {
-				xQueueReceive(request_overflow, &evt, 0);
+				// Empty queue, stop processing
+				return;
 			}
-		}
-		else {
-			// Empty queue, stop processing
-			return;
 		}
 	}
 }
@@ -821,6 +936,16 @@ bool serial::SerialInterface::handle_request(SerialEvent &evt) {
 
 		case SerialEvent::EventSubtypeSizeUpdate:
 			{
+				// Check if the slot size is already that, and if it is just skip this, but only if this is the only update size
+				// task that'd be running for that slot.
+				if (
+					std::none_of(subtasks, subtasks + 8, [&](auto &i){return i && i->subtask_type() == st::UpdateSizeTask::TYPE && i->slotid == evt.d.size_update.slotid;}) &&
+					arena.contents_size(evt.d.size_update.slotid) == evt.d.size_update.newsize
+				) {
+					// skip it
+					ESP_LOGD(TAG, "skipping size update");
+					return true;
+				}
 				// Queue up a size update task
 				if (try_start_task<st::UpdateSizeTask>(evt.d.size_update.slotid, evt.d.size_update.newsize) == -1) {
 					return false;
@@ -832,7 +957,7 @@ bool serial::SerialInterface::handle_request(SerialEvent &evt) {
 		case SerialEvent::EventSubtypeSync:
 			{
 				// Queue up a syncing task
-				if (try_start_task<st::SyncTask>(evt.d.sync.slotid, evt.d.sync.tonotify) == -1) {
+				if (try_start_task<st::SyncTask>(evt.d.sync.slotids, evt.d.sync.amt, evt.d.sync.tonotify) == -1) {
 					return false;
 				}
 
@@ -969,8 +1094,24 @@ void serial::SerialInterface::process_packet_directly() {
 
 				ESP_LOGD(TAG, "Marking region @%04x of length %d in slot %03x as dirty due to DATA_FORGOT", offset, length, slotid);
 
+				bool should_flush = std::any_of(arena.begin(slotid), arena.end(slotid), [](const auto& b){return b.location == bheap::Block::LocationRemote;});
+
 				for (auto *b = &arena.get(slotid, offset); b && arena.block_offset(*b) < offset + length; b = b->next()) {
-					b->flags |= bheap::Block::FlagDirty;
+					// Is this a canonical block? If so, we mark it dirty as long as it's not queued to be flushed
+					if (b->location == bheap::Block::LocationCanonical && !(b->flags & bheap::Block::FlagFlush) && !should_flush) {
+						b->flags |= bheap::Block::FlagDirty;
+					}
+					else if (b->location == bheap::Block::LocationRemote) {
+						ESP_LOGW(TAG, "Block %p has not yet been moved back to the esp, so we're ignoring the request to clear it", b);
+					}
+					else if (should_flush) {
+						// There is data here but the stm wants it flushed.
+						ESP_LOGD(TAG, "Block should be flushed, flushing it");
+						b->flags |= bheap::Block::FlagFlush;
+					}
+					else {
+						ESP_LOGW(TAG, "Skipping %p", b);
+					}
 				}
 
 				mark_arena_dirty();
@@ -980,7 +1121,50 @@ void serial::SerialInterface::process_packet_directly() {
 		case DATA_MOVE:
 			// This is started here as a task (and if that task was ignored b.c. lack of space gets ignored here too)
 			{
-				ESP_LOGW(TAG, "data move todo");
+				
+				uint16_t hdr[4]; memcpy(hdr, rx_buf + 3, sizeof(hdr));
+				bool start = hdr[0] & (1 << 15);
+				hdr[0] &= 0xfff;
+
+				if (!start) {
+					ESP_LOGW(TAG, "ignoring non-start data move");
+					continue_rx();
+					return;
+				}
+
+				uint8_t status = 0;
+				
+				// Check if there any ongoing data update tasks concerning this slot
+				if (std::any_of(subtasks, subtasks + 8, [&](auto x){
+					return x && (
+						x->subtask_type() == st::BlockOutTask::TYPE ||
+						x->subtask_type() == st::DataUpdateTask::TYPE ||
+						x->subtask_type() == st::UpdateSizeTask::TYPE
+					) && x->slotid == hdr[0];
+				})) {
+					status = 2;
+				}
+				else if (std::any_of(subtasks, subtasks + 8, [&](auto x){
+					return x && ((
+						x->subtask_type() == st::BlockInTask::TYPE && x->slotid == hdr[0]
+					) || x->subtask_type() == st::FreeSpaceTask::TYPE);
+				})) {
+					status = 3;
+				}
+				else {
+					// Try to allocate space
+					if (!arena.set_location(hdr[0], hdr[1], hdr[3], bheap::Block::LocationCanonical)) {
+						status = 1;
+					}
+				}
+
+				// Start the task
+				if (try_start_task<st::BlockInTask>(rx_buf, status) == -1) {
+					// Ignore the packet
+					ESP_LOGW(TAG, "out of space trying to get block, ignoring it");
+				}
+
+				continue_rx();
 			}
 			
 			return;
@@ -1004,6 +1188,8 @@ void serial::SerialInterface::on_pkt() {
 	r.event_type = SerialEvent::EventTypePacket;
 	xQueueSend(events, &r, portMAX_DELAY);
 }
+
+const static inline int max_single_processing_events = 6;
 
 void serial::SerialInterface::run() {
 	// Initialize queue
@@ -1092,38 +1278,58 @@ void serial::SerialInterface::run() {
 		update_task_timeouts();
 		send_pings();
 
+		DeferGuard g(this);
 		SerialEvent evt;
-		if (!xQueueReceive(events, &evt, pdMS_TO_TICKS(100))) { // min timeout delay
-			continue;
-		}
+		int processed = 0;
+		do {
+			if (!xQueueReceive(events, &evt, pdMS_TO_TICKS(100))) { // min timeout delay
+				break;
+			}
 
-		// Did we get a packet?
-		if (evt.event_type == SerialEvent::EventTypePacket) {
-			// Try giving it to all subtasks before processing it ourselves.
-			for (auto& subtask : subtasks) {
-				if (!subtask) continue;
-				if (subtask->on_packet(rx_buf)) {
-					// handled packet, continue
-					continue_rx();
-					goto processed_by_subtask;
+			++processed;
+
+			// Did we get a packet?
+			if (evt.event_type == SerialEvent::EventTypePacket) {
+				// Try giving it to all subtasks before processing it ourselves.
+				for (auto& subtask : subtasks) {
+					if (!subtask) continue;
+					if (subtask->on_packet(rx_buf)) {
+						// handled packet, continue
+						continue_rx();
+						goto processed_by_subtask;
+					}
+				}
+
+				// Packet needs to be handled separately.
+				process_packet_directly();
+	processed_by_subtask:
+				;
+			}
+			else {
+				// Is the overflow queue currently in use?
+				if (uxQueueMessagesWaiting(request_overflow)) {
+					// Send directly to overflow queue
+					ESP_LOGD(TAG, "already overflowing, sending next requests there too");
+					goto send_to_overflow;
+				}
+				// Handle the request
+				if (!handle_request(evt)) {
+					// Place it in the overflow queue
+					ESP_LOGD(TAG, "placing request in overflow queue");
+send_to_overflow:
+					if (!xQueueSend(request_overflow, &evt, 0)) {
+						ESP_LOGW(TAG, "out of space in overflow queue, dumping request");
+					}
+					// Break to perform bookkeeping tasks so we have a bit of time to potentially clear the obstruction
+					break;
 				}
 			}
 
-			// Packet needs to be handled separately.
-			process_packet_directly();
-processed_by_subtask:
-			;
-		}
-		else {
-			// Handle the request
-			if (!handle_request(evt)) {
-				// Place it in the overflow queue
-				ESP_LOGD(TAG, "placing request in overflow queue");
-				if (!xQueueSend(request_overflow, &evt, 0)) {
-					ESP_LOGW(TAG, "out of space in overflow queue, dumping request");
-				}
+			// If we've processed more than max_single_processing events in one go, break to let the bookkeeping tasks run
+			if (processed > max_single_processing_events) {
+				break;
 			}
-		}
+		} while (uxQueueMessagesWaiting(events));
 	}
 }
 
@@ -1164,20 +1370,29 @@ void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
 }
 
 void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync) {
-	SerialEvent pr;
-	pr.event_type = SerialEvent::EventTypeRequest;
-	pr.event_subtype = SerialEvent::EventSubtypeDataUpdate;
-	pr.d.data_update.slotid = slotid;
-	pr.d.data_update.length = (uint16_t)length;
-	pr.d.data_update.offset = offset;
-	pr.d.data_update.data = ptr;
-	xQueueSendToBack(events, &pr, portMAX_DELAY);
+	{
+		SerialEvent pr;
+		pr.event_type = SerialEvent::EventTypeRequest;
+		pr.event_subtype = SerialEvent::EventSubtypeDataUpdate;
+		pr.d.data_update.slotid = slotid;
+		pr.d.data_update.length = (uint16_t)length;
+		pr.d.data_update.offset = offset;
+		pr.d.data_update.data = ptr;
+		xQueueSendToBack(events, &pr, portMAX_DELAY);
+	}
 
 	if (should_sync) {
-		pr.event_subtype = SerialEvent::EventSubtypeSync;
-		pr.d.sync.slotid = slotid;
-		pr.d.sync.tonotify = xTaskGetCurrentTaskHandle();
-		xQueueSendToBack(events, &pr, portMAX_DELAY);
-		xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
+		sync_slots(slotid);
 	}
+}
+
+void serial::SerialInterface::sync_slots_array(uint16_t *sid_list, uint16_t sid_size) {
+	SerialEvent pr;
+	pr.event_type = SerialEvent::EventTypeRequest;
+	pr.event_subtype = SerialEvent::EventSubtypeSync;
+	pr.d.sync.slotids = sid_list;
+	pr.d.sync.amt = sid_size;
+	pr.d.sync.tonotify = xTaskGetCurrentTaskHandle();
+	xQueueSendToBack(events, &pr, portMAX_DELAY);
+	xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
 }
