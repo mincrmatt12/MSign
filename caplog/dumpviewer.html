@@ -1,5 +1,6 @@
 <html>
 	<head>
+		<meta charset="utf-8">
 		<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
 		<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
 		<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
@@ -14,6 +15,7 @@
 				width: calc(100% - 2em);
 				margin-left: 1em;
 				margin-right: 1em;
+				image-rendering: pixelated;
 			}
 
 			div.triple {
@@ -44,7 +46,7 @@
 				padding: 1em;
 			}
 
-			div.block {
+			.block {
 				background-color: #ddd;
 				padding: 1em;
 				border-color: black;
@@ -53,20 +55,39 @@
 				font-size: 0.8em;
 			}
 
-			.block-empty {
-				background-color: #aaa !important;
+			div.block-empty {
+				background-image: linear-gradient(135deg, #dddddd 25%, #aaaaaa 25%, #aaaaaa 50%, #dddddd 50%, #dddddd 75%, #aaaaaa 75%, #aaaaaa 100%);
+				background-size: 56.57px 56.57px;
 			}
 
-			.block-warm {
-				background-color: #f88 !important;
+			div.block-warm {
+				background-color: #f88;
 			}
 
-			.block-hot {
-				background-color: #f55 !important;
+			div.block-hot {
+				background-color: #f55;
 			}
 
-			.block-remote {
-				background-color: #8f8 !important;
+			div.block-remote {
+				background-color: #8f8;
+			}
+
+			div.block-dirty {
+				border-right-color: cornflowerblue;
+				border-right-width: 5px;
+			}
+
+			div.block-flush {
+				border-right-color: indianred !important;
+				border-right-width: 5px;
+			}
+
+			div.block-warm.block-dirty,div.block-warm.block-flush {
+				border-right-width: 8px;
+			}
+
+			div.block-hot.block-dirty,div.block-hot.block-flush {
+				border-right-width: 10px;
 			}
 		</style>
 
@@ -189,8 +210,6 @@
 					// Draw current selection
 					offset = (props.dump.records[selectionIdx].time - seekMin) / (seekMax - seekMin);
 					ctx.fillRect(offset * cv.width, 0, 3, seekHeight);
-
-					console.log(offset);
 				}, [props.time, props.dump]);
 
 				return <div>
@@ -239,8 +258,22 @@
 					if (blk.temperature == "warm") {
 						styles += " block-warm";
 					}
+					let flagstr = "";
+					if (blk.flags[0]) {
+						styles += " block-dirty";
+						flagstr += "dirty";
+					}
+					if (blk.flags[1]) {
+						if (flagstr) flagstr += ", ";
+						flagstr += "flush";
+						styles += " block-flush";
+					}
 
-					innercontents.push(<li>slot {blk.slotid.toString(16)} (<b>{blk.slotname}</b>) @ {blk.slotoffset.toString(16)}, len <b>{blk.datasize}</b> ({blk.datasize.toString(16)})</li>);
+					if (flagstr) {
+						flagstr = " / " + flagstr;
+					}
+
+					innercontents.push(<li>slot {blk.slotid.toString(16)} (<b>{blk.slotname}</b>) @ {blk.slotoffset.toString(16)}, len <b>{blk.datasize}</b> ({blk.datasize.toString(16)}){flagstr}</li>);
 					innercontents.push(<li>temperature <b>{blk.temperature}</b> / location <b>{blk.location}</b></li>);
 				}
 
@@ -258,8 +291,8 @@
 
 				let elements = [];
 				if (records !== undefined) {
-					elements = records.blocks.map((x) => 
-						<SingleBlock block={x} />
+					elements = records.blocks.map((x, i) => 
+						<SingleBlock key={i} block={x} />
 					);
 				}
 

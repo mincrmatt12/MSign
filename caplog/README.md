@@ -19,3 +19,10 @@ a summary of all the blocks in the heap.
 (gdb) source caplog/regiondump.py
 (gdb) dump_bheap servicer.arena.region dump_file.txt
 ```
+
+This also adds another command, `dump_raw_bheap` which outputs a json file (or appends to an existing json file) with an easier
+to parse representation of the heap, suitable for visualization with `dumpviewer.html`.
+
+## `dumpviewer.html`
+
+Tiny single page web thing that can read a heap trace and visualize it.
