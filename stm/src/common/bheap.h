@@ -616,21 +616,41 @@ finish_setting:
 					if (x.datasize % 4) x.datasize += (4 - x.datasize % 4);
 				}
 			}
-			auto last_empty = &last(Block::SlotEmpty);
-			if (last_empty->slotid != Block::SlotEnd) {
-				for (auto& x : *this) {
-					if (x.slotid == Block::SlotEmpty && &x != last_empty) {
-						// Shift everything from x->adjacent() of size (&last_empty - x->adjacent()) over to x, then move the empty header
-						Block *begin_region = x.adjacent();
-						Block *copy_to = &x;
-						Block old_empty =    *last_empty;
+			{
+				auto last_empty = &last(Block::SlotEmpty);
+				if (last_empty->slotid != Block::SlotEnd) {
+					for (auto& x : *this) {
+						if (x.slotid == Block::SlotEmpty && &x != last_empty) {
+							// Shift everything from x->adjacent() of size (&last_empty - x->adjacent()) over to x, then move the empty header
+							Block *begin_region = x.adjacent();
+							Block *copy_to = &x;
+							Block old_empty =    *last_empty;
 
-						memmove(copy_to, begin_region, (last_empty - begin_region)*sizeof(Block));
-						// Add a new block header
-						last_empty -= (begin_region - copy_to);
-						*last_empty = old_empty;
-						last_empty->datasize += (begin_region - copy_to)*sizeof(Block);
+							memmove(copy_to, begin_region, (last_empty - begin_region)*sizeof(Block));
+							// Add a new block header
+							last_empty -= (begin_region - copy_to);
+							*last_empty = old_empty;
+							last_empty->datasize += (begin_region - copy_to)*sizeof(Block);
+						}
 					}
+				}
+			}
+			// Move all content to the right of the last empty
+			{
+				Block * last_empty = &last(Block::SlotEmpty);
+				if (last_empty->slotid != Block::SlotEnd && last_empty->adjacent()->slotid != Block::SlotEnd) {
+					Block *begin_location = last_empty;
+					Block  old_empty      = *last_empty;
+					uint8_t *target_area    = (uint8_t *)last_empty->adjacent();
+					uint8_t *end            = region + Size - 4;
+
+					size_t moved_size = end - target_area;
+					size_t old_empty_size = last_empty->datasize;
+					memmove(begin_location, target_area, moved_size);
+
+					// Rewrite empty
+					Block *new_empty = begin_location + moved_size / 4;
+					*new_empty = old_empty;
 				}
 			}
 		}

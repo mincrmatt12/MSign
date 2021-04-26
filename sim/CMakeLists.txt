@@ -21,8 +21,10 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
    add_compile_options (-fcolor-diagnostics)
 endif ()
 
-add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
-add_link_options(-fno-omit-frame-pointer -fsanitize=address)
+if (${USE_ASAN})
+	add_compile_options(-fno-omit-frame-pointer -fsanitize=address)
+	add_link_options(-fno-omit-frame-pointer -fsanitize=address)
+endif()
 
 # This CMake file is responsible for a) creating the source directories from:
 # - the original directory
@@ -134,7 +136,7 @@ target_link_libraries(stm_freertos Threads::Threads)
 add_executable(stmsim ${TOTAL_STM_SRCS})
 file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
 target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
-target_compile_options(stmsim PRIVATE -DSIM -Wno-pmf-conversions)
+target_compile_options(stmsim PRIVATE -DSIM )
 add_dependencies(stmsim copy_stm_src)
 
 target_link_libraries(stmsim stm_freertos)
@@ -291,7 +293,7 @@ target_include_directories(esp_b64 PUBLIC
 add_custom_target(esp_parsers DEPENDS ${ESP_NMFU_SRCS})
 
 add_executable(espsim ${TOTAL_ESP_SRCS})
-target_compile_options(espsim PRIVATE -DSIM -Wno-pmf-conversions)
+target_compile_options(espsim PRIVATE -DSIM)
 target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
 add_dependencies(espsim copy_esp_src esp_parsers)
 

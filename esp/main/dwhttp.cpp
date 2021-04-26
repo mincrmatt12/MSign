@@ -270,8 +270,12 @@ namespace dwhttp {
 					br_ssl_engine_inject_entropy(&ssl_cc->eng, &block, sizeof block);
 					// Setup certificate verification with our dynamic thingies
 					br_x509_minimal_set_dynamic(ssl_xc, this,
-						(const br_x509_trust_anchor * (*)(void *, void*, size_t))(&HttpsAdapter::find_hashed_ta), 
-						(void (*)(void *, const br_x509_trust_anchor *))(&HttpsAdapter::held_ta_free)
+						[](void * ptr, void *arg, size_t arg2){
+							return ((HttpsAdapter *)ptr)->find_hashed_ta(arg, arg2);
+						},
+						[](void * ptr, const br_x509_trust_anchor *ta){
+							return ((HttpsAdapter *)ptr)->held_ta_free(ta);
+						}
 					);
 					// Copy the host
 					active_host = strdup(host);
@@ -279,8 +283,12 @@ namespace dwhttp {
 					br_ssl_client_reset(ssl_cc, active_host, 0);
 					// Initialize IO
 					br_sslio_init(ssl_ic, &ssl_cc->eng, 
-						(int (*)(void *, unsigned char *, size_t))(&HttpsAdapter::_read), this,
-						(int (*)(void *, const unsigned char *, size_t))(&HttpsAdapter::_write), this
+						[](void *arg, unsigned char *data, size_t len){
+							return ((HttpsAdapter *)arg)->_read(data, len);
+						}, this,
+						[](void *arg, const unsigned char *data, size_t len){
+							return ((HttpsAdapter *)arg)->_write(data, len);
+						}, this
 					);
 					return true;
 				}

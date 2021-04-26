@@ -40,7 +40,4 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 
 	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 17)
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
-	add_dependencies(${COMPONENT_LIB} msign_parsers)
-
-	target_compile_options(${COMPONENT_LIB} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions>)
 endif()

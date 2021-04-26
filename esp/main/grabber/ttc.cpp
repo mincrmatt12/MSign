@@ -20,7 +20,7 @@ namespace ttc {
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			if (config::manager.get_value((config::Entry)(config::STOPID1 + slot))) {
 				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + slot));
-				serial::interface.update_slot(slots::TTC_NAME_1 + slot, name);
+				serial::interface.update_slot_nosync(slots::TTC_NAME_1 + slot, name); // this is in config, which doesn't change
 			}
 		}
 	}
@@ -289,7 +289,7 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
 	}
 	else {
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1);
+		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1, false); // sync this on the separator
 		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
 	}
 	ps.offset += newlength;

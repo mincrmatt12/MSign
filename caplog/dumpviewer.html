@@ -1,0 +1,321 @@
+<html>
+	<head>
+		<script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+		<script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+		<script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
+		<style>
+			html {
+				box-sizing: border-box;
+			}
+
+			canvas.seekbar {
+				height: 96px;
+				width: calc(100% - 2em);
+				margin-left: 1em;
+				margin-right: 1em;
+			}
+
+			div.triple {
+				display: flex;
+				width: calc(100% - 2em);
+				margin-left: 1em;
+				margin-right: 1em;
+			}
+
+			div.blockbox {
+				display: flex;
+				flex-direction: column;
+				padding: 0;
+				margin: 0;
+				flex-grow: 1;
+			}
+
+			h1 {
+				font-size: 15px;
+			}
+
+			h2 {
+				font-size: 13px;
+			}
+
+			.blockheader {
+				text-align: center;
+				padding: 1em;
+			}
+
+			div.block {
+				background-color: #ddd;
+				padding: 1em;
+				border-color: black;
+				border-width: 1px;
+				border-style: solid;
+				font-size: 0.8em;
+			}
+
+			.block-empty {
+				background-color: #aaa !important;
+			}
+
+			.block-warm {
+				background-color: #f88 !important;
+			}
+
+			.block-hot {
+				background-color: #f55 !important;
+			}
+
+			.block-remote {
+				background-color: #8f8 !important;
+			}
+		</style>
+
+		<title>msign bheap dump viewer</title>
+
+		<script type="text/babel">
+			// pirated from react examples
+			function useEventListener(eventName, handler, element = window){
+			  // Create a ref that stores handler
+			  const savedHandler = React.useRef();
+
+			  // Update ref.current value if handler changes.
+			  // This allows our effect below to always get latest handler ...
+			  // ... without us needing to pass it in effect deps array ...
+			  // ... and potentially cause effect to re-run every render.
+			  React.useEffect(() => {
+				savedHandler.current = handler;
+			  }, [handler]);
+
+			  React.useEffect(
+				() => {
+				  // Make sure element supports addEventListener
+				  // On 
+				  const isSupported = element && element.addEventListener;
+				  if (!isSupported) return;
+
+				  // Create event listener that calls handler function stored in ref
+				  const eventListener = event => savedHandler.current(event);
+
+				  // Add event listener
+				  element.addEventListener(eventName, eventListener);
+
+				  // Remove event listener on cleanup
+				  return () => {
+					element.removeEventListener(eventName, eventListener);
+				  };
+				},
+				[eventName, element] // Re-run if eventName or element changes
+			  );
+			};
+
+			function filterIdenticalRecords(records) {
+				let i = 0;
+				while (i + 1 < records.length) {
+					if (JSON.stringify(records[i].blocks) == JSON.stringify(records[i+1].blocks)) {
+						records.splice(i + 1, 1);
+					}
+					else {
+						i += 1;
+					}
+				}
+			}
+
+			function findIndex(dump, time) {
+				let selectionIdx = 0;
+				for (let i = 0; i < dump.records.length; ++i) {
+					if (time + 0.00001 > dump.records[i].time) selectionIdx = i;
+					else break;
+				}
+
+				return selectionIdx;
+			}
+
+			function SeekBar(props) {
+				const [isDragging, setIsDragging] = React.useState(false);
+
+				// compute the min/max location for the seek bar
+				const seekMin = props.dump.records[0].time;
+				const seekMax = props.dump.records[props.dump.records.length-1].time;
+
+				const selectionIdx = findIndex(props.dump, props.time);
+				const canvas = React.useRef(null);
+
+				const seekHeight = 48;
+
+				useEventListener("keydown", (e) => {
+					const selectionIdx = findIndex(props.dump, props.time);
+					if (e.keyCode == 39) {
+						if (selectionIdx < props.dump.records.length-1) {
+							props.setTime(props.dump.records[selectionIdx+1].time);
+						}
+					}
+					else if (e.keyCode == 37) {
+						if (selectionIdx > 0) {
+							props.setTime(props.dump.records[selectionIdx-1].time);
+						}
+					}
+				});
+
+				React.useEffect(() => {
+					const cv  = canvas.current;
+					const ctx = canvas.current.getContext('2d');
+
+					ctx.clearRect(0, 0, cv.width, cv.height);
+					// Draw an outline 
+					ctx.lineWidth = 3;
+					ctx.strokeRect(0, 0, cv.width, seekHeight);
+
+					ctx.lineWidth = 1;
+					ctx.beginPath();
+
+					// Draw all tickmarks
+					for (let record of props.dump.records) {
+						let offset = (record.time - seekMin) / (seekMax - seekMin);
+						offset *= cv.width;
+
+						ctx.moveTo(offset, seekHeight);
+						ctx.lineTo(offset, cv.height);
+					}
+
+					ctx.stroke();
+
+					ctx.fillStyle = "#33f";
+
+					// Draw current time
+					let offset = (props.time - seekMin) / (seekMax - seekMin);
+					ctx.fillRect(offset * cv.width, 0, 3, seekHeight);
+
+					ctx.fillStyle = "#3f3";
+					// Draw current selection
+					offset = (props.dump.records[selectionIdx].time - seekMin) / (seekMax - seekMin);
+					ctx.fillRect(offset * cv.width, 0, 3, seekHeight);
+
+					console.log(offset);
+				}, [props.time, props.dump]);
+
+				return <div>
+					<p>seek location: {seekMin} / <b>{props.time}</b> / {seekMax}</p>
+					<p>viewing record at {selectionIdx} (t={props.dump.records[selectionIdx].time})</p>
+					<canvas onMouseDown={(e) => {
+						setIsDragging(true);
+					}} onMouseUp={(e) => {
+						setIsDragging(false);
+					}} onMouseMove={(e) => {
+						if (isDragging) {
+							const offsetX = e.pageX - canvas.current.offsetLeft;
+							props.setTime(seekMin + (offsetX / canvas.current.offsetWidth) * (seekMax - seekMin));
+						}
+					}} width="1920" height="96" className="seekbar" ref={canvas} />
+				</div>;
+			}
+
+			function SingleBlock(props) {
+				const pxPerByte = 0.38;
+				const blk = props.block;
+
+				// Generate block inner contents
+				let innercontents = [
+				];
+				let styles = "block";
+				if (blk.slotid == 4080) {
+					// show an empty block
+					styles += " block-empty";
+					innercontents.push(<li>size <b>{blk.datasize}</b> ({blk.datasize.toString(16)})</li>);
+					innercontents.push(<li>empty</li>);
+				}
+				else if (blk.slotid == 4081) {
+					// show an empty block
+					styles += " block-empty";
+					innercontents.push(<li>size <b>{blk.datasize}</b> ({blk.datasize.toString(16)})</li>);
+					innercontents.push(<li>end</li>);
+				}
+				else {
+					if (blk.location == "remote") {
+						styles += " block-remote";
+					}
+					if (blk.temperature == "hot") {
+						styles += " block-hot";
+					}
+					if (blk.temperature == "warm") {
+						styles += " block-warm";
+					}
+
+					innercontents.push(<li>slot {blk.slotid.toString(16)} (<b>{blk.slotname}</b>) @ {blk.slotoffset.toString(16)}, len <b>{blk.datasize}</b> ({blk.datasize.toString(16)})</li>);
+					innercontents.push(<li>temperature <b>{blk.temperature}</b> / location <b>{blk.location}</b></li>);
+				}
+
+				const bst = {
+					minHeight: (pxPerByte * blk.datasize) + "px"
+				};
+				
+				return <div className={styles} style={bst}>
+					<ul>{innercontents}</ul>
+				</div>;
+			}
+
+			function BlockBox(props) {
+				const records = props.records;
+
+				let elements = [];
+				if (records !== undefined) {
+					elements = records.blocks.map((x) => 
+						<SingleBlock block={x} />
+					);
+				}
+
+				return <div className="blockbox">
+					<h1 className="blockheader">{props.title}</h1>
+					{records && <h2 className="blockheader">{records.time - props.basetime}</h2>}
+					{elements}
+				</div>;
+			}
+
+			function App() {
+				const [dump, setDump] = React.useState(null);
+				const [seekPosition, setSeekPosition] = React.useState(null);
+
+				if (dump === null) {
+					// Show just a load prompt
+					
+					return <button onClick={() => {
+						let input = document.createElement('input');
+						input.type = "file";
+						input.accept = "json";
+
+						input.onchange = (e => {
+							let f = e.target.files[0];
+							let reader = new FileReader();
+							reader.onload = readerEvent => {
+								const dump = JSON.parse(readerEvent.target.result);
+								filterIdenticalRecords(dump.records);
+								setSeekPosition(dump.records[0].time);
+								setDump(dump);
+							};
+							reader.readAsText(f);
+						});
+
+						input.click();
+					}}>load dump</button>
+				}
+
+				const idx = findIndex(dump, seekPosition);
+
+				// render a seek bar
+				return <div>
+					<SeekBar dump={dump} time={seekPosition} setTime={setSeekPosition} />
+					<div className="triple">
+						<BlockBox title="previous" basetime={dump.records[idx].time} records={dump.records[idx-1]} />
+						<BlockBox title="now" basetime={dump.records[idx].time} records={dump.records[idx]} />
+						<BlockBox title="next" basetime={dump.records[idx].time} records={dump.records[idx+1]} />
+					</div>
+				</div>
+			}
+
+			const mount = document.getElementById("mount");
+			ReactDOM.render(<App />, mount);
+		</script>
+	</head>
+	<body>
+		<div id="mount" />
+	</body>
+</html>

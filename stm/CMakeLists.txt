@@ -2,7 +2,6 @@
 cmake_minimum_required(VERSION 3.13)
 project(msign-stm C CXX ASM)
 
-set(CMAKE_EXE_LINKER_FLAGS "")
 set(CMAKE_CXX_STANDARD 17)
 
 # specify target
@@ -90,7 +89,7 @@ target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>:-Wno-pmf-conversions -fno-threadsafe-statics -Wno-register>
+	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register>
 )
 
 target_include_directories(stm

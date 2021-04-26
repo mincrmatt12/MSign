@@ -39,9 +39,9 @@ int main() {
 	matrix.init();
 	servicer.init();
 
-	if (xTaskCreate((TaskFunction_t)&srv::Servicer::run, "srvc", 256, &servicer, 5, nullptr) != pdPASS) out_of_memory();
-	if (xTaskCreate((TaskFunction_t)&tasks::DispMan::run, "screen", 512, &dispman, 4, nullptr) != pdPASS) out_of_memory();
-	if (xTaskCreate((TaskFunction_t)&tasks::DebugConsole::run, "dbgtim", 176, &dbgtim, 2, nullptr) != pdPASS) out_of_memory();
+	if (xTaskCreate([](void *arg){((srv::Servicer *)arg)->run();}, "srvc", 256, &servicer, 5, nullptr) != pdPASS) out_of_memory();
+	if (xTaskCreate([](void *arg){((tasks::DispMan *)arg)->run();}, "screen", 512, &dispman, 4, nullptr) != pdPASS) out_of_memory();
+	if (xTaskCreate([](void *arg){((tasks::DebugConsole *)arg)->run();}, "dbgtim", 176, &dbgtim, 2, nullptr) != pdPASS) out_of_memory();
 
 	matrix.start_display();
 	finished_init_ok = true;

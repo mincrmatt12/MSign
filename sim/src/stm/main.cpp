@@ -36,9 +36,9 @@ int main(int argc, char ** argv) {
 	std::cout.tie(0);
 	servicer.init();
 	
-	xTaskCreate((TaskFunction_t)&srv::Servicer::run, "srvc", 256, &servicer, 5, nullptr);
-	xTaskCreate((TaskFunction_t)&tasks::DispMan::run, "screen", 512, &dispman, 4, nullptr);
-	xTaskCreate((TaskFunction_t)&tasks::DebugConsole::run, "dbgtim", 176, &dbgtim, 2, nullptr);
+	xTaskCreate([](void *arg){((srv::Servicer *)arg)->run();}, "srvc", 256, &servicer, 5, nullptr);
+	xTaskCreate([](void *arg){((tasks::DispMan *)arg)->run();}, "screen", 512, &dispman, 4, nullptr);
+	xTaskCreate([](void *arg){((tasks::DebugConsole *)arg)->run();}, "dbgtim", 176, &dbgtim, 2, nullptr);
 	xTaskCreate(pump_faux_dma_task, "faux", 1024, nullptr, 6, nullptr);
 
 	matrix.start_display();

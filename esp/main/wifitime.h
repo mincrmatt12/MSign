@@ -14,7 +14,8 @@ namespace wifi {
 
 	enum Events : EventBits_t {
 		WifiConnected = 1,
-		TimeSynced = 2
+		TimeSynced = 2,
+		StmConnected = 4
 	};
 }
 
