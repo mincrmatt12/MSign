@@ -12,9 +12,10 @@ prefixes = lambda y: [y[:x] for x in range(1, len(y)+1)]
 realtime = False
 
 ignored_dataids = []
-ignored_datastr = os.getenv("CAPLOG_INGORE_IDS")
+ignored_datastr = os.getenv("CAPLOG_IGNORE_IDS")
 if ignored_datastr:
     ignored_dataids = [int(x, 16) for x in ignored_datastr.split()]
+    print(f"NOTE: ignoring data ids {', '.join(hex(x) for x in ignored_dataids)}")
 
 if len(sys.argv) < 3:
     print("usage: {} [logicexport,simlog,realtime] <in>")
@@ -116,6 +117,8 @@ tempcodes = {
 
 slot_temps = {}
 slot_databufs = {}
+
+just_restarted = True
 
 def data_temp(dat, from_esp):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
@@ -282,6 +285,12 @@ phandle = {
 
 while True:
     for pkt in read():
+        if pkt[0] == 0xa5 and pkt[1] == 0x00 and pkt[2] == 0x10 and not just_restarted:
+            just_restarted = True
+            print("\n\n==== RESTART ====\n\n")
+        else:
+            just_restarted = False
+
         if pkt[0] == 0xa6:
             print('E->S ', end='')
         elif pkt[0] == 0xa5:
@@ -294,6 +303,7 @@ while True:
             continue
 
         print(": 0x{:02x} ({:20}) ".format(pkt[2], pnames[pkt[2]]), end="")
+
 
         if pkt[1] == 0x00:
             print()
