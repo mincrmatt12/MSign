@@ -43,7 +43,7 @@ elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 endif()
 
 target_compile_options(stmboot PRIVATE
-	-O2
+	$<IF:$<C_COMPILER_ID:Clang>,-Oz,-Os>
 	-ffreestanding
 )
 
