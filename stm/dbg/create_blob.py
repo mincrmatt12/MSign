@@ -128,11 +128,15 @@ def run(inelf, outbin):
         for instruction in instructions:
             opcode = instruction_name(instruction.opcode)
             if opcode.startswith("DW_CFA_advance_loc") and opcode[-1] in "c1248":
+                if instruction.args[0] < 0:
+                    print("ia0", instruction.args[0])
                 block_end += instruction.args[0] * code_mult
                 if block_start != block_end:
                     do_add()
             elif opcode == "DW_CFA_set_loc":
                 block_end = instruction.args[0]
+                if block_end < block_start:
+                    print("dw_cfa_set_loc backwards to", block_end)
                 if block_start != block_end:
                     do_add()
             elif opcode.startswith("DW_CFA_def_cfa_offset"):
@@ -152,7 +156,11 @@ def run(inelf, outbin):
                     pc_addr_offset = 0
 
         block_end = base_address + fde.header.address_range 
+        if block_end < block_start:
+            block_start, block_end = block_end, block_start
         do_add()
+
+    #print(dbgtable)
 
     # optimize table
     dbgtable_optimized = []
@@ -174,6 +182,8 @@ def run(inelf, outbin):
         f1.write(b'\x00')
 
     for start, end, offs in dbgtable_optimized:
+        if end < start:
+            print("{:08x} - {:08x} = {}".format(start, end, offs))
         f2.write(struct.pack(">IHh", start, (end - start), offs))
 
     blob1 = lowmemcompress(f1.getvalue())
