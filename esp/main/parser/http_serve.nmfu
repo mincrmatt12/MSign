@@ -14,11 +14,11 @@ out str[52] auth_string;
 out str[71] multipart_boundary;
 out int content_length = 0;
 
-macro ows {
+macro ows() {
 	optional { " "; }
 }
 
-macro waitend {
+macro waitend() {
 	wait "\r\n\r\n";
 }
 
@@ -81,7 +81,7 @@ parser {
 						case {
 							"gzip" -> {is_gzipable = true;}
 							"\r\n" -> {break gzip_matcher;}
-							else -> {} // ignore invalid things
+							else -> {/./;} // ignore invalid things
 						}
 					}
 				}
@@ -102,17 +102,14 @@ parser {
 				}
 
 				"Content-Length:"i -> {
-					ows();
-					content_length = 0;
-					// Read in a nice hearty integer
-					loop number_parser {
-						case {
-							"\r\n" -> {break number_parser;}
-							/\d/ -> {
-								content_length = [content_length * 10 + ($last - 48)]; // '0' = 48
-							}
-						}
-					}
+                    ows();
+                    content_length = 0;
+                    foreach {
+                        /\d+/;
+                    } do {
+                        content_length = [content_length * 10 + ($last - '0')]; // math
+                    }
+                    "\r\n";
 				}
 
 				"If-None-Match:"i -> {
@@ -142,7 +139,7 @@ parser {
 
 					case {
 						"text/plain" -> {content_type = PLAIN;}
-						/(text)|(application)\/json/ -> {content_type = JSON;}
+						/(text|application)\/json/ -> {content_type = JSON;}
 						"multipart/form-data;" -> {
 							content_type = MULTIPART_FILE;
 							multipart_boundary = "";
@@ -158,7 +155,6 @@ parser {
 										/"/;
 									}
 									else -> {
-										multipart_boundary += [$last];
 										multipart_boundary += /[a-zA-Z0-9\-_]*/;
 									}
 								}

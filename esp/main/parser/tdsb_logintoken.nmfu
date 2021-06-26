@@ -30,12 +30,7 @@ parser {
             }
         }
         case {
-            "," -> {
-            }
-            "}" -> {
-                // todo: this shouldn't be needed in a later version of nmfu that doesn't eat characters
-                finish;
-            }
+            "," -> {}
             else -> {
                 break;
             }

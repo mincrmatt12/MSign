@@ -171,7 +171,8 @@ namespace ttc {
 		// Run this through the parser
 		int16_t result;
 		while ((result = cb()) != -1) {
-			switch (ttc_rdf_feed((uint8_t)result, false, &state)) {
+			// only works on little-endian
+			switch (ttc_rdf_feed((uint8_t *)&result, 1 + (uint8_t *)&result, &state)) {
 				case TTC_RDF_OK:
 					continue;
 				case TTC_RDF_FAIL:

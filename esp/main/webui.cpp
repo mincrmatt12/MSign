@@ -174,6 +174,18 @@ namespace webui {
 		return i;
 	}
 
+	// Slightly different from read_from_client, only peeks and
+	// does not enforce reading all the way to maxsize.
+	int peek_from_client(uint8_t * tgt, int maxsize) {
+		int recvd = lwip_recv(client_sock, tgt, maxsize, MSG_PEEK);
+		if (recvd < 0) {
+			ESP_LOGE(TAG, "Failed to peek from client %d", errno);
+			return -1;
+		}
+		errno = 0;
+		return recvd;
+	}
+
 	int read_from_req_body(uint8_t *tgt, int size) {
 		// TODO: make me handle chunked encoding
 		return read_from_client(tgt, size);
@@ -243,7 +255,9 @@ continuewaiting:
 			while (true) {
 				if (errno) return MultipartStatus::EOF_EARLY;
 				int x = read_from_req_body();
-				switch (multipart_header_feed(x, x == -1, &header_state)) {
+				if (x == -1) return MultipartStatus::EOF_EARLY;
+				uint8_t x_ = x;
+				switch (multipart_header_feed(&x_, 1 + &x_, &header_state)) {
 					case MULTIPART_HEADER_OK:
 						continue;
 					case MULTIPART_HEADER_FAIL:
@@ -885,21 +899,28 @@ notfound:
 			if (client_sock >= 0) {
 				// Deal with the client
 				while (client_sock >= 0) {
-					uint8_t x;
-					if (read_from_client(&x, 1) != 1) {
+					uint8_t peekbuf[32];
+					int bytes = peek_from_client(peekbuf, sizeof(peekbuf));
+					if (bytes < 0) {
 						ESP_LOGW(TAG, "Failed to read req");
 						lwip_close(client_sock);
 						client_sock = -1;
 						break;
 					}
-					switch (http_serve_feed(x, false, reqstate)) {
+					if (!bytes) continue;
+					const uint8_t *ptr = peekbuf; // keep track of how much we read
+					switch (http_serve_feed(&ptr, peekbuf + bytes, reqstate)) {
 						case HTTP_SERVE_FAIL:
 							reqstate->c.error_code = HTTP_SERVE_ERROR_CODE_BAD_REQUEST;
 							[[fallthrough]];
 						case HTTP_SERVE_DONE:
+							// ptr is now equal to the last character read, so we read in total ptr - peekbuf + 1 characters
+							read_from_client(peekbuf, (ptr - peekbuf) + 1);
 							// Done handling
 							start_response();
 						default:
+							// consumed entire buffer, use read
+							read_from_client(peekbuf, bytes); // this should not error since peek didn't
 							break;
 					}
 				}

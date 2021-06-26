@@ -5,7 +5,7 @@ out str[32] date;
 
 hook on_advisory;
 
-macro ows {
+macro ows() {
     /\s*/;
 }
 
@@ -29,7 +29,7 @@ parser {
 
     loop rdf_body {
         case {
-            else -> {}
+            else -> {/./;}
             /<\s*channel/ -> {wait "</channel>";}
             /<\s*image/ -> {wait "</image>";}
             /<\s*item/ -> {
@@ -42,7 +42,7 @@ parser {
 
                 loop item_body {
                     case {
-                        else -> {}
+                        else -> {/./;}
                         "</item>" -> {break item_body;}
                         "<title>" -> {wait "</title>";}
                         "<link>" -> {wait "</link>";}
@@ -63,17 +63,14 @@ parser {
 
                             try {
                                 try {
-                                    date += /\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+[\-+]\d\d:\d\d/;
+                                    date += /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[\-+]\d{2}:\d{2}/;
                                 }
                                 catch (outofspace) {
                                     date = "";
                                 }
-
-                                wait "</dc:date>";
                             }
-                            catch (nomatch) {
-                                wait "</dc:date>";
-                            }
+                            catch (nomatch) {date = "";}
+                            wait "</dc:date>";
                         }
                     }
                 }

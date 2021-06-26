@@ -123,12 +123,13 @@ namespace tdsb {
 
 			// Run the response through NMFU
 			for (int i = 0; i < resp_size; ++i) {
-				auto value = cb();
+				int16_t value = cb();
 				if (value <= 0) {
 					dwhttp::stop_download();
 					goto exit_readloop;
 				}
-				switch (tdsb_logintoken_feed(value, false, login_token.get())) {
+				uint8_t value2 = value;
+				switch (tdsb_logintoken_feed(&value2, &value2 + 1, login_token.get())) {
 					case TDSB_LOGINTOKEN_FAIL:
 						{
 							dwhttp::stop_download();

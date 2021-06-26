@@ -555,7 +555,7 @@ namespace dwhttp {
 						return false;
 					}
 					// Otherwise, feed it into nmfu
-					switch (http_client_feed(buf, false, &state)) {
+					switch (http_client_feed(&buf, 1 + &buf, &state)) {
 						case HTTP_CLIENT_OK:
 							continue;
 						case HTTP_CLIENT_FAIL:

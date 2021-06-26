@@ -33,7 +33,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_custom_target(msign_parsers DEPENDS ${msign_nmfus_gen})
 
 	add_nmfu_target(http_client "")
-	add_nmfu_target(http_serve "")
+	add_nmfu_target(http_serve "-findirect-start-ptr")
 	add_nmfu_target(multipart_header "")
 	add_nmfu_target(tdsb_logintoken "")
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
