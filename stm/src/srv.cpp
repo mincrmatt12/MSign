@@ -21,9 +21,9 @@
 
 extern tasks::Timekeeper timekeeper;
 
-constexpr uint16_t srv_reclaim_low_watermark = 768;
-constexpr uint16_t srv_reclaim_high_watermark_simple = 1636;
-constexpr uint16_t srv_reclaim_high_watermark_complex = 1152;
+constexpr uint16_t srv_reclaim_low_watermark = 100;
+constexpr uint16_t srv_reclaim_high_watermark_simple = 200;
+constexpr uint16_t srv_reclaim_high_watermark_complex = 200;
 
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
@@ -145,18 +145,7 @@ bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
 
 
 const bheap::Block& srv::Servicer::_slot(uint16_t slotid) {
-	const bheap::Block* target;
-	if (bcache.contains(slotid)) {
-		target = reinterpret_cast<const bheap::Block*>(&arena.region[bcache.lookup(slotid) * 4]);
-	}
-	else {
-		target = &arena.get(slotid);
-		if (*target && !target->next())
-			bcache.insert(slotid, static_cast<uint16_t>(reinterpret_cast<ptrdiff_t>(target - &arena.first)));
-		else
-			target = &arena.get(bheap::Block::SlotEnd);
-	}
-	return *target;
+	return arena.get(slotid);
 }
 
 bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
@@ -164,36 +153,27 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 	//
 	// This function returns true if it sent a packet.
 	
+	// Do a defrag regardless to calculate free space correctly
+	
+	srv::ServicerLockGuard g(*this); // Lock the buffer
+	arena.defrag();
+	
 	// Start by checking how much free allocatable space we have
 	
-	auto current_space = arena.free_space();
-
-	// If we more space than the low watermark + the total last update delta we don't do anything
-	if (current_space > (srv_reclaim_low_watermark + last_update_failed_delta_size)) {
-		last_update_failed_delta_size = 0;
-		return false;
-	}
+	auto current_space = arena.free_space(); // buffer region
+	if (current_space < 64) current_space = 0;
+	else current_space -= 64;
 
 	// TODO: use high_watermark_complex when checking for defrags
-	int to_free = static_cast<int>(srv_reclaim_high_watermark_simple - current_space);
-
-	srv::ServicerLockGuard g(*this); // Lock the buffer
-
-	// First just try coalescing stuff
-	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
-		arena.defrag();
-		bcache.evict();
-
-		last_update_failed_delta_size = 0;
-		return false;
-	}
+	int to_free = static_cast<int>(std::max<int16_t>(srv_reclaim_high_watermark_simple, last_update_failed_delta_size) - current_space);
+	if (to_free < 0) return false;
 
 	// Otherwise we begin freeing up blocks.
 	// This first pass will eliminate all non-cached cold ephemeral blocks
 	//
 	// We free from left to right; this could probably be more efficient going right to left but it'd use more memory more of the time.
 	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !bcache.contains(block.slotid)) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !arena.cached(block.slotid)) {
 			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
 			auto len = block.datasize;
 			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
@@ -212,7 +192,6 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 	// We now do a cleanup to try and reclaim space if it'll recover enough on its own
 	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
 		arena.defrag();
-		bcache.evict();
 
 		last_update_failed_delta_size = 0;
 		return false;
@@ -238,10 +217,9 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 
 	// .. followed by all _warm_ blocks not in the cache
 	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm && !bcache.contains(block.slotid)) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm && !arena.cached(block.slotid)) {
 			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
 			auto len = block.datasize;
-			block.shrink(0);
 			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
 
 			auto freed = block.datasize - 4 + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
@@ -257,7 +235,6 @@ bool srv::Servicer::do_bheap_cleanup(bool full_cleanup) {
 
 	// We then _again_ run defrag uncoditionally
 	arena.defrag();
-	bcache.evict();
 
 	to_free -= (arena.free_space() - current_space);
 	current_space = arena.free_space();
@@ -539,8 +516,6 @@ void srv::Servicer::run() {
 
 						arena.add_block(slotid, bheap::Block::LocationRemote, 0);
 						arena.set_temperature(slotid, msgbuf[2]);
-
-						bcache.evict();
 					}
 
 					// Check if we need to homogenize
@@ -548,7 +523,6 @@ void srv::Servicer::run() {
 						ServicerLockGuard g(*this);
 
 						arena.homogenize(slotid);
-						bcache.evict();
 					}
 
 					// Check if we can process the next req
@@ -578,9 +552,6 @@ void srv::Servicer::run() {
 					if (!code) {
 						// Acquire lock
 						ServicerLockGuard g(*this);
-
-						// Evict the cache
-						bcache.evict();
 
 						// Change the location of the marked segment to remote
 						arena.set_location(slotid, start, len, bheap::Block::LocationRemote);
@@ -661,8 +632,6 @@ void srv::Servicer::run() {
 								// Lock the heap as this messes with stuff
 								ServicerLockGuard g(*this);
 
-								// This also evicts the entire cache
-								bcache.evict();
 								if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) {
 									move_update_errcode = 0x1;
 
@@ -747,7 +716,6 @@ failed_again:
 							ServicerLockGuard g(*this);
 
 							arena.homogenize(sid_frame);
-							bcache.evict();
 						}
 					}
 				}
@@ -763,7 +731,6 @@ failed_again:
 						ServicerLockGuard g(*this);
 
 						arena.truncate_contents(slotid, 0);
-						bcache.evict(slotid);
 					}
 
 					// Send an ack

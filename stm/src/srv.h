@@ -6,7 +6,7 @@
 #include "common/slots.h"
 #include "protocol.h"
 #include "common/bheap.h"
-#include "lru.h"
+#include "common/heapsize.h"
 
 #include <FreeRTOS.h>
 #include <stream_buffer.h>
@@ -78,8 +78,7 @@ namespace srv {
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
-		bheap::Arena<14*1024> arena;
-		lru::Cache<8, 4> bcache;
+		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
 
 		// Called from ISR and populates queue.
 
@@ -100,13 +99,21 @@ namespace srv {
 		bool is_updating = false;
 		uint8_t update_state = 0;
 
+		// status shown on screen
 		char update_status_buffer[16];
+		// buffer of the last update package
 		uint8_t update_pkg_buffer[256];
+		// size of update pkg
 		uint32_t update_pkg_size = 0;
 
+		// update total size (new bin length)
 		uint32_t update_total_size = 0;
+		// checksum of entire update
 		uint16_t update_checksum = 0;
+		// how many chunks remaining in update
 		uint16_t update_chunks_remaining = 0;
+
+		// 
 		int16_t last_update_failed_delta_size = 0;
 
 		// Sync primitives + log buffers + dma buffer
