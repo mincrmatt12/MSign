@@ -1,7 +1,7 @@
 # python dependencies for the MSign
 
 # building parsers
-nmfu~=0.2
+nmfu>=0.3.1
 
 # building debug tools
 cxxfilt
