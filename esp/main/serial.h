@@ -5,6 +5,7 @@
 #include <stddef.h>
 #include "common/slots.h"
 #include "common/bheap.h"
+#include "common/heapsize.h"
 #include "protocol.h"
 #include <type_traits>
 
@@ -73,7 +74,7 @@ namespace serial {
 		void on_pkt() override;
 
 		// ESP-local data-store
-		bheap::Arena<12*1024> arena;
+		bheap::Arena<ESP_HEAP_SIZE> arena;
 
 		// Event queue, containing ServicerEvent records:
 		//   - either packets, or task requests

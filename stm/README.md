@@ -244,6 +244,15 @@ The status code can be one of
 | `0x00` | OK |
 | `0x01` | Time is still being retrieved, try again in a bit |
 
+### Heap stats
+
+The `QUERY_FREE_HEAP` command returns a few constants about the data heap:
+
+- the total size of the heap
+- the amount of space free in the heap (as in, how much space can be allocated to new blocks without having to clear anything)
+
+as two 16-bit values in that order.
+
 ### Other commands
 
 When either device sends the `RESET` command, both devices should reset. Usually sent by the ESP upon grabbing new configuration -- but the STM can also send it in rare cases.
@@ -251,9 +260,6 @@ When either device sends the `RESET` command, both devices should reset. Usually
 When either device sends the `PING` command, the other MUST respond with the `PONG` command, UNLESS the handshake has not been completed.
 
 The above three commands have no payload.
-
-When either device sends the `QUERY_FREE_HEAP` command (with no payload) the other device should respond with the same message ID but with a payload corresponding to the
-maximum amount of data that can be `DATA_MOVE`d to it. This should only ever underestimate this quantity, not over estimate it. The value itself is represented as an unsigned 16 bit integer.
 
 ### Update commands
 

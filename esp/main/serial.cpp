@@ -51,6 +51,7 @@ namespace serial::st {
 
 			if (current_pkt == nullptr) {
 				ST_LOGW("current pkt is nullptr; exiting now -- may be stuck");
+				finish();
 				return;
 			}
 
@@ -166,6 +167,13 @@ namespace serial::st {
 					send_chunk();
 					break;
 				case 1:
+					// give up after a few attempts
+					if (retries++ > 3) {
+						ST_LOGW("gave up sending block due to no space");
+						handle_ack();
+						finish();
+						return true;
+					}
 					// not enough space, wait a bit for transfers to come back to us and try again
 					state = StDelayRetry;
 					timeout = xTaskGetTickCount() + pdMS_TO_TICKS(250);
@@ -188,7 +196,7 @@ namespace serial::st {
 				case StWaitAck:
 				case StWaitMoveAck:
 					// Have we retried too many times?
-					if (retries++ > 2) {
+					if (retries++ > 3) {
 						// Cancel this update
 						ST_LOGW("block out timed out, dropping update");
 						// ack these but finish immediately
@@ -615,6 +623,8 @@ again:
 		void start() override {
 			switch (state) {
 				case StStart:
+					// Give up after 1.5 seconds
+					if (this->timeout == 0) this->timeout = xTaskGetTickCount() + pdMS_TO_TICKS(1500);
 				recheck_blocked:
 					if (blocked()) {
 						ST_LOGD("data update blocked");
@@ -685,6 +695,13 @@ again:
 		bool should_block_updates_for(uint16_t slotid) override {
 			if (state == StWaitUnblocked || state == StWaitingForFreedSpace || state == StWaitingForEmptySlotToFreeSpace) return false;
 			return slotid == this->slotid;
+		}
+
+		// Handle giving up on timeout of ~1.5s
+		void on_timeout() override {
+			timeout = 0;
+			ST_LOGW("timed out trying to update slot; giving up");
+			finish();
 		}
 
 	private:
@@ -812,9 +829,58 @@ void serial::SerialInterface::mark_arena_dirty(bool ignore_defer) {
 		return;
 	}
 
+	// We need to calculate some things in order to check whether blocks have enough space to be moved.
+	//
+	// For the purposes of this calculation, we treat the STM's heap as an ideal linear layout in two segments:
+	//
+	// |    hot    |  warm/DATA_MOVED  | free |
+	//
+	// By definition, hot blocks should be prioritized at all costs, so they are sent always and assumed to be always present.
+	//
+	// As a result, the "budget" for warm blocks / moved data is STM_HEAP_SIZE - sum(blk.size for blk in blocks if blk.temp == Hot).
+	//
+	// We have to prioritize moved blocks which won't fit on us over warm blocks, so we first have to compute how much space all remote blocks
+	// take up. If there's corresponding free space on us, we can swap it (on the stm) with a warm block.
+	
+	ssize_t total_hot = 0;
+	ssize_t moved_space = 0;
+
+	for (auto& blk : arena) {
+		if (blk.temperature == bheap::Block::TemperatureHot)
+			total_hot += blk.datasize + 4; 
+		else if ((blk.location == bheap::Block::LocationRemote || blk.flags & bheap::Block::FlagFlush) && blk.temperature <= bheap::Block::TemperatureWarm) 
+			moved_space += blk.datasize + 4;
+	}
+
+	ssize_t warm_budget = STM_HEAP_SIZE - total_hot - moved_space - 4;
+	if (warm_budget < 0) warm_budget = 0;
+
+	ssize_t free_space_for_moved_blocks = arena.free_space() - 32;
+
 	// Go through all blocks and schedule their slots
 	for (auto& blk : arena) {
 		if (!blk) continue;
+
+		// only considered for warm blocks
+		bool space_available = false;
+
+		// Update the budgets so we can choose how to update this and future blocks
+		if (blk.temperature == bheap::Block::TemperatureWarm) {
+			// Is there space left in the budget?
+			if (warm_budget >= blk.datasize) {
+				space_available = true;
+				// use budget
+				warm_budget -= blk.datasize;
+			}
+			else {
+				// Can we make more space by moving parts of the cold region here?
+				if (moved_space > blk.datasize && free_space_for_moved_blocks > blk.datasize) {
+					moved_space -= blk.datasize;
+					free_space_for_moved_blocks -= blk.datasize;
+					space_available = true;
+				}
+			}
+		}
 
 		// Check if this block needs updating
 		if ((blk.flags & bheap::Block::FlagFlush) || (blk.temperature >= bheap::Block::TemperatureWarm && blk.location != bheap::Block::LocationRemote && (blk.flags & bheap::Block::FlagDirty))) {
@@ -845,6 +911,12 @@ void serial::SerialInterface::mark_arena_dirty(bool ignore_defer) {
 				ESP_LOGD(TAG, "delaying %04x because we don't have enough slots", blk.slotid);
 				arena_dirty = true;
 				return;
+			}
+
+			// Does this warm block fit?
+			if (blk.temperature == bheap::Block::TemperatureWarm && !space_available) {
+				ESP_LOGW(TAG, "not sending warm block %04x since there's no space for it", blk.slotid);
+				continue;
 			}
 
 			// Try to start a new task
@@ -919,7 +991,7 @@ bool serial::SerialInterface::handle_request(SerialEvent &evt) {
 
 				send_pkt(pkt);
 				ESP_LOGE(TAG, "The system is going down for reset.");
-				vTaskDelay(100);
+				vTaskDelay(pdMS_TO_TICKS(100));
 				esp_restart();
 			}
 			return true;
