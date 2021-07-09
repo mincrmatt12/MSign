@@ -1119,7 +1119,8 @@ void srv::Servicer::wait_for_not_sending() {
 
 	else {
 		this->notify_on_send_done = xTaskGetCurrentTaskHandle();
-		xTaskNotifyWait(0, 0xFFFF'FFFFul, nullptr, portMAX_DELAY);
+		while (is_sending) xTaskNotifyWait(0, 0xFFFF'FFFFul, nullptr, pdMS_TO_TICKS(50));
+		this->notify_on_send_done = nullptr;
 	}
 }
 
