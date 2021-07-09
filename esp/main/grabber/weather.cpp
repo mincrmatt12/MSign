@@ -178,12 +178,12 @@ bool weather::loop() {
 	
 	// Update the resulting things
 	serial::interface.update_slot_nosync(slots::WEATHER_INFO, info);
-	serial::interface.update_slot(slots::WEATHER_ARRAY, state_data, sizeof state_data, false);
-	serial::interface.update_slot(slots::WEATHER_TEMP_GRAPH, temp_over_day, sizeof temp_over_day, false);
+	serial::interface.update_slot_nosync(slots::WEATHER_ARRAY, state_data);
+	serial::interface.update_slot_nosync(slots::WEATHER_TEMP_GRAPH, temp_over_day);
 	serial::interface.update_slot_nosync(slots::WEATHER_TIME_SUN, suntimes);
 
 	// Sync
-	serial::interface.sync_slots(slots::WEATHER_INFO, slots::WEATHER_ARRAY, slots::WEATHER_TEMP_GRAPH, slots::WEATHER_TIME_SUN);
+	serial::interface.sync();
 	
 	return true;
 }

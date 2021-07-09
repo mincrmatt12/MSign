@@ -195,7 +195,7 @@ end_parseloop:
 			if (stopid != nullptr) {
 				const char * dtag = config::manager.get_value((config::Entry)(config::DTAG1 + slot));
 				if (update_slot_times_and_info(stopid, dtag, slot, x, local_times)) {
-					serial::interface.update_slot(slots::TTC_TIME_1 + slot, local_times, sizeof(local_times));
+					serial::interface.update_slot_raw(slots::TTC_TIME_1 + slot, local_times, sizeof(local_times));
 				}
 				else return false;
 			}

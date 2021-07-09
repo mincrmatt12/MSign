@@ -123,7 +123,7 @@ namespace sccfg {
 			times[3].millis_enabled = 12000;
 		}
 
-		serial::interface.update_slot(slots::SCCFG_TIMING, &times, sizeof(times));
+		serial::interface.update_slot(slots::SCCFG_TIMING, times);
 	}
 
 	uint64_t last_run_time = 0;
