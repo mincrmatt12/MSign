@@ -1,0 +1,2 @@
+CompileFlags:
+  Remove: [-mlongcalls, -fstrict-volatile-bitfields]
