@@ -64,7 +64,7 @@ extern "C" void app_main() {
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
 		((serial::SerialInterface *)ptr)->run();
-	}, "srv", 4096 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
+	}, "srv", 3072 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;
 	}
@@ -84,7 +84,7 @@ extern "C" void app_main() {
 		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 
-	ESP_LOGI(TAG, "Created tasks");
+	ESP_LOGI(TAG, "Created tasks (1)");
 	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(pvMALLOC_DRAM));
 }
 

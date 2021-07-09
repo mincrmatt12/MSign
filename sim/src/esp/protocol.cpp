@@ -82,11 +82,6 @@ void protocol::ProtocolImpl::rx_task() {
 		// Signal packet completed
 		ESP_LOGD(TAG, "got pkt");
 		on_pkt();
-		// Wait for sync
-		uint32_t f = 0;
-		while (f != 0x5555) {
-			xTaskNotifyWait(0, 0xffff'ffff, &f, portMAX_DELAY);
-		}
 	}
 }
 

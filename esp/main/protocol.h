@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <FreeRTOS.h>
 #include <task.h>
+#include "common/slots.h"
 
 namespace protocol {
 	struct ProtocolImpl {
@@ -16,20 +17,20 @@ namespace protocol {
 						// blockable thread.
 
 		void send_pkt(const void *packet); // Send a packet out blocking.
-		
-		void continue_rx(); // Send when done with rx_buf
+		inline void send_pkt(const slots::PacketWrapper<>& pw) {
+			send_pkt(&pw);
+		}
 
+		bool wait_for_packet(TickType_t timeout=portMAX_DELAY);
 	protected:
-		virtual void on_pkt() = 0; // Called on reception of a valid packet.
-
-		uint8_t rx_buf[258];
+		union {
+			uint8_t rx_buf[258];
+			slots::PacketWrapper<255> rx_pkt;
+		};
 
 		unsigned get_processing_delay(); // return the number of milliseconds (rounded down) from when we received the header of the last packet.
 
 	private:
-		void rx_task();
-
-		TaskHandle_t rx_thread;
 		unsigned last_received_at;
 	};
 }
