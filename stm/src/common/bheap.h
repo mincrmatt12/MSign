@@ -34,8 +34,10 @@ namespace bheap {
 
 		MSN_BHEAP_INLINE_V uint32_t TemperatureHot = 0b11;
 		MSN_BHEAP_INLINE_V uint32_t TemperatureWarm = 0b10;
-		MSN_BHEAP_INLINE_V uint32_t TemperatureCold = 0b01;
+		MSN_BHEAP_INLINE_V uint32_t TemperatureColdWantsWarm = 0b01; // block that wants to be warm but no space for it
+		MSN_BHEAP_INLINE_V uint32_t TemperatureCold =          0b00;
 
+		//MSN_BHEAP_INLINE_V uint32_t LocationHotPotato = 0b00;
 		MSN_BHEAP_INLINE_V uint32_t LocationCanonical = 0b01;
 		MSN_BHEAP_INLINE_V uint32_t LocationEphemeral = 0b10;
 		MSN_BHEAP_INLINE_V uint32_t LocationRemote = 0b11;
@@ -44,7 +46,7 @@ namespace bheap {
 		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
 
 		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
-		MSN_BHEAP_INLINE_V uint32_t FlagFlush = 2;
+		MSN_BHEAP_INLINE_V uint32_t FlagSupressed = 2;
 
 		// DATA ACCESS
 
@@ -161,12 +163,24 @@ namespace bheap {
 
 		// Check if that block will fit in this location
 		bool will_fit(const Block& b, uint32_t offset) const {
-			uint32_t length = offset + (b.adjacent() - &b) * 4;
-			return length <= (adjacent() - this) * 4;
+			uint32_t length = offset + b.total_size();
+			return length <= total_size();
 		}
 
 		operator bool() const {
 			return this->slotid != SlotEnd && this->slotid != SlotEmpty;
+		}
+
+		// in bytes
+		ptrdiff_t total_size() const {
+			return (uintptr_t)adjacent() - (uintptr_t)this;
+		}
+
+		// total rounded datasize (ignoring remote/etc.)
+		size_t rounded_datasize() const {
+			size_t result = datasize;
+			if (result % 4) result += (4 - result % 4);
+			return result;
 		}
 
 		template<size_t, typename> friend struct Arena;
@@ -369,9 +383,26 @@ namespace bheap {
 		}
 
 		// Update the contents of the data at that offset + length with data.
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data) {
+			return update_contents(slotid, offset, length, data, true);
+		}
+
+		// Update the contents of the data at that offset + length with data.
 		//
-		// This function will convert remote chunks to either canonical + flush or ephemeral (semantically the correct choice)
-		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
+		// This function will convert remote chunks to either canonical + flush or ephemeral depending on the set_flush
+		// parameter. For more control, use the overload that takes a functor.
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool fulfill_with_ephemeral) {
+			return update_contents(slotid, offset, length, data, [this, slotid, fulfill_with_ephemeral](uint32_t off, uint32_t len, const void *dat){
+				if (!fulfill_with_ephemeral) return false;
+				if (!set_location(slotid, off, len, Block::LocationEphemeral)) return false;
+				return update_contents(slotid, off, len, dat);
+			});
+		}
+
+		template<typename RemoteHandler>
+		std::enable_if_t<
+			std::is_invocable_r_v<bool, RemoteHandler, uint32_t /* offset */, uint32_t /* length */, const void * /* data */>,
+		bool> update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, RemoteHandler&& rh) {
 			if (offset + length > contents_size(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
 			Block& containing_block = get(slotid, offset);
@@ -382,18 +413,13 @@ namespace bheap {
 				// 0123456
 				// Region starting at begin_pos + containing_block.datasize has size offset + length - begin_pos + containing_block.datasize
 				auto sublength = begin_pos + containing_block.datasize - offset;
-				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, set_flush) &&
-					   update_contents(slotid, offset + sublength, length - sublength, static_cast<const uint8_t*>(data) + sublength, set_flush);
+				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, std::forward<RemoteHandler>(rh)) &&
+					   update_contents(slotid, offset + sublength, length - sublength, static_cast<const uint8_t*>(data) + sublength, std::forward<RemoteHandler>(rh));
 			}
 
 			// Check if this is a remote region, in which case we have to convert it
 			if (containing_block.location == Block::LocationRemote) {
-				// Set the location (and in the process evict the cache correctly)
-				if (!set_location(slotid, offset, length, set_flush ? Block::LocationCanonical : Block::LocationEphemeral)) return false;
-				Block& new_block = get(slotid, offset);
-				new_block.flags = (set_flush ? Block::FlagFlush : Block::FlagDirty);
-				// Tail recursion
-				return update_contents(slotid,offset, length, data, set_flush);
+				return std::forward<RemoteHandler>(rh)(offset, length, data);
 			}
 			
 			// Otherwise, just patch the block content
@@ -570,7 +596,7 @@ finish_setting:
 					// 	- the location is equal
 					// 	- the flush flag is equal (if the dirty flag is unequal, or it)
 
-					while (x->location == x->next()->location && (x->flags & Block::FlagFlush) == (x->next()->flags & Block::FlagFlush)) {
+					while (x->location == x->next()->location && (x->flags & Block::FlagSupressed) == (x->next()->flags & Block::FlagSupressed)) {
 						// If this is a remote block, just increase the size
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
@@ -628,8 +654,7 @@ finish_setting:
 			// Condense empty slots (simplifies next section)
 			for (auto& x : *this) {
 				while (x.adjacent() && x.slotid == Block::SlotEmpty && x.adjacent()->slotid == Block::SlotEmpty) {
-					x.datasize += 4 + x.adjacent()->datasize;
-					if (x.datasize % 4) x.datasize += (4 - x.datasize % 4);
+					x.datasize += x.adjacent()->total_size();
 				}
 			}
 			{
@@ -663,7 +688,6 @@ finish_setting:
 					uint8_t *end            = region + Size - 4;
 
 					size_t moved_size = end - target_area;
-					size_t old_empty_size = last_empty->datasize;
 					memmove(begin_location, target_area, moved_size);
 
 					// Rewrite empty
@@ -720,8 +744,7 @@ finish_setting:
 			if (mode & FreeSpaceEmpty) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
 					if (blk->slotid == Block::SlotEmpty) {
-						total += 4 + blk->datasize;
-						if (total % 4) total += 4 - (total % 4);
+						total += blk->total_size();
 					}
 				}
 			}
@@ -737,7 +760,7 @@ finish_setting:
 			}
 			if (mode & FreeSpaceHomogenizeable) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagFlush) == (blk->next()->flags & Block::FlagFlush)) total += 4;
+					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagSupressed) == (blk->next()->flags & Block::FlagSupressed)) total += 4;
 				}
 			}
 			return total;
@@ -933,11 +956,7 @@ finish_setting:
 				// After reclaiming we memmove
 
 				uint32_t remaining_new_alloc_space = containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
-				if (next_empty->datasize % 4) next_empty->datasize += (4 - next_empty->datasize % 4);
-				uint32_t reclaimable_space = next_empty->datasize + 4;
-				if (reclaimable_space % 4) {
-					reclaimable_space += 4 - (reclaimable_space % 4);
-				}
+				uint32_t reclaimable_space = next_empty->total_size();
 
 				uint32_t total_reclaimed = 0;
 
@@ -1035,7 +1054,7 @@ copy_data:
 			for (const Block *b = &first; b; b = b->adjacent()) {
 				if (b->slotid != Block::SlotEmpty) continue;
 				// How much space is there?
-				size_t amount = (uintptr_t)b->adjacent() - (uintptr_t)b->data();
+				size_t amount = b->rounded_datasize();
 				if (amount < 4 || amount < scratch_size) continue;
 				// Check if this region overlaps the move region
 				if ((uintptr_t)b->data() >= (uintptr_t)in_front_of.data() && (uintptr_t)b->data() <= (uintptr_t)to_move.adjacent()->data()) continue;
