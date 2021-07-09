@@ -2,6 +2,7 @@
 #define SLOTS_H
 
 #include <stdint.h>
+#include <string.h>
 
 namespace slots {
 	// The comments here are important, as they get parsed by the dissector.
@@ -197,18 +198,20 @@ namespace slots {
 			HANDSHAKE_UOK,
 
 			DATA_TEMP = 0x20,
-			DATA_UPDATE,
-			DATA_MOVE,
-			DATA_DEL,
-			DATA_FORGOT,
+			DATA_FULFILL,
+			DATA_RETRIEVE,
+			DATA_REQUEST,
+			DATA_SET_SIZE,
+			DATA_STORE,
 
 			ACK_DATA_TEMP = 0x30,
-			ACK_DATA_UPDATE,
-			ACK_DATA_MOVE,
-			ACK_DATA_DEL,
+			ACK_DATA_FULFILL,
+			ACK_DATA_RETRIEVE,
+			ACK_DATA_REQUEST,
+			ACK_DATA_SET_SIZE,
+			ACK_DATA_STORE,
 
-			QUERY_FREE_HEAP = 0x40,
-			QUERY_TIME,
+			QUERY_TIME = 0x40,
 
 			RESET = 0x50,
 			PING,
@@ -225,6 +228,16 @@ namespace slots {
 		enum struct TimeStatus : uint8_t {
 			Ok = 0,
 			NotSet = 1
+		};
+
+		enum struct DataStoreFulfillResult : uint8_t {
+			Ok = 0,
+			NotEnoughSpace_TryAgain,
+			NotEnoughSpace_Failed,
+			IllegalState = 0x10,
+			InvalidOrNak = 0x11,
+
+			Timeout = 0xff
 		};
 
 		enum struct UpdateStatus : uint8_t {
@@ -255,6 +268,61 @@ namespace slots {
 			ESP_COPYING
 		};
 	}
+
+	// PACKET WRAPPER
+	template<uint8_t CS=0> struct PacketWrapper;
+
+	template<>
+	struct PacketWrapper<0> {
+		uint8_t direction;
+		uint8_t size;
+		uint8_t cmd_byte;
+
+		const static inline uint8_t FromStm = 0xa5;
+		const static inline uint8_t FromEsp = 0xa6;
+
+		// Lots of helpers
+		inline bool from_stm() const {return direction == FromStm;}
+		inline bool from_esp() const {return direction == FromEsp;}
+		inline operator bool() const {return direction >= 0xa5;}
+		inline protocol::Command cmd() const {return static_cast<protocol::Command>(cmd_byte);}
+		inline uint8_t * data() {return reinterpret_cast<uint8_t *>(this) + 3;}
+		inline const uint8_t * data() const {return reinterpret_cast<const uint8_t *>(this) + 3;}
+
+		// These could just be R& things, but i'm trying to avoid breaking aliasing.
+		
+		// Read helpers
+		template<typename R>
+		R at(uint8_t byte_offset) const {
+			// for now, we use memcpy since it's more correct re: aliasing rules
+			R res;
+			memcpy(&res, data() + byte_offset, sizeof(R));
+			return res;
+		}
+
+		// Write helper
+		template<typename T>
+		void put(T value, uint8_t byte_offset) {
+			memcpy(data() + byte_offset, &value, sizeof(T));
+		}
+	};
+
+	// NOTE: this (the layout of inherited members) is fairly unstandardized, _however_ in c++23 this will be enforced.
+	template<uint8_t ConstantSize>
+	struct PacketWrapper : public PacketWrapper<0> {
+		uint8_t _data[ConstantSize];
+
+		inline void init(uint8_t cmd) {
+#if (defined(STM32F205xx) || defined(STM32F207xx))
+			direction = FromStm;
+#else
+			direction = FromEsp;
+#endif
+			cmd_byte = cmd;
+			size = ConstantSize;
+		}
+	};
+
 }
 
 #endif
