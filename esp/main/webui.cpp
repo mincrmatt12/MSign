@@ -918,6 +918,7 @@ notfound:
 							read_from_client(peekbuf, (ptr - peekbuf) + 1);
 							// Done handling
 							start_response();
+							break;
 						default:
 							// consumed entire buffer, use read
 							read_from_client(peekbuf, bytes); // this should not error since peek didn't
