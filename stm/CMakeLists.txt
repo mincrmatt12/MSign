@@ -4,6 +4,12 @@ project(msign-stm C CXX ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+   add_compile_options (-fdiagnostics-color=always)
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+   add_compile_options (-fcolor-diagnostics)
+endif ()
+
 # specify target
 set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board'")
 
