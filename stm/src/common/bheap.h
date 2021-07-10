@@ -242,7 +242,7 @@ namespace bheap {
 		using Block::temperature;
 
 		operator bool() const {
-			return Block::operator bool() && this->datasize;
+			return Block::operator bool() && this->datasize && this->location != bheap::Block::LocationRemote;
 		}
 	};
 
