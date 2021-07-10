@@ -87,16 +87,18 @@ pnames = {
     0x12: "HANDSHAKE_OK",
     0x13: "HANDSHAKE_UOK",
     0x20: "DATA_TEMP",
-    0x21: "DATA_UPDATE",
-    0x22: "DATA_MOVE",
-    0x23: "DATA_DEL",
-    0x24: "DATA_FORGOT",
+    0x21: "DATA_FULFILL",
+    0x22: "DATA_RETRIEVE",
+    0x23: "DATA_REQUEST",
+    0x24: "DATA_SET_SIZE",
+    0x25: "DATA_STORE",
     0x30: "ACK_DATA_TEMP",
-    0x31: "ACK_DATA_UPDATE",
-    0x32: "ACK_DATA_MOVE",
-    0x33: "ACK_DATA_DEL",
-    0x40: "QUERY_FREE_HEAP",
-    0x41: "QUERY_TIME",
+    0x31: "ACK_DATA_FULFILL",
+    0x32: "ACK_DATA_RETRIEVE",
+    0x33: "ACK_DATA_REQUEST",
+    0x34: "ACK_DATA_SET_SIZE",
+    0x35: "ACK_DATA_STORE",
+    0x40: "QUERY_TIME",
     0x50: "RESET",
     0x51: "PING",
     0x52: "PONG",
@@ -112,7 +114,8 @@ header_width = 5 + 2 + 2 + 2 + 2 + 20 + 2
 tempcodes = {
     0b11: "Hot",
     0b10: "Warm",
-    0b01: "Cold"
+    0b01: "ColdWantsWarm",
+    0b00: "Cold"
 }
 
 slot_temps = {}
@@ -127,25 +130,21 @@ def data_temp(dat, from_esp):
 
 def ack_data_temp(dat, from_esp):
     slotid, tempcode = struct.unpack("<HB", bytes(dat))
+    if tempcode == 0xff:
+        print(f": Nack of request to change temp on {slotid:03x} ({slotlib.slot_types[slotid][0]})")
+        return
     slot_temps[slotid] = tempcode
     
     print(f": ack of request to set {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {tempcodes[tempcode]}")
 
 def data_update(dat, from_esp, is_move):
     # always from esp
-    sid_frame, offs, totallen, totalupd = struct.unpack("<HHHH", dat[:8])
+    sid_frame, offs, totalupd = struct.unpack("<HHH", dat[:6])
 
     start = bool(sid_frame & (1 << 15))
     end = bool(sid_frame & (1 << 14))
 
     slotid = sid_frame & 0xfff
-    if slotid not in slot_databufs:
-        slot_databufs[slotid] = bytearray(totallen)
-    else:
-        if len(slot_databufs[slotid]) > totallen:
-            slot_databufs[slotid] = slot_databufs[slotid][:totallen]
-        else:
-            slot_databufs[slotid] += bytearray(totallen - len(slot_databufs[slotid]))
 
     endstart = {
             (True, False): "start",
@@ -156,26 +155,28 @@ def data_update(dat, from_esp, is_move):
 
     if from_esp:
         # patch in
-        slot_databufs[slotid][offs:offs+len(dat)-8] = dat[8:]
+        slot_databufs[slotid][offs:offs+len(dat)-6] = dat[6:]
 
     print(f": data {'move' if is_move else 'update'} [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
     if start:
-        print(" "*header_width + f": total slot length {totallen}; total update length {totalupd}")
+        print(" "*header_width + f": total update length {totalupd}")
     if end and from_esp:
         if slotid in ignored_dataids:
             print(textwrap.indent("(data supressed due to environment var)", ' '*(header_width + 3)))
             return
         st = slotlib.slot_types[slotid][1]
-        if totallen >= 512:
-            print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid]), (offs + len(dat) - 8 - totalupd), (offs + len(dat) - 8)), ' ' * (header_width + 2) + '└'))
+        if len(slot_databufs[slotid]) >= 512:
+            print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid]), (offs + len(dat) - 6 - totalupd), (offs + len(dat) - 6)), ' ' * (header_width + 2) + '└'))
         else:
             print(textwrap.indent(st.get_formatted(st.parse(slot_databufs[slotid])), ' ' * (header_width + 2) + '└'))
 
 updrescode = {
     0: "Ok",
-    1: "NotEnoughSpace",
-    2: "IllegalInternalState",
-    3: "NAK"
+    1: "NotEnoughSpace_TryAgain",
+    2: "NotEnoughSpace_Failed",
+    0x10: "IllegalState",
+    0x11: "NAK",
+    0xff: "Timeout"
 }
 
 def ack_data_update(dat, from_esp, is_move):
@@ -183,18 +184,23 @@ def ack_data_update(dat, from_esp, is_move):
 
     print(f": ack of data {'move' if is_move else 'update'} for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {upds:04x} of length {updl} with code {updrescode[code]}")
 
-def data_del(dat, from_esp):
-    slotid = struct.unpack("<H", dat)[0]
+def data_chsize(dat, from_esp):
+    slotid, totallen = struct.unpack("<HH", dat)
 
-    if slotid in slot_databufs:
-        slot_databufs[slotid] = bytearray()
+    if slotid not in slot_databufs:
+        slot_databufs[slotid] = bytearray(totallen)
+    else:
+        if len(slot_databufs[slotid]) > totallen:
+            slot_databufs[slotid] = slot_databufs[slotid][:totallen]
+        else:
+            slot_databufs[slotid] += bytearray(totallen - len(slot_databufs[slotid]))
     
-    print(f": data delete for {slotid:03x} ({slotlib.slot_types[slotid][0]})")
+    print(f": data size change for {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {totallen} (0x{totallen:04x})")
 
-def ack_data_del(dat, from_esp):
-    slotid = struct.unpack("<H", dat)[0]
+def ack_data_chsize(dat, from_esp):
+    slotid, totallen = struct.unpack("<HH", dat)
     
-    print(f": ack of data delete for {slotid:03x} ({slotlib.slot_types[slotid][0]})")
+    print(f": ack of data size change for {slotid:03x} ({slotlib.slot_types[slotid][0]}) to {totallen} (0x{totallen:04x})")
 
 timestatus = {
     0: "Ok",
@@ -212,9 +218,25 @@ def query_time(dat, from_esp):
         else:
             print(f": response with error code {timestatus[code]}")
 
-def data_forgot(dat, from_esp):
+def data_request_retrieve(dat, from_esp, is_req):
     slotid, offs, size = struct.unpack("<HHH", dat)
-    print(f": notification of data deletion for {slotid:03x} ({slotlib.slot_types[slotid][0]}) at {offs:04x} of length {size}")
+
+    if is_req:
+        print(": request of data update ", end="")
+    else:
+        print(": request of data retrieval ", end="")
+    print(f"for {slotid:03x} ({slotlib.slot_types[slotid][0]}) at {offs:04x} of length {size}")
+
+def ack_data_request_retrieve(dat, from_esp, is_req):
+    slotid, offs, size = struct.unpack("<HHH", dat)
+
+    if is_req:
+        print(": ack of request for data update ", end="")
+    else:
+        print(": retrieved data will be sent soon ", end="")
+
+    print(f"for {slotid:03x} ({slotlib.slot_types[slotid][0]}) at {offs:04x} of length {size}")
+
 
 consolenames = {
     1: "DbgIn",
@@ -268,14 +290,17 @@ def update_img_start(dat, from_esp):
 phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
-    0x41: query_time,
+    0x40: query_time,
     0x21: lambda x, y: data_update(x, y, False),
     0x31: lambda x, y: ack_data_update(x, y, False),
-    0x22: lambda x, y: data_update(x, y, True),
-    0x32: lambda x, y: ack_data_update(x, y, True),
-    0x23: data_del,
-    0x33: ack_data_del,
-    0x24: data_forgot,
+    0x25: lambda x, y: data_update(x, y, True),
+    0x35: lambda x, y: ack_data_update(x, y, True),
+    0x24: data_chsize,
+    0x34: ack_data_chsize,
+    0x22: lambda x, y: data_request_retrieve(x, y, False),
+    0x32: lambda x, y: ack_data_request_retrieve(x, y, False),
+    0x23: lambda x, y: data_request_retrieve(x, y, True),
+    0x33: lambda x, y: ack_data_request_retrieve(x, y, True),
     0x70: console_msg,
     0x60: lambda x, y: update_statcmd(x, y, False),
     0x63: lambda x, y: update_statcmd(x, y, True),
