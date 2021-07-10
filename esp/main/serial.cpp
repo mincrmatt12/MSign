@@ -96,19 +96,6 @@ void serial::SerialInterface::run() {
 	srv_task = xTaskGetCurrentTaskHandle();
 	// Initialize the protocol
 	init_hw();
-#ifdef SIM
-#define STACK_MULT 8
-#else
-#define STACK_MULT 1
-#endif
-	// Init data update manager task
-	if (xTaskCreate([](void *ptr){
-		((serial::DataUpdateManager *)ptr)->run();
-	}, "dupm", 3072 * STACK_MULT, &dum, 9, NULL) != pdPASS) {
-		ESP_LOGE(TAG, "Failed to create dupm");
-		return;
-	}
-#undef STACK_MULT
 
 	ESP_LOGI(TAG, "Initialized servicer HW");
 
@@ -152,6 +139,20 @@ void serial::SerialInterface::run() {
 	}
 
 	ESP_LOGI(TAG, "Connected to STM32");
+
+#ifdef SIM
+#define STACK_MULT 8
+#else
+#define STACK_MULT 1
+#endif
+	// Init data update manager task
+	if (xTaskCreate([](void *ptr){
+		((serial::DataUpdateManager *)ptr)->run();
+	}, "dupm", 3072 * STACK_MULT, &dum, 9, NULL) != pdPASS) {
+		ESP_LOGE(TAG, "Failed to create dupm");
+		return;
+	}
+#undef STACK_MULT
 
 	// Main servicer loop
 	while (true) {
