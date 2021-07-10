@@ -513,7 +513,11 @@ namespace bheap {
 					containing_block.shrink(0);
 
 					// Ensure space exists for the block
-					if (!make_space_after(containing_block, length)) return false;
+					if (!make_space_after(containing_block, length)) {
+						// If there's not enough space, do at least ensure we don't invalidate the length
+						containing_block.datasize = length;
+						return false;
+					}
 
 					// Copy relevant portions of block info
 					auto& new_contain = *containing_block.adjacent();
