@@ -19,6 +19,14 @@ namespace serial {
 	const inline static uint32_t TaskBitPacketOK = 1 << 14;
 	const inline static uint32_t TaskBitPacketNOK = 1 << 15;
 
+	void DataUpdateManager::init() {
+		pending = xQueueCreate(10, sizeof(DataUpdateRequest));
+		if (!pending) {
+			ESP_LOGE(TAG, "failed to create dur queue");
+			while (1) {;}
+		}
+	}
+
 	bool DataUpdateManager::queue_request(const DataUpdateRequest& req) {
 		return xQueueSend(pending, &req, pdMS_TO_TICKS(2000)) == pdPASS;
 	}
@@ -76,8 +84,6 @@ wrong_bits:
 			for (int tries = 0; tries < 4; ++tries) {
 				switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), false)) {
 					case slots::protocol::DataStoreFulfillResult::Ok:
-						// finish by setting block to remote
-						arena.set_location(b.slotid, arena.block_offset(b), b.datasize, bheap::Block::LocationRemote);
 						goto block_ok;
 					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
 						// not enough space for block, if it's warm set it to non-warm
@@ -209,21 +215,23 @@ block_ok:
 			pkt.init(is_store ? slots::protocol::DATA_STORE : slots::protocol::DATA_FULFILL);
 
 			pkt.put(length, 4);
-			for (uint16_t suboff = 0; suboff < offset + length; suboff += (255-6)) {
+			for (uint16_t suboff = 0; suboff < length; suboff += (255-6)) {
 				bool start = suboff == 0;
-				bool end   = suboff + (255-6) >= offset + length;
+				bool end   = suboff + (255-6) >= length;
 				if (end) {
-					pkt.size = 6 + (offset + length) - suboff;
+					pkt.size = 6 + length - suboff;
 				}
 				pkt.put<uint16_t>((start << 15) | (end << 14) | (slotid & 0xfff), 0);
-				pkt.put(suboff, 2);
-				memcpy(pkt.data() + 6, &((const uint8_t *)datasource)[suboff], pkt.size - 6);
+				pkt.put<uint16_t>(suboff + offset, 2);
+				if (datasource) memcpy(pkt.data() + 6, &((const uint8_t *)datasource)[suboff], pkt.size - 6);
 
 				serial::interface.send_pkt(pkt);
+
+				if (!end) vTaskDelay(pdMS_TO_TICKS(10));
 			}
 		}
 
-		auto v = wait_for_packet([&](const slots::PacketWrapper<>& p){
+		auto &v = wait_for_packet([&](const slots::PacketWrapper<>& p){
 			return p.from_stm() && p.cmd() == (is_store ? slots::protocol::ACK_DATA_STORE : slots::protocol::ACK_DATA_FULFILL) && p.at<uint16_t>(0) == slotid && p.at<uint16_t>(2) == offset && p.at<uint16_t>(4) == length;
 		}, pdMS_TO_TICKS(500));
 
@@ -247,12 +255,17 @@ block_ok:
 
 		// If the data is not present, ignore this request and NAK
 		if (!arena.contains(dur.d_temp.slotid)) {
+			if (!arena.add_block(dur.d_temp.slotid, bheap::Block::LocationCanonical, 0)) {
+				cleanout_esp_space();
+				if (!arena.add_block(dur.d_temp.slotid, bheap::Block::LocationCanonical, 0)) {
 send_nak:
-			// Respond with NAK
-			pkt_ack.data()[2] = 0xff;
-			if (!send_pkt) return;
-			serial::interface.send_pkt(pkt_ack);
-			return;
+					// Respond with NAK
+					pkt_ack.data()[2] = 0xff;
+					if (!send_pkt) return;
+					serial::interface.send_pkt(pkt_ack);
+					return;
+				}
+			}
 		}
 		auto current_temp = arena.get(dur.d_temp.slotid).temperature;
 		// If the current temperature is equal, ignore.
@@ -298,7 +311,7 @@ warm_hot_send_remotes:
 					if (std::any_of(arena.begin(dur.d_temp.slotid), arena.end(dur.d_temp.slotid), [](auto& b){return b.location == bheap::Block::LocationRemote;})) {
 						// For all remote blocks, ship them out to the STM. We also perform this for warm, so only in the low-space condition does this happen _now_.
 						std::for_each(arena.begin(dur.d_temp.slotid), arena.end(dur.d_temp.slotid), [&](bheap::Block& b){
-							if (b.location != bheap::Block::LocationRemote) return;
+							if (b.location == bheap::Block::LocationRemote) return;
 							// Ship out block
 							for (int tries = 0; tries < 3; ++tries) {
 								switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), true)) {
@@ -524,6 +537,7 @@ warm_hot_send_remotes:
 				}
 			}
 		}
+		ESP_LOGD(TAG, "membudget: %d free, %d hot, %d warm %d cold, %d remote", budget.unused_space, budget.hot(), budget.allocated_warm(), budget.cold_remote, budget.remote());
 		return budget;
 	}
 
@@ -686,6 +700,7 @@ common_remote_use_end:
 		// 	- defragging
 		arena.defrag();
 		if (arena.free_space() > target_free_space_buffer) return;
+		ESP_LOGW(TAG, "cleanout_esp_space");
 		// - moving things to the stm
 		auto budget = calculate_memory_budget();
 		auto needed_space = target_free_space_buffer - arena.free_space();
@@ -789,6 +804,7 @@ common_remote_use_end:
 
 
 		// Alright, now we can start allocating onto the STM
+		ESP_LOGW(TAG, "out of space chsize, allocating...");
 
 		// Before we do so, though, we might be getting an obscenely long update request which we could partially fit on our heap. There's a threshold here so we don't do
 		// something dumb like split a 8 byte block into two 4 byte chunks.
