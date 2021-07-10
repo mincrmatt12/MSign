@@ -61,6 +61,8 @@ extern "C" void app_main() {
 		return;
 	}
 
+	serial::interface.init();
+
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
 		((serial::SerialInterface *)ptr)->run();
