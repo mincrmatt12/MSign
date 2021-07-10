@@ -305,6 +305,12 @@ namespace slots {
 		void put(T value, uint8_t byte_offset) {
 			memcpy(data() + byte_offset, &value, sizeof(T));
 		}
+
+		PacketWrapper& operator=(const PacketWrapper& other) = delete;
+		PacketWrapper& operator=(PacketWrapper&& other) = delete;
+		PacketWrapper(const PacketWrapper& other) = delete;
+		PacketWrapper(PacketWrapper&& other) = delete;
+		PacketWrapper() = default;
 	};
 
 	// NOTE: this (the layout of inherited members) is fairly unstandardized, _however_ in c++23 this will be enforced.
