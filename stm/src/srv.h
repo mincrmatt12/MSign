@@ -18,8 +18,8 @@ namespace srv {
 	//
 	// Manages slots of arbitrary length data using the bheap.
 	//
-	// NOTE: the result of a call to data() may become invalid at any point.
-	//       this may change depending on available RAM / queueing system, but presently 
+	// NOTE: the result of a call to data() may become invalid at any point, unless
+	// the lock is held, in which case they will remain valid until the lock is next given.
 	//
 	// This class also handles the update procedure.
 	struct Servicer final : private ProtocolImpl {
@@ -81,21 +81,31 @@ namespace srv {
 		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
 
 		// Called from ISR and populates queue.
-
 		void process_command() override;
+
+		// Wait send to complete (or return if not sending)
+		void wait_for_not_sending(); // uses notification
+
+		// Update specific routines
+
+		// Handle a single packet in update mode
 		void process_update_packet(uint8_t cmd, uint8_t len);
+		// Handle an UPDATE_CMD
 		void process_update_cmd(slots::protocol::UpdateCmd cmd);
+		// Send a single UPDATE_STATUS
+		void send_update_status(slots::protocol::UpdateStatus status);
+		// Main loop in update mode.
 		void do_update_logic();
+
+		// Connect to the ESP
 		void do_handshake();
 
 		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
-		bool do_bheap_cleanup(bool full_cleanup=true); // returns done
-		void wait_for_not_sending(); // uses notification
+		void try_cleanup_heap(ssize_t space_to_clear); // returns done
 		void check_connection_ping(); // verify we're still connected with last_transmission
-		void update_forgot_statuses(); // send DATA_FORGOT for all "dirty" remote blocks.
-		void send_update_status(slots::protocol::UpdateStatus status);
+		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
 
-		// Logic related to update
+		// Are we currently doing an update? If so, we _won't_ process _any_ data requests.
 		bool is_updating = false;
 		uint8_t update_state = 0;
 
@@ -112,9 +122,6 @@ namespace srv {
 		uint16_t update_checksum = 0;
 		// how many chunks remaining in update
 		uint16_t update_chunks_remaining = 0;
-
-		// 
-		int16_t last_update_failed_delta_size = 0;
 
 		// Sync primitives + log buffers + dma buffer
 		QueueHandle_t bheap_mutex;
@@ -146,7 +153,6 @@ namespace srv {
 		QueueHandle_t pending_requests;
 
 		void start_pend_request(PendRequest req);
-		void evict_block(bheap::Block& block);
 		
 		// Stream buffers for dma-ing
 		//

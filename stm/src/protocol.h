@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_H
 #define PROTOCOL_H
 
+#include "common/slots.h"
 #include <stdint.h>
 #include <FreeRTOS.h>
 #include <task.h>
@@ -20,7 +21,10 @@ namespace srv {
 		// Buffers for DMA
 
 		uint8_t dma_buffer[258];
-		uint8_t dma_out_buffer[67];
+		union {
+			uint8_t dma_out_buffer[67]{};
+			slots::PacketWrapper<> dma_out_pkt;
+		};
 
 		// Implementation
 		void setup_uart_dma();
