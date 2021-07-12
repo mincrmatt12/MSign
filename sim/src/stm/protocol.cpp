@@ -67,6 +67,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 		}
 		else {
 			process_command();
+			vTaskDelay(pdMS_TO_TICKS(4));
 			start_recv();
 		}
 	}
