@@ -21,10 +21,6 @@
 
 extern tasks::Timekeeper timekeeper;
 
-constexpr uint16_t srv_reclaim_low_watermark = 100;
-constexpr uint16_t srv_reclaim_high_watermark_simple = 200;
-constexpr uint16_t srv_reclaim_high_watermark_complex = 200;
-
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
 #define USTATE_WAITING_FOR_FINISH_SECTORCOUNT 21
@@ -169,21 +165,28 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	int to_free = need_space - current_space;
 	if (to_free < 0) return;
 
+	auto common_free = [&](auto& block){
+		// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
+		auto len = block.datasize;
+
+		// Only free up so much
+		if (len >= (to_free + 20)) len = to_free;
+
+		arena.set_location(block.slotid, arena.block_offset(block), len, bheap::Block::LocationRemote);
+
+		auto freed = len + (len % 4 ? 0 : 4 - len % 4);
+		to_free -= freed;
+		current_space += freed;
+	};
+
 	// Otherwise we begin freeing up blocks.
 	// This first pass will eliminate all non-cached cold ephemeral blocks
 	//
 	// We free from left to right; this could probably be more efficient going right to left but it'd use more memory more of the time.
 	for (auto& block : arena) {
 		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !arena.cached(block.slotid)) {
-			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
-			auto len = block.datasize;
-			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
-
-			auto freed = block.datasize + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
-			to_free -= freed;
-			current_space += freed;
+			common_free(block);
 		}
-
 		if (to_free <= 0) {
 			return;
 		}
@@ -199,15 +202,8 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	// Otherwise we start clearing out _all_ cold blocks.
 	for (auto& block : arena) {
 		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold) {
-			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
-			auto len = block.datasize;
-			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
-
-			auto freed = block.datasize + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
-			to_free -= freed;
-			current_space += freed;
+			common_free(block);
 		}
-
 		if (to_free <= 0) {
 			return;
 		}
@@ -216,15 +212,8 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	// .. followed by all _warm_ blocks not in the cache
 	for (auto& block : arena) {
 		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm && !arena.cached(block.slotid)) {
-			// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
-			auto len = block.datasize;
-			arena.set_location(block.slotid, arena.block_offset(block), block.datasize, bheap::Block::LocationRemote);
-
-			auto freed = block.datasize + (block.datasize % 4 ? 0 : 4 - block.datasize % 4);
-			to_free -= freed;
-			current_space += freed;
+			common_free(block);
 		}
-
 		if (to_free <= 0) {
 			return;
 		}
@@ -749,7 +738,7 @@ void srv::Servicer::check_connection_ping() {
 
 void srv::Servicer::send_data_requests() {
 	for (auto &block : arena) {
-		if (block.location == bheap::Block::LocationRemote && block.flags & bheap::Block::FlagDirty && block.datasize) {
+		if (block && block.location == bheap::Block::LocationRemote && block.flags & bheap::Block::FlagDirty && block.datasize) {
 			wait_for_not_sending();
 
 			dma_out_buffer[0] = 0xa5;
@@ -768,7 +757,7 @@ void srv::Servicer::send_data_requests() {
 
 	// Also mark unsent hot blocks as dirty too.
 	for (auto &block : arena) {
-		if (block.location == bheap::Block::LocationRemote && block.datasize && block.temperature == bheap::Block::TemperatureHot) {
+		if (block && block.location == bheap::Block::LocationRemote && block.datasize && block.temperature >= bheap::Block::TemperatureWarm) {
 			block.flags |= bheap::Block::FlagDirty;
 		}
 	}
