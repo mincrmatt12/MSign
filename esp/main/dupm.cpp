@@ -226,8 +226,6 @@ block_ok:
 				if (datasource) memcpy(pkt.data() + 6, &((const uint8_t *)datasource)[suboff], pkt.size - 6);
 
 				serial::interface.send_pkt(pkt);
-
-				if (!end) vTaskDelay(pdMS_TO_TICKS(10));
 			}
 		}
 
@@ -236,6 +234,7 @@ block_ok:
 		}, pdMS_TO_TICKS(500));
 
 		if (!v) {
+			ESP_LOGD(TAG, "timed out in ssf");
 			return slots::protocol::DataStoreFulfillResult::Timeout;
 		}
 
