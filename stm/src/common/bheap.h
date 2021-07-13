@@ -1043,9 +1043,14 @@ finish_setting:
 
 			// Create an empty space after the block with enough space to fit the block's contents after offset_in_block + 4 bytes + alignment including the null space
 			{
-				uint32_t space_required = 4;
+				uint32_t shift_required = 4;
 				if (offset_in_block % 4) {
-					space_required += 4 - (offset_in_block % 4);
+					shift_required += 4 - (offset_in_block % 4);
+				}
+
+				uint32_t space_required = shift_required - (block.rounded_datasize() - block.datasize);
+				if (new_length % 4) {
+					space_required += 4 - (new_length % 4);
 				}
 
 				// Create that much space
@@ -1053,7 +1058,7 @@ finish_setting:
 
 				// Shift with memmove
 				char * starting_pos = ((char *)block.data()) + offset_in_block;
-				memmove(starting_pos + space_required, starting_pos, block.datasize - offset_in_block);
+				memmove(starting_pos + shift_required, starting_pos, block.datasize - offset_in_block);
 
 				// Shrink block to generate header in right place
 				block.shrink(offset_in_block);
