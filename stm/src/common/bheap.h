@@ -703,6 +703,30 @@ finish_setting:
 			bcache.evict();
 		}
 
+		// Ensure a certain subsection of a slot is in its own block. This only ever splits blocks, not merges them, so if the region given
+		// is not already in a single block, we will return false.
+		bool ensure_single_block(uint32_t slotid, uint32_t offset, uint32_t length) {
+			// Ensure single block.
+			if (&get(slotid, offset) != &get(slotid, offset + length - 1)) return false;
+
+			// If offset is not the start of a block, split.
+			{
+				Block& containing_block = get(slotid, offset);
+				auto begin_pos = block_offset(containing_block);
+				if (begin_pos != offset) {
+					if (!split_block(containing_block, offset - begin_pos)) return false;
+				}
+			}
+			// If length is not the size of the containing block, split (possibly again)
+			{
+				Block& containing_block = get(slotid, offset);
+				if (containing_block.datasize != length) {
+					if (!split_block(containing_block, length)) return false;
+				}
+			}
+			return true;
+		}
+
 		// DATA ACCESS OPERATIONS
 
 		// Size/offset for something that doesn't exist
