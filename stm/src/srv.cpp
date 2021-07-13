@@ -219,7 +219,22 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 		}
 	}
 
-	// We then _again_ run defrag uncoditionally
+	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
+		arena.defrag();
+
+		return;
+	}
+
+	// Finally, try all warm blocks even those cached
+	for (auto& block : arena) {
+		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm) {
+			common_free(block);
+		}
+		if (to_free <= 0) {
+			return;
+		}
+	}
+
 	arena.defrag();
 }
 
@@ -325,8 +340,8 @@ void srv::Servicer::run() {
 	};
 	PendRequest active_request{};
 	int active_request_send_retries = 0;
-	bool is_cleaning = false;
 	slots::protocol::DataStoreFulfillResult move_update_errcode = slots::protocol::DataStoreFulfillResult::Ok;
+	uint16_t last_slotid = 0xfff; uint8_t last_slotid_tries = 0;
 	uint8_t active_request_statemachine = 0;
 
 	// Otherwise, begin processing packets/requests
@@ -490,8 +505,8 @@ void srv::Servicer::run() {
 						// Acquire lock
 						ServicerLockGuard g(*this);
 
-						// Change the location of the marked segment to remote
-						arena.set_location(slotid, start, len, bheap::Block::LocationRemote);
+						// Change the location of the marked segment to ephemeral (we'll free up space as necessary)
+						arena.set_location(slotid, start, len, bheap::Block::LocationEphemeral);
 					}
 				}
 				break;
@@ -513,7 +528,7 @@ void srv::Servicer::run() {
 					// Send an ack first of all
 					dma_out_pkt.direction = dma_out_pkt.FromStm;
 					dma_out_pkt.cmd_byte =  slots::protocol::ACK_DATA_RETRIEVE;
-					dma_out_pkt.size = 3;
+					dma_out_pkt.size = 6;
 					dma_out_pkt.put(slotid, 0);
 					dma_out_pkt.put(start, 2);
 					dma_out_pkt.put(len, 4);
@@ -524,6 +539,7 @@ void srv::Servicer::run() {
 
 					// NOTE: our blocks might not be the same as the ESP's blocks, so we have to ensure we only send the blocks it wants.
 					for (auto *b = &arena.get(slotid, start); b && arena.block_offset(*b) < (start + len); b = b->next()){
+						if (!*b) continue;
 						uint8_t total_size = 64 - 6;
 						for (
 							uint16_t suboffset = (sendoffset - arena.block_offset(*b));
@@ -577,6 +593,13 @@ void srv::Servicer::run() {
 						if (start) {
 							move_update_errcode = slots::protocol::DataStoreFulfillResult::Ok; // init back to 0 here
 
+							// Keep track of retries
+							if (last_slotid == sid_frame) ++last_slotid_tries;
+							else {
+								last_slotid = sid_frame;
+								last_slotid_tries = 0;
+							}
+
 							// Ensure there's enough space in the buffer and decide how to setup the buffer for this new data.
 							auto currsize = arena.contents_size(sid_frame);
 							if (currsize == arena.npos || (offset + total_upd_len > currsize)) {
@@ -596,6 +619,10 @@ void srv::Servicer::run() {
 										// Try to clean up without sending a packet to recover
 										try_cleanup_heap(total_upd_len + 8);
 										this->take_lock();
+
+										if (last_slotid_tries > 2) {
+											move_update_errcode = slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed;
+										}
 									}
 								}
 							}
