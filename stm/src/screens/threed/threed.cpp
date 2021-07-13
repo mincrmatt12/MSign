@@ -146,7 +146,8 @@ namespace threed {
 			camera_pos = camera_target;
 			camera_look = camera_look_target;
 
-			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0) {
+			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0 || 
+				!servicer.slot(slots::MODEL_CAM_MINPOS) || !servicer.slot(slots::MODEL_CAM_MAXPOS)) {
 				camera_target = Vec3{
 					rng::getrange(-1.0f, 1.0f),
 					rng::getrange(0, 1.0f),
