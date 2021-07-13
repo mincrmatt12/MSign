@@ -190,6 +190,7 @@ with open(os.path.join(os.path.dirname(__file__), "../stm/src/common/slots.h"), 
 # parse the file
 gp, gn = utils.find_xml_generator()
 xml_generator_config = parser.xml_generator_configuration_t(
+    cflags="--std=c++17",
     xml_generator_path=gp,
     xml_generator=gn)
 
