@@ -155,7 +155,11 @@ def data_update(dat, from_esp, is_move):
 
     if from_esp:
         # patch in
-        slot_databufs[slotid][offs:offs+len(dat)-6] = dat[6:]
+        try:
+            slot_databufs[slotid][offs:offs+len(dat)-6] = dat[6:]
+        except:
+            print(f": data {'move' if is_move else 'update'} [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x} (invalid range)")
+            return
 
     print(f": data {'move' if is_move else 'update'} [{endstart}] for {slotid:03x} ({slotlib.slot_types[slotid][0]}) @ {offs:04x}")
     if start:
