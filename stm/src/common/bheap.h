@@ -805,7 +805,10 @@ finish_setting:
 			if (slotid == Block::SlotEmpty) return get(slotid, 0); // bypass cache
 			// Can we use the cache?
 			if (bcache.contains(slotid)) {
-				return get_from_cache(bcache.lookup(slotid));
+				const Block& result = get_from_cache(bcache.lookup(slotid));
+				if (result.slotid != slotid && result) { // be resistant against cache corruption
+					return result;
+				}
 			}
 			for (const Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
@@ -815,7 +818,7 @@ finish_setting:
 
 		Block& get(uint32_t slotid) {
 			if (slotid == Block::SlotEmpty) return get(slotid, 0); // bypass cache
-			return get_from_cache(
+			Block& result = get_from_cache(
 				bcache.lookup_or_calculate(slotid, [&](){
 					for (Block& x : *this) {
 						if (x.slotid == slotid || x.slotid == Block::SlotEnd) return bptr_to_cache(&x);
@@ -823,6 +826,11 @@ finish_setting:
 					__builtin_unreachable();
 				})
 			);
+			if (result.slotid != slotid && result) { // be resistant against cache corruption
+				bcache.evict();
+				return get(slotid);
+			}
+			return result;
 		}
 
 		const Block& get(uint32_t slotid, uint32_t offset) const {
