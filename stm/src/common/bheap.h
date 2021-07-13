@@ -434,7 +434,7 @@ namespace bheap {
 			
 			// This isn't particularly fast but probably has less problems than the old implementation
 			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
-				if ((offset+length) <= block_offset(*x) || offset > (block_offset(*x) + x->datasize)) continue;
+				if ((offset+length) <= block_offset(*x) || offset >= (block_offset(*x) + x->datasize)) continue;
 				if (x->location != location) return false;
 			}
 
