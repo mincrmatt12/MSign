@@ -81,26 +81,32 @@ wrong_bits:
 		// Ship out all blocks that are >= Warm with the dirty flag set.
 		for (auto& b : arena) {
 			if (!(b.location == bheap::Block::LocationCanonical && b.temperature >= bheap::Block::TemperatureWarm && b.flags & bheap::Block::FlagDirty)) continue;
+			bool spacefail = false;
 			for (int tries = 0; tries < 4; ++tries) {
 				switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), false)) {
 					case slots::protocol::DataStoreFulfillResult::Ok:
 						goto block_ok;
 					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
-						// not enough space for block, if it's warm set it to non-warm
-						if (b.temperature == bheap::Block::TemperatureWarm) {
-							ESP_LOGW(TAG, "out of space shipping out warm block, deferring slot...");
-							inform_temp_change(b.slotid, bheap::Block::TemperatureCold);
-							arena.set_temperature(b.slotid, bheap::Block::TemperatureCold); // not the "wants warm" variant since this shouldn't happen normally.
-						}
+						spacefail = true;
 						[[fallthrough]];
 					case slots::protocol::DataStoreFulfillResult::IllegalState:
 					case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
 						ESP_LOGE(TAG, "error sending block.");
 						goto block_fail;
-					case slots::protocol::DataStoreFulfillResult::Timeout:
 					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
+						spacefail = true;
+						[[fallthrough]];
+					case slots::protocol::DataStoreFulfillResult::Timeout:
 						vTaskDelay(40);
 						continue;
+				}
+			}
+			if (spacefail) {
+				// not enough space for block, if it's warm set it to non-warm
+				if (b.temperature == bheap::Block::TemperatureWarm) {
+					ESP_LOGW(TAG, "out of space shipping out warm block, deferring slot...");
+					inform_temp_change(b.slotid, bheap::Block::TemperatureCold);
+					arena.set_temperature(b.slotid, bheap::Block::TemperatureCold); // not the "wants warm" variant since this shouldn't happen normally.
 				}
 			}
 block_fail:
@@ -198,15 +204,28 @@ block_ok:
 		for (auto *b = &arena.get(dur.d_dirty.slotid, dur.d_dirty.offset); b && arena.block_offset(*b) < dur.d_dirty.offset + dur.d_dirty.size; b = b->next()) {
 			// Is this a canonical block? If so, we mark it dirty as long as it's not queued to be flushed
 			if (b->location == bheap::Block::LocationCanonical) {
+				// Can we be more precise with this? Check if the block only partially contains the region
+				auto current_offset = arena.block_offset(*b);
+				auto before = dur.d_dirty.offset - current_offset;
+				auto after = (dur.d_dirty.offset + dur.d_dirty.size) > (current_offset + b->datasize) ? 0 : (current_offset + b->datasize) - (dur.d_dirty.offset + dur.d_dirty.size);
+				if (before + after > 256) {
+					// If there's a significant difference, split block
+					auto start_off = std::max<uint32_t>(dur.d_dirty.offset, current_offset);
+					arena.ensure_single_block(dur.d_dirty.slotid, start_off, std::min<uint32_t>((current_offset + b->datasize), (dur.d_dirty.offset + dur.d_dirty.size)) - start_off);
+					b = &arena.get(dur.d_dirty.slotid, start_off);
+				}
+
 				b->flags |= bheap::Block::FlagDirty;
 			}
 			else if (b->location == bheap::Block::LocationRemote) {
 				ESP_LOGW(TAG, "Block %p has not yet been moved back to the esp, so we're ignoring the request to clear it", b);
 			}
 			else {
-				ESP_LOGW(TAG, "Skipping %p", b);
+				ESP_LOGW(TAG, "Skipping %p, (%03x, %d, %d, %d)", b, b->slotid, b->temperature, b->location, b->datasize);
 			}
 		}
+
+		sync_pending = true;
 	}
 
 	slots::protocol::DataStoreFulfillResult DataUpdateManager::single_store_fulfill(uint16_t slotid, uint16_t offset, uint16_t length, const void * datasource, bool is_store) {
@@ -387,11 +406,11 @@ warm_hot_send_remotes:
 	template<typename Pred, typename Handler>
 	std::enable_if_t<
 		std::is_invocable_r_v<bool, Pred, const bheap::Block&> &&
-		std::is_invocable_r_v<ssize_t, Handler, const bheap::Block&, size_t>,
+		std::is_invocable_r_v<ssize_t, Handler, bheap::Block&, size_t>,
 	size_t> DataUpdateManager::free_space_matching_using(size_t target_amount, Pred&& from_blocks_matching, Handler&& by_doing) {
-		if constexpr (std::is_same_v<std::invoke_result_t<Handler, const bheap::Block&, size_t>, bool>) {
+		if constexpr (std::is_same_v<std::invoke_result_t<Handler, bheap::Block&, size_t>, bool>) {
 			// call with wrapper that assumes entire block is sent or not
-			return free_space_matching_using(target_amount, std::forward<Pred>(from_blocks_matching), [sub=std::forward<Handler>(by_doing)](const bheap::Block& b, size_t a){
+			return free_space_matching_using(target_amount, std::forward<Pred>(from_blocks_matching), [sub=std::forward<Handler>(by_doing)](bheap::Block& b, size_t a){
 				return sub(b, a) ? a : -1;
 			});
 		}
@@ -496,9 +515,66 @@ warm_hot_send_remotes:
 
 		budget.free_by(budget.cold_remote, free_space_matching_using(reclaim, [ignoring_slotid](auto& b){
 			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
-		}, [&](auto& blk, size_t len){
+		}, [&](bheap::Block& blk, size_t len) -> bool {
+			auto orig_offset = arena.block_offset(blk), slotid = blk.slotid;
+			// Make new space for this block
+			if (!arena.set_location(slotid, orig_offset, len, bheap::Block::LocationCanonical)) return false;
 			
-			return false;
+			// Ask the STM for this data.
+			{
+				slots::PacketWrapper<6> pkt;
+				pkt.init(slots::protocol::DATA_RETRIEVE);
+				pkt.put<uint16_t>(slotid, 0);
+				pkt.put<uint16_t>(orig_offset, 2);
+				pkt.put<uint16_t>(len, 4);
+
+				serial::interface.send_pkt(pkt);
+
+				// Wait for a corresponding ack
+				if (!wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::ACK_DATA_RETRIEVE && memcmp(pkt.data(), pw.data(), 6) == 0;}, pdMS_TO_TICKS(90))) return false;
+				finished_with_last_packet();
+			}
+
+			// Await move commands
+			while (true) {
+				auto& pkt = wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::DATA_STORE && (pw.template at<uint16_t>(0) & 0xfff) == slotid;}, pdMS_TO_TICKS(100));
+				if (!pkt) {
+					ESP_LOGW(TAG, "timeout waiting for data_store");
+					arena.set_location(slotid, orig_offset, len, bheap::Block::LocationRemote);
+					return false;
+				}
+
+				uint16_t sid_frame = pkt.template at<uint16_t>(0);
+				uint16_t offset    = pkt.template at<uint16_t>(2);
+				uint16_t total_len = pkt.template at<uint16_t>(4);
+
+				if (total_len != len) ESP_LOGW(TAG, "still processing weird-lengthed update");
+				// verify start makes sense
+				if (sid_frame & (1 << 15)) {
+					if (offset != orig_offset) ESP_LOGW(TAG, "still processing update with incorrect position");
+				}
+				// update data -- this sets dirty but that's fine, we'll account for it
+				arena.update_contents(slotid, offset, pkt.size - 6, pkt.data() + 6);
+				finished_with_last_packet();
+				// finish on end
+				if (sid_frame & (1 << 14)) {
+					ESP_LOGD(TAG, "got update ok");
+					break;
+				}
+			}
+
+			// Send an ACK
+			{
+				slots::PacketWrapper<7> pkt;
+				pkt.init(slots::protocol::ACK_DATA_STORE);
+				pkt.put<uint16_t>(slotid, 0);
+				pkt.put<uint16_t>(orig_offset, 2);
+				pkt.put<uint16_t>(len, 4);
+				pkt.data()[6] = (uint8_t)slots::protocol::DataStoreFulfillResult::Ok;
+
+				serial::interface.send_pkt(pkt);
+			}
+			return true;
 		}));
 	}
 
@@ -511,7 +587,7 @@ warm_hot_send_remotes:
 			if (b.location == bheap::Block::LocationRemote) {
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
-						if (arena.block_offset(b) != 0) continue;
+						if (&b != &arena.get(b.slotid)) continue;
 						budget.use_for(budget.hot_remote, 4 + arena.contents_size(b.slotid));
 						break;
 					case bheap::Block::TemperatureWarm:
@@ -525,7 +601,7 @@ warm_hot_send_remotes:
 			else if (b.location == bheap::Block::LocationCanonical) {
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
-						if (arena.block_offset(b) != 0) continue;
+						if (&b != &arena.get(b.slotid)) continue;
 						budget.use_for(budget.hot_ephemeral, 4 + arena.contents_size(b.slotid));
 						break;
 					case bheap::Block::TemperatureWarm:
@@ -628,7 +704,7 @@ warm_hot_send_remotes:
 						// That being said, this is _also_ used when allocating space for extra things on remoted warm or higher, so we'll also perform cold
 						// reclaiming if the slot is warm or higher
 						if (temp < bheap::Block::TemperatureWarm) return false;
-						
+
 common_remote_use_end:
 						delta_size_change -= std::exchange(budget.unused_space, 0);
 
@@ -659,7 +735,7 @@ common_remote_use_end:
 						}
 
 						delta_size_change -= std::exchange(budget.unused_space, 0);
-						
+
 						// Try to free out warm blocks
 
 						if (budget.allocated_warm_ephemeral) {
@@ -689,6 +765,79 @@ common_remote_use_end:
 						return delta_size_change <= budget.unused_space;
 					}
 					break;
+				case TryForLocalDedup:
+					{
+						uint16_t local_free_space = arena.free_space() - target_free_space_buffer;
+						// Try to free local space by moving first entire warm, then entire hot, then partial warm to the stm completely,
+						// avoiding duplication of data at the expense of slower local updates.
+
+						if (delta_size_change <= local_free_space) {
+							return true;
+						}
+
+						// Try to move warm slots.
+						if (budget.allocated_warm_ephemeral) {
+							local_free_space += budget.xfer_into(budget.allocated_warm_ephemeral, free_slots_matching_using(delta_size_change,
+								[&](const bheap::Block& b){
+									return b && b.temperature == bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationCanonical;
+								}, [&](uint16_t slotid){
+									// Move all blocks in this slot.
+									return std::all_of(arena.begin(slotid), arena.end(slotid), [&](auto& blk){
+										return blk.location == bheap::Block::LocationRemote || move_block_to_stm(blk, blk.datasize);
+									});
+								}
+							), budget.warm_remote);
+						}
+
+						// Did we free up enough space?
+						if (delta_size_change <= local_free_space) {
+							return true;
+						}
+
+						// Use up space as much as possible
+						delta_size_change -= std::exchange(local_free_space, 0);
+
+						// Now try allocating hot blocks
+						if (budget.hot_ephemeral) {
+							local_free_space += budget.xfer_into(budget.hot_ephemeral, free_slots_matching_using(delta_size_change,
+								[&](const bheap::Block& b){
+									return b && b.temperature == bheap::Block::TemperatureHot && b.location == bheap::Block::LocationCanonical;
+								}, [&](uint16_t slotid){
+									// Move all blocks in this slot.
+									return std::all_of(arena.begin(slotid), arena.end(slotid), [&](auto& blk){
+										return blk.location == bheap::Block::LocationRemote || move_block_to_stm(blk, blk.datasize);
+									});
+								}
+							), budget.hot_remote);
+						}
+
+						return local_free_space >= delta_size_change;
+					}
+					break;
+			}
+		}
+		return false;
+	}
+
+	bool DataUpdateManager::move_block_to_stm(const bheap::Block& tgt, size_t subsection_length) {
+		ESP_LOGD(TAG, "moving block %p (%03x, %d) // %d to stm", &tgt, tgt.slotid, tgt.datasize, subsection_length);
+		// Ship out block
+		for (int tries = 0; tries < 3; ++tries) {
+			switch (single_store_fulfill(tgt.slotid, arena.block_offset(tgt), subsection_length, tgt.data(), true)) {
+				case slots::protocol::DataStoreFulfillResult::Ok:
+					ESP_LOGD(TAG, "moved block ok");
+					// finish by setting block to remote
+					arena.set_location(tgt.slotid, arena.block_offset(tgt), subsection_length, bheap::Block::LocationRemote);
+					return true;
+				case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
+				case slots::protocol::DataStoreFulfillResult::IllegalState:
+				case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
+					ESP_LOGE(TAG, "bad state for block");
+					return false;
+				case slots::protocol::DataStoreFulfillResult::Timeout:
+				case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
+					vTaskDelay(80);
+					continue;
 			}
 		}
 		return false;
@@ -697,37 +846,21 @@ common_remote_use_end:
 	void DataUpdateManager::cleanout_esp_space() {
 		// Try to ensure there's some free space by:
 		// 	- defragging
+		if (arena.free_space() > target_free_space_buffer) return;
 		arena.defrag();
 		if (arena.free_space() > target_free_space_buffer) return;
 		ESP_LOGW(TAG, "cleanout_esp_space");
 		// - moving things to the stm
 		auto budget = calculate_memory_budget();
 		auto needed_space = target_free_space_buffer - arena.free_space();
-		auto ship_out_blk = [&](const bheap::Block& tgt, size_t subsection){
-			// Ship out block
-			for (int tries = 0; tries < 3; ++tries) {
-				switch (single_store_fulfill(tgt.slotid, arena.block_offset(tgt), subsection, tgt.data(), true)) {
-					case slots::protocol::DataStoreFulfillResult::Ok:
-						// finish by setting block to remote
-						arena.set_location(tgt.slotid, arena.block_offset(tgt), subsection, bheap::Block::LocationRemote);
-						return true;
-					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
-					case slots::protocol::DataStoreFulfillResult::IllegalState:
-					case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
-						ESP_LOGE(TAG, "bad state for block");
-						return false;
-					case slots::protocol::DataStoreFulfillResult::Timeout:
-					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
-						vTaskDelay(80);
-						continue;
-				}
-			}
-			return false;
-		};
+		auto ship_out_blk = [&](const auto& blk, size_t len){return move_block_to_stm(blk, len);};
 		// we prioritize moving warm/hot things since if they're hot/warm they're guaranteed to have space in the budget
 		if (free_space_matching_using(needed_space, [](const bheap::Block& b){
 			return b && b.temperature == bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationCanonical;
-		}, ship_out_blk) >= needed_space) return;
+		}, ship_out_blk) >= needed_space) {
+			arena.defrag();
+			return;
+		}
 		// recompute budget
 		budget = calculate_memory_budget();
 		needed_space = target_free_space_buffer - arena.free_space();
@@ -741,6 +874,7 @@ common_remote_use_end:
 		}, ship_out_blk) < needed_space) {
 			ESP_LOGE(TAG, "failed to free up enough space, bailing.");
 		}
+		arena.defrag();
 	}
 
 	void DataUpdateManager::change_size_handler(DataUpdateRequest &dur) {
@@ -765,6 +899,75 @@ common_remote_use_end:
 		
 		const static size_t minimum_split_block_size = 64;
 
+		int alloc_attempts = 0;
+
+		bool needs_to_defer_to_remote = false, done_ok = false;
+
+		// Try to truncate
+		if (current_size > dur.d_chsize.size) {
+			arena.truncate_contents(dur.d_chsize.slotid, dur.d_chsize.size);
+			try_reclaim_supressed_warm();
+			done_ok = true;
+		}
+		else {
+			if (arena.contains(dur.d_chsize.slotid)) {
+				// If the slot is already present, we have to check where we should try to allocate, as well as whether or not this allocation will run out of space.
+				//
+				// If the slot is cold (incl. wantswarm) (or not present):
+				// 		- allocate on esp if possible, otherwise defer to stm.
+				// 	           is warm:
+				// 	    - allocate:
+				// 	    	- on esp if there's space and the slot is not already partially on the stm
+				// 	    	- on stm if there isn't space on esp or if some of the slot is already on the stm
+				// 	    		note: calculations for available space in esp may be changed.
+				// 	    - use ensure_budget_space with TryForRemoteCache to make sure there's enough space on stm for slot to continue being warm if we are allocating a non-remote
+				// 	      chunk
+				// 	        - if not, set block to cold
+				// 	    "   "  is hot:
+				// 	    - slot _must_ have enough space, so do the same as warm but with remotedisplay instead, and if the allocation fails ignore the change size requestand
+				// 	      complain loudly.
+				//
+				auto current_temp = arena.get(dur.d_chsize.slotid).temperature;
+				needs_to_defer_to_remote = std::any_of(arena.begin(dur.d_chsize.slotid), arena.end(dur.d_chsize.slotid), [](auto& b){return b.location == bheap::Block::LocationRemote;});
+
+				if (current_temp == bheap::Block::TemperatureWarm) {
+					// Ensure there's enough space for this block.
+					if (!ensure_budget_space(TryForRemoteCache, dur.d_chsize.slotid, new_blk_size)) {
+						// If there isn't enough space, set this block back to cold.
+						inform_temp_change(dur.d_chsize.slotid, bheap::Block::TemperatureCold);
+						arena.set_temperature(dur.d_chsize.slotid, bheap::Block::TemperatureColdWantsWarm);
+					}
+				}
+				else if (current_temp == bheap::Block::TemperatureHot) {
+					// Ensure there's enough space, bailing early if there isn't
+					if (!ensure_budget_space(UseForRemoteDisplay, dur.d_chsize.slotid, new_blk_size)) {
+						ESP_LOGE(TAG, "not enough space for hot block (%03x, adding %d bytes)", dur.d_chsize.slotid, new_blk_size);
+						return; // don't process this change.
+					}
+				}
+				else {
+					needs_to_defer_to_remote = false;
+				}
+			}
+
+			// If we're trying to allocate on the esp, do a defrag.
+			if (!needs_to_defer_to_remote) {
+				if (arena.free_space(arena.last(dur.d_chsize.slotid)) < new_blk_size + 4) arena.defrag();
+
+				if (arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationCanonical, new_blk_size)) {
+					done_ok = true;
+					// Make sure there's enough space going forwards
+					cleanout_esp_space();
+				}
+				else {
+					ESP_LOGW(TAG, "not enough space allocating for %03x, moving", dur.d_temp.slotid);
+				}
+
+				// There was no space for this block, and we've already tried a cleanup at this point, so we have to try further clearing.
+				// Since we're _bound_ to allocate the new block on the STM, we're going to have to update it's size information first though, so handle this after that.
+			}
+		}
+
 		// Inform the STM of the change
 		{
 			slots::PacketWrapper<4> pkt;
@@ -778,29 +981,7 @@ common_remote_use_end:
 			finished_with_last_packet();
 		}
 
-		// Try to truncate
-		if (current_size > dur.d_chsize.size) {
-			arena.truncate_contents(dur.d_chsize.slotid, dur.d_chsize.size);
-			// TODO: potentially make this reclaim reserved remote space?
-			return;
-		}
-		else {
-			// If there's not enough free space, try cleanup first.
-			if (arena.contains(dur.d_chsize.slotid)) {
-				// If this is already partially remoted and we're adding to a warm or higher, skip right to generating a remote block.
-				if (std::any_of(arena.begin(dur.d_chsize.slotid), arena.end(dur.d_chsize.slotid), [](auto& b){return b.temperature >= bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationRemote;}))
-					goto only_send_remote;
-				if (arena.free_space(arena.last(dur.d_chsize.slotid), arena.FreeSpaceAllocatable) < new_blk_size) arena.defrag();
-			}
-			// The "quick" path is to just allocate the block immediately, so we try that first.
-			if (arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationCanonical, new_blk_size)) {
-				// It worked, so finish now
-				return;
-			}
-			// There was no space for this block, and we've already tried a cleanup at this point, so we have to try further clearing.
-			// Since we're _bound_ to allocate the new block on the STM, we're going to have to update it's size information first though, so handle this after that.
-		}
-
+		if (done_ok) return;
 
 		// Alright, now we can start allocating onto the STM
 		ESP_LOGW(TAG, "out of space chsize, allocating...");
@@ -808,7 +989,9 @@ common_remote_use_end:
 		// Before we do so, though, we might be getting an obscenely long update request which we could partially fit on our heap. There's a threshold here so we don't do
 		// something dumb like split a 8 byte block into two 4 byte chunks.
 
+retry_allocation:
 		if (
+			!needs_to_defer_to_remote &&
 			new_blk_size > minimum_split_block_size && // if there's enough block to split, and
 			arena.free_space() > minimum_split_block_size + 4 + target_free_space_buffer // there's enough global free space (since defrag has already occured) to fit a block
 		) {
@@ -820,9 +1003,8 @@ common_remote_use_end:
 			} // if this fails, we keep current_size as-is and just send the entire thing
 		}
 
-only_send_remote:
 		// Ensure the remote placeholder will fit
-		if (arena.free_space() < 4) {
+		if (arena.free_space() < 32) {
 			// Perform the bof™ technique for freeing up something. Unlike normal free this tries to get free space in _our_ heap.
 			//
 			// They share a common path though, which is trying to clear out "warm-buffer" space to fit.
@@ -830,8 +1012,20 @@ only_send_remote:
 		}
 
 		// Ensure there's enough space to dump this block
-		if (!ensure_budget_space(UseForRemoteStorage, dur.d_chsize.slotid, new_blk_size + 4)) { // this un-warms blocks until there's enough "budget space" on the stm to fit the given parameter. the 
-			ESP_LOGE(TAG, "Out of space trying to expand block, ignoring...");
+		if (!ensure_budget_space(UseForRemoteStorage, dur.d_chsize.slotid, new_blk_size + 4) || arena.free_space() < 4) { // this un-warms blocks until there's enough "budget space" on the stm to fit the given parameter. the 
+			if (needs_to_defer_to_remote) {
+				ESP_LOGE(TAG, "Out of space allocating space in hot block, bailing.");
+				return;
+			}
+			ESP_LOGW(TAG, "Out of space moving block to STM, trying to remove duplicates and place locally.");
+			if (ensure_budget_space(TryForLocalDedup, dur.d_chsize.slotid, new_blk_size + 4)) {
+				// We've created enough space locally, just do that instead.
+				if (arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationCanonical, new_blk_size)) {
+					return;
+				}
+			}
+			// If we failed to allocate or failed to ensure space, we might have still made enough space that after splitting it will work. Loop back to the split code.
+			if (alloc_attempts++ == 0) goto retry_allocation;
 			return;
 		}
 		// slotid is used to work out which region to allocate into.
@@ -843,7 +1037,7 @@ only_send_remote:
 		}
 
 		// Tell the STM that it's to store that data
-		for (int retry = 0; retry < 2; ++retry) {
+		for (int retry = 0; retry < 3; ++retry) {
 			switch (single_store_fulfill(dur.d_chsize.slotid, current_size, new_blk_size, nullptr, true)) {
 				case slots::protocol::DataStoreFulfillResult::Ok:
 					// Processed ok, return
@@ -865,5 +1059,18 @@ only_send_remote:
 
 		ESP_LOGE(TAG, "Failed to send to STM, cancelling update.");
 		arena.truncate_contents(dur.d_chsize.slotid, original_size);
+
+		// Make the STM aware we cancelled the update so it doesn't send us requests for data.
+		{
+			slots::PacketWrapper<4> pkt;
+			pkt.init(slots::protocol::DATA_SET_SIZE);
+			pkt.put(dur.d_chsize.slotid, 0);
+			pkt.put(original_size, 2);
+			serial::interface.send_pkt(pkt);
+
+			// Wait for an acknowledgement TODO proper retry logic here
+			wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;});
+			finished_with_last_packet();
+		}
 	}
 };

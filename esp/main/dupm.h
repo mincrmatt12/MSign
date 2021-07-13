@@ -129,13 +129,15 @@ namespace serial {
 		// Allocation subroutines
 
 		enum UseIntent {
-			UseForRemoteStorage,
-			UseForRemoteDisplay,
-			TryForRemoteCache
+			UseForRemoteStorage, // Make space for a remote chunk due to no local space
+			UseForRemoteDisplay, // Make space for hot chunk
+			TryForRemoteCache,   // Attempt to make space for warm chunk
+			TryForLocalDedup     // Attempt to make space for local blocks by moving stuff to the STM (specifically warm/hot blocks to avoid duplicating them)
 		};
 		
 
-		// Ensure there's a bit more space (at least enough to store 1 remote header) in our local heap,
+		// Ensure there's a bit more space (at least enough to store 1 remote header) in our local heap. This is separate from TryForLocalDedup as that doesn't
+		// try to evict cold blocks (since it's designed for trying to optimize for really low mem situations)
 		void cleanout_esp_space();
 
 		// Perform single DATA_STORE/DATA_FULFILL "cycle" (i.e. no retry handling), and return the status code (or a timeout).
@@ -156,12 +158,13 @@ namespace serial {
 			uint16_t cold_remote{};
 
 			// Helpers
-			void free_by(uint16_t& parameter, size_t amount) {xfer_into(parameter, amount, unused_space);}
-			void use_for(uint16_t &parameter, size_t amount) {xfer_into(unused_space, amount, parameter);}
-			void xfer_into(uint16_t &parameter, size_t by, uint16_t& into) {
+			size_t free_by(uint16_t& parameter, size_t amount) {return xfer_into(parameter, amount, unused_space);}
+			size_t use_for(uint16_t &parameter, size_t amount) {return xfer_into(unused_space, amount, parameter);}
+			size_t xfer_into(uint16_t &parameter, size_t by, uint16_t& into) {
 				if (parameter < by) by = parameter;
 				parameter -= by;
 				into += by;
+				return by;
 			}
 
 			uint16_t hot() { return hot_remote + hot_ephemeral; }
@@ -185,7 +188,7 @@ namespace serial {
 		template<typename Pred, typename Handler>
 		std::enable_if_t<
 			std::is_invocable_r_v<bool, Pred, const bheap::Block&> &&
-			std::is_invocable_r_v<ssize_t, Handler, const bheap::Block&, size_t>,
+			std::is_invocable_r_v<ssize_t, Handler, bheap::Block&, size_t>,
 		size_t> free_space_matching_using(size_t target_amount, Pred&& from_blocks_matching, Handler&& by_doing);
 
 		// Free entire slots (but potentially only reaping the rewards of part of them) by calling a function.
@@ -205,6 +208,8 @@ namespace serial {
 		// Inform the STM that the temperature has been reduced
 		void inform_temp_change(uint16_t slotid, uint8_t temp);
 
+		// Move a block to the STM (useable as a handler for free_space_using)
+		bool move_block_to_stm(const bheap::Block& tgt, size_t subsection_length);
 	};
 };
 
