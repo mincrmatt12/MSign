@@ -10,6 +10,8 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#include "tskmem.h"
+
 namespace led {
 
 	template<uint16_t Width, uint16_t Height>
@@ -112,7 +114,7 @@ namespace led {
 
 			void start_display() {                                                             
 				should_swap = false;
-				xTaskCreate([](void *arg){((Matrix<FB> *)arg)->disptask();}, "dispint", 1024, this, 6, &me);
+				me = dispinttask.create([](void *arg){((Matrix<FB> *)arg)->disptask();}, "dispint", this, 6);
 			}
 
 			// This should only be called from an RTOS task
@@ -133,6 +135,7 @@ namespace led {
 			FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}                
 			const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}            
 		private:                                                                         
+			tskmem::TaskHolder<1024> dispinttask;
 
 			void disptask() {
 				while (true) {

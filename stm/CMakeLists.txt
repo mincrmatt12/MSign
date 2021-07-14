@@ -65,7 +65,6 @@ add_library(freertos STATIC
 	${freertos_dir}/tasks.c
 
 	${freertos_dir}/portable/GCC/ARM_CM3/port.c
-	${freertos_dir}/portable/MemMang/heap_1.c # we never malloc on the sign from the stm
 )
 
 target_include_directories(freertos PUBLIC

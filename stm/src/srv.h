@@ -10,6 +10,7 @@
 
 #include <FreeRTOS.h>
 #include <stream_buffer.h>
+#include <semphr.h>
 #include <queue.h>
 #include <task.h>
 
@@ -124,7 +125,8 @@ namespace srv {
 		uint16_t update_chunks_remaining = 0;
 
 		// Sync primitives + log buffers + dma buffer
-		QueueHandle_t bheap_mutex;
+		SemaphoreHandle_t bheap_mutex;
+		StaticSemaphore_t bheap_mutex_private;
 
 		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
 		// The format of these requests is this struct:
@@ -150,7 +152,11 @@ namespace srv {
 				TypeRxTime
 			} type;
 		};
+
 		QueueHandle_t pending_requests;
+		// Static queue allocation
+		StaticQueue_t pending_requests_private;
+		uint8_t       pending_requests_data[32 * sizeof(PendRequest)];
 
 		void start_pend_request(PendRequest req);
 		
@@ -158,9 +164,13 @@ namespace srv {
 		//
 		// Specifically only receive as [citation needed] we don't need to queue up transmissions.
 		StreamBufferHandle_t dma_rx_queue;
+		uint8_t              dma_rx_queue_data[2048];
+		StaticStreamBuffer_t dma_rx_queue_private;
 
 		// Stream buffers for sending/rx-ing debug stuff
 		StreamBufferHandle_t log_in, log_out;
+		uint8_t              log_in_data[176], log_out_data[128];
+		StaticStreamBuffer_t log_in_private, log_out_private;
 
 		// The task to notify whenever we add something to the queue.
 		//

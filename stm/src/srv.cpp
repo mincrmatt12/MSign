@@ -951,17 +951,17 @@ void srv::Servicer::init() {
 	// Setup RTOS
 	
 	// Create the mutex for locking the bheap
-	bheap_mutex = xSemaphoreCreateMutex();
+	bheap_mutex = xSemaphoreCreateMutexStatic(&bheap_mutex_private);
 
 	// Create the pending operation queue
-	pending_requests = xQueueCreate(32, sizeof(PendRequest));
+	pending_requests = xQueueCreateStatic(sizeof(pending_requests_data) / sizeof(PendRequest), sizeof(PendRequest), pending_requests_data, &pending_requests_private);
 
 	// Create the incoming packet buffer
-	dma_rx_queue = xStreamBufferCreate(2048, 3);
+	dma_rx_queue = xStreamBufferCreateStatic(2048, 3, dma_rx_queue_data, &dma_rx_queue_private);
 
 	// Create the debug in/out
-	log_in = xStreamBufferCreate(176, 1);
-	log_out = xStreamBufferCreate(128, 1); // blocking allowed
+	log_in = xStreamBufferCreateStatic(176, 1, log_in_data, &log_in_private);
+	log_out = xStreamBufferCreateStatic(128, 1, log_out_data, &log_out_private); // blocking allowed
 
 	// this_task is initialized in run()
 }
