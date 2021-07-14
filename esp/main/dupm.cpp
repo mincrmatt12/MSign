@@ -328,16 +328,22 @@ warm_hot_send_remotes:
 					// Ensure the entire block is either remote or non-remote
 					if (std::any_of(arena.begin(dur.d_temp.slotid), arena.end(dur.d_temp.slotid), [](auto& b){return b.location == bheap::Block::LocationRemote;})) {
 						// For all remote blocks, ship them out to the STM. We also perform this for warm, so only in the low-space condition does this happen _now_.
-						std::for_each(arena.begin(dur.d_temp.slotid), arena.end(dur.d_temp.slotid), [&](bheap::Block& b){
-							if (b.location == bheap::Block::LocationRemote) return;
+						for (auto b = arena.begin(dur.d_temp.slotid); b != arena.end(dur.d_temp.slotid); ++b) {
+							if (b->location == bheap::Block::LocationRemote) continue;
 							// Ship out block
 							for (int tries = 0; tries < 3; ++tries) {
-								switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), true)) {
+								switch (single_store_fulfill(b->slotid, arena.block_offset(*b), b->datasize, b->data(), true)) {
 									case slots::protocol::DataStoreFulfillResult::Ok:
 										// finish by setting block to remote
-										arena.set_location(b.slotid, arena.block_offset(b), b.datasize, bheap::Block::LocationRemote);
-										return;
+										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
+										goto ok;
 									case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
+										if (dur.d_temp.newtemperature == bheap::Block::TemperatureWarm) {
+											ESP_LOGW(TAG, "out of space trying to send warm for %03x; deferring", dur.d_temp.slotid);
+											arena.set_temperature(dur.d_temp.slotid, bheap::Block::TemperatureColdWantsWarm);
+											// Send a cold
+											inform_temp_change(dur.d_temp.slotid, bheap::Block::TemperatureCold);
+										}
 									case slots::protocol::DataStoreFulfillResult::IllegalState:
 									case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
 										ESP_LOGE(TAG, "bad state for block");
@@ -348,8 +354,10 @@ warm_hot_send_remotes:
 										continue;
 								}
 							}
-							ESP_LOGE(TAG, "Failed to ship out remote block in Warm/Hot (%p)", &b);
-						});
+							ESP_LOGE(TAG, "Failed to ship out remote block in Warm/Hot (%p)", &*b);
+ok:
+							;
+						}
 					}
 
 					// Finish setting temperature
@@ -517,6 +525,7 @@ warm_hot_send_remotes:
 			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
 		}, [&](bheap::Block& blk, size_t len) -> bool {
 			auto orig_offset = arena.block_offset(blk), slotid = blk.slotid;
+			ESP_LOGD(TAG, "reclaiming %03x @ %04d // %04d", slotid, orig_offset, len);
 			// Make new space for this block
 			if (!arena.set_location(slotid, orig_offset, len, bheap::Block::LocationCanonical)) return false;
 			
@@ -580,6 +589,7 @@ warm_hot_send_remotes:
 
 	DataUpdateManager::StmMemoryBudgetInfo DataUpdateManager::calculate_memory_budget() {
 		auto budget = StmMemoryBudgetInfo{};
+		uint32_t cs = 0;
 		budget.unused_space = STM_HEAP_SIZE - target_free_space_buffer;
 		// Place each block into the right section
 		for (const auto &b : arena) {
@@ -588,7 +598,8 @@ warm_hot_send_remotes:
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
 						if (&b != &arena.get(b.slotid)) continue;
-						budget.use_for(budget.hot_remote, 4 + arena.contents_size(b.slotid));
+						cs = arena.contents_size(b.slotid); if (cs % 4) cs += 4 - (cs % 4);
+						budget.use_for(budget.hot_remote, 4 + cs);
 						break;
 					case bheap::Block::TemperatureWarm:
 						budget.use_for(budget.warm_remote, 4 + b.rounded_datasize());
@@ -602,7 +613,8 @@ warm_hot_send_remotes:
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
 						if (&b != &arena.get(b.slotid)) continue;
-						budget.use_for(budget.hot_ephemeral, 4 + arena.contents_size(b.slotid));
+						cs = arena.contents_size(b.slotid); if (cs % 4) cs += 4 - (cs % 4);
+						budget.use_for(budget.hot_ephemeral, 4 + cs);
 						break;
 					case bheap::Block::TemperatureWarm:
 						budget.use_for(budget.allocated_warm_ephemeral, 4 + b.rounded_datasize());
