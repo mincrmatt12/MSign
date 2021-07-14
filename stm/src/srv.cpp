@@ -165,72 +165,39 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	int to_free = need_space - current_space;
 	if (to_free < 0) return;
 
-	auto common_free = [&](auto& block){
-		// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
-		auto len = block.datasize;
-
-		// Only free up so much
-		if (len >= (to_free + 20)) len = to_free;
-
-		arena.set_location(block.slotid, arena.block_offset(block), len, bheap::Block::LocationRemote);
-
-		auto freed = len + (len % 4 ? 0 : 4 - len % 4);
-		to_free -= freed;
-		current_space += freed;
-	};
-
 	// Otherwise we begin freeing up blocks.
 	// This first pass will eliminate all non-cached cold ephemeral blocks
 	//
 	// We free from left to right; this could probably be more efficient going right to left but it'd use more memory more of the time.
-	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold && !arena.cached(block.slotid)) {
-			common_free(block);
-		}
-		if (to_free <= 0) {
-			return;
-		}
-	}
+	for (int stage = 0; stage < 8; ++stage) {
+		for (auto& block : arena) {
+			if (block && block.location == bheap::Block::LocationEphemeral && block.datasize 
+				&& block.temperature == 
+				   (stage & 4 ? bheap::Block::TemperatureWarm : bheap::Block::TemperatureCold) // then finally warm ones.
+				&& (stage & 2 || !arena.cached(block.slotid))   // then cached ones
+				&& (stage & 1 || block.datasize >= to_free)) { // try and free big blocks first
 
-	// We now do a cleanup to try and reclaim space if it'll recover enough on its own
-	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
-		arena.defrag();
+				// Delete this block (shrink to size = 0 to create empty set location to remote and reset datasize)
+				auto len = block.datasize;
 
-		return;
-	}
+				// Only free up so much
+				if (len >= (to_free + 20)) len = to_free;
 
-	// Otherwise we start clearing out _all_ cold blocks.
-	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureCold) {
-			common_free(block);
+				arena.set_location(block.slotid, arena.block_offset(block), len, bheap::Block::LocationRemote);
+
+				auto freed = len + (len % 4 ? 0 : 4 - len % 4);
+				to_free -= freed;
+				current_space += freed;
+			}
+			if (to_free <= 0) {
+				return;
+			}
 		}
-		if (to_free <= 0) {
-			return;
-		}
-	}
 
-	// .. followed by all _warm_ blocks not in the cache
-	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm && !arena.cached(block.slotid)) {
-			common_free(block);
-		}
-		if (to_free <= 0) {
-			return;
-		}
-	}
+		// We now do a cleanup to try and reclaim space if it'll recover enough on its own
+		if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
+			arena.defrag();
 
-	if (arena.free_space(arena.FreeSpaceDefrag) - current_space >= to_free) {
-		arena.defrag();
-
-		return;
-	}
-
-	// Finally, try all warm blocks even those cached
-	for (auto& block : arena) {
-		if (block && block.location == bheap::Block::LocationEphemeral && block.datasize && block.temperature == bheap::Block::TemperatureWarm) {
-			common_free(block);
-		}
-		if (to_free <= 0) {
 			return;
 		}
 	}
