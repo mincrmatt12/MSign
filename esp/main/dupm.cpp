@@ -78,43 +78,45 @@ wrong_bits:
 	}
 
 	void DataUpdateManager::send_pending_dirty_blocks() {
-		// Ship out all blocks that are >= Warm with the dirty flag set.
-		for (auto& b : arena) {
-			if (!(b.location == bheap::Block::LocationCanonical && b.temperature >= bheap::Block::TemperatureWarm && b.flags & bheap::Block::FlagDirty)) continue;
-			bool spacefail = false;
-			for (int tries = 0; tries < 4; ++tries) {
-				switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), false)) {
-					case slots::protocol::DataStoreFulfillResult::Ok:
-						goto block_ok;
-					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
-						spacefail = true;
-						[[fallthrough]];
-					case slots::protocol::DataStoreFulfillResult::IllegalState:
-					case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
-						ESP_LOGE(TAG, "error sending block.");
-						goto block_fail;
-					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
-						spacefail = true;
-						[[fallthrough]];
-					case slots::protocol::DataStoreFulfillResult::Timeout:
-						vTaskDelay(40);
-						continue;
+		for (int include_warm = 0; include_warm <= 1; ++include_warm) {
+			// Ship out all blocks that are >= Warm with the dirty flag set.
+			for (auto& b : arena) {
+				if (!(b.location == bheap::Block::LocationCanonical && b.temperature >= (include_warm ? bheap::Block::TemperatureWarm : bheap::Block::TemperatureHot) && b.flags & bheap::Block::FlagDirty)) continue;
+				bool spacefail = false;
+				for (int tries = 0; tries < 4; ++tries) {
+					switch (single_store_fulfill(b.slotid, arena.block_offset(b), b.datasize, b.data(), false)) {
+						case slots::protocol::DataStoreFulfillResult::Ok:
+							goto block_ok;
+						case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
+							spacefail = true;
+							[[fallthrough]];
+						case slots::protocol::DataStoreFulfillResult::IllegalState:
+						case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
+							ESP_LOGE(TAG, "error sending block.");
+							goto block_fail;
+						case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
+							spacefail = true;
+							[[fallthrough]];
+						case slots::protocol::DataStoreFulfillResult::Timeout:
+							vTaskDelay(40);
+							continue;
+					}
 				}
-			}
-			if (spacefail) {
-				// not enough space for block, if it's warm set it to non-warm
-				if (b.temperature == bheap::Block::TemperatureWarm) {
-					ESP_LOGW(TAG, "out of space shipping out warm block, deferring slot...");
-					inform_temp_change(b.slotid, bheap::Block::TemperatureCold);
-					arena.set_temperature(b.slotid, bheap::Block::TemperatureCold); // not the "wants warm" variant since this shouldn't happen normally.
+				if (spacefail) {
+					// not enough space for block, if it's warm set it to non-warm
+					if (b.temperature == bheap::Block::TemperatureWarm) {
+						ESP_LOGW(TAG, "out of space shipping out warm block, deferring slot...");
+						inform_temp_change(b.slotid, bheap::Block::TemperatureCold);
+						arena.set_temperature(b.slotid, bheap::Block::TemperatureCold); // not the "wants warm" variant since this shouldn't happen normally.
+					}
 				}
-			}
 block_fail:
-			ESP_LOGE(TAG, "Failed to ship out block (%p) (%03x)", &b, b.slotid);
-			continue;
+				ESP_LOGE(TAG, "Failed to ship out block (%p) (%03x)", &b, b.slotid);
+				continue;
 block_ok:
-			// mark block non-dirty
-			b.flags &= ~bheap::Block::FlagDirty;
+				// mark block non-dirty
+				b.flags &= ~bheap::Block::FlagDirty;
+			}
 		}
 		sync_pending = false;
 	}
