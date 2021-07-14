@@ -60,11 +60,13 @@ wrong_bits:
 	}
 
 	slots::PacketWrapper<>& DataUpdateManager::wait_for_packet(TickType_t timeout) {
-		static slots::PacketWrapper<> nullp;
+		static slots::PacketWrapper<> nullp{};
 		uint32_t v;
 		if (!xTaskNotifyWait(0, 0xffff'ffff, &v, timeout)) {
 			pending_packet_in = nullptr;
-			memset(&nullp, 0, sizeof(nullp));
+			nullp.size = 0;
+			nullp.cmd_byte = 0;
+			nullp.direction = 0;
 			return nullp;
 		}
 		pending_packet_in = nullptr;
@@ -355,6 +357,7 @@ warm_hot_send_remotes:
 											// Send a cold
 											inform_temp_change(dur.d_temp.slotid, bheap::Block::TemperatureCold);
 										}
+										[[fallthrough]];
 									case slots::protocol::DataStoreFulfillResult::IllegalState:
 									case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
 										ESP_LOGE(TAG, "bad state for block");
