@@ -204,6 +204,14 @@ block_ok:
 
 	void DataUpdateManager::mark_dirty_handler(DataUpdateRequest &dur) {
 		for (auto *b = &arena.get(dur.d_dirty.slotid, dur.d_dirty.offset); b && arena.block_offset(*b) < dur.d_dirty.offset + dur.d_dirty.size; b = b->next()) {
+			// Is this a warm block? if so, just give up on sending it in general. TODO: maybe make this delay a bit?
+			if (b->temperature == bheap::Block::TemperatureWarm && dur.d_dirty.size > 8) {
+				ESP_LOGW(TAG, "detected warm block being marked dirty, marking it cold to prevent loops.");
+				// Abandon updating this block at all.
+				inform_temp_change(dur.d_dirty.slotid, bheap::Block::TemperatureCold);
+				arena.set_temperature(dur.d_dirty.slotid, bheap::Block::TemperatureColdWantsWarm);
+				return;
+			}
 			// Is this a canonical block? If so, we mark it dirty as long as it's not queued to be flushed
 			if (b->location == bheap::Block::LocationCanonical) {
 				// Can we be more precise with this? Check if the block only partially contains the region
