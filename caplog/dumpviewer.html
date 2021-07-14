@@ -130,6 +130,10 @@
 			};
 
 			function filterIdenticalRecords(records) {
+				// add original index
+				for (let i = 0; i < records.length; ++i) {
+					records[i].realindex = i;
+				}
 				let i = 0;
 				while (i + 1 < records.length) {
 					if (JSON.stringify(records[i].blocks) == JSON.stringify(records[i+1].blocks)) {
@@ -214,7 +218,7 @@
 
 				return <div>
 					<p>seek location: {seekMin} / <b>{props.time}</b> / {seekMax}</p>
-					<p>viewing record at {selectionIdx} (t={props.dump.records[selectionIdx].time})</p>
+					<p>viewing record at {selectionIdx} (real {props.dump.records[selectionIdx].realindex}) (t={props.dump.records[selectionIdx].time})</p>
 					<canvas onMouseDown={(e) => {
 						setIsDragging(true);
 					}} onMouseUp={(e) => {
