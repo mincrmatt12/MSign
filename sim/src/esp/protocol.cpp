@@ -67,8 +67,6 @@ bool protocol::ProtocolImpl::wait_for_packet(TickType_t to) {
 	}
 	// Read the rest of the packet
 	uart_read_bytes(rx_buf + 3, rx_buf[1]);
-	// Signal packet completed
-	ESP_LOGD(TAG, "got pkt");
 	return true;
 }
 
