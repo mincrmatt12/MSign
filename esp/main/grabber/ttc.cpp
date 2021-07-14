@@ -32,7 +32,7 @@ namespace ttc {
 
 		int16_t status_code;
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
-		auto cb = dwhttp::download_with_callback("webservices.nextbus.com", url, status_code);
+		auto cb = dwhttp::download_with_callback("_retro.umoiq.com", url, status_code);
 
 		if (status_code < 200 || status_code > 299) {
 			dwhttp::stop_download();
