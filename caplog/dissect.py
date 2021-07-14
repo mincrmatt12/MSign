@@ -316,6 +316,8 @@ while True:
     for pkt in read():
         if pkt[0] == 0xa5 and pkt[1] == 0x00 and pkt[2] == 0x10 and not just_restarted:
             just_restarted = True
+            slot_databufs = {}
+            slot_temps = {}
             print("\n\n==== RESTART ====\n\n")
         else:
             just_restarted = False
