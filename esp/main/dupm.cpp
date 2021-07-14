@@ -622,6 +622,7 @@ ok:
 		budget.unused_space = STM_HEAP_SIZE - target_free_space_buffer;
 		// Place each block into the right section
 		for (const auto &b : arena) {
+			if (!b) continue;
 			// Is this a remote block?
 			if (b.location == bheap::Block::LocationRemote) {
 				switch (b.temperature) {
