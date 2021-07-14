@@ -538,13 +538,22 @@ ok:
 		if (!reclaim) return;
 		if (reclaim > amount) reclaim = amount;
 
+		ESP_LOGD(TAG, "cold_reclaim: reclaim %zu; amount %zu", reclaim, amount);
+
 		budget.free_by(budget.cold_remote, free_space_matching_using(reclaim, [ignoring_slotid](auto& b){
 			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
 		}, [&](bheap::Block& blk, size_t len) -> bool {
 			auto orig_offset = arena.block_offset(blk), slotid = blk.slotid;
-			ESP_LOGD(TAG, "reclaiming %03x @ %04d // %04d", slotid, orig_offset, len);
+			ESP_LOGD(TAG, "reclaiming %03x @ %04d // %04zu", slotid, orig_offset, len);
 			// Make new space for this block
-			if (!arena.set_location(slotid, orig_offset, len, bheap::Block::LocationCanonical)) return false;
+			if (!arena.set_location(slotid, orig_offset, len, bheap::Block::LocationCanonical)) {
+				ESP_LOGD(TAG, "out of space making canonical in reclaim");
+				arena.defrag();
+				if (!arena.set_location(slotid, orig_offset, len, bheap::Block::LocationCanonical)) {
+					ESP_LOGW(TAG, "Really out of space..");
+					return false;
+				}
+			}
 			
 			// Ask the STM for this data.
 			{
@@ -661,6 +670,7 @@ ok:
 		}
 
 		// Try to use unused space first
+redo_loop:
 		for (const auto& startb : arena) {
 			if (!startb || startb.temperature != bheap::Block::TemperatureColdWantsWarm || &startb != &arena.get(startb.slotid)) continue;
 			// Check size
@@ -670,7 +680,8 @@ ok:
 				// Try to clear cold
 				if (sz <= budget.cold_remote) {
 					perform_cold_remote_reclaim(budget, sz, startb.slotid);
-					if (sz > budget.unused_space) continue;
+					if (sz > budget.unused_space) return;
+					goto redo_loop;
 				}
 				else continue;
 			}
