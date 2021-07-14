@@ -11,10 +11,10 @@ import slotlib
 # use gdb to generate a report
 
 tempstrs = {
+    0: "cold",
     1: "coldwarm",
     2: "warm",
-    3: "hot",
-    0: "cold"
+    3: "hot"
 }
 
 locstrs = {
@@ -88,7 +88,7 @@ class RawBHeapDump(gdb.Command):
                 "raw": hdr,
                 "slotid": slotid,
                 "datasize": datasize,
-                "temperature": tempstrs[temperature] if temperature else None,
+                "temperature": tempstrs[temperature],
                 "location": locstrs[location] if location else None,
                 "flags": [
                     flags & 1,
