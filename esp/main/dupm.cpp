@@ -239,6 +239,7 @@ block_ok:
 	}
 
 	slots::protocol::DataStoreFulfillResult DataUpdateManager::single_store_fulfill(uint16_t slotid, uint16_t offset, uint16_t length, const void * datasource, bool is_store) {
+		if (!length) return slots::protocol::DataStoreFulfillResult::Ok;
 		{
 			slots::PacketWrapper<255> pkt;
 			pkt.init(is_store ? slots::protocol::DATA_STORE : slots::protocol::DATA_FULFILL);
