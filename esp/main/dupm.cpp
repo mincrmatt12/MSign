@@ -434,11 +434,12 @@ ok:
 			});
 		}
 		else {
-			size_t amount = 0;
+			size_t amount = 0, last_failed_amount = -1;
 			while (amount < target_amount) {
 				bheap::Block *selected = nullptr;
 				for (auto& block : arena) {
 					if (!std::forward<Pred>(from_blocks_matching)(block)) continue;
+					if (block.datasize >= last_failed_amount) continue;
 					if (!selected || (selected->datasize <= (target_amount - amount) + maximum_sliver_for_free && selected->datasize < block.datasize)) selected = &block;
 				}
 
@@ -452,10 +453,15 @@ ok:
 					use_amount = selected->datasize;
 				}
 
+				if (use_amount > last_failed_amount) {
+					use_amount = last_failed_amount;
+				}
+
 				if (auto amt = std::forward<Handler>(by_doing)(*selected, use_amount); amt != -1) amount += amt;
 				else {
-					ESP_LOGW(TAG, "free_space_matching handler returned -1, stopping early.");
-					return amount;
+					last_failed_amount = use_amount;
+					ESP_LOGW(TAG, "free_space handler failed, limiting to %d", last_failed_amount);
+					if (last_failed_amount < 8) return amount;
 				}
 			}
 
