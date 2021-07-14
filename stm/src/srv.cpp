@@ -158,8 +158,8 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	// Start by checking how much free allocatable space we have
 	
 	auto current_space = arena.free_space(); // buffer region
-	if (current_space < 64) current_space = 0;
-	else current_space -= 64;
+	if (current_space < 32) current_space = 0;
+	else current_space -= 32;
 
 	// TODO: use high_watermark_complex when checking for defrags
 	int to_free = need_space - current_space;
@@ -539,7 +539,7 @@ void srv::Servicer::run() {
 
 					// NOTE: our blocks might not be the same as the ESP's blocks, so we have to ensure we only send the blocks it wants.
 					for (auto *b = &arena.get(slotid, start); b && arena.block_offset(*b) < (start + len); b = b->next()){
-						if (!*b) continue;
+						if (!*b || !b->datasize) continue;
 						uint8_t total_size = 64 - 6;
 						for (
 							uint16_t suboffset = (sendoffset - arena.block_offset(*b));
@@ -549,6 +549,8 @@ void srv::Servicer::run() {
 							// Calculate total size
 							total_size = std::min<uint8_t>(total_size, (start + len) - sendoffset);
 							total_size = std::min<uint8_t>(total_size, b->datasize - suboffset);
+
+							if (!total_size) break;
 
 							bool is_start = sendoffset == start;
 							bool is_end   = (sendoffset + total_size) == (start + len);
@@ -614,10 +616,24 @@ void srv::Servicer::run() {
 									if (!arena.set_location(sid_frame, offset, total_upd_len, target_loc)) {
 										move_update_errcode = slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain;
 
+										// Compute how much new space is needed
+										ssize_t current_allocated_space = 0;
+										for (auto *b = &arena.get(sid_frame, offset); b && arena.block_offset(*b) < (offset + total_upd_len); b = b->next()) {
+											if (b->location != bheap::Block::LocationRemote) {
+												auto inner_off = arena.block_offset(*b);
+												auto inner_begin = std::max<size_t>(inner_off, offset);
+												auto inner_end   = std::min<size_t>(offset + total_upd_len, inner_off + b->datasize);
+												current_allocated_space += (inner_end - inner_begin);
+											}
+											else {
+												current_allocated_space -= 4;
+											}
+										}
+
 										// Mark the total clear length
 										this->give_lock();
 										// Try to clean up without sending a packet to recover
-										try_cleanup_heap(total_upd_len + 8);
+										try_cleanup_heap(last_slotid_tries > 1 ? 8 + total_upd_len : 4 + (total_upd_len - current_allocated_space));
 										this->take_lock();
 
 										if (last_slotid_tries > 2) {
@@ -669,6 +685,9 @@ void srv::Servicer::run() {
 						
 						// Send the packet
 						send();
+
+						// If the errcode was 0, reset retries
+						if (move_update_errcode == slots::protocol::DataStoreFulfillResult::Ok) last_slotid_tries = 0;
 					}
 				}
 				break;
