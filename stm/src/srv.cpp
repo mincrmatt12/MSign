@@ -1021,6 +1021,7 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 					send();
 				}
 			}
+			break;
 		case PendRequest::TypeRxTime:
 			{
 				wait_for_not_sending();
