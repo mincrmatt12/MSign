@@ -109,6 +109,21 @@ pnames = {
     0x70: "CONSOLE_MSG"
 }
 
+pktcolors = {
+    "HANDSHAKE": 82,
+    "QUERY_TIME": 225,
+    "PING": 245,
+    "PONG": 245,
+    "RESET": 226,
+    "CONSOLE": 238,
+    "DATA_TEMP": 93,
+    "DATA_SET_SIZE": 93,
+    "DATA_FULFILL": 45,
+    "DATA_REQUEST": 101,
+    "DATA_STORE": 196,
+    "DATA_RETRIEVE": 208
+}
+
 header_width = 5 + 2 + 2 + 2 + 2 + 20 + 2
 
 tempcodes = {
@@ -322,6 +337,13 @@ while True:
         else:
             just_restarted = False
 
+        if pkt[2] in pnames:
+            for j, i in pktcolors.items():
+                if j in pnames[pkt[2]]:
+                    print('\x1b[38;5;{}m'.format(i), end="")
+            if "ACK" in pnames[pkt[2]]:
+                print('\x1b[1m')
+
         if pkt[0] == 0xa6:
             print('E->S ', end='')
         elif pkt[0] == 0xa5:
@@ -333,7 +355,7 @@ while True:
             print(f": {pkt[0]:02x}{pkt[1]:02x}{pkt[2]:02x} <invalid packet>")
             continue
 
-        print(": 0x{:02x} ({:20}) ".format(pkt[2], pnames[pkt[2]]), end="")
+        print(": 0x{:02x} ({:20}) \x1b[0m".format(pkt[2], pnames[pkt[2]]), end="")
 
 
         if pkt[1] == 0x00:
