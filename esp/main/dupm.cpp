@@ -19,6 +19,18 @@ namespace serial {
 	const inline static uint32_t TaskBitPacketOK = 1 << 14;
 	const inline static uint32_t TaskBitPacketNOK = 1 << 15;
 
+	namespace {
+		size_t round_with_max(size_t target, size_t maximum, size_t to) {
+			// Round up by 64 bytes
+			size_t base = target & ~(to - 1);
+			if (target - base < (to/2)) target = base + to;
+			else if (target == base) target = base;
+			else target = base + to + to/2;
+			if (target > maximum) return maximum;
+			else return target;
+		}
+	}
+
 	void DataUpdateManager::init() {
 		pending = xQueueCreate(10, sizeof(DataUpdateRequest));
 		if (!pending) {
@@ -517,6 +529,8 @@ ok:
 	}
 
 	void DataUpdateManager::perform_warm_ephemeral_reclaim(StmMemoryBudgetInfo &budget, size_t amount, uint16_t ignoring_slotid) {
+		// Only minimal rounding is performed here because there isn't much point in overcompensating
+		amount = round_with_max(amount, budget.allocated_warm_ephemeral, 32);
 		// Try to free space
 		budget.free_by(budget.allocated_warm_ephemeral, free_slots_matching_using(amount, [ignoring_slotid](auto& b){
 			return b && b.temperature == bheap::Block::TemperatureWarm && b.location != bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
@@ -537,9 +551,10 @@ ok:
 
 	void DataUpdateManager::perform_cold_remote_reclaim(StmMemoryBudgetInfo &budget, size_t amount, uint16_t ignoring_slotid) {
 		// Check maximum reclaimable region
-		size_t reclaim = std::min<size_t>(budget.cold_remote, std::max<size_t>(0, arena.free_space() - target_free_space_buffer));
-		if (!reclaim) return;
-		if (reclaim > amount) reclaim = amount;
+		size_t reclaim_max = std::min<size_t>(budget.cold_remote, std::max<size_t>(0, arena.free_space() - target_free_space_buffer));
+		if (!reclaim_max) return;
+		auto reclaim = round_with_max(amount, reclaim_max, 128);
+		// Round up to avoid small chunks
 
 		ESP_LOGD(TAG, "cold_reclaim: reclaim %zu; amount %zu", reclaim, amount);
 
@@ -569,13 +584,13 @@ ok:
 				serial::interface.send_pkt(pkt);
 
 				// Wait for a corresponding ack
-				if (!wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::ACK_DATA_RETRIEVE && memcmp(pkt.data(), pw.data(), 6) == 0;}, pdMS_TO_TICKS(90))) return false;
+				if (!wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::ACK_DATA_RETRIEVE && memcmp(pkt.data(), pw.data(), 6) == 0;}, pdMS_TO_TICKS(200))) return false;
 				finished_with_last_packet();
 			}
 
 			// Await move commands
 			while (true) {
-				auto& pkt = wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::DATA_STORE && (pw.template at<uint16_t>(0) & 0xfff) == slotid;}, pdMS_TO_TICKS(100));
+				auto& pkt = wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::DATA_STORE && (pw.template at<uint16_t>(0) & 0xfff) == slotid;}, pdMS_TO_TICKS(500));
 				if (!pkt) {
 					ESP_LOGW(TAG, "timeout waiting for data_store");
 					arena.set_location(slotid, orig_offset, len, bheap::Block::LocationRemote);
@@ -821,7 +836,7 @@ common_remote_use_end:
 
 						// Try to move warm slots.
 						if (budget.allocated_warm_ephemeral) {
-							local_free_space += budget.xfer_into(budget.allocated_warm_ephemeral, free_slots_matching_using(delta_size_change,
+							local_free_space += budget.xfer_into(budget.allocated_warm_ephemeral, free_slots_matching_using(round_with_max(delta_size_change, budget.allocated_warm_ephemeral, 64),
 								[&](const bheap::Block& b){
 									return b && b.temperature == bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationCanonical;
 								}, [&](uint16_t slotid){
@@ -843,7 +858,7 @@ common_remote_use_end:
 
 						// Now try allocating hot blocks
 						if (budget.hot_ephemeral) {
-							local_free_space += budget.xfer_into(budget.hot_ephemeral, free_slots_matching_using(delta_size_change,
+							local_free_space += budget.xfer_into(budget.hot_ephemeral, free_slots_matching_using(round_with_max(delta_size_change, budget.hot_ephemeral, 64),
 								[&](const bheap::Block& b){
 									return b && b.temperature == bheap::Block::TemperatureHot && b.location == bheap::Block::LocationCanonical;
 								}, [&](uint16_t slotid){
