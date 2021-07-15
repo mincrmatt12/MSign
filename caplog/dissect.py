@@ -327,6 +327,8 @@ phandle = {
     0x62: update_img_start
 }
 
+last_pkt_time = None
+
 while True:
     for pkt in read():
         if pkt[0] == 0xa5 and pkt[1] == 0x00 and pkt[2] == 0x10 and not just_restarted:
@@ -334,15 +336,28 @@ while True:
             slot_databufs = {}
             slot_temps = {}
             print("\n\n==== RESTART ====\n\n")
+            last_pkt_time = None
         else:
             just_restarted = False
+            if last_pkt_time == None:
+                last_pkt_time = time.time()
+            else:
+                now = time.time()
+                delta = now - last_pkt_time
+                last_pkt_time = now
+                if delta > 0.05:
+                    if delta < 2:
+                        print("    +{}ms".format(int(delta*1000)))
+                    else:
+                        print("    +{:.02f}s".format(delta))
+
 
         if pkt[2] in pnames:
             for j, i in pktcolors.items():
                 if j in pnames[pkt[2]]:
                     print('\x1b[38;5;{}m'.format(i), end="")
             if "ACK" in pnames[pkt[2]]:
-                print('\x1b[1m')
+                print('\x1b[1m', end="")
 
         if pkt[0] == 0xa6:
             print('E->S ', end='')
