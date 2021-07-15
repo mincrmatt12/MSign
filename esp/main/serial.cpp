@@ -160,7 +160,9 @@ void serial::SerialInterface::run() {
 		send_pings();
 
 		// Wait for a packet for a bit.
-		if (!wait_for_packet(pdMS_TO_TICKS(1000))) continue;
+		if (!wait_for_packet(portMAX_DELAY)) {
+			ESP_LOGW(TAG, "bad packet");
+		}
 
 		// Try to process with the data update manager
 		if (dum.is_packet_in_pending(rx_buf)) {

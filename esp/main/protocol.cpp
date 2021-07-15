@@ -4,7 +4,7 @@
 #include <uart.h>
 #include <esp_system.h>
 
-//const static char *TAG = "protocol";
+const static char *TAG = "protocol";
 
 void protocol::ProtocolImpl::init_hw() {
 	memset(rx_buf, 0, sizeof rx_buf);
@@ -28,14 +28,15 @@ void protocol::ProtocolImpl::send_pkt(const void *pkt) {
 
 bool protocol::ProtocolImpl::wait_for_packet(TickType_t to) {
 	// Wait for a sync byte
-	if (uart_read_bytes(UART_NUM_0, rx_buf, 3, to) != 3) return false;
+	if (!uart_read_bytes(UART_NUM_0, rx_buf, 3, to)) return false;
 	while (rx_buf[0] != 0xa5) {
 		rx_buf[0] = rx_buf[1];
 		rx_buf[1] = rx_buf[2];
-		if (uart_read_bytes(UART_NUM_0, rx_buf + 2, 1, to) != 2) return false;
+		if (!uart_read_bytes(UART_NUM_0, rx_buf + 2, 1, to)) return false;
 	}
 	// Set last received at
 	last_received_at = xthal_get_ccount();
+	if (rx_buf[1] == 0) return true;
 	// Read the rest of the packet
 	if (!uart_read_bytes(UART_NUM_0, rx_buf + 3, rx_buf[1], to)) return false;
 	return true;
