@@ -352,9 +352,11 @@ send_nak:
 warm_hot_send_remotes:
 					// Ensure the entire block is either remote or non-remote
 					if (std::any_of(arena.begin(dur.d_temp.slotid), arena.end(dur.d_temp.slotid), [](auto& b){return b.location == bheap::Block::LocationRemote;})) {
+						// Homogenize this block, this simplifies this output code
+						arena.homogenize(dur.d_temp.slotid);
 						// For all remote blocks, ship them out to the STM. We also perform this for warm, so only in the low-space condition does this happen _now_.
 						for (auto b = arena.begin(dur.d_temp.slotid); b != arena.end(dur.d_temp.slotid); ++b) {
-							if (b->location == bheap::Block::LocationRemote) continue;
+							if (b->location == bheap::Block::LocationRemote || b->datasize == 0) continue;
 							// Ship out block
 							for (int tries = 0; tries < 3; ++tries) {
 								switch (single_store_fulfill(b->slotid, arena.block_offset(*b), b->datasize, b->data(), true)) {
@@ -559,7 +561,7 @@ ok:
 		ESP_LOGD(TAG, "cold_reclaim: reclaim %zu; amount %zu", reclaim, amount);
 
 		budget.free_by(budget.cold_remote, free_space_matching_using(reclaim, [ignoring_slotid](auto& b){
-			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
+			return b && b.temperature <= bheap::Block::TemperatureColdWantsWarm && b.location == bheap::Block::LocationRemote && b.slotid != ignoring_slotid;
 		}, [&](bheap::Block& blk, size_t len) -> bool {
 			auto orig_offset = arena.block_offset(blk), slotid = blk.slotid;
 			ESP_LOGD(TAG, "reclaiming %03x @ %04d // %04zu", slotid, orig_offset, len);
