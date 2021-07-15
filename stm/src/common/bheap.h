@@ -706,6 +706,7 @@ finish_setting:
 		// Ensure a certain subsection of a slot is in its own block. This only ever splits blocks, not merges them, so if the region given
 		// is not already in a single block, we will return false.
 		bool ensure_single_block(uint32_t slotid, uint32_t offset, uint32_t length) {
+			if (offset + length > contents_size(slotid)) return false;
 			// Ensure single block.
 			if (&get(slotid, offset) != &get(slotid, offset + length - 1)) return false;
 
