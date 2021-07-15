@@ -472,8 +472,7 @@ void srv::Servicer::run() {
 						// Acquire lock
 						ServicerLockGuard g(*this);
 
-						// Change the location of the marked segment to ephemeral (we'll free up space as necessary)
-						arena.set_location(slotid, start, len, bheap::Block::LocationEphemeral);
+						arena.set_location(slotid, start, len, bheap::Block::LocationRemote);
 					}
 				}
 				break;
@@ -514,10 +513,10 @@ void srv::Servicer::run() {
 							suboffset += total_size, sendoffset += total_size
 						) {
 							// Calculate total size
-							total_size = std::min<uint8_t>(total_size, (start + len) - sendoffset);
-							total_size = std::min<uint8_t>(total_size, b->datasize - suboffset);
+							total_size = std::min<ssize_t>(total_size, (start + len) - sendoffset);
+							total_size = std::min<ssize_t>(total_size, b->datasize - suboffset);
 
-							if (!total_size) break;
+							//if (!total_size) break;
 
 							bool is_start = sendoffset == start;
 							bool is_end   = (sendoffset + total_size) == (start + len);
