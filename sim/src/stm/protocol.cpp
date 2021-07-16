@@ -67,6 +67,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 		}
 		else {
 			process_command();
+			vTaskDelay(pdMS_TO_TICKS(4));
 			start_recv();
 		}
 	}
@@ -86,6 +87,7 @@ void srv::ProtocolImpl::setup_uart_dma() {
 void srv::ProtocolImpl::send() {
 	// Send whatever is in the dma_out_buffer
 	std::cerr.write((char *)dma_out_buffer, dma_out_buffer[1] + 3);
+	vTaskDelay(dma_out_buffer[1] < 4 ? pdMS_TO_TICKS(1) : pdMS_TO_TICKS(4)); // delay a bit to simulate transfer lag
 	is_sending = false;
 }
 

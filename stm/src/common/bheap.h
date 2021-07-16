@@ -6,6 +6,8 @@
 #include <type_traits>
 #include <iterator>
 
+#include "lru.h"
+
 #if __cpp_inline_variables >= 201603
 #define MSN_BHEAP_INLINE_V const inline static
 #else
@@ -19,7 +21,7 @@ namespace bheap {
 
 	template<typename T>
 	struct TypedBlock;
-	template<size_t Size>
+	template<size_t Size, typename Cache=lru::Cache<8, 3>>
 	struct Arena;
 
 	// Represents a block header
@@ -32,8 +34,10 @@ namespace bheap {
 
 		MSN_BHEAP_INLINE_V uint32_t TemperatureHot = 0b11;
 		MSN_BHEAP_INLINE_V uint32_t TemperatureWarm = 0b10;
-		MSN_BHEAP_INLINE_V uint32_t TemperatureCold = 0b01;
+		MSN_BHEAP_INLINE_V uint32_t TemperatureColdWantsWarm = 0b01; // block that wants to be warm but no space for it
+		MSN_BHEAP_INLINE_V uint32_t TemperatureCold =          0b00;
 
+		//MSN_BHEAP_INLINE_V uint32_t LocationHotPotato = 0b00;
 		MSN_BHEAP_INLINE_V uint32_t LocationCanonical = 0b01;
 		MSN_BHEAP_INLINE_V uint32_t LocationEphemeral = 0b10;
 		MSN_BHEAP_INLINE_V uint32_t LocationRemote = 0b11;
@@ -42,7 +46,7 @@ namespace bheap {
 		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
 
 		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
-		MSN_BHEAP_INLINE_V uint32_t FlagFlush = 2;
+		MSN_BHEAP_INLINE_V uint32_t FlagSupressed = 2;
 
 		// DATA ACCESS
 
@@ -159,15 +163,27 @@ namespace bheap {
 
 		// Check if that block will fit in this location
 		bool will_fit(const Block& b, uint32_t offset) const {
-			uint32_t length = offset + (b.adjacent() - &b) * 4;
-			return length <= (adjacent() - this) * 4;
+			uint32_t length = offset + b.total_size();
+			return length <= total_size();
 		}
 
 		operator bool() const {
 			return this->slotid != SlotEnd && this->slotid != SlotEmpty;
 		}
 
-		template<size_t> friend struct Arena;
+		// in bytes
+		ptrdiff_t total_size() const {
+			return (uintptr_t)adjacent() - (uintptr_t)this;
+		}
+
+		// total rounded datasize (ignoring remote/etc.)
+		size_t rounded_datasize() const {
+			size_t result = datasize;
+			if (result % 4) result += (4 - result % 4);
+			return result;
+		}
+
+		template<size_t, typename> friend struct Arena;
 	private:
 
 		Block& operator=(const Block& other) = default;
@@ -226,12 +242,12 @@ namespace bheap {
 		using Block::temperature;
 
 		operator bool() const {
-			return Block::operator bool() && this->datasize;
+			return Block::operator bool() && this->datasize && this->location != bheap::Block::LocationRemote;
 		}
 	};
 
 	// An arena of blocks (fight!)
-	template<size_t Size>
+	template<size_t Size, typename Cache>
 	struct Arena {
 		static_assert(Size % 4 == 0, "Arena must have a size aligned to 4 bytes");
 
@@ -324,6 +340,10 @@ namespace bheap {
 			if (contains(slotid)) {
 				free_space = this->free_space(this->get(slotid), FreeSpaceAllocatable); // explicitly use the second one to avoid a warning
 			}
+			else {
+				// If this is a new block, clear the cache since it might have an end block polluting it
+				bcache.evict(slotid);
+			}
 
 			uint32_t required_space = 4;
 			if (datalocation != Block::LocationRemote) required_space += datasize;
@@ -352,6 +372,7 @@ namespace bheap {
 				if (x->will_fit(newb, 0)) {
 					// place this block there
 					x->insert(newb, 0);
+					// note we don't have to update the cache since it'll get filled at the next lookup anyways.
 					return true;
 				}
 			}
@@ -362,9 +383,26 @@ namespace bheap {
 		}
 
 		// Update the contents of the data at that offset + length with data.
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data) {
+			return update_contents(slotid, offset, length, data, true);
+		}
+
+		// Update the contents of the data at that offset + length with data.
 		//
-		// This function will convert remote chunks to either canonical + flush or ephemeral (semantically the correct choice)
-		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool set_flush=false) {
+		// This function will convert remote chunks to either canonical + flush or ephemeral depending on the set_flush
+		// parameter. For more control, use the overload that takes a functor.
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool fulfill_with_ephemeral) {
+			return update_contents(slotid, offset, length, data, [this, slotid, fulfill_with_ephemeral](uint32_t off, uint32_t len, const void *dat){
+				if (!fulfill_with_ephemeral) return false;
+				if (!set_location(slotid, off, len, Block::LocationEphemeral)) return false;
+				return update_contents(slotid, off, len, dat);
+			});
+		}
+
+		template<typename RemoteHandler>
+		std::enable_if_t<
+			std::is_invocable_r_v<bool, RemoteHandler, uint32_t /* offset */, uint32_t /* length */, const void * /* data */>,
+		bool> update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, RemoteHandler&& rh) {
 			if (offset + length > contents_size(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
 			Block& containing_block = get(slotid, offset);
@@ -375,18 +413,13 @@ namespace bheap {
 				// 0123456
 				// Region starting at begin_pos + containing_block.datasize has size offset + length - begin_pos + containing_block.datasize
 				auto sublength = begin_pos + containing_block.datasize - offset;
-				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, set_flush) &&
-					   update_contents(slotid, offset + sublength, length - sublength, static_cast<const uint8_t*>(data) + sublength, set_flush);
+				return update_contents(slotid, offset, begin_pos + containing_block.datasize - offset, data, std::forward<RemoteHandler>(rh)) &&
+					   update_contents(slotid, offset + sublength, length - sublength, static_cast<const uint8_t*>(data) + sublength, std::forward<RemoteHandler>(rh));
 			}
 
 			// Check if this is a remote region, in which case we have to convert it
 			if (containing_block.location == Block::LocationRemote) {
-				// Set the location
-				if (!set_location(slotid, offset, length, set_flush ? Block::LocationCanonical : Block::LocationEphemeral)) return false;
-				Block& new_block = get(slotid, offset);
-				new_block.flags = (set_flush ? Block::FlagFlush : Block::FlagDirty);
-				// Tail recursion
-				return update_contents(slotid,offset, length, data, set_flush);
+				return std::forward<RemoteHandler>(rh)(offset, length, data);
 			}
 			
 			// Otherwise, just patch the block content
@@ -401,7 +434,7 @@ namespace bheap {
 			
 			// This isn't particularly fast but probably has less problems than the old implementation
 			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
-				if ((offset+length) <= block_offset(*x) || offset > (block_offset(*x) + x->datasize)) continue;
+				if ((offset+length) <= block_offset(*x) || offset >= (block_offset(*x) + x->datasize)) continue;
 				if (x->location != location) return false;
 			}
 
@@ -474,11 +507,17 @@ namespace bheap {
 					// Allocate space for entire chunk.
 					// I will admit this wastes 4 bytes, but eh it's the easiest and cleanest way to do this
 					
+					invalidate(&containing_block);
+
 					// Delete block contents
 					containing_block.shrink(0);
 
 					// Ensure space exists for the block
-					if (!make_space_after(containing_block, length)) return false;
+					if (!make_space_after(containing_block, length)) {
+						// If there's not enough space, do at least ensure we don't invalidate the length
+						containing_block.datasize = length;
+						return false;
+					}
 
 					// Copy relevant portions of block info
 					auto& new_contain = *containing_block.adjacent();
@@ -490,6 +529,8 @@ namespace bheap {
 
 					// Null out old contents
 					containing_block.slotid = Block::SlotEmpty;
+
+					// Evict cache for this block
 					return true;
 				}
 				else {
@@ -520,6 +561,9 @@ finish_setting:
 				if (should_reclaim >= endptr.datasize) {
 					// delete the block
 					if (endptr.location == Block::LocationRemote) endptr.datasize = 0;
+					else {
+						bcache.evict(slotid);
+					}
 					endptr.slotid = Block::SlotEmpty;
 				}
 				else {
@@ -538,6 +582,7 @@ finish_setting:
 			// Remove 0-size placeholders
 			for (auto x = this->begin(slotid); x != this->end(slotid); ++x) {
 				if (x->next() && x->location == Block::LocationRemote && x->datasize == 0) {
+					invalidate(x);
 					auto nextptr = x;
 					++nextptr;
 					x->slotid = Block::SlotEmpty;
@@ -555,7 +600,7 @@ finish_setting:
 					// 	- the location is equal
 					// 	- the flush flag is equal (if the dirty flag is unequal, or it)
 
-					while (x->location == x->next()->location && (x->flags & Block::FlagFlush) == (x->next()->flags & Block::FlagFlush)) {
+					while (x->location == x->next()->location && (x->flags & Block::FlagSupressed) == (x->next()->flags & Block::FlagSupressed)) {
 						// If this is a remote block, just increase the size
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
@@ -605,6 +650,7 @@ finish_setting:
 					x.location = Block::LocationCanonical;
 				}
 			}
+			bcache.evict();
 			// Homogenize all slots
 			for (auto& x : *this) {
 				if (x && x.next()) homogenize(x.slotid);
@@ -612,8 +658,7 @@ finish_setting:
 			// Condense empty slots (simplifies next section)
 			for (auto& x : *this) {
 				while (x.adjacent() && x.slotid == Block::SlotEmpty && x.adjacent()->slotid == Block::SlotEmpty) {
-					x.datasize += 4 + x.adjacent()->datasize;
-					if (x.datasize % 4) x.datasize += (4 - x.datasize % 4);
+					x.datasize += x.adjacent()->total_size();
 				}
 			}
 			{
@@ -631,6 +676,8 @@ finish_setting:
 							last_empty -= (begin_region - copy_to);
 							*last_empty = old_empty;
 							last_empty->datasize += (begin_region - copy_to)*sizeof(Block);
+							// Continue evicting the cache
+							bcache.evict();
 						}
 					}
 				}
@@ -645,7 +692,6 @@ finish_setting:
 					uint8_t *end            = region + Size - 4;
 
 					size_t moved_size = end - target_area;
-					size_t old_empty_size = last_empty->datasize;
 					memmove(begin_location, target_area, moved_size);
 
 					// Rewrite empty
@@ -653,6 +699,33 @@ finish_setting:
 					*new_empty = old_empty;
 				}
 			}
+			// Completely wipe the entire cache
+			bcache.evict();
+		}
+
+		// Ensure a certain subsection of a slot is in its own block. This only ever splits blocks, not merges them, so if the region given
+		// is not already in a single block, we will return false.
+		bool ensure_single_block(uint32_t slotid, uint32_t offset, uint32_t length) {
+			if (offset + length > contents_size(slotid)) return false;
+			// Ensure single block.
+			if (&get(slotid, offset) != &get(slotid, offset + length - 1)) return false;
+
+			// If offset is not the start of a block, split.
+			{
+				Block& containing_block = get(slotid, offset);
+				auto begin_pos = block_offset(containing_block);
+				if (begin_pos != offset) {
+					if (!split_block(containing_block, offset - begin_pos)) return false;
+				}
+			}
+			// If length is not the size of the containing block, split (possibly again)
+			{
+				Block& containing_block = get(slotid, offset);
+				if (containing_block.datasize != length) {
+					if (!split_block(containing_block, length)) return false;
+				}
+			}
+			return true;
 		}
 
 		// DATA ACCESS OPERATIONS
@@ -700,8 +773,7 @@ finish_setting:
 			if (mode & FreeSpaceEmpty) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
 					if (blk->slotid == Block::SlotEmpty) {
-						total += 4 + blk->datasize;
-						if (total % 4) total += 4 - (total % 4);
+						total += blk->total_size();
 					}
 				}
 			}
@@ -717,7 +789,7 @@ finish_setting:
 			}
 			if (mode & FreeSpaceHomogenizeable) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagFlush) == (blk->next()->flags & Block::FlagFlush)) total += 4;
+					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagSupressed) == (blk->next()->flags & Block::FlagSupressed)) total += 4;
 				}
 			}
 			return total;
@@ -726,18 +798,40 @@ finish_setting:
 		// Is this data ID represented in this arena
 		inline bool contains(uint32_t slotid) const {return get(slotid);}
 
+		// Is this data ID in the cache (i.e. has it been used recently)
+		inline bool cached(uint32_t slotid) const {return bcache.contains(slotid);}
+
 		// Get the first block of that SlotID (returning the end block if not present, whose bool() is false)
 		const Block& get(uint32_t slotid) const {
+			if (slotid == Block::SlotEmpty) return get(slotid, 0); // bypass cache
+			// Can we use the cache?
+			if (bcache.contains(slotid)) {
+				const Block& result = get_from_cache(bcache.lookup(slotid));
+				if (result.slotid != slotid && result) { // be resistant against cache corruption
+					return result;
+				}
+			}
 			for (const Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
 			}
 			__builtin_unreachable();
 		}
+
 		Block& get(uint32_t slotid) {
-			for (Block& x : *this) {
-				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
+			if (slotid == Block::SlotEmpty) return get(slotid, 0); // bypass cache
+			Block& result = get_from_cache(
+				bcache.lookup_or_calculate(slotid, [&](){
+					for (Block& x : *this) {
+						if (x.slotid == slotid || x.slotid == Block::SlotEnd) return bptr_to_cache(&x);
+					}
+					__builtin_unreachable();
+				})
+			);
+			if (result.slotid != slotid && result) { // be resistant against cache corruption
+				bcache.evict();
+				return get(slotid);
 			}
-			__builtin_unreachable();
+			return result;
 		}
 
 		const Block& get(uint32_t slotid, uint32_t offset) const {
@@ -832,9 +926,38 @@ finish_setting:
 		inline data_const_iterator<T> cend(uint32_t slotid) const {return data_const_iterator<T>();}
 
 	private:
-		// INTERNAL HELPERS
+		// Slot get() cache
+		Cache bcache;
 
-		// Ensure there's an empty block of datasize at least new_alloc_space after the specified block (block->adjacent())
+		// INTERNAL HELPERS
+		
+		// Get a block from a cache value
+		Block &get_from_cache(uint16_t offset) {
+			return *reinterpret_cast<Block *>(&region[offset * 4]);
+		}
+
+		const Block &get_from_cache(uint16_t offset) const {
+			return *reinterpret_cast<const Block *>(&region[offset * 4]);
+		}
+
+		// Get the cache value from a slot
+		uint16_t bptr_to_cache(const Block * ptr) const {
+			return ptr - &first;
+		}
+
+		// Invalidate all blocks in a range
+		template<typename Iterator>
+		void invalidate(Iterator begin, Iterator end) {
+			for (; begin != end; ++begin) {
+				invalidate(begin);
+			}
+		}
+
+		void invalidate(const Block *ptr) {
+			bcache.evict_if(ptr->slotid, bptr_to_cache(ptr));
+		}
+
+		// Ensure there's an empty block of exactly new_alloc_space after the specified block (block->adjacent())
 		bool make_space_after(Block& containing_block, uint32_t new_alloc_space) {
 			if (new_alloc_space % 4) new_alloc_space += 4 - (new_alloc_space % 4);
 			while (containing_block.adjacent()->slotid != Block::SlotEmpty || containing_block.adjacent()->datasize < new_alloc_space) {
@@ -842,16 +965,21 @@ finish_setting:
 				// 	- find empty block
 				// 	- shift prior contents into it by units of 4
 				if (containing_block.adjacent()->slotid == Block::SlotEnd) return false;
+				// If we're appending to an existing empty block, start searching for the next one after it.
 				Block* next_empty = containing_block.adjacent()->slotid != Block::SlotEmpty ? containing_block.adjacent() : containing_block.adjacent()->adjacent();
+				// We need to move stuff starting after the empty.
 				Block* move_region_start = next_empty;
 				while (*next_empty) {
 					next_empty = next_empty->adjacent();
 				}
-				if (next_empty->slotid == Block::SlotEnd) return false;
+				if (next_empty->slotid == Block::SlotEnd) return false; // No more empties, return false.
+
+				// Evict everything in the move region
+				invalidate(iterator(containing_block), iterator(*next_empty));
 
 				// Now we have the following situation:
 				// | cb | xxxx | e |
-				// where cb is containing_block and e is an empty block.
+				// where cb is containing_block and e is an empty block (next_empty).
 				//
 				// We want to swap cb->adjacent() with the empty block, effectively (or insert it, etc.)
 				//
@@ -865,11 +993,7 @@ finish_setting:
 				// After reclaiming we memmove
 
 				uint32_t remaining_new_alloc_space = containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
-				if (next_empty->datasize % 4) next_empty->datasize += (4 - next_empty->datasize % 4);
-				uint32_t reclaimable_space = next_empty->datasize + 4;
-				if (reclaimable_space % 4) {
-					reclaimable_space += 4 - (reclaimable_space % 4);
-				}
+				uint32_t reclaimable_space = next_empty->total_size();
 
 				uint32_t total_reclaimed = 0;
 
@@ -912,6 +1036,7 @@ finish_setting:
 			uint32_t new_length = block.datasize - offset_in_block;
 			// If the block is remote, do something very simple
 			if (block.location == Block::LocationRemote) {
+				// Create an empty empty block after the remote block (which will turn into the second remote)
 				if (!make_space_after(block, 0)) return false;
 				block.shrink(offset_in_block);
 				goto copy_data;
@@ -919,9 +1044,14 @@ finish_setting:
 
 			// Create an empty space after the block with enough space to fit the block's contents after offset_in_block + 4 bytes + alignment including the null space
 			{
-				uint32_t space_required = 4;
+				uint32_t shift_required = 4;
 				if (offset_in_block % 4) {
-					space_required += 4 - (offset_in_block % 4);
+					shift_required += 4 - (offset_in_block % 4);
+				}
+
+				uint32_t space_required = shift_required - (block.rounded_datasize() - block.datasize);
+				if (new_length % 4) {
+					space_required += 4 - (new_length % 4);
 				}
 
 				// Create that much space
@@ -929,7 +1059,7 @@ finish_setting:
 
 				// Shift with memmove
 				char * starting_pos = ((char *)block.data()) + offset_in_block;
-				memmove(starting_pos + space_required, starting_pos, block.datasize - offset_in_block);
+				memmove(starting_pos + shift_required, starting_pos, block.datasize - offset_in_block);
 
 				// Shrink block to generate header in right place
 				block.shrink(offset_in_block);
@@ -946,23 +1076,66 @@ copy_data:
 			return true;
 		}
 
-		// Move a block to the left of another, moving the middle region wordwise
+		// Move a block to the left of another, reorganizing the rest of the array properly.
 		void move_left(Block& to_move, Block& in_front_of) {
 			if (in_front_of.adjacent() == &to_move) return;
+
+			// Invalidate everything between in_front_of.adjacent() and to_move inclusive
+			invalidate(iterator(*in_front_of.adjacent()), iterator(*to_move.adjacent()));
 			
 			uint32_t * middle_start = reinterpret_cast<uint32_t *>(in_front_of.adjacent());
 			uint32_t * middle_end = reinterpret_cast<uint32_t *>(&to_move);
 			uint32_t * paste_from = middle_end;
 			uint32_t * paste_to = middle_start;
 
+			// Try to find some free space.
+			uint32_t * scratch_area = nullptr;
+			size_t     scratch_size = 0;
+
+			// Search for empty space outside the region that will be trashed
+			for (const Block *b = &first; b; b = b->adjacent()) {
+				if (b->slotid != Block::SlotEmpty) continue;
+				// How much space is there?
+				size_t amount = b->rounded_datasize();
+				if (amount < 4 || amount < scratch_size) continue;
+				// Check if this region overlaps the move region
+				if ((uintptr_t)b->data() >= (uintptr_t)in_front_of.data() && (uintptr_t)b->data() <= (uintptr_t)to_move.adjacent()->data()) continue;
+				// Update scratch area
+				scratch_area = (uint32_t *)b->data();
+				scratch_size = amount;
+				// Do we have enough space?
+				if (scratch_size >= (to_move.adjacent() - &to_move) * 4) {
+					scratch_size = (to_move.adjacent() - &to_move) * 4;
+					break;
+				}
+			}
+
+			// If we don't have any free space, make up some
+			if (scratch_area == nullptr || scratch_size < 4) {
+				scratch_area = (uint32_t *)alloca(4);
+				scratch_size = 4;
+			}
+
 			// Compute total length
-			uint32_t paste_amount = to_move.adjacent() - &to_move;
-			for (int i = 0; i < paste_amount; ++i) {
-				uint32_t temp = *paste_from++;
-				memmove(middle_start + 1, middle_start, (middle_end - middle_start) * 4);
-				middle_start++;
-				middle_end++;
-				*paste_to++ = temp;
+			uint32_t paste_amount = (to_move.adjacent() - &to_move) * 4;
+			while (paste_amount) {
+				// Shrink as appropriate
+				if (paste_amount < scratch_size) {
+					scratch_size = paste_amount;
+				}
+				// Read in scratch_size bytes from paste from
+				memcpy(scratch_area, paste_from, scratch_size);
+				paste_from += (scratch_size / 4);
+				// Shift over the middle region
+				memmove(middle_start + (scratch_size / 4), middle_start, (middle_end - middle_start) * 4);
+				// Move the pointers by scratch size
+				middle_start += (scratch_size / 4);
+				middle_end   += (scratch_size / 4);
+				// Write out scratch_size bytes back to the paste pointer
+				memcpy(paste_to, scratch_area, scratch_size);
+				paste_to += (scratch_size / 4);
+
+				paste_amount -= scratch_size;
 			}
 		}
 	};

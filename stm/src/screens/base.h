@@ -59,12 +59,12 @@ namespace screen {
 
 		template<size_t ...Idx>
 		inline void _destruct(size_t idx, std::index_sequence<Idx...>) {
-			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->~Screens(), true)) || ...);
+			(void)((idx == Idx && (reinterpret_cast<Screens *>(&storage)->~Screens(), true)) || ...);
 		}
 
 		template<size_t ...Idx>
 		inline void _construct(size_t idx, std::index_sequence<Idx...>) {
-			((idx == Idx && (new (&storage) Screens{}, true)) || ...);
+			(void)((idx == Idx && (new (&storage) Screens{}, true)) || ...);
 		}
 
 		template<size_t ...Idx>
@@ -74,12 +74,12 @@ namespace screen {
 
 		template<size_t ...Idx>
 		inline void _notify(size_t idx, bool param, std::index_sequence<Idx...>) {
-			((idx == Idx && (Screens::prepare(param), true)) || ...);
+			(void)((idx == Idx && (Screens::prepare(param), true)) || ...);
 		}
 
 		template<size_t ...Idx>
 		inline void _draw(size_t idx, std::index_sequence<Idx...>) {
-			((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) || ...);
+			(void)((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) || ...);
 		}
 
 	public:

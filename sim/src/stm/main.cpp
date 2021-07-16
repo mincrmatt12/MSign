@@ -5,6 +5,7 @@
 #include "tasks/screen.h"
 #include "tasks/debug.h"
 #include "srv.h"
+#include "tskmem.h"
 
 // strange parse error - put this last...
 
@@ -27,6 +28,8 @@ tasks::DebugConsole dbgtim{timekeeper};
 extern void pump_faux_dma_task(void*);
 char ** orig_argv;
 
+tskmem::TaskHolder<1024> faux_dma_task;
+
 int main(int argc, char ** argv) {
 	orig_argv = argv;
 	rcc::init();
@@ -36,10 +39,10 @@ int main(int argc, char ** argv) {
 	std::cout.tie(0);
 	servicer.init();
 	
-	xTaskCreate([](void *arg){((srv::Servicer *)arg)->run();}, "srvc", 256, &servicer, 5, nullptr);
-	xTaskCreate([](void *arg){((tasks::DispMan *)arg)->run();}, "screen", 512, &dispman, 4, nullptr);
-	xTaskCreate([](void *arg){((tasks::DebugConsole *)arg)->run();}, "dbgtim", 176, &dbgtim, 2, nullptr);
-	xTaskCreate(pump_faux_dma_task, "faux", 1024, nullptr, 6, nullptr);
+	tskmem::srvc.create(servicer, "srvc", 5);
+	tskmem::screen.create(dispman, "srvc", 4);
+	tskmem::dbgtim.create(dbgtim, "dbtim", 2);
+	faux_dma_task.create(pump_faux_dma_task, "faux", nullptr, 6);
 
 	matrix.start_display();
 	vTaskStartScheduler();

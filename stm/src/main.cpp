@@ -8,6 +8,7 @@
 #include "tasks/timekeeper.h"
 #include "tasks/screen.h"
 #include "srv.h"
+#include "tskmem.h"
 
 // strange parse error - put this last...
 
@@ -39,9 +40,9 @@ int main() {
 	matrix.init();
 	servicer.init();
 
-	if (xTaskCreate([](void *arg){((srv::Servicer *)arg)->run();}, "srvc", 256, &servicer, 5, nullptr) != pdPASS) out_of_memory();
-	if (xTaskCreate([](void *arg){((tasks::DispMan *)arg)->run();}, "screen", 512, &dispman, 4, nullptr) != pdPASS) out_of_memory();
-	if (xTaskCreate([](void *arg){((tasks::DebugConsole *)arg)->run();}, "dbgtim", 176, &dbgtim, 2, nullptr) != pdPASS) out_of_memory();
+	tskmem::srvc.create(servicer, "srvc", 5);
+	tskmem::screen.create(dispman, "srvc", 4);
+	tskmem::dbgtim.create(dbgtim, "dbtim", 2);
 
 	matrix.start_display();
 	finished_init_ok = true;

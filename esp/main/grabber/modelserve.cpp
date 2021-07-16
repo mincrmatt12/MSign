@@ -155,7 +155,7 @@ namespace modelserve {
 			mi.tri_count = 0;
 			serial::interface.update_slot_nosync(slots::MODEL_INFO, mi);
 			serial::interface.delete_slot(slots::MODEL_DATA);
-			serial::interface.sync_slots(slots::MODEL_INFO, slots::MODEL_DATA);
+			serial::interface.sync();
 		}
 	}
 

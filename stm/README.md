@@ -66,16 +66,18 @@ is limited to around 8k in practice.
 | `HANDSHAKE_OK` | `0x12` |
 | `HANDSHAKE_UOK` | `0x13` |
 | `DATA_TEMP` | `0x20` |
-| `DATA_UPDATE` | `0x21` |
-| `DATA_MOVE` | `0x22` |
-| `DATA_DEL` | `0x23` |
-| `DATA_FORGOT` | `0x24` |
+| `DATA_FULFILL` | `0x21` |
+| `DATA_RETRIEVE` | `0x22` |
+| `DATA_REQUEST` | `0x23` |
+| `DATA_SET_SIZE` | `0x24` |
+| `DATA_STORE` | `0x25` |
 | `ACK_DATA_TEMP` | `0x30` |
-| `ACK_DATA_UPDATE` | `0x31` |
-| `ACK_DATA_MOVE` | `0x32` |
-| `ACK_DATA_DEL` | `0x33` |
-| `QUERY_FREE_HEAP` | `0x40` |
-| `QUERY_TIME` | `0x41` |
+| `ACK_DATA_FULFILL` | `0x31` |
+| `ACK_DATA_RETRIEVE` | `0x32` |
+| `ACK_DATA_REQUEST` | `0x33` |
+| `ACK_DATA_SET_SIZE` | `0x34` |
+| `ACK_DATA_STORE` | `0x35` |
+| `QUERY_TIME` | `0x40` |
 | `RESET` | `0x50` |
 | `PING` | `0x51` |
 | `PONG` | `0x52` |
@@ -107,8 +109,11 @@ An entire slot has a _temperature_, which relates to where a version of it shoul
 | Warm | Will be required soon for the display, should be sent. |
 | Hot | Is being displayed right now. |
 
-Any updates to data that is at least level Warm should be immediately transferred to the STM. Additionally, if any part of the slot's data is stored _canonically_ on the STM and the slot
-is made Warm or higher, all the remaining parts of the data still stored on the ESP should be flushed to the STM and marked remote.
+There is also a special temperature which is never transmitted, but which the ESP uses internally to represent data that should be Warm but has no space to fit on the STM.
+
+Any updates to data that is at least level Warm should be immediately transferred to the STM, so long as there
+is space for it. Additionally, if any part of the slot's data is stored _canonically_ on the STM and the slot
+is made Warm or higher, all the remaining parts of the data still stored on the ESP should be flushed to the STM and marked remote, again, memory permitting.
 
 The STM controls the temperature of data using the `DATA_TEMP` (data temperature) message:
 
@@ -120,17 +125,22 @@ The STM controls the temperature of data using the `DATA_TEMP` (data temperature
 ```
 
 The STM shall send this message whenever it wishes to change the temperature of a slot, and should send it repeatedly until it receives an identical message of type `ACK_DATA_TEMP` confirming the change
-(although it's allowed to stop sending if it wants to)
+(although it's allowed to stop sending if it wants to). The ESP can also respond with the fake temperature "0xff" which indicates a non-acknowledgement, usually because it thinks there isn't 
+enough space (or for if there's no data for that slot)
+
+The ESP can also send a `DATA_TEMP` message to set a slot back to Cold should it determine there is not enough space for it to be updated immediately. The STM may challenge this declaration
+by trying to change the slot back to Warm, but will probably get a nak. The ESP may decide to re-instate the Warm temperature for a slot later, but only if the STM has not otherwise changed
+the temperature since.
 
 #### Updating
 
-The ESP uses the `DATA_UPDATE` message to signal that the STM should create an ephemeral part of the data at some offset and length. It also sends along the total length of the slot.
+The ESP uses the `DATA_FULFILL` message to signal that the STM should create an ephemeral part of the data at some offset and length.
 
 ```
-| 0x090a | 0x0100 | 0x0500 | 0x0120 | <data> |
-  |        |        |        |
-  |        |        |        ---- total length of this update
-  |        |        ---- total length of slot
+| 0x090a | 0x0100 | 0x0500 | <data> |
+  |        |        |        
+  |        |        |        
+  |        |        ---- total length of update
   |        --- offset to update at
   --- slot ID + framing info:
 
@@ -142,16 +152,18 @@ The ESP uses the `DATA_UPDATE` message to signal that the STM should create an e
     - start
 ```
 
+The "fulfilling" of the data is in response to a "request", either implicitly from the temperature setting or explicitly from a "DATA_REQUEST" message.
+
 #### Framing
 
-This message (as well as `DATA_MOVE`) is framed to allow for sending more than 249 bytes: the `start` bit is set for the first message corresponding to this update, the `end` bit is set for the last message, and the offset is always
+This message (as well as `DATA_STORE`) is framed to allow for sending more than 249 bytes: the `start` bit is set for the first message corresponding to this update, the `end` bit is set for the last message, and the offset is always
 the offset of this message.
 
 This is enough to both know the size and starting offset of an update immediately, progressively update, and again know the size and starting offset of the entire update as well.
 
 #### Acknowledgements
 
-This message (as well as `DATA_MOVE`) send a single acknowledgement to indicate successful/unsuccessful completion of the update as a whole. Note that an acknowledgement is not required if an `end` packet
+This message (as well as `DATA_STORE`) send a single acknowledgement to indicate successful/unsuccessful completion of the update as a whole. Note that an acknowledgement is not required if an `end` packet
 is not sent.
 
 This acknowledgement takes the form
@@ -164,45 +176,62 @@ This acknowledgement takes the form
   -- slot ID  -- start of update
 ```
 
-Valid result codes are:
+The result code is one of these:
 
 | Code | Usage |
 | ---- | ----- |
 | `0x00` | Completed OK |
-| `0x01` | Not enough space to store |
-| `0x02` | Illegal internal state |
-| `0x03` | Parameters don't make sense / other NAK |
+| `0x01` | Not enough space to store -- try again soon to allow for potential cleanup |
+| `0x02` | Not enough space to store -- cleanup failed, definitely no space |
+| `0x10` | Illegal internal state |
+| `0x11` | Parameters don't make sense / other NAK |
+| `0xff` | Internal timeout somewhere |
 
 #### Moving 
 
-The ESP or STM are both allowed to "flush" parts of data to the opposite processor, and convert them from canonical parts to remote parts. This is accomplished with the `DATA_MOVE` message, which has the
-same format and acknowledgement scheme as `DATA_UPDATE`, but semantically means to create a canonical part not an ephemeral one.
+The ESP is allowed to store data canonically on the STM should it want, and it does this with the `DATA_STORE` message.
+It has the same format and acknowledgement scheme as `DATA_FULFILL`, but semantically means to create a canonical part not an ephemeral one.
 
-#### Deletion
+### Unmoving
 
-The ESP can also send the following message to indicate that a slot has been nulled entirely (a 0-slot-length update packet is illegal)
+If the ESP decides it no longer wants data canonically on the STM, it can send the `DATA_RETRIEVE` message. 
 
 ```
-| 0x090a |
-   |
-   -- slot ID
+| 0x090a | 0x0100 | 0x0120 |
+  |           |     |
+  |           |     -- region size
+  -- slot ID  -- region start 
 ```
 
-This is acknowledged with a copy of the message, and it is illegal to not have this complete succesfully: if the data is not present, silently ignore it.
+If the data is present on the STM, it sends an acknowledgement that is identical. If the data is not present, a similar process to an invalid `DATA_CHANGE_SIZE` is used.
+Once the acknowledgement is sent, the STM sends its own `DATA_STORE` message sequence, and the ESP responds accordingly. 
 
-#### Forgetting
+#### Size update
 
-The STM can declare that it has "forgot" a slot id, which tells the ESP to send it next time it is made warm as opposed to assuming it is not dirty.
-There is no acknowledgement for this message as interpretation is optional.
+The ESP sends `DATA_CHANGE_SIZE` whenever the total size of a slot changes. The STM should handle new empty space as remote placeholders.
 
-The syntax for this message is:
+```
+| 0x090a | 0x0aaa |
+   |           |
+   |           |
+   -- slot ID  -- new slot size
+```
+
+This is acknowledged with a copy of the message, and it is illegal to not have this complete succesfully. If there isn't enough space to store
+the placeholder, not responding is valid and the ESP will handle the timeout in some vaguely graceful manner.
+
+#### Forgetting/requesting
+
+The STM can request an explicit `DATA_FULFILL` from the ESP by sending a `DATA_REQUEST` message. The syntax for this message is:
 
 ```
 | 0x090a | 0x000c | 0x0120 |
-  |
-  |
-  --- slot ID
+  |           |     |
+  |           |     -- region size
+  -- slot ID  -- region start
 ```
+
+An identically-formatted message is sent as acknowledgement.
 
 ### Consoles
 
@@ -243,15 +272,6 @@ The status code can be one of
 | ---- | ------- |
 | `0x00` | OK |
 | `0x01` | Time is still being retrieved, try again in a bit |
-
-### Heap stats
-
-The `QUERY_FREE_HEAP` command returns a few constants about the data heap:
-
-- the total size of the heap
-- the amount of space free in the heap (as in, how much space can be allocated to new blocks without having to clear anything)
-
-as two 16-bit values in that order.
 
 ### Other commands
 

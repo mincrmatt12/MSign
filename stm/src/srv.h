@@ -6,10 +6,11 @@
 #include "common/slots.h"
 #include "protocol.h"
 #include "common/bheap.h"
-#include "lru.h"
+#include "common/heapsize.h"
 
 #include <FreeRTOS.h>
 #include <stream_buffer.h>
+#include <semphr.h>
 #include <queue.h>
 #include <task.h>
 
@@ -18,8 +19,8 @@ namespace srv {
 	//
 	// Manages slots of arbitrary length data using the bheap.
 	//
-	// NOTE: the result of a call to data() may become invalid at any point.
-	//       this may change depending on available RAM / queueing system, but presently 
+	// NOTE: the result of a call to data() may become invalid at any point, unless
+	// the lock is held, in which case they will remain valid until the lock is next given.
 	//
 	// This class also handles the update procedure.
 	struct Servicer final : private ProtocolImpl {
@@ -78,39 +79,54 @@ namespace srv {
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
-		bheap::Arena<14*1024> arena;
-		lru::Cache<8, 4> bcache;
+		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
 
 		// Called from ISR and populates queue.
-
 		void process_command() override;
+
+		// Wait send to complete (or return if not sending)
+		void wait_for_not_sending(); // uses notification
+
+		// Update specific routines
+
+		// Handle a single packet in update mode
 		void process_update_packet(uint8_t cmd, uint8_t len);
+		// Handle an UPDATE_CMD
 		void process_update_cmd(slots::protocol::UpdateCmd cmd);
+		// Send a single UPDATE_STATUS
+		void send_update_status(slots::protocol::UpdateStatus status);
+		// Main loop in update mode.
 		void do_update_logic();
+
+		// Connect to the ESP
 		void do_handshake();
 
 		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
-		bool do_bheap_cleanup(bool full_cleanup=true); // returns done
-		void wait_for_not_sending(); // uses notification
+		void try_cleanup_heap(ssize_t space_to_clear); // returns done
 		void check_connection_ping(); // verify we're still connected with last_transmission
-		void update_forgot_statuses(); // send DATA_FORGOT for all "dirty" remote blocks.
-		void send_update_status(slots::protocol::UpdateStatus status);
+		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
 
-		// Logic related to update
+		// Are we currently doing an update? If so, we _won't_ process _any_ data requests.
 		bool is_updating = false;
 		uint8_t update_state = 0;
 
+		// status shown on screen
 		char update_status_buffer[16];
+		// buffer of the last update package
 		uint8_t update_pkg_buffer[256];
+		// size of update pkg
 		uint32_t update_pkg_size = 0;
 
+		// update total size (new bin length)
 		uint32_t update_total_size = 0;
+		// checksum of entire update
 		uint16_t update_checksum = 0;
+		// how many chunks remaining in update
 		uint16_t update_chunks_remaining = 0;
-		int16_t last_update_failed_delta_size = 0;
 
 		// Sync primitives + log buffers + dma buffer
-		QueueHandle_t bheap_mutex;
+		SemaphoreHandle_t bheap_mutex;
+		StaticSemaphore_t bheap_mutex_private;
 
 		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
 		// The format of these requests is this struct:
@@ -136,18 +152,25 @@ namespace srv {
 				TypeRxTime
 			} type;
 		};
+
 		QueueHandle_t pending_requests;
+		// Static queue allocation
+		StaticQueue_t pending_requests_private;
+		uint8_t       pending_requests_data[32 * sizeof(PendRequest)];
 
 		void start_pend_request(PendRequest req);
-		void evict_block(bheap::Block& block);
 		
 		// Stream buffers for dma-ing
 		//
 		// Specifically only receive as [citation needed] we don't need to queue up transmissions.
 		StreamBufferHandle_t dma_rx_queue;
+		uint8_t              dma_rx_queue_data[2048];
+		StaticStreamBuffer_t dma_rx_queue_private;
 
 		// Stream buffers for sending/rx-ing debug stuff
 		StreamBufferHandle_t log_in, log_out;
+		uint8_t              log_in_data[176], log_out_data[128];
+		StaticStreamBuffer_t log_in_private, log_out_private;
 
 		// The task to notify whenever we add something to the queue.
 		//
