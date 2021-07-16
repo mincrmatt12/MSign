@@ -42,43 +42,45 @@ namespace led {
 		}
 
 		void prepare_stream(uint16_t i, uint8_t pos) {
-			// ARM assembler is fairly interesting 
-			// we can have nearly any instruction execute conditionally
-			// and the and operation will set flags if it ends with an S...
-
-			uint8_t * lo = (uint8_t *)(((uintptr_t)(&data[i*Storage::EffectiveWidth*3]) & 0xFFFFF) * 32 + 0x22000000 + pos*4);
-			uint8_t * hi = lo + stb_lines*Storage::EffectiveWidth*3*64;
-			uint8_t * bs = &byte_stream[0];
-
-			for (uint_fast16_t j = 0; j < Storage::EffectiveWidth; ++j) {
-				asm volatile (
-					// start by loading the bit value at lo into r2
-					"ldrb r2, [%[Lo]], #64\n\t"  // increment by 64 each time to advance a word
-					// load the next byte
-					"ldrb r10, [%[Lo]], #64\n\t"
-					// or them together
-					"orr r2, r2, r10, lsl #1\n\t"
-					// repeat for B byte
-					"ldrb r10, [%[Lo]], #64\n\t"
-					"orr r2, r2, r10, lsl #2\n\t" // now shift by 2 since it's in bit position 2
-					// do the entire thing but in r3 to save an or
-					"ldrb r3, [%[Hi]], #64\n\t"
-					"ldrb r10, [%[Hi]], #64\n\t"
-					"orr r3, r3, r10, lsl #1\n\t"
-					"ldrb r10, [%[Hi]], #64\n\t"
-					"orr r3, r3, r10, lsl #2\n\t"
-					// move r3 into r2
-					"orr r2, r2, r3, lsl #3\n\t"
-					// now, r2 contains the value for bs
-					"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
-					// set the clock line
-					"orr r2, r2, #64\n\t"
-					// store the byte
-					"strb r2, [%[Bs]], #1\n\t" // store r2 into BS then add 1 to BS
-					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
-					: "0"(lo), "1"(hi), "2"(bs)
-					: "r2", "r3", "cc", "r10"
-				);
+			switch (pos) {
+				case 0:
+					prepare_stream_bf<0>(i);
+					return;
+				case 1:
+					prepare_stream_bf<1>(i);
+					return;
+				case 2:
+					prepare_stream_bf<2>(i);
+					return;
+				case 3:
+					prepare_stream_bf<3>(i);
+					return;
+				case 4:
+					prepare_stream_bf<4>(i);
+					return;
+				case 5:
+					prepare_stream_bf<5>(i);
+					return;
+				case 6:
+					prepare_stream_bf<6>(i);
+					return;
+				case 7:
+					prepare_stream_bf<7>(i);
+					return;
+				case 8:
+					prepare_stream_bf<8>(i);
+					return;
+				case 9:
+					prepare_stream_bf<9>(i);
+					return;
+				case 10:
+					prepare_stream_bf<10>(i);
+					return;
+				case 11:
+					prepare_stream_bf<11>(i);
+					return;
+				default:
+					__builtin_unreachable();
 			}
 		}
 
@@ -135,6 +137,80 @@ namespace led {
 		uint16_t data[Width*Height*3];
 
 		uint16_t junk; // used as failsafe for read/write out of bounds
+
+	private:
+		template<unsigned Pos>
+		void prepare_stream_bf(uint16_t i) {
+			uint16_t * lo = &data[i*Storage::EffectiveWidth*3];
+			uint16_t * hi = lo + stb_lines*Storage::EffectiveWidth*3;
+			uint8_t  * bs = byte_stream;
+
+			for (uint_fast16_t j = 0; j < Storage::EffectiveWidth / 2; ++j) {
+				asm volatile (
+					// Load 3 words (or 6 colors / 2 pixels) into r1-r3 using ldm
+					"ldmia %[Lo]!, {r1,r2,r3}\n\t"
+					// Grab green0
+					"ubfx r10, r1, %[PosPlus], #1\n\t"
+					// Place red0  (r1 is now    g16r
+					"ubfx r1, r1, %[Pos], #1\n\t"
+					// Place red1
+					"lsr r2, r2, %[Pos]\n\t"
+					// Grab blue0
+					"bfi r10, r2, #1, #1\n\t"
+					// Mask red0
+					//"ubfx r1, r1, #1, #1\n\t"
+					// Or into r1
+					"bfi r1, r10, #1, #2\n\t" /// now r1 contains <junk>bgr in correct order
+					// Extract green1 into r10
+					"ubfx r10, r3, %[Pos], #1\n\t"
+					// Prepare pixel2
+					"lsr r3, r3, %[PosPlus]\n\t"
+					// Insert
+					"bfi r10, r3, #1, #1\n\t"
+					// Bfi again to create final value to be orred
+					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
+					// Mask out r2
+					"and r2, r2, #0x00070000\n\t"
+					// Prepare bit sequence
+					"orr r11, r1, r2\n\t"
+					// Load bottom 3 bytes
+				    
+					// Load 3 words (or 6 colors / 2 pixels) into r1-r3 using ldm
+					"ldmia %[Hi]!, {r1,r2,r3}\n\t"
+					// Grab green0
+					"ubfx r10, r1, %[PosPlus], #1\n\t"
+					// Place red0  (r1 is now    g16r
+					"ubfx r1, r1, %[Pos], #1\n\t"
+					// Place red1
+					"lsr r2, r2, %[Pos]\n\t"
+					// Grab blue0
+					"bfi r10, r2, #1, #1\n\t"
+					// Mask red0
+					//"ubfx r1, r1, #1, #1\n\t"
+					// Or into r1
+					"bfi r1, r10, #1, #2\n\t" /// now r1 contains <junk>bgr in correct order
+					// Extract green1 into r10
+					"ubfx r10, r3, %[Pos], #1\n\t"
+					// Prepare pixel2
+					"lsr r3, r3, %[PosPlus]\n\t"
+					// Insert
+					"bfi r10, r3, #1, #1\n\t"
+					// Bfi again to create final value to be orred
+					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
+					"and r2, r2, #0x00070000\n\t"
+					"orr r10, r1, r2\n\t"
+					// Prepare actual value
+					"orr r11, r11, r10, lsl #3\n\t"
+					"orr r11, r11, r11, lsl #8\n\t"
+					"orr r11, r11, #0x40004000\n\t"
+					// Store value 
+					"str r11, [%[Bs]], #4\n\t"
+					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs) 
+					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [PosPlus]"i"(Pos + 16)
+					: "r1", "r2", "r3", "cc", "r10", "r11"
+				);
+			}
+		}
 	};
 
 	struct FourPanelSnake {
@@ -355,7 +431,7 @@ namespace led {
 			show = false;
 			// Thing
 			GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-			const static uint16_t draw_ticks_table[] = {3,6,12,24,48,96,192,384,768,1536,3072,6144};
+			const static uint16_t draw_ticks_table[] = {4,7,14,29,58,115,230,461,922,1843,3686,7373};
 			uint16_t drawn_pos = draw_ticks_table[pos];
 			++row;
 			if (row < FB::stb_lines) {
