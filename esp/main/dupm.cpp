@@ -142,8 +142,8 @@ block_ok:
 			// Wait for a request
 			DataUpdateRequest dur;
 			
-			if (xQueueReceive(pending, &dur, sync_pending ? pdMS_TO_TICKS(50) : portMAX_DELAY) == pdFALSE) {
-				if (sync_pending) send_pending_dirty_blocks();
+			if (xQueueReceive(pending, &dur, sync_pending ? pdMS_TO_TICKS(50) : pdMS_TO_TICKS(1500)) == pdFALSE) {
+				send_pending_dirty_blocks();
 				continue;
 			}
 
@@ -218,16 +218,16 @@ block_ok:
 
 	void DataUpdateManager::mark_dirty_handler(DataUpdateRequest &dur) {
 		for (auto *b = &arena.get(dur.d_dirty.slotid, dur.d_dirty.offset); b && arena.block_offset(*b) < dur.d_dirty.offset + dur.d_dirty.size; b = b->next()) {
-			// Is this a warm block? if so, just give up on sending it in general. TODO: maybe make this delay a bit?
-			if (b->temperature == bheap::Block::TemperatureWarm && dur.d_dirty.size > 8) {
-				ESP_LOGW(TAG, "detected warm block being marked dirty, marking it cold to prevent loops.");
-				// Abandon updating this block at all.
-				inform_temp_change(dur.d_dirty.slotid, bheap::Block::TemperatureCold);
-				arena.set_temperature(dur.d_dirty.slotid, bheap::Block::TemperatureColdWantsWarm);
-				return;
-			}
 			// Is this a canonical block? If so, we mark it dirty as long as it's not queued to be flushed
 			if (b->location == bheap::Block::LocationCanonical) {
+				// Is this a warm block? if so, just give up on sending it in general.
+				if (b->temperature == bheap::Block::TemperatureWarm && dur.d_dirty.size > 8 && !(b->flags & bheap::Block::FlagDirty)) {
+					ESP_LOGW(TAG, "detected warm block being marked dirty, marking it cold to prevent loops.");
+					// Abandon updating this block at all.
+					inform_temp_change(dur.d_dirty.slotid, bheap::Block::TemperatureCold);
+					arena.set_temperature(dur.d_dirty.slotid, bheap::Block::TemperatureColdWantsWarm);
+					return;
+				}
 				// Can we be more precise with this? Check if the block only partially contains the region
 				auto current_offset = arena.block_offset(*b);
 				auto before = dur.d_dirty.offset - current_offset;
