@@ -620,11 +620,15 @@ void srv::Servicer::run() {
 						// Read (or discard) the remaining packet data
 						amount = 0;
 						while (amount < packet_length) {
-							auto got = xStreamBufferReceive(dma_rx_queue, msgbuf, std::min<size_t>(16, (packet_length - amount)), portMAX_DELAY);
+							auto got = xStreamBufferReceive(dma_rx_queue, msgbuf, std::min<size_t>(16, (packet_length - amount)), pdMS_TO_TICKS(5));
 							// If nothing has gone wrong, update the contents in 16-byte chunks reading from the buffer.
 							if (move_update_errcode == slots::protocol::DataStoreFulfillResult::Ok)
 								if (!arena.update_contents(sid_frame, offset + amount, got, msgbuf)) move_update_errcode = slots::protocol::DataStoreFulfillResult::IllegalState;
 							amount += got;
+							if (got == 0) {
+								// Timed out waiting, just give up -- the ESP was probably sending packets too fast.
+								break;
+							}
 						}
 
 						// If this is a hot packet and not homogenous we also homogenize it
