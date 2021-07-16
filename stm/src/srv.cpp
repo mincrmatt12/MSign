@@ -170,6 +170,7 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 	//
 	// We free from left to right; this could probably be more efficient going right to left but it'd use more memory more of the time.
 	for (int stage = 0; stage < 8; ++stage) {
+repeatloop:
 		for (auto& block : arena) {
 			if (block && block.location == bheap::Block::LocationEphemeral && block.datasize 
 				&& block.temperature == 
@@ -183,14 +184,28 @@ void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
 				// Only free up so much
 				if (len >= (to_free + 20)) len = to_free;
 
+				// Send out a packet with the freed block immediately, so the ESP knows to send it.
+				wait_for_not_sending();
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 6;
+				dma_out_buffer[2] = slots::protocol::DATA_REQUEST;
+
+				*reinterpret_cast<uint16_t *>(dma_out_buffer + 3) = block.slotid;
+				*reinterpret_cast<uint16_t *>(dma_out_buffer + 5) = arena.block_offset(block);
+				*reinterpret_cast<uint16_t *>(dma_out_buffer + 7) = block.datasize;
+				
+				send();
+				// Set location afterwards to avoid invalidating block
 				arena.set_location(block.slotid, arena.block_offset(block), len, bheap::Block::LocationRemote);
 
 				auto freed = len + (len % 4 ? 0 : 4 - len % 4);
 				to_free -= freed;
 				current_space += freed;
-			}
-			if (to_free <= 0) {
-				return;
+				if (to_free <= 0) {
+					return;
+				}
+				else goto repeatloop; // avoid invalid iteration
 			}
 		}
 
