@@ -368,7 +368,8 @@ void srv::Servicer::run() {
 			// TODO: handle request timeouts
 			continue;
 		}
-		// This message will come pre-verified from the protocol layer.
+		// This message will come pre-verified from the protocol layer, but we'll check anyways in case something overran
+		if (msgbuf[0] != slots::PacketWrapper<>::FromEsp) continue;
 		//
 		// Now we dispatch based on command
 
