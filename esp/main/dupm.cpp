@@ -259,7 +259,12 @@ block_ok:
 			pkt.init(is_store ? slots::protocol::DATA_STORE : slots::protocol::DATA_FULFILL);
 
 			pkt.put(length, 4);
+			size_t bytes_without_pause = 0;
 			for (uint16_t suboff = 0; suboff < length; suboff += (255-6)) {
+				if (bytes_without_pause > 768) { // ensure we don't send too much data too quickly, as this can confuse the STM and cause it to get stuck.
+					vTaskDelay(pdMS_TO_TICKS(2));
+					bytes_without_pause = 0;
+				}
 				bool start = suboff == 0;
 				bool end   = suboff + (255-6) >= length;
 				if (end) {
@@ -270,6 +275,7 @@ block_ok:
 				if (datasource) memcpy(pkt.data() + 6, &((const uint8_t *)datasource)[suboff], pkt.size - 6);
 
 				serial::interface.send_pkt(pkt);
+				bytes_without_pause += pkt.size + 3;
 			}
 		}
 
@@ -363,6 +369,8 @@ warm_hot_send_remotes:
 									case slots::protocol::DataStoreFulfillResult::Ok:
 										// finish by setting block to remote
 										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
+										// mark not dirty
+										b->flags &= ~bheap::Block::FlagDirty;
 										goto ok;
 									case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
 										if (dur.d_temp.newtemperature == bheap::Block::TemperatureWarm) {
