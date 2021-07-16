@@ -1072,14 +1072,6 @@ retry_allocation:
 			} // if this fails, we keep current_size as-is and just send the entire thing
 		}
 
-		// Ensure the remote placeholder will fit
-		if (arena.free_space() < 32) {
-			// Perform the bof™ technique for freeing up something. Unlike normal free this tries to get free space in _our_ heap.
-			//
-			// They share a common path though, which is trying to clear out "warm-buffer" space to fit.
-			cleanout_esp_space(); // this function cleans out up to the target_free_space_buffer amount, which is guaranteed to be at least 4.
-		}
-
 		// Ensure there's enough space to dump this block
 		if (!ensure_budget_space(UseForRemoteStorage, dur.d_chsize.slotid, new_blk_size + 4) || arena.free_space() < 4) { // this un-warms blocks until there's enough "budget space" on the stm to fit the given parameter. the 
 			if (needs_to_defer_to_remote) {
@@ -1097,7 +1089,14 @@ retry_allocation:
 			if (alloc_attempts++ == 0) goto retry_allocation;
 			return;
 		}
-		// slotid is used to work out which region to allocate into.
+
+		// Ensure the remote placeholder will fit
+		if (arena.free_space() < 32) {
+			// Perform the bof™ technique for freeing up something. Unlike normal free this tries to get free space in _our_ heap.
+			//
+			// They share a common path though, which is trying to clear out "warm-buffer" space to fit.
+			cleanout_esp_space(); // this function cleans out up to the target_free_space_buffer amount, which is guaranteed to be at least 4.
+		}
 		
 		// At this point we should have enough space to put a remote block into our buffer _and_ enough space to send that to the stm, so do that now.
 		if (!arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationRemote, new_blk_size)) {
