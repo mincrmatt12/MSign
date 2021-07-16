@@ -36,16 +36,6 @@ namespace slots {
 		WEATHER_TEMP_GRAPH = 0x41,  // FLOAT[]; temp data per hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
-        TIMETABLE_HEADER = 0x90,    // STRUCT; TimetableHeader; header info for timetable screen
-        TIMETABLE_AM_CODE = 0x91,   // STRING; name of am course (if applicable)
-        TIMETABLE_AM_ROOM = 0x92,   // STRING; room of am course (if applicable)
-        TIMETABLE_AM_NAME = 0x93,   // STRING; full course name of am course
-        TIMETABLE_AM_TEACHER = 0x94,// STRING; teacher name of am course
-        TIMETABLE_PM_CODE = 0x95,   // STRING; name of am course (if applicable)
-        TIMETABLE_PM_ROOM = 0x96,   // STRING; room of am course (if applicable)
-        TIMETABLE_PM_NAME = 0x97,   // STRING; full course name of am course
-        TIMETABLE_PM_TEACHER = 0x98,// STRING; teacher name of am course
-
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
 		MODEL_CAM_MINPOS  = 0x905,  // STRUCT; Vec3; minimum position of the camera 
@@ -110,20 +100,6 @@ namespace slots {
 		uint8_t data[14];
 	};
 
-    struct TimetableHeader {
-        uint8_t current_day;
-        uint8_t next_day;
-
-        enum LayoutStyle : uint8_t {
-            EMPTY,
-            AM_ONLY,
-            AM_INCLASS_ONLY,
-            AM_PM,
-            AM_INCLASS_PM,
-            PM_ONLY
-        } current_layout, next_layout;
-    };
-
 	struct ScCfgInfo {
 		uint16_t enabled_mask;
 		bool display_on;
@@ -145,10 +121,9 @@ namespace slots {
 			TTC = 0,
 			WEATHER = 1,
 			MODEL = 2,
-			PERIODS = 3,
-			PARCELS = 4,
-			JENKINS = 5,
-			PRINTER = 6
+			PARCELS = 3,
+			JENKINS = 4,
+			PRINTER = 5
 		} screen_id;
 	};
 

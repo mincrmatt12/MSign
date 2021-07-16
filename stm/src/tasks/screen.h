@@ -7,7 +7,6 @@
 #include "../screens/weather.h"
 #include "../screens/clock.h"
 #include "../screens/threed.h"
-#include "../screens/tdsb.h"
 
 namespace tasks {
 	struct DispMan {
@@ -20,8 +19,7 @@ namespace tasks {
 			screen::LayeredScreen<
 				threed::Renderer,
 				screen::ClockScreen
-			>,
-			screen::TDSBScreen
+			>
 		> swapper;
 
 		int screen_list_idx = 0;

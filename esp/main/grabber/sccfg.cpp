@@ -8,7 +8,7 @@
 const static char * TAG = "sccfg";
 
 namespace sccfg {
-	const uint8_t number_of_screens = 4;
+	const uint8_t number_of_screens = 3;
 
 	uint16_t force_enabled_mask = 0;
 	uint16_t force_disabled_mask = 0;
@@ -87,7 +87,6 @@ namespace sccfg {
 		create_events_for(0, config::SC_TTC);
 		create_events_for(1, config::SC_WEATHER);
 		create_events_for(2, config::SC_3D);
-		create_events_for(3, config::SC_CFIX);
 
 		slots::ScCfgTime times[number_of_screens];
 
@@ -95,7 +94,7 @@ namespace sccfg {
 			int indices[4];
 			sscanf(config::manager.get_value(config::SC_ORDER), "%d,%d,%d,%d", &indices[0], &indices[1], &indices[2], &indices[3]);
 
-			for (int i = 0; i < 4; ++i) {
+			for (int i = 0; i < 3; ++i) {
 				times[i].screen_id = static_cast<slots::ScCfgTime::ScreenId>(indices[i]);
 			}
 		}
@@ -103,7 +102,6 @@ namespace sccfg {
 			times[0].screen_id = slots::ScCfgTime::TTC;
 			times[1].screen_id = slots::ScCfgTime::WEATHER;
 			times[2].screen_id = slots::ScCfgTime::MODEL;
-			times[3].screen_id = slots::ScCfgTime::PERIODS;
 		}
 
 		if (config::manager.get_value(config::SC_TIMES) != nullptr) {
@@ -114,13 +112,11 @@ namespace sccfg {
 			times[0].millis_enabled = tTTC;
 			times[1].millis_enabled = tWEA;
 			times[2].millis_enabled = t3D;
-			times[3].millis_enabled = tCFIX;
 		}
 		else {
 			times[0].millis_enabled = 12000;
 			times[1].millis_enabled = 12000;
 			times[2].millis_enabled = 12000;
-			times[3].millis_enabled = 12000;
 		}
 
 		serial::interface.update_slot(slots::SCCFG_TIMING, times);
