@@ -31,6 +31,9 @@ namespace crash {
 
 	// Transfer control the interrupt handler, getting the state from the stacked registers in an interrupt handler.
 	[[noreturn]] void panic_from_isr(const char* errcode, uint32_t *SP_at_ISR_entry);
+
 };
+
+extern "C" void msign_assert(bool condition, const char *msg="assertion failed");
 
 #endif

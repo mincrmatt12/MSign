@@ -278,4 +278,9 @@ reboot:
 		uint32_t SP = (uint32_t)(&SP_at_isr[8]) + aligned * 4;
 		call_crash_main(errcode, SP, PC, LR);
 	}
+
+}
+
+extern "C" void msign_assert(bool c, const char *msg) {
+	if (!c) crash::panic(msg);
 }
