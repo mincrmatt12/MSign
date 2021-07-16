@@ -77,7 +77,18 @@ namespace dwhttp {
 					return true;
 				}
 
-				size_t read(uint8_t *buf, size_t max) {
+				ssize_t read(uint8_t *buf, size_t max) {
+					size_t amount = 0;
+					while (amount < max) {
+						auto amt = read_some(buf, max - amount);
+						if (amt == -1) return -1;
+						amount += amt;
+						buf += amount;
+					}
+					return amount;
+				}
+
+				ssize_t read_some(uint8_t *buf, size_t max) {
 					int code = lwip_recv(sockno, buf, max, 0);
 					if (code >= 0) return code;
 					else {
@@ -91,6 +102,7 @@ namespace dwhttp {
 						}
 					}
 				}
+
 				bool write(const uint8_t *buf, size_t length) {
 					size_t pos = 0;
 					while (pos < length) {
@@ -293,7 +305,7 @@ namespace dwhttp {
 					return true;
 				}
 
-				size_t read(uint8_t *buf, size_t max) {
+				ssize_t read(uint8_t *buf, size_t max) {
 					if (!is_connected()) return -1;
 					int rlen = br_sslio_read_all(ssl_ic, buf, max);
 					if (rlen < 0) {
@@ -301,6 +313,16 @@ namespace dwhttp {
 						return -1;
 					}
 					return max;
+				}
+
+				ssize_t read_some(uint8_t *buf, size_t max) {
+					if (!is_connected()) return -1;
+					int rlen = br_sslio_read(ssl_ic, buf, max);
+					if (rlen < 0) {
+						close();
+						return -1;
+					}
+					return rlen;
 				}
 
 				bool write(const uint8_t *buf, size_t length) {
@@ -437,32 +459,9 @@ namespace dwhttp {
 			};
 		}
 
-		template<typename Adapter>
-		struct Downloader {
-			// helper for char-by-char access
-			//
-			// will this perform terribly? perhaps!
-			int16_t next() {
-				uint8_t buf;
-				if (!read_from(&buf, 1)) return -1;
-				return buf;
-			}
-
-			size_t read_from(uint8_t *buf, size_t max) {
-				if (!socket.is_connected()) return 0;
-				int r = socket.read(buf, max);
-				if (r <= 0) {
-					ESP_LOGW(TAG, "Read failed.");
-					socket.close();
-					return 0;
-				}
-				return r;
-			}
-
-			// Close sockets
-			void stop() {
-				socket.close();
-			}
+		struct DownloaderBase {
+			virtual size_t read_from(uint8_t * buf, size_t max) = 0;
+			virtual void   stop() = 0;
 
 			inline const int& result_code() const {
 				return state.c.result_code;
@@ -474,6 +473,27 @@ namespace dwhttp {
 
 			inline bool is_unknown_length() const {
 				return state.c.connection == HTTP_CLIENT_CONNECTION_CLOSE;
+			}
+		protected:
+			http_client_state_t state;
+		};
+
+		template<typename Adapter>
+		struct Downloader : DownloaderBase {
+			size_t read_from(uint8_t *buf, size_t max) override {
+				if (!socket.is_connected()) return 0;
+				int r = socket.read_some(buf, max);
+				if (r <= 0) {
+					ESP_LOGW(TAG, "Read failed.");
+					socket.close();
+					return 0;
+				}
+				return r;
+			}
+
+			// Close sockets
+			void stop() override {
+				socket.close();
 			}
 
 			bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const uint8_t * body=nullptr, const size_t bodylen=0) {
@@ -573,7 +593,6 @@ finish_req:
 			}
 		private:
 			Adapter socket;
-			http_client_state_t state;
 
 			bool write_header(const char * name, const char * value) {
 				if (!socket.write(name)) return false;
@@ -593,129 +612,75 @@ finish_req:
 		template<>
 		inline constexpr Downloader<adapter::HttpsAdapter>& get_downloader() {return dwnld_s;};
 
-	}
-}
+		template<typename T>
+		dwhttp::Download download_with_callback_impl(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body) {
+			static auto& dwnld = dwhttp::detail::get_downloader<T>();
+			dwnld.request(host, path, method, headers, (const uint8_t *)body, body ? strlen(body) : 0);
 
-template<typename T>
-inline dwhttp::Download download_from_impl(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
-	constexpr static dwhttp::detail::Downloader<T>& dwnld = dwhttp::detail::get_downloader<T>();
-	dwhttp::Download d;
-	if (!dwnld.request(host, path, method, headers, (const uint8_t *)body, body ? strlen(body) : 0)) {
-		d.error = true;
-		return d;
-	}
-
-	d.status_code = dwnld.result_code();
-	d.error = false;
-	if (dwnld.result_code() < 200 || dwnld.result_code() >= 300) {
-		dwnld.stop();
-		ESP_LOGE(TAG, "download_from_impl got result code %d", d.status_code);
-		d.error = true;
-		return d;
-	}
-
-	if (!dwnld.is_unknown_length()) {
-		d.length = dwnld.content_length();
-		d.buf = (char *)malloc(d.length);
-		// TODO: rewrite me please!
-		for (int32_t i = 0; i < d.length; ++i) {
-			auto x = dwnld.next();
-			if (x != -1) {
-				d.buf[i] = (char)x;
-			}
-			else {
-				free(d.buf);
-				d.error = true;
-				return d;
-			}
+			return dwhttp::Download((dwhttp::detail::DownloaderBase *)&dwnld);
 		}
 	}
-	else {
-		// download until the connection ends
-		d.length = 128;
-		d.buf = (char *)malloc(d.length);
-		size_t i = 0;
-		int16_t x;
-		while ((x = dwnld.next()) != -1) {
-			if (i == d.length) {
-				d.length += 128;
-				d.buf = (char *)realloc(d.buf, d.length);
-				if (d.buf == nullptr) {
-					d.error = true;
-					return d;
-				}
-			}
-			d.buf[i++] = x;
-		}
-		d.buf = (char *)realloc(d.buf, i);
-		d.length = i;
-	}
-
-	return d;
 }
 
-dwhttp::Download dwhttp::download_from(const char *host, const char *path, const char * const headers[][2], const char * method, const char * body) {
+dwhttp::Download dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body) {
 	if (host[0] != '_') {
-		return ::download_from_impl<detail::adapter::HttpAdapter>(host, path, headers, method, body);
+		return detail::download_with_callback_impl<detail::adapter::HttpAdapter>(host, path, headers, method, body);
 	}
 	else {
-		return ::download_from_impl<detail::adapter::HttpsAdapter>(++host, path, headers, method, body);
+		return detail::download_with_callback_impl<detail::adapter::HttpsAdapter>(++host, path, headers, method, body);
 	}
 }
 
-dwhttp::Download dwhttp::download_from(const char *host, const char *path) {
-	const char * const headers[][2] = {{nullptr, nullptr}};
-	return download_from(host, path, headers);
-}
-
-dwhttp::Download dwhttp::download_from(const char * host, const char * path, const char * const headers[][2]) {
-	return download_from(host, path, headers, "GET");
-}
-
-
-template<typename T>
-inline std::function<int16_t (void)> download_with_callback_impl(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
-	static auto& dwnld = dwhttp::detail::get_downloader<T>();
-	dwnld.request(host, path, method, headers, (const uint8_t *)body, body ? strlen(body) : 0);
-
-	status_code_out = dwnld.result_code();
-	size_out = dwnld.content_length();
-
-	return std::bind(&dwhttp::detail::Downloader<T>::next, &dwnld);
-}
-
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body, int16_t &status_code_out, int32_t &size_out) {
-	if (host[0] != '_') {
-		return ::download_with_callback_impl<detail::adapter::HttpAdapter>(host, path, headers, method, body, status_code_out, size_out);
-	}
-	else {
-		return ::download_with_callback_impl<detail::adapter::HttpsAdapter>(++host, path, headers, method, body, status_code_out, size_out);
-	}
-}
-
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path) {
-	const char * const headers[][2] = {{nullptr, nullptr}};
+dwhttp::Download dwhttp::download_with_callback(const char * host, const char * path) {
+	static const char * const headers[][2] = {{nullptr, nullptr}};
 	return download_with_callback(host, path, headers);
 }
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2]) {
-	int16_t st;
-	return download_with_callback(host, path, headers, st);
-}
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path, int16_t &status_code_out) {
-	const char * const headers[][2] = {{nullptr, nullptr}};
-	return download_with_callback(host, path, headers, status_code_out);
-}
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2], int16_t &status_code_out) {
-	int32_t so;
-	return download_with_callback(host, path, headers, "GET", nullptr, status_code_out, so);
-}
-std::function<int16_t (void)> dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body) {
-	int16_t sco;
-	int32_t so;
-	return download_with_callback(host, path, headers, method, body, sco, so);
+dwhttp::Download dwhttp::download_with_callback(const char * host, const char * path, const char * const headers[][2]) {
+	return download_with_callback(host, path, headers, "GET", nullptr);
 }
 
-void dwhttp::stop_download() {
-	detail::dwnld.stop();
-	detail::dwnld_s.stop();
+dwhttp::Download::~Download() {
+	if (adapter) {
+		((dwhttp::detail::DownloaderBase *)(adapter))->stop();
+		adapter = nullptr;
+	}
+	if (recvbuf) free(recvbuf);
+}
+
+int16_t dwhttp::Download::operator()() {
+	// Pump recvuf
+	if (!recvbuf) {
+		recvbuf = (uint8_t *)malloc(32);
+		recvpending = 0;
+		recvread = 0;
+	}
+	if (recvread == recvpending) {
+		recvpending = ((dwhttp::detail::DownloaderBase *)adapter)->read_from(recvbuf, 32);
+		recvread = 0;
+	}
+	if (recvpending == 0) return -1; // eof
+	return recvbuf[recvread++];
+}
+
+size_t dwhttp::Download::operator()(uint8_t * buf, size_t amount) {
+	size_t r = 0;
+	while (recvbuf && recvpending != recvread && amount) {
+		auto v = (*this)();
+		if (v == -1) return r;
+		++r;
+		*buf++ = (uint8_t)v;
+		--amount;
+	}
+	r += ((dwhttp::detail::DownloaderBase *)adapter)->read_from(buf, amount);
+	return r;
+}
+
+int dwhttp::Download::result_code() const {
+	return ((dwhttp::detail::DownloaderBase *)adapter)->result_code();
+}
+int dwhttp::Download::content_length() const {
+	return ((dwhttp::detail::DownloaderBase *)adapter)->content_length();
+}
+bool dwhttp::Download::is_unknown_length() const {
+	return ((dwhttp::detail::DownloaderBase *)adapter)->is_unknown_length();
 }

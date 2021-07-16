@@ -1,6 +1,9 @@
 #include "json.h"
 #include "utf.h"
 #include <string.h>
+#include <esp_log.h>
+
+const static char * TAG = "json";
 
 json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : is_utf8(is_utf8), cb(std::move(c)) {
 	this->stack_ptr = 0;
@@ -30,6 +33,13 @@ bool json::JSONParser::parse(TextCallback && cb) {
 	if (this->stack_ptr < 1) push(); // root node
 
 	return parse_value();
+}
+
+bool json::JSONParser::parse(dwhttp::Download & d) {
+	return parse([&]() -> int16_t {
+		auto v = d();
+		return v;
+	});
 }
 
 bool json::JSONParser::parse_value() {
@@ -165,7 +175,9 @@ bool json::JSONParser::advance_whitespace() {
 	while (peek() == ' ' ||
 		   peek() == '\t' ||
 		   peek() == '\n') {
-		if (next() == 0) return false;
+		if (next() == 0) {
+			return false;
+		}
 	}
 	return true;
 }

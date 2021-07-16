@@ -30,17 +30,14 @@ namespace ttc {
 		char url[80];
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
 
-		int16_t status_code;
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
-		auto cb = dwhttp::download_with_callback("_retro.umoiq.com", url, status_code);
+		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
 
-		if (status_code < 200 || status_code > 299) {
-			dwhttp::stop_download();
+		if (dw.result_code() < 200 || dw.result_code() > 299) {
 			return false;
 		}
 
 		ESP_LOGD(TAG, "Parsing json data");
-
 		// message is here now read it
 		
 		struct State {
@@ -133,12 +130,11 @@ namespace ttc {
 
 		bool ok = true;
 
-		if (!parser.parse(std::move(cb))) {
+		if (!parser.parse(dw)) {
 			ok = false;
 			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
 
-		dwhttp::stop_download();
 		free(dirtag);
 
 		// Ensure the array is sorted
@@ -157,11 +153,9 @@ namespace ttc {
 		ttc_rdf_state_t state;
 		AlertParserState aps_ptr{info};
 
-		int16_t status_code;
-		auto cb = dwhttp::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss", status_code);
+		auto dw = dwhttp::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss");
 
-		if (status_code < 200 || status_code > 299) {
-			dwhttp::stop_download();
+		if (dw.result_code() < 200 || dw.result_code() > 299) {
 			return;
 		}
 
@@ -169,20 +163,20 @@ namespace ttc {
 		state.userptr = &aps_ptr;
 
 		// Run this through the parser
-		int16_t result;
-		while ((result = cb()) != -1) {
+		uint8_t buffer[64];
+		size_t amount = 0;
+		while ((amount = dw(buffer, 64)) != 0) {
 			// only works on little-endian
-			switch (ttc_rdf_feed((uint8_t *)&result, 1 + (uint8_t *)&result, &state)) {
+			switch (ttc_rdf_feed(buffer, buffer + 64, &state)) {
 				case TTC_RDF_OK:
 					continue;
 				case TTC_RDF_FAIL:
 					ESP_LOGE(TAG, "RDF parser failed");
+					[[fallthrough]];
 				case TTC_RDF_DONE:
-					goto end_parseloop;
+					return;
 			}
 		}
-end_parseloop:
-		dwhttp::stop_download();
 	}
 
 	bool loop() {

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <cstdint>
 #include <functional>
+#include "dwhttp.h"
 
 namespace json {
 	struct PathNode {
@@ -58,6 +59,7 @@ namespace json {
 		bool parse(const char * text);
 		bool parse(const char * text, size_t size);
 		bool parse(TextCallback && c);
+		bool parse(dwhttp::Download & d);
 	private:
 		PathNode& top() {
 			return *stack[stack_ptr - 1];

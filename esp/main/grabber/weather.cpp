@@ -23,12 +23,10 @@ bool weather::loop() {
 			config::manager.get_value(config::WEATHER_LAT),
 			config::manager.get_value(config::WEATHER_LONG));
 
-	int16_t status_code;
-	auto cb = dwhttp::download_with_callback("_api.darksky.net", url, status_code); // leading _ indicates https
+	auto dw = dwhttp::download_with_callback("_api.darksky.net", url); // leading _ indicates https
 
-	if (status_code < 200 || status_code >= 300) {
-		dwhttp::stop_download();
-		ESP_LOGW(TAG, "Got status code %d", status_code);
+	if (dw.result_code() < 200 || dw.result_code() >= 300) {
+		ESP_LOGW(TAG, "Got status code %d", dw.result_code());
 		return false;
 	}
 
@@ -168,13 +166,10 @@ bool weather::loop() {
 	}, true); // use utf8 fixup
 
 	use_next_hour_summary = false;
-	if (!w_parser.parse(std::move(cb))) {
+	if (!w_parser.parse(dw)) {
 		ESP_LOGD(TAG, "Json parse failed");
-		dwhttp::stop_download();
 		return true;
 	}
-
-	dwhttp::stop_download();
 	
 	// Update the resulting things
 	serial::interface.update_slot_nosync(slots::WEATHER_INFO, info);
