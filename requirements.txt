@@ -9,3 +9,7 @@ pyelftools
 
 # building ca cert bundle
 cryptography~=3.0
+
+# building config
+pygccxml
+lark-parser
