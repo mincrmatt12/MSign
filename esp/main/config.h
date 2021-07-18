@@ -2,71 +2,49 @@
 #define CONFIG_H
 
 #include <stdint.h>
+#include "json.h"
 
 namespace config {
-	enum Entry : uint8_t {
-		SSID,
-		PSK,
-		TIME_ZONE_SERVER,
-		TIME_ZONE_STR, // todo: make the configurator delete this info
+	template<typename T>
+	struct lazy_t {
+		const T* get() const {return ptr;}
+		const T* get(const T& def) const {return (*this) ? get() : def;}
 
-		// TTC stuff
-		STOPID1,
-		STOPID2,
-		STOPID3,
-		DTAG1,
-		DTAG2,
-		DTAG3,
-		SNAME1,
-		SNAME2,
-		SNAME3,
-		ALERT_SEARCH,
+		T* get() {return ptr;}
+		T* get(const T& def) {return (*this) ? get() : def;}
 
-		WEATHER_KEY,
-		WEATHER_LAT,
-		WEATHER_LONG,
+		operator bool() const {return ptr != nullptr;}
+		operator const T*() const {return ptr;}
 
-		CONFIG_USER,
-		CONFIG_PASS,
+		operator T*() {return ptr;}
 
-		SC_TTC,
-		SC_WEATHER,
-		SC_3D,
-		SC_TIMES,
-		SC_ORDER,
-		SC_CFIX,
+		T* operator->() {return ptr;}
+		T& operator*() {return *ptr;}
 
-		MODEL_NAMES,
-		MODEL_FOCUSES,
-		MODEL_MINPOSES,
-		MODEL_MAXPOSES,
-		MODEL_ENABLE,
+		const T* operator->() const {return ptr;}
+		const T& operator*() const {return *ptr;}
 
-        TDSB_USER,
-        TDSB_PASS,
-		TDSB_SCHOOLID,
+		~lazy_t() {
+			if (ptr) {
+				delete ptr;
+				ptr = nullptr;
+			}
+		}
 
-		// leave me
-		ENTRY_COUNT
-	};
+		template<typename I>
+		lazy_t& operator=(const I& x) {
+			static_assert(std::is_same_v<std::decay_t<I>, T*> || (std::is_array_v<T> && std::is_same_v<std::decay_t<I>, std::decay_t<T>>));
 
-	extern const char * entry_names[ENTRY_COUNT];
-	struct ConfigManager {
-		ConfigManager();
-		
-		bool load_from_sd();
-		bool reload_config(); // re-inits the class and calls load_from_sd
-		const char * get_value(Entry e, const char * value=nullptr);
+			if (ptr) delete ptr;
+			ptr = x;
+		}
+
+		using inner = T;
 	private:
-		void add_entry(Entry e, const char *buffer);
-
-		char *data;
-		uint16_t offsets[ENTRY_COUNT] = {0xFFFF};
-		uint16_t ptr = 0;
-		uint16_t size = 128;
+		T* ptr{nullptr};
 	};
 
-	extern ConfigManager manager;
+	void parse_config(json::TextCallback&& tcb);
 }
 
 #endif

@@ -1,0 +1,39 @@
+%import common.ESCAPED_STRING
+%import common.SIGNED_NUMBER
+%import common.INT
+%import common.WS
+%import common.CNAME
+
+HEXNUMBER: "0x" ("a".."f"|"A".."F"|"0".."9")+
+BINNUMBER: "0b" ["0"|"1"]+
+CNUMBER: HEXNUMBER | BINNUMBER | SIGNED_NUMBER
+
+CPPNAME: CNAME ("::" CNAME)*
+
+comment: INTENT path ("," tag)*
+
+path: ("." atom)+
+
+atom: CNAME -> path_element
+	| CNAME "[" array_index "]" -> named_array_element
+	| "[" array_index "]" -> anon_array_element
+	| variable -> wildcard_element
+	| CNAME "!size" -> special_size_element
+
+variable: "$" CNAME
+
+?array_index: INT
+		   | variable
+
+value: CNUMBER -> float_or_int
+	 | ESCAPED_STRING -> string
+	 | CPPNAME -> named_constant
+	 | variable -> variable_constant
+
+tag: "default" value+ -> default_tag
+   | "required" ESCAPED_STRING? -> required_tag
+   | "max" variable "=" INT -> explicit_array_max
+
+INTENT: "holds" | "receives" | "provides"
+
+%ignore WS
