@@ -1,6 +1,6 @@
 #include "wifitime.h"
-#include "config.h"
 #include "serial.h"
+#include "wifitime.cfg.h"
 
 #include <esp_log.h>
 #include <sys/time.h>
@@ -43,6 +43,10 @@ namespace {
 	}
 }
 
+void wifi::receive_config(const char* k, const char *v) {
+	ESP_LOGI(TAG, "got %s == %s", k, v);
+}
+
 uint64_t wifi::get_localtime() {
 	time_t now;
 	struct tm current_time;
@@ -64,14 +68,6 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 }
 
 bool wifi::init() {
-	// Verify we have ssid/psk
-	
-	const char *ssid = config::manager.get_value(config::SSID), *psk = config::manager.get_value(config::PSK);
-	if (!ssid) {
-		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
-		return false;
-	}
-
 	// Init events
 	events = xEventGroupCreate();
 

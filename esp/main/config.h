@@ -32,11 +32,12 @@ namespace config {
 		}
 
 		template<typename I>
-		lazy_t& operator=(const I& x) {
+		lazy_t& operator=(I x) {
 			static_assert(std::is_same_v<std::decay_t<I>, T*> || (std::is_array_v<T> && std::is_same_v<std::decay_t<I>, std::decay_t<T>>));
 
 			if (ptr) delete ptr;
-			ptr = x;
+			ptr = (T*)x;
+			return *this;
 		}
 
 		using inner = T;
@@ -44,7 +45,9 @@ namespace config {
 		T* ptr{nullptr};
 	};
 
-	void parse_config(json::TextCallback&& tcb);
+	bool parse_config(json::TextCallback&& tcb);
+
+	bool parse_config_from_sd();
 }
 
 #endif

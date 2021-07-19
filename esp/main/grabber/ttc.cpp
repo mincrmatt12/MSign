@@ -4,6 +4,7 @@
 #include "../dwhttp.h"
 #include "../wifitime.h"
 #include "../config.h"
+#include "ttc.cfg.h"
 
 #include <algorithm>
 #include <esp_log.h>
@@ -15,20 +16,17 @@ extern "C" {
 const static char * TAG = "ttc";
 
 namespace ttc {
+	void update_ttc_entry_name(size_t n, const char * value) {
+		serial::interface.update_slot(slots::TTC_NAME_1 + n, value);
+	}
+
 	void init() {
-		// Initialize all the slot names
-		for (uint8_t slot = 0; slot < 3; ++slot) {
-			if (config::manager.get_value((config::Entry)(config::STOPID1 + slot))) {
-				const char * name = config::manager.get_value((config::Entry)(config::SNAME1 + slot));
-				serial::interface.update_slot_nosync(slots::TTC_NAME_1 + slot, name); // this is in config, which doesn't change
-			}
-		}
 	}
 
 	// Populate the info and times with the information for this slot.
-	bool update_slot_times_and_info(const char * stop, const char * dtag, uint8_t slot, slots::TTCInfo& info, uint64_t times[6]) {
+	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6]) {
 		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%s", stop);
+		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%d", entry.stopid);
 
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
 		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
@@ -50,8 +48,6 @@ namespace ttc {
 		} state;
 
 		int max_e = 0;
-
-		char * dirtag = strdup(dtag);
 		
 		json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 			if (stack_ptr < 2) return;
@@ -78,15 +74,10 @@ namespace ttc {
 				}
 				if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 				{
-					strcpy(dirtag, dtag);
-					char *test_str = strtok(dirtag, ",");
-					while (test_str != NULL) {
-						if (strcmp(test_str, v.str_val) == 0) {
-							ESP_LOGD(TAG, "matched on %s", test_str);
+					for (int i = 0; i < 3 && entry.dirtag[i]; ++i) {
+						if (strcmp(entry.dirtag[i], v.str_val) == 0) {
+							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i]);
 							state.tag = true; break;
-						}
-						else {
-							test_str = strtok(NULL, ",");
 						}
 					}
 				}
@@ -135,8 +126,6 @@ namespace ttc {
 			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
 
-		free(dirtag);
-
 		// Ensure the array is sorted
 		if (max_e && max_e < 6)
 			std::sort(times, times+max_e);
@@ -167,7 +156,7 @@ namespace ttc {
 		size_t amount = 0;
 		while ((amount = dw(buffer, 64)) != 0) {
 			// only works on little-endian
-			switch (ttc_rdf_feed(buffer, buffer + 64, &state)) {
+			switch (ttc_rdf_feed(buffer, buffer + amount, &state)) {
 				case TTC_RDF_OK:
 					continue;
 				case TTC_RDF_FAIL:
@@ -185,10 +174,8 @@ namespace ttc {
 			uint64_t local_times[6];
 			memset(local_times, 0, sizeof(local_times));
 
-			const char * stopid = config::manager.get_value((config::Entry)(config::STOPID1 + slot));
-			if (stopid != nullptr) {
-				const char * dtag = config::manager.get_value((config::Entry)(config::DTAG1 + slot));
-				if (update_slot_times_and_info(stopid, dtag, slot, x, local_times)) {
+			if (entries[slot]) {
+				if (update_slot_times_and_info(entries[slot], slot, x, local_times)) {
 					serial::interface.update_slot_raw(slots::TTC_TIME_1 + slot, local_times, sizeof(local_times));
 				}
 				else return false;
@@ -223,13 +210,14 @@ bool replace_xml_ent(char *in, const char* search, const char* repl) {
 }
 
 extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
+	if (!ttc::alert_search) return;
 	ttc::AlertParserState& ps = *reinterpret_cast<ttc::AlertParserState *>(state->userptr);
 
 	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
 
 	// Check all semicolon separated entries
 	{
-		char * search_query = strdup(config::manager.get_value(config::ALERT_SEARCH, ""));
+		char * search_query = strdup(ttc::alert_search);
 		char * token = strtok(search_query, ";");
 		bool found = false;
 		while (token && strlen(token)) {

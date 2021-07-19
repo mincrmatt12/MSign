@@ -4,18 +4,18 @@
 #include <string.h>
 #include "../wifitime.h"
 #include "esp_log.h"
+#include "sccfg.cfg.h"
 
 const static char * TAG = "sccfg";
 
 namespace sccfg {
-	const uint8_t number_of_screens = 3;
 
 	uint16_t force_enabled_mask = 0;
 	uint16_t force_disabled_mask = 0;
 	uint16_t parsed_enabled_mask = (1 << number_of_screens) - 1;
 
 	struct Event {
-		uint32_t timeat;
+		int32_t timeat;
 		uint8_t pos;
 		bool enable;
 		bool done_today;
@@ -48,30 +48,6 @@ namespace sccfg {
 		parsed_events[parsed_event_count++] = e;
 	}
 
-	void create_events_for(uint8_t pos, config::Entry entry) {
-		if (config::manager.get_value(entry) == nullptr) return;
-		else {
-			const auto val = config::manager.get_value(entry);
-			if (strcmp("on", val) == 0) return;
-			if (strcmp("off", val) == 0) {
-				parsed_enabled_mask &= ~(1 << pos);
-			}
-			else {
-				if (strchr(val, ',') == nullptr) {
-					ESP_LOGD(TAG, "invalid format for entry");
-					return;
-				}
-				int tA, tB;
-
-				parsed_enabled_mask &= ~(1 << pos);
-
-				sscanf(val, "%d,%d", &tA, &tB);
-				append_event({static_cast<uint32_t>(tA), pos, true, false});
-				append_event({static_cast<uint32_t>(tB), pos, false, false});
-			}
-		}
-	}
-
 	void send_mask() {
 		uint16_t enabled_mask = (parsed_enabled_mask | force_enabled_mask) & ~force_disabled_mask;
 		slots::ScCfgInfo obj;
@@ -84,42 +60,25 @@ namespace sccfg {
 	}
 	
 	void init() {
-		create_events_for(0, config::SC_TTC);
-		create_events_for(1, config::SC_WEATHER);
-		create_events_for(2, config::SC_3D);
+		parsed_enabled_mask = 0;
 
 		slots::ScCfgTime times[number_of_screens];
+		int number_configured = 0;
 
-		if (config::manager.get_value(config::SC_ORDER)) {
-			int indices[4];
-			sscanf(config::manager.get_value(config::SC_ORDER), "%d,%d,%d,%d", &indices[0], &indices[1], &indices[2], &indices[3]);
-
-			for (int i = 0; i < 3; ++i) {
-				times[i].screen_id = static_cast<slots::ScCfgTime::ScreenId>(indices[i]);
+		for (; number_configured < number_of_screens && screen_entries[number_configured]; ++number_configured) {
+			// Set enabled
+			parsed_enabled_mask |= 1 << screen_entries[number_configured]->screen;
+			// Add into order
+			times[number_configured].screen_id = screen_entries[number_configured]->screen;
+			times[number_configured].millis_enabled = screen_entries[number_configured]->duration;
+			// Add events
+			if (!screen_entries[number_configured]->times.always_on()) {
+				append_event({screen_entries[number_configured]->times.start, screen_entries[number_configured]->screen, true, false});
+				append_event({screen_entries[number_configured]->times.end, screen_entries[number_configured]->screen, true, false});
 			}
 		}
-		else {
-			times[0].screen_id = slots::ScCfgTime::TTC;
-			times[1].screen_id = slots::ScCfgTime::WEATHER;
-			times[2].screen_id = slots::ScCfgTime::MODEL;
-		}
 
-		if (config::manager.get_value(config::SC_TIMES) != nullptr) {
-			int tTTC, tWEA, t3D, tCFIX = 12000;
-
-			sscanf(config::manager.get_value(config::SC_TIMES), "%d,%d,%d,%d", &tTTC, &tWEA, &t3D, &tCFIX);
-
-			times[0].millis_enabled = tTTC;
-			times[1].millis_enabled = tWEA;
-			times[2].millis_enabled = t3D;
-		}
-		else {
-			times[0].millis_enabled = 12000;
-			times[1].millis_enabled = 12000;
-			times[2].millis_enabled = 12000;
-		}
-
-		serial::interface.update_slot(slots::SCCFG_TIMING, times);
+		serial::interface.update_slot_raw(slots::SCCFG_TIMING, &times[0], sizeof(slots::ScCfgTime)*number_configured);
 	}
 
 	uint64_t last_run_time = 0;

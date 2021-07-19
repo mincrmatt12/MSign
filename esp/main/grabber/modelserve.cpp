@@ -6,6 +6,7 @@
 #include <limits>
 #include "esp_log.h"
 #include "ff.h"
+#include "modelserve.cfg.h"
 
 const static char * TAG = "modelserve";
 
@@ -15,10 +16,19 @@ namespace modelserve {
 
 	bool     modelspresent[3] = {false, false, true};
 
-	const char * modelpaths[] = {
+	const char * const modelpaths[] = {
 		"/model.bin",
 		"/model1.bin"
 	};
+
+	void update_modelpresence(size_t n, bool value) {
+		if (f_stat(modelpaths[n], NULL)) {
+			ESP_LOGW(TAG, "No model bin on disk but it was requested, cancelling (%d)", (int)n);
+			modelspresent[n] = false;
+			return;
+		}
+		modelspresent[n] = value;
+	}
 
 	float get_token_value(const char * v, int i) {
 		char * temp = strdup(v);
@@ -33,56 +43,15 @@ namespace modelserve {
 		return r;
 	}
 
-	void send_model_parameters(config::Entry e) {
+	void send_model_parameters() {
 		if (modelidx == 2) return;
-		slots::Vec3 v;
-		const char * c;
-		if (e == config::MODEL_FOCUSES && (c = config::manager.get_value(config::MODEL_FOCUSES))) {
-			v.x = get_token_value(c, modelidx * 9 + 0);
-			v.y = get_token_value(c, modelidx * 9 + 1);
-			v.z = get_token_value(c, modelidx * 9 + 2);
-
-			serial::interface.update_slot(slots::MODEL_CAM_FOCUS1, v);
-
-			float temp = get_token_value(c, modelidx * 9 + 3);
-			if (!std::isnan(temp)) {
-				v.x = temp;
-				v.y = get_token_value(c, modelidx * 9 + 4);
-				v.z = get_token_value(c, modelidx * 9 + 5);
-			}
-
-			serial::interface.update_slot(slots::MODEL_CAM_FOCUS2, v);
-
-			temp = get_token_value(c, modelidx * 9 + 6);
-			if (!std::isnan(temp)) {
-				v.x = temp;
-				v.y = get_token_value(c, modelidx * 9 + 4);
-				v.z = get_token_value(c, modelidx * 9 + 5);
-			}
-
-			v.y = get_token_value(c, modelidx * 9 + 7);
-			v.z = get_token_value(c, modelidx * 9 + 8);
-
-			serial::interface.update_slot(slots::MODEL_CAM_FOCUS3, v);
-		}
-		else if (e == config::MODEL_MINPOSES && (c = config::manager.get_value(config::MODEL_MINPOSES))) {
-			v.x = get_token_value(c, modelidx * 3 + 0);
-			v.y = get_token_value(c, modelidx * 3 + 1);
-			v.z = get_token_value(c, modelidx * 3 + 2);
-
-			serial::interface.update_slot(slots::MODEL_CAM_MINPOS, v);
-		}
-		else if (e == config::MODEL_MAXPOSES && (c = config::manager.get_value(config::MODEL_MAXPOSES))) {
-			v.x = get_token_value(c, modelidx * 3 + 0);
-			v.y = get_token_value(c, modelidx * 3 + 1);
-			v.z = get_token_value(c, modelidx * 3 + 2);
-
-			serial::interface.update_slot(slots::MODEL_CAM_MAXPOS, v);
-		}
+		
+		serial::interface.update_slot_raw(slots::MODEL_CAM_FOCUS, model_params[modelidx].focuses, sizeof(slots::Vec3)*model_params[modelidx].nfocus, false);
+		serial::interface.update_slot_nosync(slots::MODEL_CAM_MINPOS, model_params[modelidx].minpos);
+		serial::interface.update_slot_nosync(slots::MODEL_CAM_MAXPOS, model_params[modelidx].maxpos);
 	}
 
 	void send_model_data() {
-
 		// Create blocks of up to 12 triangles.
 		slots::Tri chunk[12] {};
 		float buf[3];
@@ -93,6 +62,7 @@ namespace modelserve {
 
 		if (f_open(&f, modelpaths[modelidx], FA_READ) != FR_OK) {
 			ESP_LOGE(TAG, "Failed to open model for send");
+			modelspresent[modelidx] = false;
 			return;
 		}
 
@@ -129,13 +99,13 @@ namespace modelserve {
 			}
 
 			// Send chunk
-			serial::interface.update_slot_partial(slots::MODEL_DATA, index*sizeof(slots::Tri), chunk, remaining_triangles*sizeof(slots::Tri));
+			serial::interface.update_slot_range(slots::MODEL_DATA, chunk, index, remaining_triangles);
 		}
 
 		f_close(&f);
 		slots::ModelInfo mi;
 		mi.tri_count = tricount;
-		mi.use_lighting = true;
+		mi.use_lighting = model_params[modelidx].lighting_mode == ModelParams::DYNAMIC;
 		// Finally update INFO
 		serial::interface.update_slot(slots::MODEL_INFO, mi);
 	}
@@ -144,9 +114,7 @@ namespace modelserve {
 		modelidx = i;
 		if (i < 2) {
 			// Send model parameters to device
-			send_model_parameters(config::MODEL_FOCUSES);
-			send_model_parameters(config::MODEL_MINPOSES);
-			send_model_parameters(config::MODEL_MAXPOSES);
+			send_model_parameters();
 			// Send all triangles
 			send_model_data();
 		}
@@ -174,17 +142,9 @@ namespace modelserve {
 	}
 
 	void init() {
+		// init() is called after config is loaded so this will work correctly.
 		init_modeldat(0);
 		init_modeldat(1);
-
-		// check present data
-		char * temp = strdup(config::manager.get_value(config::MODEL_ENABLE, "0,0,1"));
-		char * token = temp;
-		for (int i = 0; i < 3; ++i) {
-			token = strtok(i == 0 ? temp : NULL, ",");
-			if (*token == '0') modelspresent[i] = false;
-		}
-		free(temp);
 
 		modelidx = 2;
 		ESP_LOGI(TAG, "Initialized model information");

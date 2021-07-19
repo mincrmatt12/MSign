@@ -7,6 +7,8 @@
 #include <esp_wifi.h>
 #include <esp_event_loop.h>
 
+#include "wifitime.cfg.h"
+
 #include <lwip/apps/sntp.h>
 
 EventGroupHandle_t wifi::events;
@@ -50,13 +52,12 @@ void sntp_task(void *) {
 
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	// This is ugly, but I'm _fairly_ sure lwip doesn't screw with this [citation needed]; plus the examples pass in a constant here so /shrug
-	sntp_setservername(0, const_cast<char *>(config::manager.get_value(config::TIME_ZONE_SERVER, "pool.ntp.org")));
+	sntp_setservername(0, const_cast<char *>(wifi::time_server));
 	sntp_init();
 	
 	// Set the timezone
-	auto tz = config::manager.get_value(config::TIME_ZONE_STR, "EST5EDT,M3.2.0/2:00:00,M11.1.0/2:00:00");
-	ESP_LOGI(T_TAG, "Timezone is %s", tz);
-	setenv("TZ", tz, 1);
+	ESP_LOGI(T_TAG, "Timezone is %s", wifi::time_zone_str);
+	setenv("TZ", wifi::time_zone_str, 1);
 	tzset();
 
 	// Wait for time to be set
@@ -131,11 +132,28 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 	return ((uint64_t)now * 1000) + millis % 1000;
 }
 
+wifi_config_t * wifi_config_data = nullptr;
+
+void wifi::receive_config(const char * field, const char * value) {
+	if (!wifi_config_data) {
+		wifi_config_data = new wifi_config_t{};
+	}
+	if (strcmp(field, "ssid") == 0) {
+		strncpy((char *)wifi_config_data->sta.ssid, value, 32);
+	}
+	else if (strcmp(field, "psk") == 0) {
+		strncpy((char *)wifi_config_data->sta.password, value, 64);
+		wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+	}
+	else {
+		ESP_LOGW(TAG, "unknown wifi config param %s", field);
+	}
+}
+
 bool wifi::init() {
 	// Verify we have ssid/psk
 	
-	const char *ssid = config::manager.get_value(config::SSID), *psk = config::manager.get_value(config::PSK);
-	if (!ssid) {
+	if (!wifi_config_data) {
 		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
 		return false;
 	}
@@ -152,16 +170,10 @@ bool wifi::init() {
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
 	// Setup with config data
-	wifi_config_t w_cfg = {};
-	strncpy((char *)w_cfg.sta.ssid, ssid, 32);
-	if (psk) {
-		strncpy((char *)w_cfg.sta.password, psk, 32);
-		w_cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-	}
-
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &w_cfg));
+	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config_data));
 	ESP_ERROR_CHECK(esp_wifi_start());
+	delete wifi_config_data; wifi_config_data = nullptr;
 
 	// Start the time wait service
 	xTaskCreate(sntp_task, "tWAIT", 2048, NULL, 7, NULL);

@@ -6,6 +6,7 @@
 #include "../wifitime.h"
 #include <string.h>
 #include <esp_log.h>
+#include "weather.cfg.h"
 
 const static char* TAG = "weather";
 
@@ -15,13 +16,13 @@ void weather::init() {
 bool weather::loop() {
 	// Do a weather update.
 	
-	if (config::manager.get_value(config::WEATHER_KEY) == nullptr) return true;
+	if (api_key == nullptr) return true;
 
 	char url[128];
-	snprintf(url, 128, "/forecast/%s/%s,%s?exclude=alerts&units=ca", 
-			config::manager.get_value(config::WEATHER_KEY),
-			config::manager.get_value(config::WEATHER_LAT),
-			config::manager.get_value(config::WEATHER_LONG));
+	snprintf(url, 128, "/forecast/%s/%f,%f?exclude=alerts&units=ca", 
+			api_key,
+			lat,
+			lon);
 
 	auto dw = dwhttp::download_with_callback("_api.darksky.net", url); // leading _ indicates https
 

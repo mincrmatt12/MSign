@@ -40,9 +40,7 @@ namespace slots {
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
 		MODEL_CAM_MINPOS  = 0x905,  // STRUCT; Vec3; minimum position of the camera 
 		MODEL_CAM_MAXPOS  = 0x906,  // ''; maximum position of the camera 
-		MODEL_CAM_FOCUS1  = 0x907,  // ''; lookat point of camera
-		MODEL_CAM_FOCUS2  = 0x908,  // ''; '' 2
-		MODEL_CAM_FOCUS3  = 0x909,  // ''; '' 3
+		MODEL_CAM_FOCUS   = 0x907,  // STRUCT[]; Vec3; lookat points of camera
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
@@ -100,21 +98,6 @@ namespace slots {
 		uint8_t data[14];
 	};
 
-	struct ScCfgInfo {
-		uint16_t enabled_mask;
-		bool display_on;
-
-		enum EnabledMask : uint16_t {
-			TTC = 1,
-			WEATHER = 2,
-			MODEL = 4,
-			PERIODS = 8,
-			PARCELS = 16,
-			JENKINS = 32,
-			PRINTER = 64
-		};
-	};
-
 	struct ScCfgTime {
 		uint32_t millis_enabled;
 		enum ScreenId : uint8_t {
@@ -127,14 +110,31 @@ namespace slots {
 		} screen_id;
 	};
 
+	struct ScCfgInfo {
+		uint16_t enabled_mask;
+		bool display_on;
+
+		enum EnabledMask : uint16_t {
+			TTC = 1 << ScCfgTime::TTC,
+			WEATHER = 1 << ScCfgTime::WEATHER,
+			MODEL = 1 << ScCfgTime::MODEL,
+			PARCELS = 1 << ScCfgTime::PARCELS,
+			JENKINS = 1 << ScCfgTime::JENKINS,
+			PRINTER = 1 << ScCfgTime::PRINTER
+		};
+	};
+
 	struct ModelInfo {
 		uint16_t tri_count;
 		bool use_lighting;
 	};
 
 	struct Vec3 {
+		//!cfg: holds .x, default 0.0
 		float x;
+		//!cfg: holds .y, default 0.0
 		float y;
+		//!cfg: holds .z, default 0.0
 		float z;
 	};
 

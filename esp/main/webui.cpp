@@ -6,6 +6,7 @@
 #include "ff.h"
 #include "upd.h"
 #include "wifitime.h"
+#include "webui.cfg.h"
 
 extern "C" {
 #include <http_serve.h>
@@ -72,18 +73,15 @@ namespace webui {
 	}
 
 	bool check_auth(const char *in) {
-		const char *user = config::manager.get_value(config::CONFIG_USER, DEFAULT_USERNAME);
-		const char *pass = config::manager.get_value(config::CONFIG_PASS, DEFAULT_PASSWORD);
-
 		char actual_buf[64] = {0};
 		char *c = actual_buf;
 
 		base64_encodestate es;
 		base64_init_encodestate(&es);
 
-		c += base64_encode_block(user, strlen(user), c, &es);
+		c += base64_encode_block(login_user, strlen(login_user), c, &es);
 		c += base64_encode_block(":", 1, c, &es);
-		c += base64_encode_block(pass, strlen(pass), c, &es);
+		c += base64_encode_block(login_password, strlen(login_password), c, &es);
 		c += base64_encode_blockend(c, &es);
 		*c = 0;
 
@@ -347,10 +345,10 @@ reachedend:
 	}
 
 	void do_api_response(const char * tgt) {
-		if (strcasecmp(tgt, "conf.txt") == 0) {
+		if (strcasecmp(tgt, "conf.json") == 0) {
 			if (reqstate->c.method == HTTP_SERVE_METHOD_GET) {
 				FIL f; 
-				if (f_open(&f, "0:/config.txt", FA_READ)) {
+				if (f_open(&f, "0:/config.json", FA_READ)) {
 					send_static_response(500, "Internal Server Error", "Missing configuration.");
 					return;
 				}
@@ -364,7 +362,7 @@ reachedend:
 
 				uint8_t buf[64];
 
-				FIL f; f_open(&f, "0:/config.txt.tmp", FA_CREATE_ALWAYS | FA_WRITE);
+				FIL f; f_open(&f, "0:/config.json.tmp", FA_CREATE_ALWAYS | FA_WRITE);
 				for (int i = 0; i < reqstate->c.content_length; i += 64) {
 					int len = read_from_req_body(buf, std::min(64, reqstate->c.content_length - i));
 					UINT bw;
@@ -376,11 +374,18 @@ reachedend:
 					}
 				}
 				f_close(&f);
-				f_unlink("0:/config.txt");
-				f_rename("0:/config.txt.tmp", "0:/config.txt");
-				config::manager.reload_config();
-				// Send a handy dandy 204
-				send_static_response(204, "No Content", "");
+				f_rename("0:/config.json", "0:/config.json.old");
+				f_rename("0:/config.json.tmp", "0:/config.json");
+				if (!config::parse_config_from_sd()) {
+					ESP_LOGW(TAG, "new config failed to parse, reinstating old config");
+					f_rename("0:/config.json", "0:/config.json.bad");
+					f_rename("0:/config.json.old", "0:/config.json");
+					config::parse_config_from_sd();
+					send_static_response(400, "Bad Request", "Invalid new config");
+				}
+				else
+					// Send a handy dandy 204
+					send_static_response(204, "No Content", "");
 			}
 			else goto invmethod;
 		}

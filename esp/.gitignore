@@ -3,3 +3,4 @@
 build/
 sdkconfig*
 !sdkconfig.defaults
+main/config.cpp

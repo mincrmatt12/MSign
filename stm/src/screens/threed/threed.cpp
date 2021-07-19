@@ -167,7 +167,9 @@ namespace threed {
 					rng::getrange(servicer.slot<slots::Vec3>(slots::MODEL_CAM_MINPOS)->z, servicer.slot<slots::Vec3>(slots::MODEL_CAM_MAXPOS)->z)
 				};
 
-				camera_look_target = *servicer.slot<slots::Vec3>(slots::MODEL_CAM_FOCUS1 + (rng::get() % 3));
+				int num_focuses = servicer.slot(slots::MODEL_CAM_FOCUS).datasize / sizeof(slots::Vec3);
+
+				camera_look_target = servicer.slot<slots::Vec3 *>(slots::MODEL_CAM_FOCUS)[rng::get() % num_focuses];
 			}
 		}
 
@@ -236,9 +238,7 @@ namespace threed {
 
 	void Renderer::prepare(bool) {
 		servicer.set_temperature_all(bheap::Block::TemperatureWarm, 
-			slots::MODEL_CAM_FOCUS1,
-			slots::MODEL_CAM_FOCUS2,
-			slots::MODEL_CAM_FOCUS3,
+			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
@@ -248,9 +248,7 @@ namespace threed {
 	
 	Renderer::Renderer() {
 		servicer.set_temperature_all(bheap::Block::TemperatureHot, 
-			slots::MODEL_CAM_FOCUS1,
-			slots::MODEL_CAM_FOCUS2,
-			slots::MODEL_CAM_FOCUS3,
+			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
@@ -260,9 +258,7 @@ namespace threed {
 
 	Renderer::~Renderer() {
 		servicer.set_temperature_all(bheap::Block::TemperatureCold, 
-			slots::MODEL_CAM_FOCUS1,
-			slots::MODEL_CAM_FOCUS2,
-			slots::MODEL_CAM_FOCUS3,
+			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
