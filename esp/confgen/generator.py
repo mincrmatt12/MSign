@@ -8,15 +8,30 @@ import textwrap
 import copy
 import re
 import enum
-import code
+import io
 import itertools
 import collections
-from typing import List, Dict
+import logging
+from typing import List, Dict, Set
+
+VERBOSE = os.getenv("CONFGEN_VERBOSE", "0") == "1"
+
+if not VERBOSE:
+    pygccxml.utils.loggers.set_level(logging.ERROR)
+
+def dprint(*args, **kwargs):
+    if not VERBOSE:
+        return
+    print(*args, **kwargs)
+
+def warn(*args, **kwargs):
+    print(*args, **kwargs, file=sys.stderr)
 
 if len(sys.argv) < 3:
     print("usage: {} <set of all input headers> <path to output source>".format(sys.argv[0]))
 
 comment_expr = re.compile(r"^\s*//!cfg:(.*)$")
+
 with open(os.path.join(os.path.dirname(__file__), "grammar.lark")) as f:
     comment_parser = lark.Lark(f.read(), start="comment")
 
@@ -217,25 +232,37 @@ class DelegateJsonPathNode(BaseJsonPathNode):
             new_node.leaves.append(new_i)
         return new_node
 
+    def _array_overlap(self, a, b):
+        if a == BaseJsonPathNode.ANY_ARRAY:
+            return True
+        elif a == BaseJsonPathNode.NOT_ARRAY:
+            return True
+        else:
+            if b >= 0:
+                return a == b
+            else:
+                return self._array_overlap(b, a)
+
     def add_leaf(self, leaf: BaseJsonPathNode):
         # Resolve conflicts
         for j, my_leaf in enumerate(self.leaves):
-            if my_leaf.name == leaf.name or my_leaf.name == BaseJsonPathNode.ANY_NAME or leaf.name == BaseJsonPathNode.ANY_NAME:
+            if (my_leaf.name == leaf.name or my_leaf.name == BaseJsonPathNode.ANY_NAME or leaf.name == BaseJsonPathNode.ANY_NAME) and self._array_overlap(my_leaf.array_index, leaf.array_index):
                 if my_leaf.array_index != leaf.array_index:
                     raise ValueError("conflict between {} and {}'s arrays".format(my_leaf, leaf))
                 if my_leaf.array_maximum != leaf.array_maximum and leaf.array_maximum is not None:
                     new_max = max(my_leaf.array_maximum, leaf.array_maximum) if my_leaf.array_maximum is not None else leaf.array_maximum
                     if my_leaf.array_maximum is not None:
-                        print("warn: conflicting maximums for {}, using {}".format(my_leaf, new_max))
+                        warn("warn: conflicting maximums for {}, using {}".format(my_leaf, new_max))
                     my_leaf.array_maximum = new_max
                     leaf.array_maximum    = new_max
                 if isinstance(leaf, DelegateJsonPathNode):
+                    my_leaf.entry_actions.extend(leaf.entry_actions)
                     if not isinstance(my_leaf, DelegateJsonPathNode) and leaf.leaves:
                         if isinstance(my_leaf, ForwardDeclarationPathNode):
                             my_leaf.pending_leaves.extend(leaf.leaves)
+                            break
                         else:
                             raise ValueError("conflict: {} and {} leaf-nonleaf".format(my_leaf, leaf))
-                    my_leaf.entry_actions.extend(leaf.entry_actions)
                 else:
                     if isinstance(my_leaf, DelegateJsonPathNode):
                         if my_leaf.leaves:
@@ -245,6 +272,7 @@ class DelegateJsonPathNode(BaseJsonPathNode):
                                 raise ValueError("conflict: {} and {} leaf-nonleaf".format(my_leaf, leaf))
                         self.leaves[j] = leaf
                         self.leaves[j].entry_actions.extend(my_leaf.entry_actions)
+                        break
                     else:
                         raise ValueError("conflict between {} and {}'s contents".format(my_leaf, leaf))
                 # adopt leaves
@@ -285,7 +313,7 @@ class ForwardDeclarationPathNode(BaseJsonPathNode):
         return "ForwardStore" + super().__str__() + "{" + str(self.target) + "} to " + str(self.referencing_type)
 
     def clone(self):
-        new_node = StoreValuePathNode(self.name, self.array_index, self.target.clone(), self.referencing_type)
+        new_node = ForwardDeclarationPathNode(self.name, self.array_index, self.target.clone(), self.referencing_type)
         self.clone_onto(new_node)
         return new_node
 
@@ -377,11 +405,14 @@ class ValueTypePrimitive(enum.Enum):
     INTEGER = 1
     FLOATING_POINT = 2
     BOOLEAN = 3
-    ENUM = 4  # similar to integer but enforces user-defined default
 
 class ValueTypeCustom:
     def __init__(self, referenced_type: pygccxml.declarations.class_t):
         self.referenced_type = referenced_type
+
+class ValueTypeEnum:
+    def __init__(self, referenced_enum: pygccxml.declarations.enumeration_t):
+        self.referenced_type = referenced_enum
 
 class ValueTypeArray:
     def __init__(self, inner, dimensions):
@@ -392,7 +423,10 @@ class ValueTypeLazyPointer:
     def __init__(self, subtype):
         self.subtype = subtype
 
+declared_enums: Set[pygccxml.declarations.enumeration_t] = set()
+
 def value_type_for(decl):
+    global declared_enums
     dimension, subdecl, is_lazy = helper_array_dimensions_and_underlying_lazy(decl)
     if pygccxml.declarations.is_same(pygccxml.declarations.remove_cv(pygccxml.declarations.remove_pointer(subdecl)), pygccxml.declarations.char_t()):
         inner = ValueTypePrimitive.STRING
@@ -403,7 +437,8 @@ def value_type_for(decl):
     elif pygccxml.declarations.is_integral(subdecl):
         inner = ValueTypePrimitive.INTEGER
     elif pygccxml.declarations.is_enum(subdecl):
-        inner = ValueTypePrimitive.ENUM
+        inner = ValueTypeEnum(subdecl)
+        declared_enums.add(subdecl)
     elif pygccxml.declarations.is_class(subdecl):
         inner = ValueTypeCustom(subdecl)
     else:
@@ -427,9 +462,11 @@ def get_default_default(t):
         return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "nullptr")]
     elif t == ValueTypePrimitive.INTEGER:
         return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "0")]
+    elif t == ValueTypePrimitive.FLOATING_POINT:
+        return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "0.")]
     elif t == ValueTypePrimitive.BOOLEAN:
         return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "false")]
-    elif t == ValueTypePrimitive.ENUM:
+    elif isinstance(t, ValueTypeEnum):
         raise ValueError("must provide explicit default for enum type")
     else:
         raise NotImplementedError(t)
@@ -473,7 +510,7 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
         elif leaf.data in ("named_array_element", "anon_array_element"):
             name = leaf.children[0].value if leaf.data == "named_array_element" else None
             idx  = leaf.children[1]       if leaf.data == "named_array_element" else leaf.children[0]
-            if idx.data == "variable":
+            if not isinstance(idx, lark.Token) and idx.data == "variable":
                 array = BaseJsonPathNode.ANY_ARRAY
                 variable_map[idx.children[0].value] = j + 1
                 if idx.children[0].value == "value":
@@ -530,7 +567,7 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
         if for_var not in variable_map:
             raise ValueError("unknown array var {}".format(for_var))
         if array_maximum_map.get(for_var, requested) < requested:
-            print("warn: requested max is larger than autodetected max {} < {} ({})".format(array_maximum_map[for_var], requested, for_var))
+            warn("warn: requested max is larger than autodetected max {} < {} ({})".format(array_maximum_map[for_var], requested, for_var))
         array_maximum_map[for_var] = requested
 
     def common_make_node(j, kind, *args):
@@ -609,19 +646,29 @@ def parse_file(fnames):
     global all_declarations, global_namespace
     all_declarations = pygccxml.parser.parse(fnames, config=xml_generator_config)
     comments_in_file = {}
-    for fname in fnames:
+    fnames_to_find = fnames[:] 
+    fnames_found = set()
+    while fnames_to_find:
+        fname = fnames_to_find.pop()
         with open(fname, "r") as f:
             ln = 0
             for line in f:
                 ln += 1
                 m = comment_expr.match(line)
                 if m:
-                    comments_in_file[(fname, ln)] = comment_parser.parse(m.group(1))
+                    data = m.group(1).strip()
+                    if data.startswith("include "):
+                        path = data[len("include "):]
+                        if path not in fnames_to_find and path not in fnames_found:
+                            if not os.path.isabs(path):
+                                path = os.path.abspath(os.path.join(os.path.dirname(fname), path))
+                            fnames_to_find.append(path)
+                    else:
+                        comments_in_file[(fname, ln)] = comment_parser.parse(data)
+        fnames_found.add(fname)
     
     # Find all declarations that are either calldefs or variables
-    broad_matcher = pygccxml.declarations.calldef_matcher(return_type="void", header_file=fnames[0]) | pygccxml.declarations.variable_matcher(header_file=fnames[0])
-    for extra in fnames[1:]:
-        broad_matcher |= pygccxml.declarations.calldef_matcher(return_type="void", header_file=extra) | pygccxml.declarations.variable_matcher(header_file=extra)
+    broad_matcher = pygccxml.declarations.calldef_matcher(return_type="void") | pygccxml.declarations.variable_matcher()
     all_things = pygccxml.declarations.matcher.find(broad_matcher, all_declarations)
     global_namespace = pygccxml.declarations.get_global_namespace(all_declarations)
 
@@ -633,7 +680,6 @@ def parse_file(fnames):
             continue
         if comment_should_be in comments_in_file:
             generate_single_entry_for_declaration(thing, comments_in_file[comment_should_be])
-
 
 # STAGE 1: load all files
 parse_file([os.path.abspath(x) for x in sys.argv[1:-1]])
@@ -653,14 +699,20 @@ def visit_all_forward_decls_with(node, functor):
     visit_all_subnodes_with(node, subfunctor)
 
 # STAGE 2: begin processing all typedefs
-def find_all_referenced_typedefs(*ins):
+def find_all_referenced_typedefs():
     referenced = set()
 
+    marked = False
     def visit(node):
-        referenced.add(node.referencing_type)
+        nonlocal marked
+        marked = True
 
-    for i in itertools.chain(*ins):
-        visit_all_forward_decls_with(i, visit)
+    for i in collected_bare_typedefs:
+        marked = False
+        for j in collected_bare_typedefs[i]:
+            visit_all_forward_decls_with(j, visit)
+        if marked:
+            referenced.add(i)
 
     return referenced
 
@@ -715,29 +767,9 @@ def forward_typedef_into_others(decltype):
     for i in itertools.chain(collected_bare_paths, *collected_bare_typedefs.values()):
         visit_all_forward_decls_with(i, visit)
 
-
-while True:
-    all_typedefs_known = set(collected_bare_typedefs.keys())
-    blocked_to_process = find_all_referenced_typedefs(*collected_bare_typedefs.values())
-
-    if not blocked_to_process <= all_typedefs_known:
-        raise ValueError("unknown types: {}".format([str(x) for x in blocked_to_process - all_typedefs_known]))
-
-    process_this_cycle = all_typedefs_known - blocked_to_process
-    if len(process_this_cycle) == 0:
-        break
-
-    for i in process_this_cycle:
-        forward_typedef_into_others(i)
-
-
-
-# finally, merge to get final tree
-options_tree = merge_path_list(collected_bare_paths)
-
 def dump_node_tree(node: BaseJsonPathNode, indentdepth=0):
     def lprint(*args):
-        print(" "*indentdepth + str(args[0]), *args[1:])
+        dprint(" "*indentdepth + str(args[0]), *args[1:])
 
     if node.is_root:
         lprint("- (root)")
@@ -764,18 +796,48 @@ def dump_node_tree(node: BaseJsonPathNode, indentdepth=0):
     elif isinstance(node, StoreValuePathNode):
         lprint("store to", node.target)
     elif isinstance(node, ForwardDeclarationPathNode):
-        lprint("store to", node.target)
-        lprint("with forward declarations from", node.referencing_type)
+        lprint("store to", node.target, "with forward declarations from", node.referencing_type)
     else:
         lprint("unknown type")
 
-print("Collected configuration tree")
+for j, i in collected_bare_typedefs.items():
+    dprint("for", j)
+    for k in i:
+        dump_node_tree(k)
+dprint("global")
+for i in collected_bare_paths:
+    dump_node_tree(i)
+
+while True:
+    all_typedefs_known = set(collected_bare_typedefs.keys())
+    blocked_to_process = find_all_referenced_typedefs()
+
+    if not blocked_to_process <= all_typedefs_known:
+        raise ValueError("unknown types: {}".format([str(x) for x in blocked_to_process - all_typedefs_known]))
+
+    process_this_cycle = all_typedefs_known - blocked_to_process
+
+    if len(process_this_cycle) == 0:
+        break
+
+    dprint("cycle", *(str(x) for x in process_this_cycle))
+    dprint("blocked", *(str(x) for x in blocked_to_process))
+
+    for i in process_this_cycle:
+        forward_typedef_into_others(i)
+
+
+
+# finally, merge to get final tree
+options_tree = merge_path_list(collected_bare_paths)
+
+dprint("Collected configuration tree")
 dump_node_tree(options_tree)
 
 # Collect all defaults into one place
 declared_variables: Dict[ObjectLocator, List[DefaultArg]] = {}
 
-def extract_defaults(of):
+def extract_variables(of):
     removed = []
     ensures = []
     for i in of.entry_actions:
@@ -792,7 +854,7 @@ def extract_defaults(of):
         of.entry_actions.insert(0, i)
         declared_variables[i.target] = []
 
-visit_all_subnodes_with(options_tree, extract_defaults)
+visit_all_subnodes_with(options_tree, extract_variables)
 
 class Outputter:
     SHIFT_WIDTH = 4
@@ -897,6 +959,29 @@ def generate_variable_declarations(output):
 
         output.add(line + ";")
 
+def generate_str_to_enum_funcs(output):
+    output.add("// STRING TO ENUM LOOKUPS")
+    output.add("template<typename T>")
+    output.add("T lookup_enum(const char* v, T default_value) {")
+    with output as defdef:
+        defdef.add('ESP_LOGW(TAG, "Unknown enum type, assuming default");')
+        defdef.add("return default_value;")
+    output.add("}")
+    for enum in declared_enums:
+        enum = pygccxml.declarations.remove_declarated(enum)
+        output.add()
+        output.add("template<>")
+        output.add(f"{enum.decl_string} lookup_enum<{enum.decl_string}>(const char *v, {enum.decl_string} default_value) {{")
+        with output as lookupbody:
+            made_if = False
+            for i, _ in enum.values:
+                compare = "else if" if made_if else "if"
+                compare += f" (strcasecmp(v, \"{i}\") == 0) return {enum.decl_string}::{i};"
+                made_if = True
+                lookupbody.add(compare)
+            lookupbody.add(f"else {{ ESP_LOGW(TAG, \"Unknown enum value %s for {enum.name}\", v); return default_value; }}")
+        output.add("}")
+
 node_to_symbol_map = {}
 
 def generate_nodeenum_declaration(output):
@@ -943,7 +1028,11 @@ def generate_redefault_function(output):
             lineoutputter = inner
             linechain = ""
 
-            # Ensure we only free up to and including the first lazy value
+            if any(
+                helper_array_dimensions_and_underlying_lazy(v.target_declaration.decl_type)[2] and k != variable_chain.length - 1
+                for k, v in enumerate(variable_chain)
+            ):
+                continue
 
             # Create for loops and line access
             for k, variable in enumerate(variable_chain):
@@ -1023,12 +1112,12 @@ def generate_assignment_path_for(locator: ObjectLocator, point_to_lazy_only=Fals
 
 def generate_entry_action(output, action, node):
     if isinstance(action, UpdateSizeRef):
-        output.add(generate_assignment_path_for(action.target), "=", f"stack[{node.node_depth}]->index;")
+        output.add(generate_assignment_path_for(action.target), "=", f"stack[{node.node_depth}]->index+1;")
     elif isinstance(action, EnsureLazyInit):
         # Check lazy type
         _, underlying, lazy_kind = helper_array_dimensions_and_underlying_lazy(action.target.tip.target_declaration.decl_type)
         if lazy_kind == LAZY_BEFORE_ARRAY:
-            output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {action.target.tip.target_declaration.decl_type.decl_string} {{}};")
+            output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {action.target.tip.target_declaration.decl_type.decl_string}::inner {{}};")
         else:
             output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {underlying.decl_string} {{}};")
     else:
@@ -1046,7 +1135,7 @@ def as_c_string(value: str):
             result += chr(i)
     return '"' + result + '"'
 
-def get_stored_value_for(decl, duplicate=True):
+def get_stored_value_and_type_for(decl, access_string="{}", duplicate=True):
     vtype = value_type_for(decl)
     _, underlying, __ = helper_array_dimensions_and_underlying_lazy(decl)
     if isinstance(vtype, ValueTypeLazyPointer):
@@ -1056,19 +1145,22 @@ def get_stored_value_for(decl, duplicate=True):
     if isinstance(vtype, ValueTypeCustom):
         raise ValueError("cannot store directly to custom type")
     if vtype == ValueTypePrimitive.STRING:
-        return "strdup(v.str_val)" if duplicate else "v.str_val"
+        return vtype, "strdup(v.str_val)" if duplicate else "v.str_val"
     elif vtype == ValueTypePrimitive.BOOLEAN:
-        return "v.bool_val"
+        return vtype, "v.bool_val"
     elif vtype == ValueTypePrimitive.FLOATING_POINT:
-        return "v.float_val"
+        return vtype, "v.as_number()"
     elif vtype == ValueTypePrimitive.INTEGER:
-        return "v.int_val"
-    elif vtype == ValueTypePrimitive.ENUM:
-        return "({underlying.decl_string})v.int_val"
+        return vtype, "v.int_val"
+    elif isinstance(vtype, ValueTypeEnum):
+        return ValueTypePrimitive.STRING, f"lookup_enum<{vtype.referenced_type}>(v.str_val, {access_string})"
+    else:
+        raise NotImplementedError(vtype)
 
 def generate_store_code(output, node: StoreValuePathNode):
     # TODO: generate type verification code
 
+    vtype = None
     line = generate_assignment_path_for(node.target)
     tip = node.target.tip
     if isinstance(tip, ObjectLocatorDelegated):
@@ -1076,7 +1168,8 @@ def generate_store_code(output, node: StoreValuePathNode):
         for argument in tip.target_declaration.arguments:
             if line[-1] != "(": line += ", "
             if argument.name == "value":
-                line += get_stored_value_for(argument.decl_type, False)
+                vtype, content = get_stored_value_and_type_for(argument.decl_type, duplicate=False)
+                line += content
             elif argument.name in tip.bound_arg_indices:
                 # Is this an array index?
                 if pygccxml.declarations.is_integral(argument.decl_type):
@@ -1087,7 +1180,14 @@ def generate_store_code(output, node: StoreValuePathNode):
                 raise ValueError("unknown what to do with argument", argument)
         line += ");"
     else:
-        line += " = " + get_stored_value_for(tip.target_declaration.decl_type) + ";"
+        vtype, content = get_stored_value_and_type_for(tip.target_declaration.decl_type, access_string=line)
+        line += " = " + content + ";"
+    output.add({
+        ValueTypePrimitive.STRING: "if (v.type != json::Value::STR) ",
+        ValueTypePrimitive.FLOATING_POINT: "if (!v.is_number()) ",
+        ValueTypePrimitive.INTEGER: "if (v.type != json::Value::INT) ",
+        ValueTypePrimitive.BOOLEAN: "if (v.type != json::Value::BOOL) ",
+    }[vtype] + "goto unk_type;")
     output.add(line)
 
 def generate_json_callback(output):
@@ -1145,15 +1245,22 @@ def generate_json_callback(output):
                 endbody.add("return;")
             body.add("}")
             # If we get out of this if, we warn in logs
-            body.add('else { ESP_LOGW(TAG, "unknown tag in config %s", stack[stack_ptr-1]->name); }')
+            body.add('else { goto unk_tag; }')
             body.add("return;")
             body.add()
                 
     output.add("}")
+    output.add("return;")
+    output.add("unk_tag:");
+    output.add('ESP_LOGW(TAG, "unknown tag in config %s", stack[stack_ptr-1]->name);')
+    output.add("return;")
+    output.add("unk_type:");
+    output.add('if (v.type != json::Value::NONE) ESP_LOGW(TAG, "wrong type for %s", stack[stack_ptr-1]->name);')
+    output.add("return;")
 
 def generate_parser(output):
     output.add("// ACTUAL PARSER")
-    output.add("void parse_config(json::TextCallback&& tcb) {")
+    output.add("bool parse_config(json::TextCallback&& tcb) {")
     with output as inner:
         # Declare state var
         inner.add("cfgstate curnode = cfgstate::R;")
@@ -1167,7 +1274,9 @@ def generate_parser(output):
         inner.add("if (!parser.parse(std::move(tcb))) {")
         with inner as bad:
             bad.add('ESP_LOGE(TAG, "Failed to parse JSON for config");')
+            bad.add("return false;")
         inner.add("}")
+        inner.add("return true;")
     output.add("}")
 
 def generate_code(output):
@@ -1176,12 +1285,16 @@ def generate_code(output):
     generate_variable_declarations(output)
     output.add()
     output.add("namespace config {")
+    parseroutput = Outputter()
     with output as nsoutput:
         generate_nodeenum_declaration(nsoutput)
         nsoutput.add()
         generate_redefault_function(nsoutput)
         nsoutput.add()
-        generate_parser(nsoutput)
+        generate_parser(parseroutput)
+        generate_str_to_enum_funcs(nsoutput)
+        nsoutput.add()
+        nsoutput += parseroutput.value()
     output.add("}")
 
 with open(sys.argv[-1], 'w') as f:

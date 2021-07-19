@@ -31,7 +31,6 @@ value: CNUMBER -> float_or_int
 	 | variable -> variable_constant
 
 tag: "default" value+ -> default_tag
-   | "required" ESCAPED_STRING? -> required_tag
    | "max" variable "=" INT -> explicit_array_max
 
 INTENT: "holds" | "receives" | "provides"
