@@ -1,9 +1,86 @@
 #include "json.h"
 #include "utf.h"
 #include <string.h>
+
+#ifndef STANDALONE_JSON
 #include <esp_log.h>
+#endif
 
 const static char * TAG = "json";
+
+json::TreeSlabAllocator::TreeSlabAllocator() {
+	tail = new Chunk();
+	_last = tail->data;
+	_start = tail->data;
+}
+
+json::TreeSlabAllocator::~TreeSlabAllocator() {
+	if (tail) delete tail;
+}
+
+bool json::TreeSlabAllocator::push(uint8_t c) {
+	return append(&c, 1);
+}
+
+uint8_t * json::TreeSlabAllocator::end() {
+	return std::exchange(_start, _last);
+}
+
+void json::TreeSlabAllocator::finish(void * obj) {
+	// obj is new start
+	if (obj > _start) {
+#ifndef STANDALONE_JSON
+		ESP_LOGW(TAG, "invalid obj in memory.free");
+#endif
+	}
+
+	_start = (uint8_t *)obj;
+
+	// Subtract size from current chunk
+	tail->used -= curlen();
+	_last = _start;
+
+	// If the current used is zero and there's a previous block, free into it
+	if (tail->previous && !tail->used) {
+		Chunk * new_end = std::exchange(tail->previous, nullptr);
+		delete tail;
+		tail = new_end;
+
+		_last = _start = tail->data + tail->used;
+	}
+}
+
+bool json::TreeSlabAllocator::append(const uint8_t * data, size_t amount) {
+	// Is there enough space?
+	if (tail->used + amount > tail->length) {
+		// Is this the first thing in the chunk? If so, we can just expand the chunk.
+		if (offset() == 0) {
+			while (tail->used + amount > tail->length)
+				if (!tail->expand(tail->length + TreeBlock)) return false;
+			_start = tail->data;
+			_last = tail->data + tail->used;
+		}
+		// Otherwise, we have to allocate a new chunk.
+		else {
+			Chunk * new_ = new Chunk{tail};
+			// Figure out how much is already used and copy that into the new chunk.
+			while (curlen()+amount > new_->length) 
+				if (!new_->expand(new_->length + TreeBlock)) return false;
+			memcpy(new_->data, _start, curlen());
+			// Free up space in the old chunk
+			tail->used -= curlen();
+			// Update start and tail pointers
+			new_->used = curlen();
+			_start = new_->data;
+			_last = new_->data + new_->used;
+			tail = new_;
+		}
+	}
+	if (data) memcpy(_last, data, amount);
+	tail->used += amount;
+	_last += amount;
+	return true;
+}
 
 json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : is_utf8(is_utf8), cb(std::move(c)) {
 	this->stack_ptr = 0;
@@ -35,12 +112,14 @@ bool json::JSONParser::parse(TextCallback && cb) {
 	return parse_value();
 }
 
+#ifndef STANDALONE_JSON
 bool json::JSONParser::parse(dwhttp::Download & d) {
 	return parse([&]() -> int16_t {
 		auto v = d();
 		return v;
 	});
 }
+#endif
 
 bool json::JSONParser::parse_value() {
 	// PARSE VALUE: skips whitespace, then calls the correct function to parse a value. Assumes the context on the stack is set properly.
@@ -184,64 +263,48 @@ bool json::JSONParser::advance_whitespace() {
 
 char * json::JSONParser::parse_string_text() {
 	if (peek() != '"') return nullptr;
-	size_t bufsize = 16;
-	size_t idx = 0;
-	char * tbuf = (char *)malloc(16);
-
-	auto append = [&tbuf, &bufsize, &idx](char c) {
-		if (bufsize > 2048) return; // Max length
-		if (idx < bufsize) {
-add:
-			tbuf[idx++] = c;
-		}
-		else {
-			bufsize += 16;
-			tbuf = (char *)realloc(tbuf, bufsize);
-			goto add;
-		}
-	};
 
 	next();
 	while (peek() != '"') {
-		if (peek() == 0) return free(tbuf), nullptr;
+		if (peek() == 0) return memory.finish(memory.end()), nullptr;
 
 		if (peek() != '\\') {
-			append(peek());
+			memory.push(peek());
 			next();
 		}
 		else {
 			switch (next()) {
 				case 'b':
-					append('\b');
+					memory.push('\b');
 					break;
 				case 'f':
-					append('\f');
+					memory.push('\f');
 					break;
 				case 'n':
-					append('\n');
+					memory.push('\n');
 					break;
 				case 'r':
-					append('\r');
+					memory.push('\r');
 					break;
 				case 't':
-					append('\t');
+					memory.push('\t');
 					break;
 				case 'u':
 					// the sign has no support for unicode anyways, so we just ignore it
 					next(); next(); next();
 					break;
 				default:
-					append(peek());
+					memory.push(peek());
 					break;
 			}
 			next();
 		}
 	}
 	next();
+
+	memory.push(0);
 	
-	tbuf = (char*)realloc(tbuf, idx + 1);
-	tbuf[idx] = 0;
-	return tbuf;
+	return (char *)memory.end();
 }
 
 bool json::JSONParser::parse_array() {
@@ -286,7 +349,7 @@ bool json::JSONParser::parse_object() {
 		next();
 		parse_value();
 		pop();
-		free(n);
+		memory.finish(n);
 		if (!advance_whitespace()) {return false;}
 		if (peek() == ',') continue;
 		else if (peek() == '}') break;
@@ -305,7 +368,7 @@ bool json::JSONParser::parse_string() {
 		if (is_utf8) utf8::process(b);
 		Value v{b};
 		cb(stack, stack_ptr, v);
-		free(b);
+		memory.finish(b);
 	}
 	return true;
 }

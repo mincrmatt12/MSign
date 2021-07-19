@@ -51,15 +51,77 @@ namespace json {
 	typedef std::function<void (PathNode **, uint8_t, const Value&)> JSONCallback;
 	typedef std::function<int16_t (void)> TextCallback;
 
-	class JSONParser {
-	public:
+	constexpr inline static size_t TreeBlock = 128;
+
+	struct TreeSlabAllocator {
+		TreeSlabAllocator();
+		~TreeSlabAllocator();
+
+		// Allocate a single object
+		template<typename T, typename ...Args>
+		T* make(Args&& ...args) {
+			if (!append(nullptr, sizeof(T))) return nullptr;
+			return new (end()) T (std::forward<Args>(args)...);
+		}
+
+		// Push a character onto a variable length object
+		bool push(uint8_t c); // Returns false if out of memory
+		// Finish a variable length object
+		uint8_t * end();
+
+		// Free up the latest allocation
+		void finish(void * obj);
+
+	private:
+		bool append(const uint8_t * data, size_t amount);
+
+		size_t offset() {
+			return _start - tail->data;
+		}
+
+		size_t curlen() {
+			return _last - _start;
+		}
+
+		struct Chunk {
+			Chunk(Chunk *onto=nullptr) {
+				length = TreeBlock;
+				used = 0;
+				previous = onto;
+				data = (uint8_t *)malloc(TreeBlock);
+			}
+
+			~Chunk() {
+				if (data) free(data);
+				if (previous) delete previous;
+			}
+
+			uint16_t length{};
+			uint16_t used{};
+			Chunk * previous{};
+			uint8_t * data{};
+
+			bool expand(size_t to) {
+				length = to;
+				data = (uint8_t *)realloc(data, to);
+				return data;
+			}
+		} *tail;
+
+		uint8_t *_last, *_start;
+	};
+
+	struct JSONParser {
 		JSONParser(JSONCallback && c, bool is_utf8=false);
 		~JSONParser();
 
 		bool parse(const char * text);
 		bool parse(const char * text, size_t size);
 		bool parse(TextCallback && c);
+#ifndef STANDALONE_JSON
 		bool parse(dwhttp::Download & d);
+#endif
+
 	private:
 		PathNode& top() {
 			return *stack[stack_ptr - 1];
@@ -67,10 +129,10 @@ namespace json {
 
 		template<typename... Args>
 		inline void push(Args&&... args) {
-			stack[stack_ptr++] = new PathNode(std::forward<Args...>(args)...);
+			stack[stack_ptr++] = memory.make<PathNode>(std::forward<Args>(args)...);
 		}
 		void pop () {
-			delete stack[--stack_ptr];
+			memory.finish(stack[--stack_ptr]);
 		}
 
 		bool parse_value();
@@ -90,14 +152,17 @@ namespace json {
 		char next();
 
 		char temp = 0;
+		uint8_t    stack_ptr;
+
 		bool need = true;
 		bool is_utf8 = false;
 
-		PathNode * stack[32];
-		uint8_t    stack_ptr;
+		PathNode * stack[20];
 
 		JSONCallback cb;
 		TextCallback tcb;
+
+		TreeSlabAllocator memory;
 	};
 }
 
