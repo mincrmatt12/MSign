@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include <stdint.h>
+#include "../config.h"
 
 namespace ttc {
 	//!cfg: holds .ttc.alert_search
@@ -18,5 +19,5 @@ namespace ttc {
 	};
 
 	//!cfg: holds .ttc.entries
-	extern TTCEntry entries[3];
+	extern config::lazy_t<TTCEntry> entries[3];
 }

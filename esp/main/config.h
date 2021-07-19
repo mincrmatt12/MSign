@@ -5,6 +5,7 @@
 #include "json.h"
 
 namespace config {
+	// Slightly less posessive unique_ptr, "lazy" as in "lazily allocated"
 	template<typename T>
 	struct lazy_t {
 		const T* get() const {return ptr;}

@@ -174,8 +174,8 @@ namespace ttc {
 			uint64_t local_times[6];
 			memset(local_times, 0, sizeof(local_times));
 
-			if (entries[slot]) {
-				if (update_slot_times_and_info(entries[slot], slot, x, local_times)) {
+			if (entries[slot] && *entries[slot]) {
+				if (update_slot_times_and_info(*entries[slot], slot, x, local_times)) {
 					serial::interface.update_slot_raw(slots::TTC_TIME_1 + slot, local_times, sizeof(local_times));
 				}
 				else return false;
