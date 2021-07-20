@@ -23,6 +23,15 @@ bool json::TreeSlabAllocator::push(uint8_t c) {
 }
 
 uint8_t * json::TreeSlabAllocator::end() {
+	// If _last is not 4-byte, aligned, make it aligned.
+	if ((uintptr_t)_last % 4) {
+		if (!append(nullptr, 4 - ((uintptr_t)_last % 4))) {
+#ifndef STANDALONE_JSON
+			ESP_LOGW(TAG, "failed to align");
+#endif
+			return nullptr;
+		}
+	}
 	return std::exchange(_start, _last);
 }
 
