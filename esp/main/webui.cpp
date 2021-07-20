@@ -374,10 +374,12 @@ reachedend:
 					}
 				}
 				f_close(&f);
+				f_unlink("0:/config.json.old");
 				f_rename("0:/config.json", "0:/config.json.old");
 				f_rename("0:/config.json.tmp", "0:/config.json");
 				if (!config::parse_config_from_sd()) {
 					ESP_LOGW(TAG, "new config failed to parse, reinstating old config");
+					f_unlink("0:/config.json.bad");
 					f_rename("0:/config.json", "0:/config.json.bad");
 					f_rename("0:/config.json.old", "0:/config.json");
 					config::parse_config_from_sd();
