@@ -61,4 +61,5 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 
 	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 17)
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
+	target_link_options(${COMPONENT_LIB} PUBLIC -Wl,-u -Wl,_printf_float)
 endif()
