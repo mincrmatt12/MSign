@@ -151,15 +151,15 @@ namespace upd {
 				uint8_t buf[256];
 				for (int i = 0; i < length; i += 256) {
 					int size_of_tx = (length - i >= 256) ? 256 : (length - i);
-					f_read(&arF, buf, size_of_tx, &br);
-					UINT bw;
-					f_write(&target, buf, br, &bw);
 					if (f_eof(&arF)) {
 						f_close(&target);
 						f_close(&arF);
 						ESP_LOGE(TAG, "failed to copy");
 						goto failure;
 					}
+					f_read(&arF, buf, size_of_tx, &br);
+					UINT bw;
+					f_write(&target, buf, br, &bw);
 					bytes_since_last_yield += bw;
 					if (bytes_since_last_yield > 8192) {
 						vTaskDelay(2);
