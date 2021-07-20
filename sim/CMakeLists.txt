@@ -6,7 +6,7 @@ set(CMAKE_BUILD_TYPE Debug)
 set(SIM_FREERTOS_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 set(SIM_LWIP_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/lwip/src)
 set(SIM_BRSSL_PATH ${CMAKE_CURRENT_LIST_DIR}/../vendor/BearSSL)
-set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs)
+set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs_priv)
 set(SIM_B64_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/libb64)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
