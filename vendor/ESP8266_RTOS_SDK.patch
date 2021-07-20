@@ -1,3 +1,19 @@
+diff --git a/components/bootloader_support/CMakeLists.txt b/components/bootloader_support/CMakeLists.txt
+index 574dfe7e..6c9849e4 100644
+--- a/components/bootloader_support/CMakeLists.txt
++++ b/components/bootloader_support/CMakeLists.txt
+@@ -8,7 +8,10 @@ else()
+     set(COMPONENT_ADD_INCLUDEDIRS "include")
+     set(COMPONENT_PRIV_INCLUDEDIRS "include_priv")
+     set(COMPONENT_REQUIRES)
+-    set(COMPONENT_PRIV_REQUIRES spi_flash mbedtls)
++    set(COMPONENT_PRIV_REQUIRES spi_flash)
++	if (CONFIG_SSL_USING_MBEDTLS)
++		set(COMPONENT_PRIV_REQUIRES spi_flash mbedtls)
++	endif()
+ endif()
+ 
+ register_component()
 diff --git a/components/freertos/port/esp8266/include/freertos/portmacro.h b/components/freertos/port/esp8266/include/freertos/portmacro.h
 index b546cd7b..5443fb33 100644
 --- a/components/freertos/port/esp8266/include/freertos/portmacro.h
@@ -24,7 +40,7 @@ index d69e2533..7b295d11 100644
      0,  //  ESP_LOG_VERBOSE
  };
 diff --git a/components/wpa_supplicant/CMakeLists.txt b/components/wpa_supplicant/CMakeLists.txt
-index 3300647e..f0a3d3dd 100644
+index 3300647e..549d4f73 100644
 --- a/components/wpa_supplicant/CMakeLists.txt
 +++ b/components/wpa_supplicant/CMakeLists.txt
 @@ -3,9 +3,7 @@ set(srcs "port/os_xtensa.c"
@@ -52,7 +68,32 @@ index 3300647e..f0a3d3dd 100644
      "src/crypto/crypto_internal.c"
      "src/crypto/des-internal.c"
      "src/crypto/dh_group5.c"
-@@ -150,8 +144,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
+@@ -85,6 +79,7 @@ set(srcs "port/os_xtensa.c"
+ 
+ if(CONFIG_WPA_MBEDTLS_CRYPTO)
+     set(tls_src "src/crypto/tls_mbedtls.c")
++	set(tls_dep mbedtls)
+ else()
+     set(tls_src
+     "src/tls/asn1.c"
+@@ -105,6 +100,7 @@ else()
+     "src/tls/tlsv1_server_write.c"
+     "src/tls/x509v3.c"
+     )
++	set(tls_dep "")
+ endif()
+ 
+ if (CONFIG_WPA_11KV_SUPPORT)
+@@ -124,7 +120,7 @@ endif()
+ idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
+                     INCLUDE_DIRS include port/include include/esp_supplicant
+                     PRIV_INCLUDE_DIRS src
+-                    PRIV_REQUIRES mbedtls freertos heap newlib)
++					PRIV_REQUIRES freertos heap newlib ${tls_dep})
+ 
+ set_source_files_properties(
+     src/crypto/crypto_ops.c
+@@ -150,8 +146,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
      ESP8266_WORKAROUND
      CONFIG_ECC
      CONFIG_IEEE80211W
