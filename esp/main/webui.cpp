@@ -425,7 +425,7 @@ reachedend:
 			print_to_client("\r\n\r\n");
 			print_to_client(buf);
 		}
-#ifdef configUSE_TRACE_FACILITY
+#if configUSE_TRACE_FACILITY
 		else if (strcasecmp(tgt, "tasks") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
 
@@ -439,6 +439,12 @@ reachedend:
 				snprintf(buf, 48, "%6s: cur %d (p%d), mst %d\r\n", statuses[i].pcTaskName, statuses[i].eCurrentState, statuses[i].uxCurrentPriority, statuses[i].usStackHighWaterMark);
 				print_to_client(buf);
 			}
+		}
+#else
+		else if (strcasecmp(tgt, "tasks") == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+
+			send_static_response(503, "Service Unavailable", "the tasks function was not compiled into this build");
 		}
 #endif
 		else if (strcasecmp(tgt, "newmodel") == 0) {
