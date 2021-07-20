@@ -425,6 +425,22 @@ reachedend:
 			print_to_client("\r\n\r\n");
 			print_to_client(buf);
 		}
+#ifdef configUSE_TRACE_FACILITY
+		else if (strcasecmp(tgt, "tasks") == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+
+			print_to_client("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: text/plain");
+			print_to_client("\r\n\r\n");
+
+			TaskStatus_t statuses[16];
+			int amt = uxTaskGetSystemState(statuses, 16, nullptr);
+			char buf[48];
+			for (int i = 0; i < amt; ++i) {
+				snprintf(buf, 48, "%6s: cur %d (p%d), mst %d\r\n", statuses[i].pcTaskName, statuses[i].eCurrentState, statuses[i].uxCurrentPriority, statuses[i].usStackHighWaterMark);
+				print_to_client(buf);
+			}
+		}
+#endif
 		else if (strcasecmp(tgt, "newmodel") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
