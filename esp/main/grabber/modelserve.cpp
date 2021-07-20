@@ -22,7 +22,7 @@ namespace modelserve {
 	};
 
 	void update_modelpresence(size_t n, bool value) {
-		if (f_stat(modelpaths[n], NULL)) {
+		if (n < 2 && f_stat(modelpaths[n], NULL)) {
 			ESP_LOGW(TAG, "No model bin on disk but it was requested, cancelling (%d)", (int)n);
 			modelspresent[n] = false;
 			return;
@@ -127,25 +127,8 @@ namespace modelserve {
 		}
 	}
 
-	bool init_modeldat(int i) {
-		if (f_stat(modelpaths[i], NULL)) {
-			ESP_LOGW(TAG, "No model bin on disk (%d)", i);
-			modelspresent[i] = false;
-
-			return false;
-		}
-
-		ESP_LOGI(TAG, "Got model of for (%d)", i);
-		modelspresent[i] = true;
-
-		return true;
-	}
-
 	void init() {
 		// init() is called after config is loaded so this will work correctly.
-		init_modeldat(0);
-		init_modeldat(1);
-
 		modelidx = 2;
 		ESP_LOGI(TAG, "Initialized model information");
 	}

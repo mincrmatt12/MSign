@@ -11,7 +11,7 @@ namespace ttc {
 	
 	struct TTCEntry {
 		//!cfg: holds .dirtag, default nullptr
-		const char * dirtag[3];
+		const char * dirtag[4];
 		//!cfg: holds .stopid
 		int stopid = -1;
 

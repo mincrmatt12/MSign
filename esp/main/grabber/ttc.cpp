@@ -74,7 +74,7 @@ namespace ttc {
 				}
 				if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 				{
-					for (int i = 0; i < 3 && entry.dirtag[i]; ++i) {
+					for (int i = 0; i < 4 && entry.dirtag[i]; ++i) {
 						if (strcmp(entry.dirtag[i], v.str_val) == 0) {
 							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i]);
 							state.tag = true; break;

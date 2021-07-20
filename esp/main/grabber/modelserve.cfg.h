@@ -24,9 +24,12 @@ namespace modelserve {
 		uint8_t nfocus = 0;
 	};
 
-	//!cfg: holds .models
+	//!cfg: holds .model.sd
 	extern ModelParams model_params[2];
 
-	//!cfg: receives .models[$n].enabled
+	//!cfg: receives .model.enabled[$n]
 	void update_modelpresence(size_t n, bool value);
+
+	//!cfg: receives .model.sd[$n].name
+	inline void update_modelname(size_t n, const char *value) {}
 }
