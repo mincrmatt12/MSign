@@ -158,9 +158,6 @@ bool wifi::init() {
 		return false;
 	}
 
-	// Init events
-	events = xEventGroupCreate();
-
 	// Setup tcpip/event handlers
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));

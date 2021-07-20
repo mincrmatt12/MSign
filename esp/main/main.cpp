@@ -58,6 +58,9 @@ extern "C" void app_main() {
 
 	serial::interface.init();
 
+	// Create event handle early
+	wifi::events = xEventGroupCreate();
+
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
 		((serial::SerialInterface *)ptr)->run();
