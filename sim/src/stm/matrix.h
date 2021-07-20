@@ -11,6 +11,7 @@
 #include <task.h>
 
 #include "tskmem.h"
+#include "color.h"
 
 namespace led {
 
@@ -29,42 +30,22 @@ namespace led {
 				std::cout << "\e[;H\e[?25l";                                                                                                                                                 
 				for (size_t y = 0; y < Height; ++y) {                                                                                                                                 
 					for (size_t x = 0; x < Width; ++x) {                                                                                                                              
-						std::cout << "\x1b[48;2;" << std::to_string(_remap(_r(x, y))) << ";" << std::to_string(_remap(_g(x, y))) << ";" << std::to_string(_remap(_b(x, y))) << "m  "; 
+						std::cout << "\x1b[48;2;" << std::to_string(_remap(_at(x, y).r)) << ";" << std::to_string(_remap(_at(x, y).g)) << ";" << std::to_string(_remap(_at(x, y).b)) << "m  "; 
 					}                                                                                                                                                                 
 					std::cout << std::endl;                                                                                                                                           
 				}                                                                                                                                                                     
 				portEXIT_CRITICAL();
 			}                                                                                                                                                                         
 
-			uint16_t & r(uint16_t x, uint16_t y) {
+			color_t & at(uint16_t x, uint16_t y) {
 				if (on_screen(x, y))
-					return _r(x, y);
-				return junk;
-			}
-			uint16_t & g(uint16_t x, uint16_t y) {
-				if (on_screen(x, y))
-					return _g(x, y);
-				return junk;
-			}
-			uint16_t & b(uint16_t x, uint16_t y) {
-				if (on_screen(x, y))
-					return _b(x, y);
+					return _at(x, y);
 				return junk;
 			}
 
-			const uint16_t & r(uint16_t x, uint16_t y) const {
+			const color_t & at(uint16_t x, uint16_t y) const {
 				if (on_screen(x, y))
-					return _r(x, y);
-				return junk;
-			}
-			const uint16_t & g(uint16_t x, uint16_t y) const {
-				if (on_screen(x, y))
-					return _g(x, y);
-				return junk;
-			}
-			const uint16_t & b(uint16_t x, uint16_t y) const {
-				if (on_screen(x, y))
-					return _b(x, y);
+					return _at(x, y);
 				return junk;
 			}
 
@@ -80,18 +61,10 @@ namespace led {
 			static constexpr uint16_t stb_lines = Height / 2;
 
 		private:
-			uint16_t data[Width*Height*3];
+			color_t data[Width*Height*3];
 
-			inline uint16_t & _r(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 0];
-			}
-
-			inline uint16_t & _g(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 1];
-			}
-
-			inline uint16_t & _b(uint16_t x, uint16_t y) {
-				return data[x*3 + y*Width*3 + 2];
+			inline color_t & _at(uint16_t x, uint16_t y) {
+				return data[x + y*Width];
 			}
 
 			inline uint8_t _remap(uint16_t prev) {                                    
@@ -99,7 +72,7 @@ namespace led {
 			}                                                                        
 
 
-			uint16_t junk; // used as failsafe for read/write out of bounds
+			color_t junk; // used as failsafe for read/write out of bounds
 		};
 
 	template<typename FB>                                                                

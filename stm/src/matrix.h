@@ -12,22 +12,15 @@
 #include "pins.h"
 #include <FreeRTOS.h>
 #include <task.h>
+#include "color.h"
 
 namespace led {
 	template<uint16_t Width>
 	struct BasicFrameBufferStorage {
 		static const uint_fast16_t EffectiveWidth = Width;
 
-		inline static uint16_t & _r(uint16_t * data, uint16_t x, uint16_t y) {
-			return data[x*3 + y*Width*3 + 0];
-		}
-
-		inline static uint16_t & _g(uint16_t * data, uint16_t x, uint16_t y) {
-			return data[x*3 + y*Width*3 + 1];
-		}
-
-		inline static uint16_t & _b(uint16_t * data, uint16_t x, uint16_t y) {
-			return data[x*3 + y*Width*3 + 2];
+		inline static color_t & _at(color_t * data, uint16_t x, uint16_t y) {
+			return data[x + y*Width];
 		}
 	};
 
@@ -84,40 +77,16 @@ namespace led {
 			}
 		}
 
-		inline uint16_t & r(uint16_t x, uint16_t y) {
+		inline color_t & at(uint16_t x, uint16_t y) {
 			if (on_screen(x, y)) {
-				return Storage::_r(data, x, y);
-			}
-			return junk;
-		}
-		inline uint16_t & g(uint16_t x, uint16_t y) {
-			if (on_screen(x, y)) {
-				return Storage::_g(data, x, y);
-			}
-			return junk;
-		}
-		inline uint16_t & b(uint16_t x, uint16_t y) {
-			if (on_screen(x, y)) {
-				return Storage::_b(data, x, y);
+				return Storage::_at(data, x, y);
 			}
 			return junk;
 		}
 
-		inline const uint16_t & r(uint16_t x, uint16_t y) const {
+		inline const color_t & at(uint16_t x, uint16_t y) const {
 			if (on_screen(x, y)) {
-				return Storage::_r(data, x, y);
-			}
-			return junk;
-		}
-		inline const uint16_t & g(uint16_t x, uint16_t y) const {
-			if (on_screen(x, y)) {
-				return Storage::_g(data, x, y);
-			}
-			return junk;
-		}
-		inline const uint16_t & b(uint16_t x, uint16_t y) const {
-			if (on_screen(x, y)) {
-				return Storage::_b(data, x, y);
+				return Storage::_at(data, x, y);
 			}
 			return junk;
 		}
@@ -136,7 +105,7 @@ namespace led {
 	protected:
 		uint16_t data[Width*Height*3];
 
-		uint16_t junk; // used as failsafe for read/write out of bounds
+		color_t junk; // used as failsafe for read/write out of bounds
 
 	private:
 		template<unsigned Pos>
@@ -223,26 +192,11 @@ namespace led {
 		
 		const static uint_fast16_t EffectiveWidth = 256;
 
-
-		inline static uint16_t & _r(uint16_t * data, uint16_t x, uint16_t y) {
+		inline static color_t & _at(color_t * data, uint16_t x, uint16_t y) {
 			if (y > 31) 
-				return data[x*3 + (y & 0x1f)*256*3];
+				return data[x + (y & 0x1f)*EffectiveWidth];
 			else
-				return data[(255 - x)*3 + (31 - y)*256*3];
-		}
-
-		inline static uint16_t & _g(uint16_t * data, uint16_t x, uint16_t y) {
-			if (y > 31) 
-				return data[x*3 + (y & 0x1f)*256*3 + 1];
-			else
-				return data[(255 - x)*3 + (31 - y)*256*3 + 1];
-		}
-
-		inline static uint16_t & _b(uint16_t * data, uint16_t x, uint16_t y) {
-			if (y > 31) 
-				return data[x*3 + (y & 0x1f)*256*3 + 2];
-			else
-				return data[(255 - x)*3 + (31 - y)*256*3 + 2];
+				return data[(EffectiveWidth - 1 - x) + (31 - y)*EffectiveWidth];
 		}
 	};
 

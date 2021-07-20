@@ -18,26 +18,26 @@ namespace tasks {
 		template <typename FB>
 		void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 			fb.clear();
-			draw::text(fb, "MSIGN V4.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0, 4095, 0);
-			draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, 4095, 4095, 4095);
+			draw::text(fb, "MSIGN V4.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
+			draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
 			char buf[5] = {0};
 			strncpy(buf, bootcmd_get_bl_revision(), 4);
-			draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", 14, 4095, 127_c, buf, 4095, 4095, 4095);
+			draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", led::color_t{14, 4095, 127_c}, buf, led::color_t{4095});
 			switch (stage) {
 				case 1:
-					draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 4095, 0, 0);
+					draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 0xff0000_cc);
 					break;
 				case 2:
-					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 4095, 4095, 4095);
-					draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0, 4095, 0);
+					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
+					draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0x00ff00_cc);
 					break;
 				case 3:
-					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 4095, 4095, 4095);
+					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
 					if (extra) {
-						draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 40_c, 40_c, 4095);
+						draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
 					}
 					else {
-						draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 40_c, 40_c, 4095);
+						draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
 					}
 					break;
 				default:
@@ -64,11 +64,11 @@ namespace tasks {
 				int width = draw::text_size("\xfe sys", font::dejavusans_10::info) + 2;
 
 				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0, 0, 0);
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 10_c, 245_c, 30_c, "sys", 128_c, 128_c, 128_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ",led::color_t {10_c, 245_c, 30_c}, "sys", led::color_t{128_c, 128_c, 128_c});
 			}
 			
 			// try to draw webui
@@ -77,11 +77,11 @@ namespace tasks {
 				int width = draw::text_size("\xfe ui", font::dejavusans_10::info) + 2;
 
 				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0, 0, 0);
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 10_c, 245_c, 30_c, "ui", 128_c, 128_c, 128_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "ui", 0x7f7f7f_cc);
 			}
 
 			// try to draw failed
@@ -90,11 +90,11 @@ namespace tasks {
 				int width = draw::text_size("\xfe err", font::dejavusans_10::info) + 2;
 
 				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0, 0, 0);
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
 				x -= width;
 
 				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 255_c, 5_c, 5_c, "err", 255_c, 255_c, 255_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0xff0505_cc, "err", 0xffffff_cc);
 			}
 		}
 	}
@@ -129,15 +129,15 @@ namespace tasks {
 		while (finalize_counter--) {
 			if (finalize_counter >= 50) matrix.swap_buffers();
 			else if (finalize_counter >= 34) {
-				draw::fill(matrix.get_inactive_buffer(), 4095, 0, 0);
+				draw::fill(matrix.get_inactive_buffer(), 0xff0000_cc);
 				matrix.swap_buffers();
 			}
 			else if (finalize_counter >= 18) {
-				draw::fill(matrix.get_inactive_buffer(), 0, 4095, 0);
+				draw::fill(matrix.get_inactive_buffer(), 0x00ff00_cc);
 				matrix.swap_buffers();
 			}
 			else {
-				draw::fill(matrix.get_inactive_buffer(), 0, 0, 4095);
+				draw::fill(matrix.get_inactive_buffer(), 0x0000ff_cc);
 				matrix.swap_buffers();
 			}
 		}

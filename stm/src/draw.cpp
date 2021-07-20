@@ -5,22 +5,20 @@ namespace draw {
 		return text_size(reinterpret_cast<const uint8_t *>(text), font, kern_on);
 	}
 
-	void bitmap(matrix_type::framebuffer_type &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool mirror) {
+	void bitmap(matrix_type::framebuffer_type &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, led::color_t rgb, bool mirror) {
 		for (uint16_t i = 0, y0 = y; i < height; ++i, ++y0) {
 			for (uint16_t j0 = 0, x0 = x; j0 < width; ++j0, ++x0) {
 				uint16_t j = mirror ? (width - j0) - 1 : j0;
 				uint8_t byte = j / 8;
 				uint8_t bit = 1 << (7 - (j % 8));
 				if ((bitmap[(i * stride) + byte] & bit) != 0) {
-					fb.r(x0, y0) = r;
-					fb.g(x0, y0) = g;
-					fb.b(x0, y0) = b;
+					fb.at(x0, y0) = rgb;
 				}
 			}
 		}
 	}
 
-	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool kern_on) {
+	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
 		uint16_t pen = x;
 		uint8_t c, c_prev = 0;
 
@@ -42,61 +40,51 @@ namespace draw {
 			}
 			c_prev = c;
 			if (data[c] == nullptr) continue; // invalid character
-			bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), r, g, b);
+			bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), rgb);
 			pen += *(metrics + (c * 6) + 3);
 		}
 		return pen;
 	}
 
-	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t r, uint16_t g, uint16_t b) {
+	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
 		for (uint16_t x = x0; x < x1; ++x) {
 			for (uint16_t y = y0; y < y1; ++y) {
-				fb.r(x, y) = r;
-				fb.g(x, y) = g;
-				fb.b(x, y) = b;
+				fb.at(x, y) = rgb;
 			}
 		}
 	}
 
-	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1) {
+	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1) {
 		for (uint16_t x = x0; x < x1; ++x) {
 			for (uint16_t y = y0; y < y1; ++y) {
 				bool color = static_cast<uint16_t>((x % 4) - (y % 4)) % 4 < 2;
 				if (color) {
-					fb.r(x, y) = r0;
-					fb.g(x, y) = g0;
-					fb.b(x, y) = b0;
+					fb.at(x, y) = rgb0;
 				}
 				else {
-					fb.r(x, y) = r1;
-					fb.g(x, y) = g1;
-					fb.b(x, y) = b1;
+					fb.at(x, y) = rgb1;
 				}
 			}
 		}
 	}
 
-	void hatched_rect_unaligned(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r0, uint16_t g0, uint16_t b0, uint16_t r1, uint16_t g1, uint16_t b1) {
+	void hatched_rect_unaligned(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb0, led::color_t rgb1) {
 		uint16_t i = 0;
 		for (int16_t x = x0; x < x1; ++x, ++i) {
 			uint16_t j = 0;
 			for (int16_t y = y0; y < y1; ++y, ++j) {
 				bool color = static_cast<uint16_t>((i % 4) - (j % 4)) % 4 < 2;
 				if (color) {
-					fb.r(x, y) = r0;
-					fb.g(x, y) = g0;
-					fb.b(x, y) = b0;
+					fb.at(x, y) = rgb0;
 				}
 				else {
-					fb.r(x, y) = r1;
-					fb.g(x, y) = g1;
-					fb.b(x, y) = b1;
+					fb.at(x, y) = rgb1;
 				}
 			}
 		}
 	}
-	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, bool kern_on) {
-		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, r, g, b, kern_on);
+	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
 	}
 
 	int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size) {
@@ -158,7 +146,7 @@ namespace draw {
 
 	namespace detail {
 		
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
+		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int yi = 1;
@@ -170,9 +158,8 @@ namespace draw {
 			int16_t y = y0;
 
 			for (int16_t x = x0; x <= x1; ++x) {
-				fb.r((uint16_t)x, (uint16_t)y) = r;
-				fb.g((uint16_t)x, (uint16_t)y) = g;
-				fb.b((uint16_t)x, (uint16_t)y) = b;
+				fb.at((uint16_t)x, (uint16_t)y) = rgb;
+				
 				if (D > 0) {
 					y += yi;
 					D -= 2*dx;
@@ -182,7 +169,7 @@ namespace draw {
 		}
 
 		
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
+		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
 			int xi = 1;
@@ -194,9 +181,8 @@ namespace draw {
 			int16_t x = x0;
 
 			for (int16_t y = y0; y <= y1; ++y) {
-				fb.r((uint16_t)x, (uint16_t)y) = r;
-				fb.g((uint16_t)x, (uint16_t)y) = g;
-				fb.b((uint16_t)x, (uint16_t)y) = b;
+				fb.at((uint16_t)x, (uint16_t)y) = rgb;
+				
 				if (D > 0) {
 					x += xi;
 					D -= 2*dy;
@@ -206,22 +192,22 @@ namespace draw {
 		}
 	}
 
-	void fill(matrix_type::framebuffer_type &fb, uint16_t r, uint16_t g, uint16_t b) {
-		rect(fb, 0, 0, matrix_type::framebuffer_type::width, matrix_type::framebuffer_type::height, r, g, b);
+	void fill(matrix_type::framebuffer_type &fb, led::color_t rgb) {
+		rect(fb, 0, 0, matrix_type::framebuffer_type::width, matrix_type::framebuffer_type::height, rgb);
 	}
 
-	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, uint16_t r, uint16_t g, uint16_t b) {
+	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 		if (std::abs(y1 - y0) < std::abs(x1 - x0)) {
 			if (x0 > x1)
-				detail::line_impl_low(fb, x1, y1, x0, y0, r, g, b);
+				detail::line_impl_low(fb, x1, y1, x0, y0, rgb);
 			else
-				detail::line_impl_low(fb, x0, y0, x1, y1, r, g, b);
+				detail::line_impl_low(fb, x0, y0, x1, y1, rgb);
 		}
 		else {
 			if (y0 > y1)
-				detail::line_impl_high(fb, x1, y1, x0, y0, r, g, b);
+				detail::line_impl_high(fb, x1, y1, x0, y0, rgb);
 			else
-				detail::line_impl_high(fb, x0, y0, x1, y1, r, g, b);
+				detail::line_impl_high(fb, x0, y0, x1, y1, rgb);
 		}
 	}
 }
