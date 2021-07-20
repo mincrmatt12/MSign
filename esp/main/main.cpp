@@ -64,7 +64,7 @@ extern "C" void app_main() {
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
 		((serial::SerialInterface *)ptr)->run();
-	}, "srv", 3072 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
+	}, "srv", 2048 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;
 	}
@@ -80,12 +80,12 @@ extern "C" void app_main() {
 	}
 
 	// Start the grabber
-	if (xTaskCreate(grabber::run, "grab", 7680 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
+	if (xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create grab");
 		return;
 	}
 
-	if (xTaskCreate(webui::run, "webUI", 4096 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
+	if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create webui; running without it");
 	}
 

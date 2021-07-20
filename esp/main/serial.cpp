@@ -148,7 +148,7 @@ void serial::SerialInterface::run() {
 	// Init data update manager task
 	if (xTaskCreate([](void *ptr){
 		((serial::DataUpdateManager *)ptr)->run();
-	}, "dupm", 3072 * STACK_MULT, &dum, 9, NULL) != pdPASS) {
+	}, "dupm", 2304 * STACK_MULT, &dum, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create dupm");
 		return;
 	}
