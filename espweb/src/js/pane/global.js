@@ -2,59 +2,50 @@ import React from 'react'
 import FormControl from 'react-bootstrap/FormControl'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
-import Row from 'react-bootstrap/Row'
 
-class GlobalPane extends React.Component {
-	constructor(props) {
-		super(props)
-	}
+import _ from 'lodash';
 
-	upload(p, val) {
-		let v_s = this.props['configState'];
-		v_s[p] = val;
-		this.props['updateState'](v_s);
-	}
+import ConfigContext from '../ctx.js';
 
-	render() {
-		return <div>
-			<hr className="hr-gray" />
+function GlobalPane() {
+	const [cfg, updateCfg] = React.useContext(ConfigContext);
 
-			<Form.Group controlId="ssid_ctrl">
-				<Form.Label>ssid</Form.Label>
-				<FormControl type='text' value={this.props.configState.ssid} onChange={(e) => {this.upload('ssid', e.target.value);}} />
-			</Form.Group>
-			<Form.Group controlId="psk_ctrl">
-				<Form.Label>psk</Form.Label>
-				<FormControl type='password' value={this.props.configState.psk} onChange={(e) => {this.upload('psk', e.target.value);}} />
-			</Form.Group>
-			<Form.Group controlId="ntp_ctrl">
-				<Form.Label>ntp server</Form.Label>
-				<InputGroup>
-					<InputGroup.Prepend>
-						<InputGroup.Text id="httpaddon1">ntp://</InputGroup.Text>
-					</InputGroup.Prepend>
-					<FormControl type='text' value={this.props.configState.ntpserver} onChange={(e) => {this.upload('ntpserver', e.target.value);}} placeholder='pool.ntp.org'/>
-				</InputGroup>
-			</Form.Group>
-			<Form.Group controlId="timezone_ctrl">
-				<Form.Label>posix timezone</Form.Label>
-				<FormControl type='text' value={this.props.configState.timezone} onChange={(e) => {this.upload('timezone', e.target.value);}} placeholder="EST5EDT,M3.2.0/2:00:00,M11.1.0/2:00:00" />
-			</Form.Group>
+	return <div>
+		<hr className="hr-gray" />
 
-			<hr className="hr-gray" />
+		<Form.Group className="my-2" controlId="ssid_ctrl">
+			<Form.Label>ssid</Form.Label>
+			<FormControl type='text' value={_.get(cfg, "wifi.conn.ssid", "")} onChange={(e) => {updateCfg('wifi.conn.ssid', e.target.value);}} />
+		</Form.Group>
+		<Form.Group className="my-2" controlId="psk_ctrl">
+			<Form.Label>psk</Form.Label>
+			<FormControl type='password' value={_.get(cfg, "wifi.conn.psk", "")} onChange={(e) => {updateCfg('wifi.conn.psk', e.target.value);}} />
+		</Form.Group>
+		<Form.Group className="my-2" controlId="ntp_ctrl">
+			<Form.Label>ntp server</Form.Label>
+			<InputGroup>
+				<InputGroup.Text id="httpaddon1">ntp://</InputGroup.Text>
+				<FormControl type='text' value={_.get(cfg, "time.server", "")} onChange={(e) => {updateCfg('time.server', e.target.value);}} placeholder='pool.ntp.org'/>
+			</InputGroup>
+		</Form.Group>
+		<Form.Group className="my-2" controlId="timezone_ctrl">
+			<Form.Label>posix timezone</Form.Label>
+			<FormControl type='text' value={_.get(cfg, "time.zone", "")} onChange={(e) => {updateCfg('time.zone', e.target.value);}} placeholder="EST5EDT,M3.2.0/2:00:00,M11.1.0/2:00:00" />
+		</Form.Group>
 
-			<Form.Group controlId="cuser_ctrl">
-				<Form.Label>config login user</Form.Label>
-				<FormControl placeholder='admin' type='text' value={this.props.configState.configuser} onChange={(e) => {this.upload('configuser', e.target.value);}} />
-			</Form.Group>
-			<Form.Group controlId="psk_ctrl">
-				<Form.Label>config login password</Form.Label>
-				<FormControl placeholder='admin' type='password' value={this.props.configState.configpass} onChange={(e) => {this.upload('configpass', e.target.value);}} />
-			</Form.Group>
+		<hr className="hr-gray" />
 
-			<hr className="hr-gray" />
-		</div>
-	}
+		<Form.Group className="my-2" controlId="cuser_ctrl">
+			<Form.Label>config login user</Form.Label>
+			<FormControl placeholder='admin' type='text' value={_.get(cfg, "webui.login.user", "")} onChange={(e) => {updateCfg('webui.login.user', e.target.value);}} />
+		</Form.Group>
+		<Form.Group className="my-2" controlId="psk_ctrl">
+			<Form.Label>config login password</Form.Label>
+			<FormControl placeholder='admin' type='password' value={_.get(cfg, "webui.login.password", "")} onChange={(e) => {updateCfg('webui.login.password', e.target.value);}} />
+		</Form.Group>
+
+		<hr className="hr-gray" />
+	</div>
 }
 
 export default GlobalPane;

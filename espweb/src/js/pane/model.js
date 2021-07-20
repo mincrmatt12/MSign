@@ -12,16 +12,13 @@ import Alert from 'react-bootstrap/Alert'
 import Modal from 'react-bootstrap/Modal'
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import ConfigContext from "../ctx.js";
+import _ from "lodash";
 
 function ModelPaneListEntry(props) {
-	return (<ListGroup.Item active={props.modelPresent && props.selected ? true : null} onClick={props.onClick} action disabled={!props.modelPresent}>
-		<Form inline className="mb-0">
-			<Form.Check className={props.builtin ? "" : "border-right pr-2 hr-gray"}>
-				<Form.Check.Input checked={props.enabled} onChange={(e) => {props.onChangeState(e.target.checked);}}/>
-				<Form.Check.Label>{props.name ? props.name : "<none>"}</Form.Check.Label>
-				</Form.Check>
-				{props.builtin ? null : (<Button className="force-enabled ml-2" variant="light" onClick={props.onChangeModel}>add model</Button>)}
-			</Form>
+	return (<ListGroup.Item active={props.modelPresent && props.selected ? true : null} className="d-flex align-items-center" onClick={props.onClick} action disabled={!props.modelPresent}>
+			<Form.Check className={props.builtin ? "" : "border-end pe-2 hr-gray"} label={props.name ? props.name : "<none>"} checked={props.enabled} onChange={(e) => {props.onChangeState(e.target.checked);}}/>
+			{props.builtin ? null : (<Button className="force-enabled ms-2" variant="light" onClick={props.onChangeModel}>add model</Button>)}
 		</ListGroup.Item>);
 }
 
@@ -196,22 +193,20 @@ class ModelPropertiesRenderer extends ModelRenderer {
 };
 
 function ThreeComponentEdit(props) {
-	return (
-		<Form>
-			{props.label}
-			<Form.Row>
-				<Col>
-					<Form.Control type="number" step={props.step} defaultValue={props.x} onChange={(e) => props.onChange([Number.parseFloat(e.target.value), props.y, props.z])}/>
-				</Col>
-				<Col>
-					<Form.Control type="number" step={props.step} defaultValue={props.y} onChange={(e) => props.onChange([props.x, Number.parseFloat(e.target.value), props.z])}/>
-				</Col>
-				<Col>
-					<Form.Control type="number" step={props.step} defaultValue={props.z} onChange={(e) => props.onChange([props.x, props.y, Number.parseFloat(e.target.value)])}/>
-				</Col>
-			</Form.Row>
-		</Form>
-	);
+	return (<>
+		{props.label && <Form.Label>{props.label}</Form.Label>}
+		<Row>
+			<Col>
+				<Form.Control type="number" step={props.step} defaultValue={props.x} onChange={(e) => props.onChange([Number.parseFloat(e.target.value), props.y, props.z])}/>
+			</Col>
+			<Col>
+				<Form.Control type="number" step={props.step} defaultValue={props.y} onChange={(e) => props.onChange([props.x, Number.parseFloat(e.target.value), props.z])}/>
+			</Col>
+			<Col>
+				<Form.Control type="number" step={props.step} defaultValue={props.z} onChange={(e) => props.onChange([props.x, props.y, Number.parseFloat(e.target.value)])}/>
+			</Col>
+		</Row>
+	</>);
 }
 
 ThreeComponentEdit.defaultProps = {
@@ -351,56 +346,71 @@ class ModelPane extends React.Component {
 		}
 	}
 
+	toVecArray(v) {
+		if (v === undefined) return [0, 0, 0];
+		return [v.x, v.y, v.z];
+	}
+
 	render() {
-		const ae = this.state.activeEntry;
+		const [cfg, updateCfg] = this.context;
+		const ae =  this.state.activeEntry;
 
 		return <div>
 			<hr className="hr-gray" />
 			{this.state.loading ? <Alert variant='info'>loading...</Alert> : null}
 			<ListGroup>
-				<ModelPaneListEntry name={this.props.configState.names[0]} selected={ae == 0} modelPresent={this.state.presence[0]} enabled={this.props.configState.enabled[0]} 
+				<ModelPaneListEntry name={_.get(cfg, ["model", "sd", 0, "name"], "")} selected={ae == 0} modelPresent={this.state.presence[0]} enabled={_.get(cfg, "model.enabled[0]", false)} 
 					onClick={() => this.setState({activeEntry: 0})}
-					onChangeState={(v) => this.uploadInner('enabled', 0, v)} 
+					onChangeState={(v) => updateCfg("model.enabled[0]", v)} 
 					onChangeModel={() => this.uploadNewModel(0)}
 				/>
-				<ModelPaneListEntry name={this.props.configState.names[1]} selected={ae == 1} modelPresent={this.state.presence[1]} enabled={this.props.configState.enabled[1]} 
+				<ModelPaneListEntry name={_.get(cfg, ["model", "sd", 1, "name"], "")} selected={ae == 1} modelPresent={this.state.presence[1]} enabled={_.get(cfg, "model.enabled[1]", false)} 
 					onClick={() => this.setState({activeEntry: 1})} 
-					onChangeState={(v) => this.uploadInner('enabled', 1, v)}
+					onChangeState={(v) => updateCfg("model.enabled[1]", v)}
 					onChangeModel={() => this.uploadNewModel(1)}
 				/>
-				<ModelPaneListEntry name="builtin" modelPresent={true} builtin={true} enabled={this.props.configState.enabled[2]} 
-					onChangeState={(v) => this.uploadInner('enabled', 2, v)} />
+				<ModelPaneListEntry name="builtin" modelPresent={true} builtin={true} enabled={_.get(cfg, "model.enabled[2]", true)} 
+					onChangeState={(v) => this.updateCfg("model.enabled[2]", v)} />
 			</ListGroup>
 			{this.state.presence[ae] && (<div>
 				<hr className="hr-gray" />
-				<Form>
-					<Form.Group controlId="model-name">
-						<Form.Label>name</Form.Label>
-						<Form.Control type="text" value={this.props.configState.names[ae]} placeholder="<none>" onChange={(e) => this.uploadInner("names", ae, e.target.value)} />
-					</Form.Group>
-				</Form>
-				<ThreeComponentEdit key={10 + ae} label="camera minpos" onChange={(v) => this.uploadInner("minposes", ae, v)}
-					x={this.props.configState.minposes[ae][0]} y={this.props.configState.minposes[ae][1]} z={this.props.configState.minposes[ae][2]}/>
-				<ThreeComponentEdit key={20 + ae} label="camera maxpos" onChange={(v) => this.uploadInner("maxposes", ae, v)} 
-					x={this.props.configState.maxposes[ae][0]} y={this.props.configState.maxposes[ae][1]} z={this.props.configState.maxposes[ae][2]}/>
+				<Form.Group className="my-2" controlId="model-name">
+					<Form.Label>name</Form.Label>
+					<Form.Control type="text" value={_.get(cfg, ["model", "sd", ae, "name"], "")} placeholder="<none>" onChange={(e) => updateCfg(["model", "sd", ae, "name"], e.target.value)} />
+				</Form.Group>
+				<ThreeComponentEdit label="camera minpos" onChange={(v) => updateCfg(["model", "sd", ae, "cam", "min"], {
+					x: v[0], y: v[1], z: v[2]
+				})}
+					x={_.get(cfg, ["model", "sd", ae, "cam", "min", "x"], 0.0)} y={_.get(cfg, ["model", "sd", ae, "cam", "min", "y"], 0.0)} z={_.get(cfg, ["model", "sd", ae, "cam", "min", "z"], 0.0)}/>
+				<ThreeComponentEdit label="camera maxpos" onChange={(v) => updateCfg(["model", "sd", ae, "cam", "max"], {
+					x: v[0], y: v[1], z: v[2]
+				})}
+					x={_.get(cfg, ["model", "sd", ae, "cam", "max", "x"], 0.0)} y={_.get(cfg, ["model", "sd", ae, "cam", "max", "y"], 0.0)} z={_.get(cfg, ["model", "sd", ae, "cam", "max", "z"], 0.0)}/>
 				<hr className="hr-gray" />
-				<p>focus points</p>
-				{[...this.props.configState.focuses[ae].keys()].map((x) => (
-					<Row key={x}>
+				<Form.Label className="d-block">focus points</Form.Label>
+				{_.get(cfg, ["model", "sd", ae, "cam", "focuses"], []).map((foc, idx) => (
+					<Row key={idx} className="my-2">
 						<Col sm="11" xs="10">
-							<ThreeComponentEdit key={x*10 + 30 + ae} onChange={(v) => {this.uploadFocus(ae, x, v);}}
-								x={this.props.configState.focuses[ae][x][0]} y={this.props.configState.focuses[ae][x][1]} z={this.props.configState.focuses[ae][x][2]}/>
+							<ThreeComponentEdit onChange={(v) => {updateCfg(["model", "sd", ae, "cam", "focuses", idx], {
+								x: v[0], y: v[1], z: v[2]
+							})}}
+								x={foc.x} y={foc.y} z={foc.z}/>
 						</Col>
-						<Col sm="1" xs="2" className="pl-0">
-							<Button variant="danger" disabled={this.props.configState.focuses[ae].length <= 1} onClick={() => this.removeFocus(ae, x)} className="w-100">X</Button>
+						<Col sm="1" xs="2" className="ps-0">
+							<Button variant="danger" disabled={_.get(cfg, ["model", "sd", ae, "cam", "focuses"], []).length <= 1} onClick={() => updateCfg(["model", "sd", ae, "cam", "focuses"], 
+								_.filter(_.get(cfg, ["model", "sd", ae, "cam", "focuses"]), (_, idx2) => idx2 != idx))} className="w-100">X</Button>
 						</Col>
 					</Row>
 				))}
 
-				<Button variant="success" disabled={this.props.configState.focuses[ae].length == 3} onClick={() => this.addFocus(ae)}>add focus</Button>
+				<Button variant="success" disabled={_.get(cfg, ["model", "sd", ae, "cam", "focuses"], []).length >= 3} onClick={() => {
+					updateCfg(["model", "sd", ae, "cam", "focuses"], _.concat(_.get(cfg, ["model", "sd", ae, "cam", "focuses"], []), {"x": 0, "y": 0, "z": 0}));
+				}}>add focus</Button>
 				<hr className="hr-gray" />
 				{this.state.dwModel != ae ? null : 
-						(<ModelPropertiesRenderer focuses={this.props.configState.focuses[ae]} maxpos={this.props.configState.maxposes[ae]} minpos={this.props.configState.minposes[ae]} modelBuffer={this.state.model} />)
+						(<ModelPropertiesRenderer focuses={_.get(cfg, ["model", "sd", ae, "cam", "focuses"], []).map(this.toVecArray)} maxpos={
+							this.toVecArray(_.get(cfg, ["model", "sd", ae, "cam", "max"]))
+						} minpos={this.toVecArray(_.get(cfg, ["model", "sd", ae, "cam", "min"]))} modelBuffer={this.state.model} />)
 				}</div>)}
 
 			<hr className="hr-gray" />
@@ -421,5 +431,7 @@ class ModelPane extends React.Component {
 		</div>
 	}
 }
+
+ModelPane.contextType = ConfigContext;
 
 export default ModelPane;

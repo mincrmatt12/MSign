@@ -19,7 +19,7 @@
 .terminal {
 	height: 80vh;
 	overflow: scroll;
-	background-color: theme-color("light");
+	background-color: map-get($theme-colors, "light");
 	padding: 0.2em;
 }
 

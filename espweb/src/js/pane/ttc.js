@@ -1,6 +1,5 @@
 import React from 'react'
 import FormControl from 'react-bootstrap/FormControl'
-import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -8,84 +7,79 @@ import Card from 'react-bootstrap/Card'
 import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
-class TTCPane extends React.Component {
-	constructor(props) {
-		super(props)
-	}
+import ConfigContext from '../ctx.js';
+import _ from 'lodash';
 
-	upload(p, idx, val) {
-		let v_s = this.props['configState'];
-		v_s[p][idx] = val;
-		this.props['updateState'](v_s);
-	}
+function TTCPane() {
+	const [cfg, updateCfg] = React.useContext(ConfigContext);
 
-	uploadAlert(val) {
-		let v_s = this.props.configState;
-		v_s.alert = val;
-		this.props['updateState'](v_s);
-	}
+	const entries = _.get(cfg, "ttc.entries", []);
 
-	add() {
-		let v_s = this.props['configState'];
-		v_s.dirtags.push("");
-		v_s.stopids.push("");
-		v_s.names.push("");
-		this.props['updateState'](v_s);
-	}
+	return <div>
+		<hr className="hr-gray" />
+		
+		<p><a href="http://retro.umoiq.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://retro.umoiq.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://retro.umoiq.com/service/publicJSONFeed?command=predictions&a=ttc&stopId=" target="_blank">predictions</a>
+		</p>
 
-	remove(idx) {
-		let v_s = this.props['configState'];
-		v_s.dirtags.splice(idx, 1);
-		v_s.stopids.splice(idx, 1);
-		v_s.names.splice(idx, 1);
-		this.props['updateState'](v_s);
-	}
-
-	render() {
-		console.log([...this.props.configState.dirtags.keys()]);
-		return <div>
-			<hr className="hr-gray" />
-			
-			<p><a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://webservices.nextbus.com/service/publicJSONFeed?command=predictions&a=ttc&stopId=" target="_blank">predictions</a>
-			</p>
-
-			{[...this.props.configState.dirtags.keys()].map((x) => (
-				<Card className="mb-3">
-					<Container>
-					<Row className="w-100 py-3" noGutters>
-						<Col sm="11" xs="10">
-							<Form.Group controlId={"dirtags_ctrl" + x}>
-								<Form.Label>dirtags (comma seperated)</Form.Label>
-								<FormControl type='text' value={this.props.configState.dirtags[x]} onChange={(e) => {this.upload('dirtags', x, e.target.value);}} />
-							</Form.Group>
-							<Form.Group controlId={"stopid_ctrl" + x}>
-								<Form.Label>stop id</Form.Label>
-								<FormControl type='text' value={this.props.configState.stopids[x]} onChange={(e) => {this.upload('stopids', x, e.target.value);}} />
-							</Form.Group>
-							<Form.Group controlId={"name_ctrl" + x}>
-								<Form.Label>display name</Form.Label>
-								<FormControl type='text' value={this.props.configState.names[x]} onChange={(e) => {this.upload('names', x, e.target.value.substr(0, 128));}} />
-							</Form.Group>
-						</Col>
-						<Col sm="1" xs="2" className="pl-3">
-							<Button variant="danger" onClick={() => this.remove(x)} className="h-100 w-100">X</Button>
-						</Col>
+		{entries.map((x, idx) => (
+			<Card className="mb-3" key={idx}>
+				<Card.Body>
+					<Row>
+					<Col sm="11" xs="10">
+						<Form.Group className="my-2">
+							<Form.Label>dirtags</Form.Label>
+							<Row>
+								{_.concat(x.dirtag.map((y, idx2) => <Col key={idx2}>
+									<Form.Control type="text" value={y} onChange={(e) => {
+										if (e.target.value) updateCfg(['ttc', 'entries', idx, 'dirtag', idx2], e.target.value)
+										else updateCfg(['ttc', 'entries', idx, 'dirtag'], _.filter(x.dirtag, (_, i) => i != idx2));
+									}} />
+								</Col>), 
+								x.dirtag.length < 3 && <Col key={x.dirtag.length}>
+									<Form.Control type="text" value="" placeholder="add new..." onChange={(e) => {updateCfg(['ttc', 'entries', idx, 'dirtag'], _.concat(x.dirtag, e.target.value))}} />
+								</Col>)}
+							</Row>
+						</Form.Group>
+						<Form.Group className="my-2" controlId={"stopid_ctrl" + idx}>
+							<Form.Label>stop id</Form.Label>
+							<FormControl type='text' value={x.stopid} onChange={(e) => {
+								if (e.target.value == "") e.target.value = "0"
+								const value = parseInt(e.target.value)
+								if (Number.isNaN(value)) e.preventDefault();
+								else updateCfg(['ttc', 'entries', idx, 'stopid'], value);
+							}} />
+						</Form.Group>
+						<Form.Group className="my-2" controlId={"name_ctrl" + idx}>
+							<Form.Label>display name</Form.Label>
+							<Form.Control type='text' value={x.name} onChange={(e) => {updateCfg(['ttc', 'entries', idx, 'name'], e.target.value);}} />
+						</Form.Group>
+					</Col>
+					<Col sm="1" xs="2">
+						<Button variant="danger" onClick={() => {
+							updateCfg('ttc.entries', _.filter(entries, (_, i) => i != idx));
+						}} className="h-100 w-100">X</Button>
+					</Col>
 					</Row>
-				</Container>
-				</Card>)
-			)}
-			<hr className="hr-gray" />
-			<Button variant="dark" disabled={this.props.configState.dirtags.length == 3} onClick={() => {this.add()}} className="w-100">+</Button>
-			<hr className="hr-gray" />
-			
-			<Form.Group controlId="alert_ctrl">
-				<Form.Label>alert search</Form.Label>
-				<FormControl type='text' value={this.props.configState.alert} onChange={(e) => {this.uploadAlert(e.target.value);}} />
-			</Form.Group>
+				</Card.Body>
+			</Card>)
+		)}
+		<hr className="hr-gray" />
+		<Button variant="dark" disabled={entries.length == 3} onClick={() => {
+			updateCfg('ttc.entries', _.concat(entries, {
+				dirtag: [],
+				stopid: -1,
+				name: ''
+			}));
+		}} className="w-100">+</Button>
+		<hr className="hr-gray" />
+		
+		<Form.Group controlId="alert_ctrl">
+			<Form.Label>alert search</Form.Label>
+			<FormControl type='text' value={_.get(cfg, "ttc.alert_search", "")} onChange={(e) => {updateCfg('ttc.alert_search', e.target.value ? e.target.value : undefined)}} />
+		</Form.Group>
 
-			<hr className="hr-gray" />
-		</div>
-	}
+		<hr className="hr-gray" />
+	</div>
 }
 
 export default TTCPane;

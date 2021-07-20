@@ -5,36 +5,15 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import Row from 'react-bootstrap/Row'
 import Button from 'react-bootstrap/Button'
 
-class WeatherPane extends React.Component {
-	constructor(props) {
-		super(props)
+import ConfigContext from '../ctx.js';
+import _ from 'lodash';
 
-		this.state = {
-			entered: ""
-		}
-	}
+function WeatherPane() {
+	const [cfg, updateCfg] = React.useContext(ConfigContext);
+	const [address, setAddress] = React.useState("");
 
-	upload(p, val) {
-		if (Number.isNaN(Number.parseFloat(val))) {
-			return false;
-		}
-
-		let v_s = this.props['configState'];
-		v_s[p] = Number.parseFloat(val);
-		this.props['updateState'](v_s);
-
-		return true;
-	}
-
-	useCurrentPlace() {
-		navigator.geolocation.getCurrentPosition((pos) => {
-			this.upload('longitude', pos.coords.longitude);
-			this.upload('latitude', pos.coords.latitude);
-		}, () => {alert("couldn't get position");}, {enableHighAccuracy: true, timeout: 10000});
-	}
-
-	geocode(param) {
-		let url = "http://open.mapquestapi.com/geocoding/v1/address?key=gIjVAAXB6OXgGJRKTK5CGZ2u2BUYsM5i&location=" + encodeURIComponent(param);
+	const geocode = () => {
+		let url = "http://open.mapquestapi.com/geocoding/v1/address?key=gIjVAAXB6OXgGJRKTK5CGZ2u2BUYsM5i&location=" + encodeURIComponent(address);
 
 		fetch(url)
 			.then((resp) => {
@@ -43,44 +22,56 @@ class WeatherPane extends React.Component {
 				throw new Error("invalid resp");
 			})
 			.then((obj) => {
-				this.upload('longitude', obj.results[0].locations[0].latLng.lng);
-				this.upload('latitude', obj.results[0].locations[0].latLng.lat);
+				updateCfg('weather.coord', [
+					obj.results[0].locations[0].latLng.lat,
+					obj.results[0].locations[0].latLng.lng,
+				])
 			})
 			.catch((e) => {
 				console.log(e);
 				alert("couldn't geocode");
 			});
+	};
+
+	const useCurrentPlace = () => {
+		navigator.geolocation.getCurrentPosition((pos) => {
+			updateCfg('weather.coord', [pos.coords.latitude, pos.coords.longitude]);
+		}, () => {alert("couldn't get position");}, {enableHighAccuracy: true, timeout: 10000});
 	}
 
-	render() {
-		return <div>
-			<hr className="hr-gray" />
+	return <div>
+		<hr className="hr-gray" />
 
-			<Form.Group controlId="latitude_control">
-				<Form.Label>latitude</Form.Label>
-				<FormControl type='text' value={this.props.configState.latitude} onChange={(e) => {if (!this.upload('latitude', e.target.value)) e.preventDefault();}} />
-			</Form.Group>
-			<Form.Group controlId="longitude_control">
-				<Form.Label>longitude</Form.Label>
-				<FormControl type='text' value={this.props.configState.longitude} onChange={(e) => {if (!this.upload('longitude', e.target.value)) e.preventDefault();}} />
-			</Form.Group>
+		<Form.Group className="my-2" controlId="latitude_control">
+			<Form.Label>latitude</Form.Label>
+			<FormControl type='text' value={_.get(cfg, 'weather.coord[0]', 0.0)} onChange={(e) => {
+				const value = Number.parseFloat(e.target.value);
+				if (Number.isNaN(value)) e.preventDefault();
+				else updateCfg('weather.coord[0]', value);
+			}} />
+		</Form.Group>
+		<Form.Group className="my-2" controlId="longitude_control">
+			<Form.Label>longitude</Form.Label>
+			<FormControl type='text' value={_.get(cfg, 'weather.coord[1]', 0.0)} onChange={(e) => {
+				const value = Number.parseFloat(e.target.value);
+				if (Number.isNaN(value)) e.preventDefault();
+				else updateCfg('weather.coord[1]', value);
+			}} />
+		</Form.Group>
 
-			<hr className="hr-gray" />
+		<hr className="hr-gray" />
 
-			<Button disabled={!('geolocation' in navigator)} className="w-100" variant="info" onClick={() => {this.useCurrentPlace();}}>use current location</Button>
+		<Button disabled={!('geolocation' in navigator)} className="w-100" variant="info" onClick={useCurrentPlace}>use current location</Button>
 
-			<hr className="hr-gray" />
+		<hr className="hr-gray" />
 
-			<InputGroup className="mb-3">
-				<FormControl type='text' value={this.state.entered} placeholder="address" onChange={(e) => {this.setState({entered: e.target.value});}} />
-				<InputGroup.Append>
-					<Button variant="success" onClick={(e) => {this.geocode(this.state.entered);}}>geocode and use</Button>
-				</InputGroup.Append>
-			</InputGroup>
+		<InputGroup className="mb-3">
+			<FormControl type='text' value={address} placeholder="address" onChange={(e) => {setAddress(e.target.value);}} />
+			<Button variant="success" onClick={geocode}>geocode and use</Button>
+		</InputGroup>
 
-			<hr className="hr-gray" />
-		</div>
-	}
+		<hr className="hr-gray" />
+	</div>
 }
 
 export default WeatherPane;
