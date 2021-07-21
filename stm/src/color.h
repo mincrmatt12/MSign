@@ -31,6 +31,22 @@ namespace led {
 			g = (g & 0x0fff) | (value & 0x00f0) << 8;
 			b = (b & 0x0fff) | (value & 0x000f) << 12;
 		}
+
+#define make_op(x) color_t operator x(const color_t& other) const {return color_t(r x other.r, g x other.g, b x other.b);} \
+				   color_t& operator x##= (const color_t& other) {r x##= other.r; g x##= other.g; b x##= other.b; return *this;}
+
+		make_op(+)
+		make_op(-)
+		make_op(/)
+		make_op(*)
+
+		color_t mix(const color_t& other, uint8_t factor /* from 0-255 */) {
+			return color_t(
+				r + ((((int)other.r - (int)this->r) * (int)factor) / 255),
+				g + ((((int)other.g - (int)this->g) * (int)factor) / 255),
+				b + ((((int)other.b - (int)this->b) * (int)factor) / 255)
+			);
+		}
 	};
 }
 

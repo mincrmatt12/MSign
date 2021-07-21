@@ -83,6 +83,24 @@ namespace draw {
 			}
 		}
 	}
+
+	led::color_t cvt(led::color_t in) {
+		return {cvt(in.r >> 4), cvt(in.g >> 4), cvt(in.b >> 4)};
+	}
+
+	void gradient_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1, bool v) {
+		uint16_t i = 0;
+		uint16_t range = v ? (y1-y0-1) : (x1-x0-1);
+		for (uint16_t x = x0; x < x1; ++x) {
+			for (uint16_t y = y0; y < y1; ++y) {
+				fb.at(x, y) = cvt(rgb0.mix(rgb1, (255*i)/range));
+				if (v) ++i;
+			}
+			if (!v) ++i;
+			else i = 0;
+		}
+	}
+
 	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
 		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
 	}
@@ -212,8 +230,10 @@ namespace draw {
 	}
 }
 
+uint8_t draw::frame_parity = 0;
+
 // COLOR TABLE
 
-const uint16_t draw::gamma_cvt[256] = {
+const uint32_t draw::gamma_cvt[256] = {
 	GAMMA_TABLE
 };

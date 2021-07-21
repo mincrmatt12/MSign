@@ -103,14 +103,14 @@ namespace led {
 		static constexpr uint16_t stb_lines = 16;
 
 	protected:
-		uint16_t data[Width*Height*3];
+		color_t data[Width*Height];
 
 		color_t junk; // used as failsafe for read/write out of bounds
 
 	private:
 		template<unsigned Pos>
 		void prepare_stream_bf(uint16_t i) {
-			uint16_t * lo = &data[i*Storage::EffectiveWidth*3];
+			uint16_t * lo = &data[i*Storage::EffectiveWidth].r;
 			uint16_t * hi = lo + stb_lines*Storage::EffectiveWidth*3;
 			uint8_t  * bs = byte_stream;
 
@@ -221,7 +221,7 @@ namespace led {
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
-			tim_init.Prescaler  = 2;
+			tim_init.Prescaler  = 3;
 			tim_init.Autoreload = 1;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM9, &tim_init);
@@ -288,11 +288,11 @@ namespace led {
 		}
 
 		void tim_elapsed() {
+			if (!delaying) return;
+			oe = true;
 			LL_TIM_ClearFlag_UPDATE(TIM9);
 			LL_TIM_DisableCounter(TIM9);
 			LL_TIM_DisableIT_UPDATE(TIM9);
-			if (!delaying) return;
-			oe = true;
 			delaying = false;
 			if (show) do_next();
 			else {
