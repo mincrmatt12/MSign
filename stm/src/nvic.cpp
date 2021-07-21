@@ -95,6 +95,9 @@ extern "C" void NVIC_SRV_TX_IRQ_HANDLER() {
 extern "C" void xPortSysTickHandler();
 
 extern "C" void SysTick_Handler() {
+	if (matrix.frames_without_refresh >= 140) {
+		crash::panic("screen refresh watchdog");
+	}
 	timekeeper.systick_handler();
 	xPortSysTickHandler();
 }

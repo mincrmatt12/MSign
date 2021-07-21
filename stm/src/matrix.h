@@ -1,6 +1,7 @@
 #ifndef MATRIX_H
 #define MATRIX_H
 
+#include "crash/main.h"
 #include "gpio.h"
 #include <stdint.h>
 #include <string.h>
@@ -300,6 +301,8 @@ namespace led {
 			}
 		}
 
+		int16_t frames_without_refresh = 0;
+
 	private:
 		FB fb0, fb1;
 		bool active_buffer = false;
@@ -375,6 +378,10 @@ namespace led {
 					active_buffer = !active_buffer;
 					if (notify_when_swapped) xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
 					should_swap = false;
+					frames_without_refresh = 0;
+				}
+				else {
+					frames_without_refresh += 1;
 				}
 				// Start the display again
 				start_display();
