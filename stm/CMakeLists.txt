@@ -143,7 +143,7 @@ if (EXISTS ${openocd_executable})
 
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit"
+		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
 	)
 
 	add_dependencies(upload stm)
