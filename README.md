@@ -1,6 +1,6 @@
-# SignCode
+# MSign
 
-Code for an LED sign display board powered by an STM32 and ESP8266. Make sure you clone the submodules.
+Code + designs for an LED sign display board powered by an STM32 and ESP8266. Make sure you clone the submodules.
 
 ## Organization
 
