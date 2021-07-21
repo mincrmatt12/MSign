@@ -1,2 +1,4 @@
 esp/components/fatfs linguist-vendored
 esp/components/fatfs/* linguist-vendored
+board/* linguist-generated
+stm/src/fonts/* linguist-generated
