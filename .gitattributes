@@ -1,3 +1,3 @@
-esp/components/* linguist-vendored
+esp/components/** linguist-vendored
 board/* linguist-generated
 stm/src/fonts/* linguist-generated
