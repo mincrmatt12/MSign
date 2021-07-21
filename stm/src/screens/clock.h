@@ -2,6 +2,7 @@
 #define CLOCK_S_H
 
 #include "base.h"
+#include "../matrix.h"
 #include <stdint.h>
 
 namespace screen {
@@ -10,7 +11,7 @@ namespace screen {
 
 		void draw();
 	private:
-		uint16_t bg_color[3];
+		led::color_t bg_color;
 	};
 }
 

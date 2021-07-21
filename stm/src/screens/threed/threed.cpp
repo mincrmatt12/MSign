@@ -178,9 +178,12 @@ namespace threed {
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0.f, 1.f, 0.f});
 
+		led::color_t fill(0);
+		fill.set_spare(INT16_MAX);
+
 		for (int i = 0; i < matrix_type::framebuffer_type::width; ++i) {
 			for (int j = 0; j < matrix_type::framebuffer_type::height; ++j) {
-				set_color_and_z(matrix.get_inactive_buffer(), i, j, 0, 0, 0, INT16_MAX);
+				matrix.get_inactive_buffer().at(i, j) = fill;
 			}
 		}
 	}
@@ -218,9 +221,9 @@ namespace threed {
 						 (t.p2 - current_pos).length(),
 						 (t.p3 - current_pos).length()));
 			avg = std::min(0.58f, (avg * avg * 0.25f));
-			cr = powf((float)t.r / 255.0f * (1.f - avg), 2.2f) * 4096.f;
-			cg = powf((float)t.g / 255.0f * (1.f - avg), 2.2f) * 4096.f;
-			cb = powf((float)t.b / 255.0f * (1.f - avg), 2.2f) * 4096.f;
+			cr = powf((float)t.r / 255.0f * (1.f - avg), 2.6f) * 4095.f;
+			cg = powf((float)t.g / 255.0f * (1.f - avg), 2.6f) * 4095.f;
+			cb = powf((float)t.b / 255.0f * (1.f - avg), 2.6f) * 4095.f;
 		}
 		else {
 			cr = draw::cvt(t.r);

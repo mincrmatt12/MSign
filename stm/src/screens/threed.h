@@ -158,15 +158,13 @@ namespace threed {
 		uint16_t interp_progress = 20000;
 		uint64_t last_update, last_new_data;
 
-		inline int16_t z_buf_at(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y) const {
-			return (int16_t)((fb.r(x, y) >> 12) | ((fb.g(x, y) >> 12) << 4) | ((fb.b(x, y) >> 12) << 8));
-		}
-
+		/*
 		inline void set_color_and_z(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, int16_t z) const {
 			fb.r(x, y) = (r & 0xFFF) | ((z & 0x00F)) << 12;
 			fb.g(x, y) = (g & 0xFFF) | ((z & 0x0F0) >> 4) << 12;
 			fb.b(x, y) = (b & 0xFFF) | ((z & 0xF00) >> 8) << 12;
 		}
+		*/
 
 		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;
@@ -180,10 +178,12 @@ namespace threed {
 			int16_t y = y0;
 
 			float d = d1, d_off = (d2 - d1) / (float)dx;
+			led::color_t c(r, g, b);
 
 			for (int16_t x = x0; x <= x1; ++x) {
-				if (fb.on_screen(x, y) && d * 410.f < z_buf_at(fb, x, y)) {
-					set_color_and_z(fb, x, y, r, g, b, d * 410.f);
+				if (fb.on_screen(x, y) && d * 410.f < fb.at(x, y).get_spare()) {
+					c.set_spare(d * 410.f);
+					fb.at(x, y) = c;
 				}
 				if (D > 0) {
 					y += yi;
@@ -207,9 +207,12 @@ namespace threed {
 			int16_t x = x0;
 
 			float d = d1, d_off = (d2 - d1) / (float)dy;
+			led::color_t c(r, g, b);
+
 			for (int16_t y = y0; y <= y1; ++y) {
-				if (fb.on_screen(x, y) && d * 410.f < z_buf_at(fb, x, y)) {
-					set_color_and_z(fb, x, y, r, g, b, d * 410.f);
+				if (fb.on_screen(x, y) && d * 410.f < fb.at(x, y).get_spare()) {
+					c.set_spare(d * 410.f);
+					fb.at(x, y) = c;
 				}
 				if (D > 0) {
 					x += xi;

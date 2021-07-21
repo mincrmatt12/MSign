@@ -229,64 +229,64 @@ void screen::WeatherScreen::draw_currentstats() {
 	text_size = draw::text_size(disp_buf, font::lato_bold_15::info);
 
 	if (ctemp > 10.0 && ctemp < 16.0) {
-		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 240_c, 240_c, 240_c);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 240_c);
 	}
 	else if (ctemp < 10.0 && ctemp > -10.0) {
-		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100_c, 100_c, 240_c);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100_c);
 	}
 	else if (ctemp >= 16.0 && ctemp < 30.0) {
-		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 50_c, 240_c, 50_c);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {50_c, 240_c, 50_c});
 	}
 	else if (ctemp > 30.0) {
-		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 250_c, 30_c, 30_c);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {250_c, 30_c, 30_c});
 	}
 	else {
-		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 40_c, 40_c, 255_c);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {40_c, 40_c, 255_c});
 	}
 
 	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp);
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 127_c, 127_c, 240_c, disp_buf, 127_c, 127_c, 127_c);
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 127_c, disp_buf, 127_c);
 
 	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
 	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 69-text_size, 30, "\xfd ", 255_c, 127_c, 10_c, disp_buf, 127_c, 127_c, 127_c);
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 69-text_size, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
 
 	snprintf(disp_buf, 16, "%.01f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp);
 	text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c, 127_c, 127_c);
+	draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c);
 
 	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 3));
 
 	const char * icon = (char*)*servicer[slots::WEATHER_ICON];
 
 	if (strcmp(icon, "cloudy") == 0 || strcmp(icon, "partly-cloudy") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 235_c, 235_c, 235_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 235_c);
 	}
 	else if (strcmp(icon, "sleet") == 0 || strcmp(icon, "snow") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::snow, 20, 20, 3, 1, y, 255_c, 255_c, 255_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::snow, 20, 20, 3, 1, y, 255_c);
 	}
 	else if (strcmp(icon, "clear-day") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::clear_day, 20, 20, 3, 1, y, 220_c, 250_c, 0_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::clear_day, 20, 20, 3, 1, y, {220_c, 250_c, 0_c});
 	}
 	else if (strcmp(icon, "clear-night") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::night, 20, 20, 3, 1, y, 79_c, 78_c, 79_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::night, 20, 20, 3, 1, y, {79_c, 78_c, 79_c});
 	}
 	else if (strcmp(icon, "wind") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::wind, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::wind, 20, 20, 3, 1, y, {118_c, 118_c, 118_c});
 	}
 	else if (strcmp(icon, "fog") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::fog, 20, 20, 3, 1, y, 118_c, 118_c, 118_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::fog, 20, 20, 3, 1, y, {118_c, 118_c, 118_c});
 	}
 	else if (strcmp(icon, "rain") == 0) {
-		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::rain, 20, 20, 3, 1, y, 43_c, 182_c, 255_c);
+		draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::rain, 20, 20, 3, 1, y, {43_c, 182_c, 255_c});
 	}
 	else {
 		if (icon[15] != 0 && icon[14] == 'd') {
-			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 245_c, 245_c, 245_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 245_c);
 		}
 		else if (icon[15] != 0) {
-			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 79_c, 79_c, 79_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, 79_c);
 		}
 	}
 }
@@ -295,11 +295,11 @@ void screen::WeatherScreen::draw_status() {
 	if (servicer.slot(slots::WEATHER_STATUS)) {
 		uint16_t text_size = draw::text_size(*servicer[slots::WEATHER_STATUS], font::tahoma_9::info);
 		if (text_size < 128) {
-			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, 64 - text_size / 2, 61, 240_c, 240_c, 240_c);
+			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, 64 - text_size / 2, 61, 240_c);
 		}
 		else {
 			int16_t t_pos = draw::scroll(timekeeper.current_time / std::min<uint64_t>(10, std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7))), text_size);
-			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, t_pos, 61, 240_c, 240_c, 240_c);
+			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, t_pos, 61, 240_c);
 		}
 	}
 }
@@ -319,18 +319,17 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 		snprintf(buf, 3, "%02d", hour);
 
 		// todo  make this a gradient
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255_c, 255_c, 255_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255_c);
 	}
-	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 50_c, 50_c, 50_c);
-	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 50_c, 50_c, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 50_c);
 }
 
 void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	int start = 4 + hour * 5;
 	int end =   9 + hour * 5;
 
-	uint16_t r = 127, g = 127, b = 127;
-	uint16_t hatch_r = 127, hatch_g = 127, hatch_b = 127;
+	led::color_t col(127), hatch(127);
 	bool do_hatch = false;
     slots::WeatherStateArrayCode code = (*servicer.slot<slots::WeatherStateArrayCode *>(slots::WEATHER_ARRAY))[hour]; 
 	
@@ -345,49 +344,49 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	switch (code) {
 		case slots::WeatherStateArrayCode::CLEAR:
 			if (hourstart > times.sunrise && hourstart < times.sunset) {
-				r = 210_c;
-				g = 200_c;
-				b = 0_c;
+				col.r = 210_c;
+				col.g = 200_c;
+				col.b = 0_c;
 			}
 			else {
-				r = g = b = 0_c;
+				col = led::color_t{0};
 			}
 			break;
 		
 		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
-			r = g = b = 130_c; break;
+			col = led::color_t(130); break;
 		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
-			r = g = b = 80_c; break;
+			col = led::color_t(80); break;
 		case slots::WeatherStateArrayCode::OVERCAST:
-			r = g = b = 50_c; break;
+			col = led::color_t(50); break;
 
 		case slots::WeatherStateArrayCode::SNOW:
-			r = g = b = 200_c;
-			hatch_r = hatch_g = hatch_b = 80_c;
+			col = led::color_t(200);
+			hatch = led::color_t(80);
 			do_hatch = true;
 		    break;
 		case slots::WeatherStateArrayCode::HEAVY_SNOW:
-			r = g = b = 255_c;
-			hatch_r = hatch_g = hatch_b = 40_c;
+			col = led::color_t(255);
+			hatch = led::color_t(40);
 			do_hatch = true;
 			break;
 		case slots::WeatherStateArrayCode::DRIZZLE:
-			r = g = 30_c;
-			b = 90_c;
+			col.r = col.g = 30_c;
+			col.b = 90_c;
 			break;
 		case slots::WeatherStateArrayCode::LIGHT_RAIN:
-			r = g = 30_c;
-			b = 150_c;
+			col.r = col.g = 30_c;
+			col.b = 150_c;
 			break;
 		case slots::WeatherStateArrayCode::RAIN:
-			r = g = 55_c;
-			b = 220_c;
+			col.r = col.g = 55_c;
+			col.b = 220_c;
 			break;
 		case slots::WeatherStateArrayCode::HEAVY_RAIN:
-			r = g = 60_c;
-			b = 255_c;
-			hatch_r = hatch_g = 50_c;
-			hatch_b = 100_c;
+			col.r = col.g = 60_c;
+			col.b = 255_c;
+			hatch.r = hatch.g = 50_c;
+			hatch.b = 100_c;
 			do_hatch = true;
 			break;
 		default:
@@ -395,16 +394,16 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	}
 
 	if (do_hatch) 
-		draw::hatched_rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b, hatch_r, hatch_g, hatch_b);
+		draw::hatched_rect(matrix.get_inactive_buffer(), start, 40, end, 51, col, hatch);
 	else
-		draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, r, g, b);
+		draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, col);
 }
 
 void screen::WeatherScreen::draw_graphaxes() {
 	// graph axes on pos 79 x, 24 y
 	
-	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 34_c, 34_c, 34_c);
-	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   34_c, 34_c, 34_c);
+	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 34_c);
+	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   34_c);
 
 	const float * tempgraph_data = *servicer.slot<float *>(slots::WEATHER_TEMP_GRAPH);
 
@@ -419,9 +418,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 	max_ = std::ceil(max_) + 1.f;
 	
 	auto tickmark = [](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().r(x, y) = 34_c;
-		matrix.get_inactive_buffer().g(x, y) = 34_c;
-		matrix.get_inactive_buffer().b(x, y) = 34_c;
+		matrix.get_inactive_buffer().at(x, y) = led::color_t(34_c);
 
 		char buf[4] = {0};
 		snprintf(buf, 4, "%.0f", v);
@@ -436,7 +433,7 @@ void screen::WeatherScreen::draw_graphaxes() {
 			y += 6;
 		}
 
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 60_c, 60_c, 60_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 60_c);
 	};
 
 	tickmark(78, 23, min_);
@@ -498,19 +495,19 @@ void screen::WeatherScreen::draw_graph(uint8_t hour) {
 
 	float ctemp = tempgraph_data[hour];
 	if (ctemp >= 10.0 && ctemp < 16.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255_c, 255_c, 255_c);
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255_c);
 	}
 	else if (ctemp > -10.0 && ctemp < 10.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 100_c, 100_c, 240_c);
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {100_c, 100_c, 240_c});
 	}
 	else if (ctemp >= 16.0 && ctemp < 30.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 50_c, 240_c, 50_c);
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {50_c, 240_c, 50_c});
 	}
 	else if (ctemp > 30.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 250_c, 30_c, 30_c);
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {250_c, 30_c, 30_c});
 	}
 	else {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 40_c, 40_c, 255_c);
+		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {40_c, 40_c, 255_c});
 	}
 }
 
