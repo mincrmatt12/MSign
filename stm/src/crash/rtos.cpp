@@ -19,3 +19,10 @@ const char* crash::rtos::guess_active_thread_name() {
 	}
 	return pcTaskGetName(NULL);
 }
+
+void crash::rtos::get_task_regs(uint32_t *topofstack, uint32_t& PC, uint32_t& SP, uint32_t &LR) {
+	PC = topofstack[6+8];
+	LR = topofstack[5+8];
+	bool aligned = topofstack[7+8] & (1 << 9);
+	SP = (uint32_t)(&topofstack[8+8]) + aligned * 4;
+}

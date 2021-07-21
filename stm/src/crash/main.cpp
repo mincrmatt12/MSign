@@ -4,6 +4,7 @@
 #include "mindraw.h"
 #include "rtos.h"
 #include "simplematrix.h"
+#include "../tskmem.h"
 #include "stm32f2xx_ll_cortex.h"
 #include "stm32f2xx_ll_system.h"
 #include "stm32f2xx_ll_utils.h"
@@ -65,11 +66,38 @@ namespace crash {
 		}
 	}
 
+	void show_backtrace_for(const char * title, uint32_t SP, uint32_t PC, uint32_t LR) {
+		// Create a backtrace
+		uint32_t backtrace[32];
+		uint16_t bt_len = 32;
+
+		decode::fill_backtrace(backtrace, bt_len, PC, LR, SP);
+
+		// Create function name list (ironically using VLA here breaks the backtracer, but whatever)
+		char symbols[bt_len][decode::max_length_size];
+
+		decode::resolve_symbols(symbols, backtrace, bt_len);
+
+		// DRAW STACKTRACE
+		print_line(title, mkcolor(1, 3, 1), 0);
+		for (int i = 0; i < bt_len; ++i) {
+			char buf[16];
+			snprintf(buf, 16, "%d - ", i);
+			uint16_t indent = print_line(buf, mkcolor(3, 2, 0), 0, false);
+			snprintf(buf, 16, "0x%08x", backtrace[i]);
+			print_line(buf, mkcolor(1, 1, 3), indent);
+			print_wrapped_lines(symbols[i], mkcolor(3, 3, 3), indent);
+		}
+
+		y = 65; // force page end
+	}
+
 	void cmain(const char* errcode, uint32_t SP, uint32_t PC, uint32_t LR) {
 		// Mask out all application interrupts
 		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 		// Change VTOR to our VTOR
 		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
+		// Try to exit an exception handler, if possible.
 
 		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
 		LL_TIM_DisableCounter(TIM1);
@@ -112,33 +140,11 @@ namespace crash {
 		}
 
 		{
-			// Create a backtrace
-			uint32_t backtrace[32];
-			uint16_t bt_len = 32;
-
-			decode::fill_backtrace(backtrace, bt_len, PC, LR, SP);
-
-			// Create function name list (ironically using VLA here breaks the backtracer, but whatever)
-			char symbols[bt_len][decode::max_length_size];
-
-			decode::resolve_symbols(symbols, backtrace, bt_len);
-
+			show_backtrace_for("Traceback (recent calls first)", SP, PC, LR);
 			// Start display again
 			matrix.start_display();
 
 			while (true) {
-				// DRAW STACKTRACE
-				print_line("Traceback (recent calls first):", mkcolor(1, 3, 1), 0);
-				for (int i = 0; i < bt_len; ++i) {
-					char buf[16];
-					snprintf(buf, 16, "%d - ", i);
-					uint16_t indent = print_line(buf, mkcolor(3, 2, 0), 0, false);
-					snprintf(buf, 16, "0x%08x", backtrace[i]);
-					print_line(buf, mkcolor(1, 1, 3), indent);
-					print_wrapped_lines(symbols[i], mkcolor(3, 3, 3), indent);
-				}
-
-				y = 65; // force page end
 				print_line("=== CONTEXT ===", mkcolor(1, 3, 1), 0);
 
 				// Are we in a fault handler?
@@ -214,7 +220,17 @@ namespace crash {
 								char buf[32];
 								snprintf(buf, 32, "from thread %s", tname);
 								print_line(buf, mkcolor(0, 3, 0), 1);
+
 							}
+							// Try to dump other tasks
+							y = 65;
+							uint32_t tSP, tPC, tLR;
+							rtos::get_task_regs(*reinterpret_cast<uint32_t **>(&tskmem::srvc), tPC, tSP, tLR);
+							show_backtrace_for("Traceback for servicer", tSP, tPC, tLR);
+							rtos::get_task_regs(*reinterpret_cast<uint32_t **>(&tskmem::screen), tPC, tSP, tLR);
+							show_backtrace_for("Traceback for screen", tSP, tPC, tLR);
+							rtos::get_task_regs(*reinterpret_cast<uint32_t **>(&tskmem::dbgtim), tPC, tSP, tLR);
+							show_backtrace_for("Traceback for dbgtim", tSP, tPC, tLR);
 						}
 					}
 
