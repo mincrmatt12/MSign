@@ -222,13 +222,11 @@ namespace led {
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
-			tim_init.Prescaler  = 3;
-			tim_init.Autoreload = 1;
+			tim_init.Prescaler  = 6;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM9, &tim_init);
 
-			LL_TIM_DisableARRPreload(TIM9);
-			LL_TIM_DisableDMAReq_UPDATE(TIM1);
+			LL_TIM_EnableDMAReq_UPDATE(TIM1);
 
 			// setup gpios
 			LL_GPIO_InitTypeDef gpio_init = {0};
@@ -241,6 +239,23 @@ namespace led {
 			gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
 			gpio_init.Pull = LL_GPIO_PULL_NO;
 			LL_GPIO_Init(GPIOB, &gpio_init);
+
+			LL_TIM_EnableIT_UPDATE(TIM9);
+
+			// Setup le dma
+			LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
+			LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
+			LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_VERYHIGH);
+			LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_NORMAL);
+			LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_PERIPH_NOINCREMENT);
+			LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MEMORY_INCREMENT);
+			LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_5, LL_DMA_PDATAALIGN_BYTE);
+			LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_5, LL_DMA_MDATAALIGN_BYTE);
+			LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_5);
+
+			LL_DMA_DisableIT_HT(DMA2, LL_DMA_STREAM_5);
+			LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_5);
+			LL_DMA_EnableIT_TE(DMA2, LL_DMA_STREAM_5);
 		}
 
 		void start_display() {
@@ -282,18 +297,16 @@ namespace led {
 			LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
 			LL_DMA_ClearFlag_TC5(DMA2);
 			LL_TIM_DisableCounter(TIM1);
-			LL_TIM_DisableDMAReq_UPDATE(TIM1);
 			// check show
 			if (show) do_next();
 			else show = true;
 		}
 
 		void tim_elapsed() {
-			if (!delaying) return;
 			oe = true;
-			LL_TIM_ClearFlag_UPDATE(TIM9);
+			if (!delaying) return;
 			LL_TIM_DisableCounter(TIM9);
-			LL_TIM_DisableIT_UPDATE(TIM9);
+			LL_TIM_ClearFlag_UPDATE(TIM9);
 			delaying = false;
 			if (show) do_next();
 			else {
@@ -330,31 +343,14 @@ namespace led {
 		FB& _get_active_buffer() {return active_buffer ? fb0 : fb1;}
 
 		void blast_row() {
-			// Setup le dma
-			LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
-			LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-			LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_VERYHIGH);
-			LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_NORMAL);
-			LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_PERIPH_NOINCREMENT);
-			LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MEMORY_INCREMENT);
-			LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_5, LL_DMA_PDATAALIGN_BYTE);
-			LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_5, LL_DMA_MDATAALIGN_BYTE);
-
-			LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_5);
 			LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_5, (uint32_t)dma_buffer, (uint32_t)(&SIGN_DATA_Port->ODR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-
 			LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_5, (FB::effective_width * 2) + 1);
 
 			// make sure the active buffer is ready
 			_get_active_buffer().prepare_stream(row, pos);
-
-			LL_DMA_DisableIT_HT(DMA2, LL_DMA_STREAM_5);
-			LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_5);
-			LL_DMA_EnableIT_TE(DMA2, LL_DMA_STREAM_5);
 			LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_5);
 
 			// blasting is a-go
-			LL_TIM_EnableDMAReq_UPDATE(TIM1);
 			LL_TIM_SetCounter(TIM1, 0);
 			LL_TIM_EnableCounter(TIM1);
 		}
@@ -364,13 +360,18 @@ namespace led {
 			delaying = true;
 			delay_counter = (ticks);
 			// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
-			LL_TIM_SetAutoReload(TIM9, ticks);
 			LL_TIM_SetCounter(TIM9, 0);
+			LL_TIM_SetAutoReload(TIM9, ticks-1);
+			oe = false;
 			LL_TIM_EnableCounter(TIM9);
-			LL_TIM_EnableIT_UPDATE(TIM9);
 		}
 
 		void do_next() {
+			const static uint16_t draw_ticks_table[] = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
+
+			oe = true;
+			show = false;
+			uint16_t drawn_pos = draw_ticks_table[pos];
 			// set address pins
 			if (pos == 12) {
 				// We have finished clocking out a row, process buffer swaps
@@ -387,20 +388,15 @@ namespace led {
 				start_display();
 				return;
 			}
-			oe = true;
 			strobe = true;
-			show = false;
 			// Thing
 			GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-			const static uint16_t draw_ticks_table[] = {4,7,14,29,58,115,230,461,922,1843,3686,7373};
-			uint16_t drawn_pos = draw_ticks_table[pos];
 			++row;
 			if (row < FB::stb_lines) {
 				strobe = false;
 				// Send off the next row
 				blast_row();
 				// Start the waiting.
-				oe = false;
 				wait(drawn_pos);		
 				return;
 			}
@@ -410,7 +406,6 @@ namespace led {
 				row = 0;
 				// Blast and wait
 				blast_row();
-				oe = false;
 				wait(drawn_pos);		
 				return;
 			}
@@ -419,7 +414,6 @@ namespace led {
 				// Alright, pos == 12, so run the wait code
 				// Just wait, but force it to run us again.
 				show = true;
-				oe = false;
 				wait(drawn_pos);
 			}
 		}
