@@ -245,7 +245,7 @@ void screen::WeatherScreen::draw_currentstats() {
 	}
 
 	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp);
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 127_c, disp_buf, 127_c);
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
 
 	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
@@ -321,8 +321,8 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 		// todo  make this a gradient
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255_c);
 	}
-	draw::rect(matrix.get_inactive_buffer(), 4, 39, 124, 40, 50_c);
-	draw::rect(matrix.get_inactive_buffer(), 4, 51, 124, 52, 50_c);
+	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 39, 40, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
+	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 51, 52, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
 }
 
 void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {

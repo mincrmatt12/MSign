@@ -129,15 +129,15 @@ namespace tasks {
 		while (finalize_counter--) {
 			if (finalize_counter >= 50) matrix.swap_buffers();
 			else if (finalize_counter >= 34) {
-				draw::fill(matrix.get_inactive_buffer(), 0xff0000_cc);
+				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0xff0000_ccu);
 				matrix.swap_buffers();
 			}
 			else if (finalize_counter >= 18) {
-				draw::fill(matrix.get_inactive_buffer(), 0x00ff00_cc);
+				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x00ff00_ccu);
 				matrix.swap_buffers();
 			}
 			else {
-				draw::fill(matrix.get_inactive_buffer(), 0x0000ff_cc);
+				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x0000ff_ccu);
 				matrix.swap_buffers();
 			}
 		}
