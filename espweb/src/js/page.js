@@ -22,6 +22,7 @@ import ApiPane from "./pane/apikeys"
 import ScCfgPane from "./pane/sc"
 import UpdatePane from "./pane/upd"
 import ModelPane from "./pane/model"
+import RawPane from "./pane/raw"
 
 import ConfigContext from "./ctx"
 
@@ -102,13 +103,22 @@ function App() {
 								<LinkContainer to="/upd">
 									<Nav.Link>sysupdate</Nav.Link>
 								</LinkContainer>
+								<hr className="hr-darkgray my-1" />
+								<LinkContainer to="/raw">
+									<Nav.Link>raw</Nav.Link>
+								</LinkContainer>
 							</Nav>
 						</Card>
 					</Col>
-					<Col xs="7" sm="8" md="9" lg="10">
+					<Col xs="7" sm="8" md="9" lg="10" className="mb-2">
 						{error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
 						{loading ? <Alert variant='info'>loading...</Alert> : <ConfigContext.Provider value={[cfg, (path, value) => {
-							setCfg(_.setWith(_.clone(cfg), path, value, _.clone));
+							if (path === "*") {
+								setCfg(value);
+							}
+							else {
+								setCfg(_.setWith(_.clone(cfg), path, value, _.clone));
+							}
 							setDirty(true);
 						}]}>
 							<Route path="/" exact>
@@ -130,6 +140,7 @@ function App() {
 								<ModelPane   />
 							</Route>
 							<Route path="/upd" component={UpdatePane} />
+							<Route path="/raw" component={RawPane} />
 						</ConfigContext.Provider>}
 					</Col>
 				</Row>
