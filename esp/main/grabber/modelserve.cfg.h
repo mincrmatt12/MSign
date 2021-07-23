@@ -27,7 +27,7 @@ namespace modelserve {
 	//!cfg: holds .model.sd
 	extern ModelParams model_params[2];
 
-	//!cfg: receives .model.enabled[$n]
+	//!cfg: receives .model.enabled[$n], max $n=3
 	void update_modelpresence(size_t n, bool value);
 
 	//!cfg: receives .model.sd[$n].name

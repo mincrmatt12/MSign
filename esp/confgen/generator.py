@@ -563,7 +563,7 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
 
     for custom_maximum in find_all_tags(comment_data, "explicit_array_max"):
         requested = int(custom_maximum.children[1].value)
-        for_var   = custom_maximum.children[0].value
+        for_var   = custom_maximum.children[0].children[0].value
         if for_var not in variable_map:
             raise ValueError("unknown array var {}".format(for_var))
         if array_maximum_map.get(for_var, requested) < requested:
@@ -1222,6 +1222,8 @@ def generate_json_callback(output):
                     conditions.append(f"stack[{leaf.node_depth}]->is_array()")
                 if leaf.array_index >= 0:
                     conditions.append(f"stack[{leaf.node_depth}]->index == {leaf.array_index}")
+                elif leaf.array_maximum is not None:
+                    conditions.append(f"stack[{leaf.node_depth}]->index < {leaf.array_maximum}")
                 body.add("//", leaf)
                 body.add(f"{'if' if not has_if else 'else if'} ({' && '.join(conditions)}) {{")
                 has_if = True
