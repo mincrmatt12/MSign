@@ -403,7 +403,7 @@ namespace bheap {
 		std::enable_if_t<
 			std::is_invocable_r_v<bool, RemoteHandler, uint32_t /* offset */, uint32_t /* length */, const void * /* data */>,
 		bool> update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, RemoteHandler&& rh) {
-			if (offset + length > contents_size(slotid)) return false;
+			if (offset + length > contents_size(slotid) || !contains(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
 			Block& containing_block = get(slotid, offset);
 			auto begin_pos = block_offset(containing_block);
@@ -430,7 +430,7 @@ namespace bheap {
 
 		// Check if the range given is stored at the given location.
 		bool check_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) const {
-			if (offset + length > contents_size(slotid)) return false;
+			if (offset + length > contents_size(slotid) || !contains(slotid)) return false;
 			
 			// This isn't particularly fast but probably has less problems than the old implementation
 			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
@@ -446,7 +446,7 @@ namespace bheap {
 		// If told to convert to remote, will create the necessary block.
 		// If told to convert _from_ remote, will create necessary blocks and shrink/replace remote sections.
 		bool set_location(uint32_t slotid, uint32_t offset, uint32_t length, uint32_t location) {
-			if (offset + length > contents_size(slotid)) return false;
+			if (offset + length > contents_size(slotid) || !contains(slotid)) return false;
 			// Strategy for normal locations:
 			// 	- find beginning block and ending block (min max, possibly overshooting)
 			// 	- over all "inner" blocks just change value
@@ -553,6 +553,7 @@ finish_setting:
 
 		// Trim data blocks so that the total size is truncated
 		bool truncate_contents(uint32_t slotid, uint32_t size) {
+			if (!contains(slotid)) return true;
 			if (contents_size(slotid) < size) return false; // also does npos
 			// if the actual size == size, we just do nothing
 			while (contents_size(slotid) > size) {
@@ -706,7 +707,7 @@ finish_setting:
 		// Ensure a certain subsection of a slot is in its own block. This only ever splits blocks, not merges them, so if the region given
 		// is not already in a single block, we will return false.
 		bool ensure_single_block(uint32_t slotid, uint32_t offset, uint32_t length) {
-			if (offset + length > contents_size(slotid)) return false;
+			if (offset + length > contents_size(slotid) || !contains(slotid)) return false;
 			// Ensure single block.
 			if (&get(slotid, offset) != &get(slotid, offset + length - 1)) return false;
 

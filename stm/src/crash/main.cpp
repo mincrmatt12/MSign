@@ -140,11 +140,11 @@ namespace crash {
 		}
 
 		{
-			show_backtrace_for("Traceback (recent calls first)", SP, PC, LR);
 			// Start display again
 			matrix.start_display();
 
 			while (true) {
+				show_backtrace_for("Traceback (recent calls first)", SP, PC, LR);
 				print_line("=== CONTEXT ===", mkcolor(1, 3, 1), 0);
 
 				// Are we in a fault handler?

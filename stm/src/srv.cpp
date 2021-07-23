@@ -121,7 +121,7 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 }
 
 void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
-	if (arena.get(slotid) && arena.get(slotid).temperature == temp) return;
+	if (std::as_const(arena).get(slotid) && std::as_const(arena).get(slotid).temperature == temp) return;
 	PendRequest pr;
 	pr.type = PendRequest::TypeChangeTemp;
 	pr.slotid = slotid;
@@ -769,6 +769,8 @@ void srv::Servicer::check_connection_ping() {
 }
 
 void srv::Servicer::send_data_requests() {
+	ServicerLockGuard g(*this);
+
 	for (auto &block : arena) {
 		if (block && block.location == bheap::Block::LocationRemote && block.flags & bheap::Block::FlagDirty && block.datasize) {
 			wait_for_not_sending();
