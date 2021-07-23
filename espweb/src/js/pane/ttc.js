@@ -35,7 +35,7 @@ function TTCPane() {
 										else updateCfg(['ttc', 'entries', idx, 'dirtag'], _.filter(x.dirtag, (_, i) => i != idx2));
 									}} />
 								</Col>), 
-								x.dirtag.length < 3 && <Col key={x.dirtag.length}>
+								x.dirtag.length < 4 && <Col key={x.dirtag.length}>
 									<Form.Control type="text" value="" placeholder="add new..." onChange={(e) => {updateCfg(['ttc', 'entries', idx, 'dirtag'], _.concat(x.dirtag, e.target.value))}} />
 								</Col>)}
 							</Row>
