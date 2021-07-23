@@ -230,12 +230,12 @@ namespace sd {
 	namespace spi {
 		template<int num>
 		inline void clbit() {
-			GPIO.out_w1tc |= (1 << num);
+			GPIO.out_w1tc = (1 << num);
 		}
 
 		template<int num>
 		inline void wrbit() {
-			GPIO.out_w1ts |= (1 << num);
+			GPIO.out_w1ts = (1 << num);
 		}
 
 		template<int num>
