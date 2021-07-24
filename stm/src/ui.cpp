@@ -28,6 +28,11 @@ void ui::Buttons::init() {
 }
 
 void ui::Buttons::update() {
+	if (!last_update) last_update = xTaskGetTickCount();
+	auto now = xTaskGetTickCount();
+	TickType_t duration = now - last_update;
+	if (duration) last_update = now;
+
 	last_held = current_held;
 	current_held = GPIOA->IDR;
 
@@ -37,10 +42,17 @@ void ui::Buttons::update() {
 		auto& blk = servicer.slot<uint16_t>(slots::VIRTUAL_BUTTONMAP);
 		if (blk && blk.datasize == 2) current_held |= *blk;
 	}
+
+	for (int i = 0; i < 11; ++i) {
+		if (current_held & (1 << i)) {
+			held_duration[i] += duration;
+		}
+		else held_duration[i] = 0;
+	}
 }
 
-bool ui::Buttons::held(Button b) const {
-	return current_held & (1 << b);
+bool ui::Buttons::held(Button b, TickType_t mindur) const {
+	return current_held & (1 << b) && held_duration[b] >= mindur;
 }
 
 bool ui::Buttons::rel(Button b) const {
@@ -49,4 +61,8 @@ bool ui::Buttons::rel(Button b) const {
 
 bool ui::Buttons::press(Button b) const {
 	return held(b) && (current_held ^ last_held) & (1 << b);
+}
+
+bool ui::Buttons::changed() const {
+	return current_held ^ last_held;
 }
