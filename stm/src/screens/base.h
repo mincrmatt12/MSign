@@ -5,6 +5,7 @@
 #include <tuple>
 #include <stdint.h>
 #include <stddef.h>
+#include "../ui.h"
 
 namespace screen {
 
@@ -21,6 +22,12 @@ namespace screen {
 
 		// Does this screen require clearing?
 		constexpr static inline bool require_clearing() { return true; }
+
+		// Handle button interactions. Only called if interaction is occuring; return value
+		// is whether or not to exit interaction. Typically this is bound to the top of the "back" tree -- usually from the power button.
+		//
+		// Note that calls to interact() can end whenever due to both inactivity timeouts and the catch all exit shortcut (hold power for 1.5 seconds)
+		bool interact() {return ui::buttons[ui::Buttons::POWER];};
 	};
 
 	// A screen which layers multiple other screens
@@ -69,7 +76,7 @@ namespace screen {
 
 		template<size_t ...Idx>
 		inline bool _require_clearing(size_t idx, std::index_sequence<Idx...>) {
-			return ((idx == Idx ? Screens::require_clearing() : true) || ...);
+			return ((idx == Idx ? Screens::require_clearing() : false) || ...);
 		}
 
 		template<size_t ...Idx>
@@ -80,6 +87,11 @@ namespace screen {
 		template<size_t ...Idx>
 		inline void _draw(size_t idx, std::index_sequence<Idx...>) {
 			(void)((idx == Idx && (reinterpret_cast<Screens *>(&storage)->draw(), true)) || ...);
+		}
+
+		template<size_t ...Idx>
+		inline bool _interact(size_t idx, std::index_sequence<Idx...>) {
+			return ((idx == Idx ? reinterpret_cast<Screens *>(&storage)->interact() : false) || ...);
 		}
 
 	public:
@@ -93,6 +105,12 @@ namespace screen {
 		void draw() {
 			if (selected != npos)
 				_draw(selected, std::index_sequence_for<Screens...>{});
+		}
+
+		bool interact() {
+			if (selected != npos)
+				return _interact(selected, std::index_sequence_for<Screens...>{});
+			return true;
 		}
 
 		void transition(size_t which) {

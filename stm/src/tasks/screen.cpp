@@ -189,6 +189,40 @@ namespace tasks {
 				}
 			}
 
+			if (interact_mode) {
+				if (xTaskGetTickCount() > interact_timeout || 
+					ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(1500))) {
+					interact_mode = InteractNone;
+					last_swapped_at = rtc_time;
+				}
+				if (ui::buttons.changed()) interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+			}
+
+			switch (interact_mode) {
+				case InteractNone:
+					// allow opening modes
+					if (ui::buttons[ui::Buttons::SEL]) {
+						interact_mode = InteractByScreen;
+						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+					}
+					/*else if (ui::buttons[ui::Buttons::MENU]) {
+						interact_mode = InteractMenuOpen;
+						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+					}*/
+					break;
+				case InteractByScreen:
+					// TODO: draw overlay?
+					draw::rect(matrix.get_inactive_buffer(), 126, 62, 128, 64, 0x00ff00_cc);
+					if (swapper.interact()) {
+						// reset swapper timer to avoid the screen instantly going away.
+						last_swapped_at = rtc_time;
+						interact_mode = InteractNone;
+					}
+					break;
+				default:
+					break;
+			}
+
 			// show overlays
 			show_overlays();
 
