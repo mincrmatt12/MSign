@@ -240,32 +240,32 @@ namespace threed {
 	}
 
 	void Renderer::prepare(bool) {
-		servicer.set_temperature_all(bheap::Block::TemperatureWarm, 
+		servicer.set_temperature_all<
 			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
 			slots::MODEL_DATA
-		);
+		>(bheap::Block::TemperatureWarm);
 	}
 	
 	Renderer::Renderer() {
-		servicer.set_temperature_all(bheap::Block::TemperatureHot, 
+		servicer.set_temperature_all<
 			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
 			slots::MODEL_DATA
-		);
+		>(bheap::Block::TemperatureHot);
 	}
 
 	Renderer::~Renderer() {
-		servicer.set_temperature_all(bheap::Block::TemperatureCold, 
+		servicer.set_temperature_all<
 			slots::MODEL_CAM_FOCUS,
 			slots::MODEL_CAM_MINPOS,
 			slots::MODEL_CAM_MAXPOS,
 			slots::MODEL_INFO,
 			slots::MODEL_DATA
-		);
+		>(bheap::Block::TemperatureCold);
 	}
 }

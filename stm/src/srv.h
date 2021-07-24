@@ -39,6 +39,14 @@ namespace srv {
 
 		// Data request methods
 		void set_temperature(uint16_t slotid, uint32_t temperature);
+		void set_temperature_group(uint32_t temperature, uint16_t len, const uint16_t * slotids);
+
+		template<uint16_t ...Slots>
+		void set_temperature_all(uint32_t temperature) {
+			const static uint16_t sidlist[] = {Slots...};
+			set_temperature_group(temperature, sizeof...(Slots), sidlist);
+		}
+
 		template<typename... Args>
 		void set_temperature_all(uint32_t temperature, Args... args) {
 			(set_temperature(args, temperature), ...);
@@ -137,6 +145,12 @@ namespace srv {
 				uint64_t &timestamp_out;
 				uint64_t &start_out;
 			};
+			// Does _not_ sync, intended for "groups" in flash -- see set_temperature_all's template version
+			struct MultiTempRequest {
+				uint16_t temperature : 2;
+				uint16_t amount : 14;
+				const uint16_t * entries;
+			};
 			union {
 				struct {
 					uint16_t slotid : 12;
@@ -144,12 +158,14 @@ namespace srv {
 				};
 
 				TimeRequest * rx_req;
+				MultiTempRequest mt_req;
 			};
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
 				TypeChangeTemp,
 				TypeDumpLogOut,
-				TypeRxTime
+				TypeRxTime,
+				TypeChangeTempMulti
 			} type;
 		};
 

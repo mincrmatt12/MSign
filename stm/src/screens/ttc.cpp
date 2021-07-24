@@ -217,7 +217,7 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 }
 
 void screen::TTCScreen::prepare(bool) {
-	servicer.set_temperature_all(bheap::Block::TemperatureWarm,
+	servicer.set_temperature_all<
 		slots::TTC_INFO,
 		slots::TTC_NAME_1,
 		slots::TTC_NAME_2,
@@ -226,11 +226,11 @@ void screen::TTCScreen::prepare(bool) {
 		slots::TTC_TIME_2,
 		slots::TTC_TIME_3,
 		slots::TTC_ALERTSTR
-	);
+	>(bheap::Block::TemperatureWarm);
 }
 
 screen::TTCScreen::TTCScreen() {
-	servicer.set_temperature_all(bheap::Block::TemperatureHot,
+	servicer.set_temperature_all<
 		slots::TTC_INFO,
 		slots::TTC_NAME_1,
 		slots::TTC_NAME_2,
@@ -239,7 +239,7 @@ screen::TTCScreen::TTCScreen() {
 		slots::TTC_TIME_2,
 		slots::TTC_TIME_3,
 		slots::TTC_ALERTSTR
-	);
+	>(bheap::Block::TemperatureHot);
 	bus_type = rng::get() % 3;
 	bus_type += 1;
 	bus_state = ((rng::get() % 10) == 0);
@@ -249,7 +249,7 @@ screen::TTCScreen::TTCScreen() {
 }
 
 screen::TTCScreen::~TTCScreen() {
-	servicer.set_temperature_all(bheap::Block::TemperatureCold,
+	servicer.set_temperature_all<
 		slots::TTC_INFO,
 		slots::TTC_NAME_1,
 		slots::TTC_NAME_2,
@@ -258,5 +258,5 @@ screen::TTCScreen::~TTCScreen() {
 		slots::TTC_TIME_2,
 		slots::TTC_TIME_3,
 		slots::TTC_ALERTSTR
-	);
+	>(bheap::Block::TemperatureCold);
 }

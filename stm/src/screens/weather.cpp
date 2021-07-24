@@ -187,36 +187,36 @@ const uint8_t wind[] = {
 }
 
 void screen::WeatherScreen::prepare(bool) {
-	servicer.set_temperature_all(bheap::Block::TemperatureWarm,
+	servicer.set_temperature_all<
 		slots::WEATHER_ARRAY,
 		slots::WEATHER_ICON,
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
 		slots::WEATHER_TIME_SUN
-	);
+	>(bheap::Block::TemperatureWarm);
 }
 
 screen::WeatherScreen::WeatherScreen() {
-	servicer.set_temperature_all(bheap::Block::TemperatureHot,
+	servicer.set_temperature_all<
 		slots::WEATHER_ARRAY,
 		slots::WEATHER_ICON,
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
 		slots::WEATHER_TIME_SUN
-	);
+	>(bheap::Block::TemperatureHot);
 }
 
 screen::WeatherScreen::~WeatherScreen() {
-	servicer.set_temperature_all(bheap::Block::TemperatureCold,
+	servicer.set_temperature_all<
 		slots::WEATHER_ARRAY,
 		slots::WEATHER_ICON,
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
 		slots::WEATHER_TIME_SUN
-	);
+	>(bheap::Block::TemperatureCold);
 }
 
 void screen::WeatherScreen::draw_currentstats() {

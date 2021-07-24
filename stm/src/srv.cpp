@@ -129,6 +129,15 @@ void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
 	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
 }
 
+void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, const uint16_t * sids) {
+	PendRequest pr;
+	pr.type = PendRequest::TypeChangeTempMulti;
+	pr.mt_req.temperature = temperature;
+	pr.mt_req.amount = amt;
+	pr.mt_req.entries = sids;
+	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+}
+
 bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
 	bool is_dirty = std::any_of(arena.begin(slotid), arena.end(slotid), [](const auto& b){return b.flags & bheap::Block::FlagDirty;});
 	if (is_dirty && clear) {
@@ -440,12 +449,24 @@ void srv::Servicer::run() {
 					}
 					// Check if we can process the next req
 					if (active_request.type == PendRequest::TypeChangeTemp) {
+end_temp_request:
 						// Consume this request.
 						active_request.type = PendRequest::TypeNone;
 						active_request_send_retries = 0;
 						// Try tail-chaining it
 						if (xQueueReceive(pending_requests, &active_request, 0)) {
 							start_pend_request(active_request);
+						}
+					}
+					else if (active_request.type == PendRequest::TypeChangeTempMulti) {
+						// Are there more entries left?
+						active_request.mt_req.amount--;
+						active_request.mt_req.entries++;
+						if (active_request.mt_req.amount) {
+							start_pend_request(active_request);
+						}
+						else {
+							goto end_temp_request;
 						}
 					}
 				}
@@ -1022,6 +1043,23 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 
 				*reinterpret_cast<uint16_t *>(dma_out_buffer + 3) = req.slotid;
 				dma_out_buffer[5] = req.temperature;
+
+				send();
+			}
+			break;
+		case PendRequest::TypeChangeTempMulti:
+			{
+				// Send the next entry.
+
+				wait_for_not_sending();
+
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 3;
+				dma_out_buffer[2] = slots::protocol::DATA_TEMP;
+				
+				// Load the slotid
+				dma_out_pkt.put(req.mt_req.entries[0], 0);
+				dma_out_buffer[5] = req.mt_req.temperature;
 
 				send();
 			}
