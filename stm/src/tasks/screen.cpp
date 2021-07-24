@@ -4,6 +4,7 @@
 #include "../fonts/lcdpixel_6.h"
 #include "../common/bootcmd.h"
 #include "../srv.h"
+#include "../ui.h"
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -120,6 +121,8 @@ namespace tasks {
 			// Servicer will eventually reset the STM.
 		}
 
+		ui::buttons.init();
+
 		show_test_pattern(2, matrix.get_inactive_buffer());
 		matrix.swap_buffers();
 		show_test_pattern(2, matrix.get_inactive_buffer());
@@ -149,19 +152,32 @@ namespace tasks {
 		swapper.transition(0);
 
 		while (1) {
+			ui::buttons.update();
 			// Draw active screen
 			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();
 			swapper.draw();
 
 			// Check for screen swaps 
-			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING]) {
+			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING] && !interacting()) {
 				srv::ServicerLockGuard g(servicer);
 				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
 					last_swapped_at = rtc_time;
 
 				// Check if the time elapsed is more than the current selection's millis_enabled
-				if ((rtc_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled) {
+				if ((rtc_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled ||
+						ui::buttons[ui::Buttons::NXT]) {
 					screen_list_idx = next_screen_idx();
+					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id;
+					int next_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id;
+					servicer.give_lock();
+					swapper.notify_before_transition(about_to_show, true);
+					swapper.transition(about_to_show);
+					swapper.notify_before_transition(next_to_show, false);
+					servicer.take_lock();
+					last_swapped_at = rtc_time;
+				}
+				else if (ui::buttons[ui::Buttons::PRV]) {
+					screen_list_idx = next_screen_idx(true);
 					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id;
 					int next_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id;
 					servicer.give_lock();
@@ -181,11 +197,17 @@ namespace tasks {
 		}
 	}
 	
-	int DispMan::next_screen_idx() {
-		int retval = screen_list_idx;
+	int DispMan::next_screen_idx(bool prev) {
+		uint8_t retval = screen_list_idx;
 		do {
-			++retval;
-			retval %= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime));
+			if (!prev) {
+				++retval;
+				retval %= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime));
+			}
+			else {
+				--retval;
+				retval = std::min<uint8_t>(retval, servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime)-1);
+			}
 			if (retval == screen_list_idx) return retval;
 		} while (
 			!(servicer.slot<slots::ScCfgInfo>(slots::SCCFG_INFO)->enabled_mask & (1 << 
