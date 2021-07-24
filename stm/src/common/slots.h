@@ -16,9 +16,7 @@ namespace slots {
 		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
 		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
 
-		REMOTE_CONTROL = 0x10,      // BOOL; 0 - no remote control is taking place, request_screen and virtual_buttonmap are not valid
-		REQUEST_SCREEN = 0x11, 		// UINT8_T; screen ID to request, sent very infrequently
-		VIRTUAL_BUTTONMAP = 0x12, 	// UINT8_T; bitmap, override of the data on GPIOA for the buttons
+		VIRTUAL_BUTTONMAP = 0x10, 	// UINT16_T; bitmap, override of the data on GPIOA for the buttons
 
 		TTC_INFO = 0x20,			// STRUCT; TTCInfo
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled

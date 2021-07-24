@@ -41,6 +41,9 @@
 #define NVIC_SRV_RXE_CLRF LL_DMA_ClearFlag_TE1
 #define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC7
 
+#define UI_BUTTON_PORT GPIOA
+#define UI_BUTTON_PERIPH LL_AHB1_GRP1_PERIPH_GPIOA
+
 #endif
 
 #ifdef STM32F205xx
@@ -80,6 +83,9 @@
 #define NVIC_SRV_RX_CLRF LL_DMA_ClearFlag_TC5
 #define NVIC_SRV_RXE_CLRF LL_DMA_ClearFlag_TE5
 #define NVIC_SRV_TX_CLRF LL_DMA_ClearFlag_TC6
+
+#define UI_BUTTON_PORT GPIOA
+#define UI_BUTTON_PERIPH LL_AHB1_GRP1_PERIPH_GPIOA
 
 #endif
 
