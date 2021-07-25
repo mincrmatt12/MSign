@@ -25,6 +25,8 @@ pipeline {
 
 						// archive
 						archiveArtifacts artifacts: 'stm/build_*/stm.bin', fingerprint: true
+						// also archive the elf for debugging
+						archiveArtifacts artifacts: 'stm/build_*/stm'
 					}
 				}
 				stage("Build ESP") {
@@ -37,6 +39,7 @@ pipeline {
 						}
 
 						archiveArtifacts artifacts: 'esp/build/msign-esp.bin', fingerprint: true
+						archiveArtifacts artifacts: 'esp/build/msign-esp.elf'
 					}
 				}
 				stage("Build STMboot") {
