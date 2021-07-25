@@ -45,6 +45,10 @@ namespace screen {
 			return require_clearing_impl<Layered...>();
 		}
 
+		bool interact() {
+			return std::get<0>(screens).interact();
+		}
+
 	private:
 		std::tuple<Layered...> screens;
 
