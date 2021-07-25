@@ -31,7 +31,11 @@ void ui::Buttons::update() {
 	if (!last_update) last_update = xTaskGetTickCount();
 	auto now = xTaskGetTickCount();
 	TickType_t duration = now - last_update;
-	if (duration) last_update = now;
+	if (duration) {
+		last_update = now;
+		last_duration = duration;
+	}
+	else last_duration = 0;
 
 	last_held = current_held;
 	current_held = GPIOA->IDR;
@@ -65,4 +69,8 @@ bool ui::Buttons::press(Button b) const {
 
 bool ui::Buttons::changed() const {
 	return current_held ^ last_held;
+}
+
+TickType_t ui::Buttons::frame_time() const {
+	return last_duration;
 }

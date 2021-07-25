@@ -28,11 +28,14 @@ namespace ui {
 
 		bool operator[](Button b) const {return press(b);}
 		bool changed() const;
+
+		TickType_t frame_time() const;
 	private:
 		uint16_t current_held{};
 		uint16_t last_held{};
 		uint16_t held_duration[11]{};
 		TickType_t last_update{};
+		TickType_t last_duration{};
 	} buttons;
 }
 

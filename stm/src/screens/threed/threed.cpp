@@ -195,22 +195,27 @@ namespace threed {
 
 	bool Renderer::interact() {
 		Vec3 target{0};
-		float amt = ui::buttons.held(ui::Buttons::MENU) ? -0.1f : 0.1f;
-		if (ui::buttons[ui::Buttons::PRV]) target.x += amt;
-		if (ui::buttons[ui::Buttons::NXT]) target.z += amt;
-		if (ui::buttons[ui::Buttons::SEL]) target.y += amt;
+		float amt = ui::buttons.held(ui::Buttons::MENU) ? -0.4f : 0.4f;
+		amt *= ui::buttons.frame_time();
+		amt /= 1000.f;
+		if (ui::buttons.held(ui::Buttons::PRV)) target.x += amt;
+		if (ui::buttons.held(ui::Buttons::NXT)) target.z += amt;
+		if (ui::buttons.held(ui::Buttons::SEL)) target.y += amt;
 
+		Vec3 for_ = (current_look - current_pos).normalize();
 		if (im == MOVE_POS) {
-			Vec3 for_ = (current_look - current_pos).normalize();
-			Vec3 left_ = (Vec3{0.f, 1.f, 0.f}.cross(for_));
-
+			Vec3 left_ = -(Vec3{0.f, 1.f, 0.f}.cross(for_));
 			current_pos += for_ * target.x + left_ * target.z;
 			current_pos.y += target.y;
 			current_look += for_ * target.x + left_ * target.z;
 			current_look.y += target.y;
 		}
 		else {
-			current_look += target;
+			for_.y = 0;
+			for_ = for_.normalize();
+			Vec3 left_ = -(Vec3{0.f, 1.f, 0.f}.cross(for_));
+			current_look += for_ * target.x + left_ * target.z;
+			current_look.y += target.y;
 		}
 
 		if (ui::buttons[ui::Buttons::POWER]) {
