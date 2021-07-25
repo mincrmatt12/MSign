@@ -318,8 +318,7 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 		char buf[3] = {0};
 		snprintf(buf, 3, "%02d", hour);
 
-		// todo  make this a gradient
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 3 + i * 20, 38, 255_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 4 + i * 20, 38, 255_c);
 	}
 	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 39, 40, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
 	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 51, 52, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
@@ -399,13 +398,14 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 		draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, col);
 }
 
-void screen::WeatherScreen::draw_graphaxes() {
+void screen::WeatherScreen::draw_graph(int left_, int bottom_) {
 	// graph axes on pos 79 x, 24 y
 	
-	draw::rect(matrix.get_inactive_buffer(), 80, 24, 128, 25, 34_c);
-	draw::rect(matrix.get_inactive_buffer(), 79, 0, 80, 24,   34_c);
+	draw::rect(matrix.get_inactive_buffer(), left_, bottom_, 128, bottom_ + 1, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), left_, 0, left_ + 1, bottom_ + 1, 50_c);
 
 	const float * tempgraph_data = *servicer.slot<float *>(slots::WEATHER_TEMP_GRAPH);
+	const float space = bottom_;
 
 	float min_ = 10000, max_ = -10000;
 	for (uint8_t i = 0; i < 24; ++i) {
@@ -417,13 +417,16 @@ void screen::WeatherScreen::draw_graphaxes() {
 	min_ = std::floor(min_) - 1.f;
 	max_ = std::ceil(max_) + 1.f;
 	
-	auto tickmark = [](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().at(x, y) = led::color_t(34_c);
+	auto tickmark = [bottom_, left_](int16_t x, int16_t y, float v){
+		matrix.get_inactive_buffer().at(x, y) = led::color_t(95_c);
 
-		char buf[4] = {0};
-		snprintf(buf, 4, "%.0f", v);
+		char buf[10] = {0};
+		snprintf(buf, 10, "%02.0f", v);
+		if (y == bottom_ + 1 && left_ < 32) {
+			snprintf(buf, 10, "%02.0f:00", v);
+		}
 
-		if (x == 78) {
+		if (x == left_ - 1) {
 			int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
 			x -= sz - 1;
 			y += 3;
@@ -433,29 +436,21 @@ void screen::WeatherScreen::draw_graphaxes() {
 			y += 6;
 		}
 
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 60_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 120_c);
 	};
 
-	tickmark(78, 23, min_);
+	// based on min/max, figure out minimum offset:
+	
+	float each_pixel_is = (max_ - min_) / space;
+	float tickmark_min = std::ceil(each_pixel_is * 6);
 
-	int16_t previous = 23;
-	float previous_val = min_, previous_height = 23.f;
-	float diff = 23.0 / (max_ - min_);
-	if (!(diff > 0.05)) return;
-	
-	// Continue adding tickmarks such that:
-	// 	they all have an integer value
-	// 	they don't intersect
-	// 	they have at least one pixel gap
-	
-	while (previous_height >= diff) {
-		previous_val += 1.f;
-		previous_height -= diff;
-		int16_t target = std::round(previous_height);
-		if ((previous + 3) - std::max(5, target + 3) > 5) {
-			previous = target;
-			tickmark(78, previous, previous_val);
-		}
+	for (int i = 0;; ++i) {
+		float value = tickmark_min * i;
+		int position = std::round((space - 1) - (space * value / (max_ - min_)));
+
+		if (position < 0) break;
+
+		tickmark(left_ - 1, position, value + min_);
 	}
 
 	struct tm timedat;
@@ -463,51 +458,56 @@ void screen::WeatherScreen::draw_graphaxes() {
 	gmtime_r(&now, &timedat);
 	int first = timedat.tm_hour;
 
-	tickmark(80, 25, first);
-	tickmark(92, 25, (first + 6) % 24);
-	tickmark(104, 25, (first + 12) % 24);
-	tickmark(116, 25, (first + 18) % 24);
-}
 
-void screen::WeatherScreen::draw_graph(uint8_t hour) {
-	const float * tempgraph_data = *servicer.slot<float *>(slots::WEATHER_TEMP_GRAPH);
+	if (left_ < 64) {
+		const float horiztick = (128 - left_ - 1) / 6.f;
 
-	float min_ = 10000, max_ = -10000;
-	for (uint8_t i = 0; i < 24; ++i) {
-		min_ = std::min(min_, tempgraph_data[i]);
-		max_ = std::max(max_, tempgraph_data[i]);
-	}
-
-	// The actual min/max is rounded down/up +/- 1
-	min_ = std::floor(min_) - 1.f;
-	max_ = std::ceil(max_) + 1.f;
-
-	int16_t begin = hour * 2 + 80;
-	int16_t end   = begin + 2;
-
-	float diff = 23.0 / (max_ - min_);
-
-	int16_t y0 = std::round((tempgraph_data[hour] - min_) * diff);
-	int16_t y1 = (hour == 23 ? y0 : std::round((tempgraph_data[hour + 1] - min_) * diff));
-	y0 = 23 - y0;
-	y1 = 23 - y1;
-	if (hour == 23) y1 = y0;
-
-	float ctemp = tempgraph_data[hour];
-	if (ctemp >= 10.0 && ctemp < 16.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255_c);
-	}
-	else if (ctemp > -10.0 && ctemp < 10.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {100_c, 100_c, 240_c});
-	}
-	else if (ctemp >= 16.0 && ctemp < 30.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {50_c, 240_c, 50_c});
-	}
-	else if (ctemp > 30.0) {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {250_c, 30_c, 30_c});
+		tickmark(left_ + 1, bottom_ + 1, first);
+		tickmark(left_ + 1 + horiztick, bottom_ + 1, (first + 4) % 24);
+		tickmark(left_ + 1 + horiztick * 2, bottom_ + 1, (first + 8) % 24);
+		tickmark(left_ + 1 + horiztick * 3, bottom_ + 1, (first + 12) % 24);
+		tickmark(left_ + 1 + horiztick * 4, bottom_ + 1, (first + 16) % 24);
+		tickmark(left_ + 1 + horiztick * 5, bottom_ + 1, (first + 20) % 24);
 	}
 	else {
-		draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {40_c, 40_c, 255_c});
+		const float horiztick = (128 - left_ - 1) / 4.f;
+
+		tickmark(left_ + 1, bottom_ + 1, first);
+		tickmark(left_ + 1 + horiztick, bottom_ + 1, (first + 6) % 24);
+		tickmark(left_ + 1 + horiztick * 2, bottom_ + 1, (first + 12) % 24);
+		tickmark(left_ + 1 + horiztick * 3, bottom_ + 1, (first + 18) % 24);
+	}
+
+	for (int hour = 0; hour < 24; ++hour) {
+		int begin = hour * (128 - left_ - 1) / 24;
+		int end = (hour + 1) * (128 - left_ - 1) / 24;
+		begin += left_ + 1;
+		end += left_ + 1;
+
+		float diff = space / (max_ - min_);
+
+		int16_t y0 = std::round((tempgraph_data[hour] - min_) * diff);
+		int16_t y1 = (hour == 23 ? y0 : std::round((tempgraph_data[hour + 1] - min_) * diff));
+		y0 = bottom_ - 1 - y0;
+		y1 = bottom_ - 1 - y1;
+		if (hour == 23) y1 = y0;
+
+		float ctemp = tempgraph_data[hour];
+		if (ctemp >= 10.0 && ctemp < 16.0) {
+			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255_c);
+		}
+		else if (ctemp > -10.0 && ctemp < 10.0) {
+			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {100_c, 100_c, 240_c});
+		}
+		else if (ctemp >= 16.0 && ctemp < 30.0) {
+			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {50_c, 240_c, 50_c});
+		}
+		else if (ctemp > 30.0) {
+			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {250_c, 30_c, 30_c});
+		}
+		else {
+			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {40_c, 40_c, 255_c});
+		}
 	}
 }
 
@@ -515,20 +515,65 @@ void screen::WeatherScreen::draw() {
 	// Lock the contents
 	srv::ServicerLockGuard g(servicer);
 
-	if (servicer.slot(slots::WEATHER_STATUS) && servicer.slot(slots::WEATHER_ICON)) {
-		draw_currentstats();
-		draw_status();
-		draw_hourlybar_header();
-		if (servicer.slot(slots::WEATHER_ARRAY) && servicer.slot(slots::WEATHER_TIME_SUN)) {
-			for (int i = 0; i < 24; ++i) {
-				draw_hourlybar(i);
+	switch (subscreen) {
+	default:
+		if (servicer.slot(slots::WEATHER_STATUS) && servicer.slot(slots::WEATHER_ICON)) {
+			draw_currentstats();
+			draw_status();
+			draw_hourlybar_header();
+			if (servicer.slot(slots::WEATHER_ARRAY) && servicer.slot(slots::WEATHER_TIME_SUN)) {
+				for (int i = 0; i < 24; ++i) {
+					draw_hourlybar(i);
+				}
+			}
+			if (servicer.slot(slots::WEATHER_TEMP_GRAPH))  {
+				draw_graph();
 			}
 		}
-		if (servicer.slot(slots::WEATHER_TEMP_GRAPH))  {
-			draw_graphaxes();
-			for (int i = 0; i < 24; ++i) {
-				draw_graph(i);
-			}
+		break;
+	case BIG_GRAPH:
+		// TODO: more info, for now just draw the graph enlarged
+		if (!servicer.slot(slots::WEATHER_TEMP_GRAPH)) {
+			// show loading spinner (TODO)
+			draw::text(matrix.get_inactive_buffer(), "loading", font::dejavusans_10::info, 55, 34, 0xff_c);
 		}
+		else {
+			draw_graph(14, 64-8);
+		}
+		break;
 	}
+}
+
+bool screen::WeatherScreen::interact() {
+	switch (subscreen) {
+		case MAIN:
+			// draw outline
+			switch (highlight) {
+				default: break;
+				case BIG_GRAPH: 
+					draw::dashed_outline(matrix.get_inactive_buffer(), 79, 0, 127, 24, 0xff_c);
+					break;
+				case BIG_HOURLY:
+					draw::dashed_outline(matrix.get_inactive_buffer(), 2, 31, 125, 53, 0xff_c);
+					break;
+			}
+
+			if (ui::buttons[ui::Buttons::NXT]) {
+				highlight = (Subscreen)((int)highlight + 1);
+				if (highlight == MAX_SUBSCREEN) highlight = BIG_GRAPH;
+			}
+			else if (ui::buttons[ui::Buttons::PRV]) {
+				highlight = (Subscreen)((int)highlight - 1);
+				if (highlight == MAIN) highlight = BIG_HOURLY;
+			}
+			else if (ui::buttons[ui::Buttons::SEL]) {
+				subscreen = highlight;
+			}
+			else if (ui::buttons[ui::Buttons::POWER]) return true;
+			break;
+		default:
+			if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
+			break;
+	}
+	return false;
 }
