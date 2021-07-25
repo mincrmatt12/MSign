@@ -144,6 +144,7 @@ namespace threed {
 
 		void draw();
 
+		bool interact();
 		constexpr static inline bool require_clearing() {return false;}
 	private:
 		void draw_triangle(const Tri& t, bool enable_lighting);
@@ -158,13 +159,10 @@ namespace threed {
 		uint16_t interp_progress = 20000;
 		uint64_t last_update, last_new_data;
 
-		/*
-		inline void set_color_and_z(matrix_type::framebuffer_type &fb, uint16_t x, uint16_t y, uint16_t r, uint16_t g, uint16_t b, int16_t z) const {
-			fb.r(x, y) = (r & 0xFFF) | ((z & 0x00F)) << 12;
-			fb.g(x, y) = (g & 0xFFF) | ((z & 0x0F0) >> 4) << 12;
-			fb.b(x, y) = (b & 0xFFF) | ((z & 0xF00) >> 8) << 12;
-		}
-		*/
+		enum InteractMode : uint8_t {
+			MOVE_POS,
+			MOVE_LOOK
+		} im=MOVE_POS;
 
 		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, float d1, float d2, uint16_t r, uint16_t g, uint16_t b) {
 			int dx = x1 - x0;

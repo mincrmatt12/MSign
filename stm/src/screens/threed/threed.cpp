@@ -3,11 +3,14 @@
 #include "../threed.h"
 #include "../../draw.h"
 #include "../../common/slots.h"
+#include "../../tasks/screen.h"
+#include "../../fonts/tahoma_9.h"
 #include "mesh.h"
 
 extern matrix_type matrix;
 extern uint64_t rtc_time;
 extern srv::Servicer servicer;
+extern tasks::DispMan dispman;
 
 namespace threed {
 	constexpr DefaultMeshHolder default_mesh{};
@@ -173,8 +176,10 @@ namespace threed {
 			}
 		}
 
-		current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
-		current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
+		if (!dispman.interacting()) {
+			current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
+			current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
+		}
 
 		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0.f, 1.f, 0.f});
 
@@ -186,6 +191,35 @@ namespace threed {
 				matrix.get_inactive_buffer().at(i, j) = fill;
 			}
 		}
+	}
+
+	bool Renderer::interact() {
+		Vec3 target{0};
+		float amt = ui::buttons.held(ui::Buttons::MENU) ? -0.1f : 0.1f;
+		if (ui::buttons[ui::Buttons::PRV]) target.x += amt;
+		if (ui::buttons[ui::Buttons::NXT]) target.z += amt;
+		if (ui::buttons[ui::Buttons::SEL]) target.y += amt;
+
+		if (im == MOVE_POS) {
+			Vec3 for_ = (current_look - current_pos).normalize();
+			Vec3 left_ = (Vec3{0.f, 1.f, 0.f}.cross(for_));
+
+			current_pos += for_ * target.x + left_ * target.z;
+			current_pos.y += target.y;
+			current_look += for_ * target.x + left_ * target.z;
+			current_look.y += target.y;
+		}
+		else {
+			current_look += target;
+		}
+
+		if (ui::buttons[ui::Buttons::POWER]) {
+			im = (im == MOVE_POS) ? MOVE_LOOK : MOVE_POS;
+		}
+
+		// draw label
+		draw::text(matrix.get_inactive_buffer(), im == MOVE_POS ? "move" : "look", font::tahoma_9::info, 1, 63, 0x5555ff_cc);
+		return false;
 	}
 
 	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {

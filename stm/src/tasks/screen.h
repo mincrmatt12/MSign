@@ -12,6 +12,9 @@ namespace tasks {
 	struct DispMan {
 		void run();
 
+		bool interacting() const {
+			return interact_timeout && interact_mode;
+		}
 	private:
 		screen::ScreenSwapper<
 			screen::TTCScreen,
@@ -38,10 +41,6 @@ namespace tasks {
 		uint32_t interact_timeout = 0;
 
 		int next_screen_idx(bool prev=false);
-
-		bool interacting() const {
-			return interact_timeout && interact_mode;
-		}
 	};
 }
 
