@@ -101,6 +101,34 @@ namespace draw {
 		}
 	}
 
+	void outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
+		for (int y = y0; y < y1; ++y) {
+			fb.at(x0, y) = rgb;
+			fb.at(x1, y) = rgb;
+		}
+
+		for (int x = x0; x < x1; ++x) {
+			fb.at(x, y0) = rgb;
+			fb.at(x, y1) = rgb;
+		}
+	}
+
+	void dashed_outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
+		for (int y = y0; y < y1; y += 4) {
+			fb.at(x0, y) = rgb;
+			fb.at(x1, y) = rgb;
+			fb.at(x0, y+1) = rgb;
+			fb.at(x1, y+1) = rgb;
+		}
+
+		for (int x = x0; x < x1; x += 4) {
+			fb.at(x, y0) = rgb;
+			fb.at(x, y1) = rgb;
+			fb.at(x+1, y0) = rgb;
+			fb.at(x+1, y1) = rgb;
+		}
+	}
+
 	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
 		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
 	}

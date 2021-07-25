@@ -40,6 +40,12 @@ namespace draw {
 	// Draw a gradient rectangle (gradient is horizontal). Takes _ungammacorrected_ colors, (use _ccu)
 	void gradient_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1, bool vertical=false);
 
+	// Draw an outline rectangle
+	void outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb);
+
+	// Draw dashed outline
+	void dashed_outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb);
+
 	// Fill the entire screen.
 	void fill(matrix_type::framebuffer_type &fb, led::color_t rgb); 
 
