@@ -596,7 +596,7 @@ namespace sd {
 				if (x.address_error) return read_status::OutOfBounds;
 				else return read_status::ProtocolError;
 			}
-			read_status s;
+			read_status s=read_status::OutOfBounds;
 
 			for (size_t i = 0; i < length_in_sectors; ++i, buf += 512) {
 				 s = single_read(buf, 512);
@@ -657,7 +657,7 @@ namespace sd {
 				}
 			}
 			// Send out the block data
-			write_status s;
+			write_status s=write_status::ProtocolError;
 			
 			for (size_t i = 0; i < length_in_sectors; ++i, buf += 512) {
 				s = single_write(buf, 512, 0xFC);
