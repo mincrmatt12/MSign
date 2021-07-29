@@ -21,7 +21,7 @@ macro read_number(out target, match delimit) {
 
 parser {
     connection = OTHER;
-    "HTTP";
+    /.?\s*HTTP/;
     wait " ";
 
     // Get the response code
