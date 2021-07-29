@@ -13,12 +13,13 @@ lowfi_login_page = r"""
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
 <title>msign remote login</title>
 <link rel="stylesheet" href="/page.css" />
 </head>
 <body>
 <div class="container">
-    <form action="/login" method="post" enctype="application/x-ww-form-urlencoded">
+    <form class="py-3" action="/login" method="post" enctype="application/x-ww-form-urlencoded">
         <div class="mb-2">
             <label for="userIn" class="form-label">username</label>
             <input type="text" class="form-control" id="userIn" name="user">
@@ -108,6 +109,7 @@ def update_ui():
 @app.route("/a/updatefirm", methods=["POST"])
 def update_firm():
     db.update_firm(request.files["stm"], request.files["esp"])
+    return 'ok', 200
 
 @app.route("/a/challenge")
 def get_auth_challenge():
