@@ -1,0 +1,25 @@
+version: "3.7"
+
+services:
+  cfgserver:
+    build: ./
+    image: docker-registry.i.mm12.xyz/msign-cfgserver:0.1.0
+    ports:
+      - "8080:8080"
+    secrets:
+      - mscfgserver-shared-secret
+      - mscfgserver-server-secret
+    environment:
+      - MSIGN_SHARED_SECRET=/run/secrets/mscfgserver-shared-secret
+      - MSIGN_SERVER_SECRET=/run/secrets/mscfgserver-server-secret
+    volumes:
+      - db-data:/data
+
+secrets:
+  mscfgserver-shared-secret:
+    external: true
+  mscfgserver-server-secret:
+    external: true
+
+volumes:
+  db-data:
