@@ -9,6 +9,7 @@ Code + designs for an LED sign display board powered by an STM32 and ESP8266. Ma
 - `stmboot`: STM32 bootloader
 - `esp`: ESP8266 firmware (grabs information from the internet)
 - `espweb`: ESP8266 web-based configuration page source
+- `cfgserver`: Server for shipping unattended config and software updates (without using the webui)
 - `bmap`: Tools for generating graphics resources
 - `caplog`: Tools for debugging
 - `vendor`: Various dependencies in source form (everything not listed below)

@@ -1,0 +1,6 @@
+flask
+Flask-Login
+unix-ar
+tinydb
+mintotp
+qrcode

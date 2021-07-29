@@ -1,0 +1,31 @@
+version: "3.7"
+
+services:
+  cfgserver:
+    build: ./
+    image: docker-registry.i.mm12.xyz/msign-cfgserver:dev
+    init: true
+    ports:
+      - "8080:8080"
+    secrets:
+      - mscfgserver-shared-secret
+      - mscfgserver-server-secret
+    environment:
+      - MSIGN_SHARED_SECRET=/run/secrets/mscfgserver-shared-secret
+      - MSIGN_SERVER_SECRET=/run/secrets/mscfgserver-server-secret
+      - FLASK_ENV=development
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - type: bind
+        source: ./cfgserver
+        target: /opt/venv/lib/python3.7/site-packages/cfgserver
+      - db-data:/data
+
+secrets:
+  mscfgserver-shared-secret:
+    file: .shared-secret
+  mscfgserver-server-secret:
+    file: .server-secret
+
+volumes:
+  db-data:
