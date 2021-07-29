@@ -228,6 +228,11 @@ bool cfgpull::loop() {
 			stm_csum
 		)) {
 			ESP_LOGE(TAG, "failed to download sysupgrade files, bail");
+			{
+				slots::WebuiStatus current_status;
+				current_status.flags = slots::WebuiStatus::LAST_RX_FAILED;
+				serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+			}
 			return false;
 		}
 
