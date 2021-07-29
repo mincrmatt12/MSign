@@ -35,6 +35,8 @@ namespace ttc {
 			return false;
 		}
 
+		dw.make_nonclose();
+
 		ESP_LOGD(TAG, "Parsing json data");
 		// message is here now read it
 		
@@ -181,6 +183,7 @@ namespace ttc {
 				else return false;
 			}
 		}
+		dwhttp::close_connection(true);
 		update_alertstr(x);
 		if (!(x.flags & slots::TTCInfo::SUBWAY_ALERT)) {
 			serial::interface.delete_slot(slots::TTC_ALERTSTR);

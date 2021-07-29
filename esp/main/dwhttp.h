@@ -45,19 +45,23 @@ namespace dwhttp {
 		int content_length() const;
 		bool is_unknown_length() const;
 
+		void make_nonclose() {nonclose = true;}
+		bool ok() const {return result_code() >= 200 && result_code() < 300;}
 	private:
 
 		uint8_t * recvbuf {};
 		uint8_t recvpending{};
 		uint8_t recvread{};
+		uint8_t nonclose = false;
 		void * adapter{};
 	};
 
-	// Starts the downloader, but returns a function that will return a byte (1-255) indicating data or 0 indicating end of transmission. Not designed for use with binary data.
 	Download download_with_callback(const char * host, const char * path);
 	Download download_with_callback(const char * host, const char * path, const char * const headers[][2]);
 	Download download_with_callback(const char * host, const char * path, const char * const headers[][2]);
 	Download download_with_callback(const char * host, const char * path, const char * const headers[][2], const char * method, const char * body);
+
+	void close_connection(bool ssl);
 }
 
 #endif

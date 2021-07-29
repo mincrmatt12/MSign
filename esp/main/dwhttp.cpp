@@ -494,17 +494,21 @@ namespace dwhttp {
 			// Close sockets
 			void stop() override {
 				socket.close();
+				last_server = nullptr;
 			}
 
 			bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const uint8_t * body=nullptr, const size_t bodylen=0) {
-				if (socket.is_connected()) {
+				if (socket.is_connected() && (!last_server || strcmp(host, last_server))) {
 					ESP_LOGW(TAG, "Socket wasn't closed, closing");
 					socket.close();
 				}
-				if (!socket.connect(host)) {
-					ESP_LOGE(TAG, "Failed to connect to host");
-					return false;
+				if (last_server != host) {
+					if (!socket.connect(host)) {
+						ESP_LOGE(TAG, "Failed to connect to host");
+						return false;
+					}
 				}
+				last_server = host;
 				
 				// Send request
 				if (!(socket.write(method) && 
@@ -513,7 +517,7 @@ namespace dwhttp {
 					socket.write(" HTTP/1.1\r\n"))) {
 					ESP_LOGE(TAG, "Failed to send request path");
 
-					socket.close();
+					stop();
 					return false;
 				}
 
@@ -523,7 +527,7 @@ namespace dwhttp {
 
 					ESP_LOGE(TAG, "Failed to send request headers");
 
-					socket.close();
+					stop();
 					return false;
 				}
 
@@ -534,7 +538,7 @@ namespace dwhttp {
 					if (!write_header("Content-Length", buf)) {
 						ESP_LOGE(TAG, "Failed to send body headers");
 
-						socket.close();
+						stop();
 						return false;
 					}
 				}
@@ -545,7 +549,7 @@ namespace dwhttp {
 					if (!write_header(headers[i][0], headers[i][1])) {
 						ESP_LOGE(TAG, "Failed to send user headers");
 
-						socket.close();
+						stop();
 						return false;
 					}
 					ESP_LOGD(TAG, "hdr: %s --> %s", headers[i][0], headers[i][1]);
@@ -556,7 +560,7 @@ namespace dwhttp {
 					if (!socket.write(body, bodylen)) {
 						ESP_LOGE(TAG, "Failed to send body");
 
-						socket.close();
+						stop();
 						return false;
 					}
 				}
@@ -571,7 +575,7 @@ namespace dwhttp {
 					int recvd_bytes = socket.read(&buf, 1);
 					if (recvd_bytes < 0) {
 						ESP_LOGE(TAG, "Got error while recving");
-						socket.close();
+						stop();
 						return false;
 					}
 					// Otherwise, feed it into nmfu
@@ -580,7 +584,7 @@ namespace dwhttp {
 							continue;
 						case HTTP_CLIENT_FAIL:
 							ESP_LOGE(TAG, "Parser failed");
-							socket.close();
+							stop();
 							return false;
 						case HTTP_CLIENT_DONE:
 							ESP_LOGD(TAG, "Finished parsing req headers");
@@ -593,6 +597,7 @@ finish_req:
 			}
 		private:
 			Adapter socket;
+			const char * last_server=nullptr;
 
 			bool write_header(const char * name, const char * value) {
 				if (!socket.write(name)) return false;
@@ -641,7 +646,9 @@ dwhttp::Download dwhttp::download_with_callback(const char * host, const char * 
 
 dwhttp::Download::~Download() {
 	if (adapter) {
-		((dwhttp::detail::DownloaderBase *)(adapter))->stop();
+		if (!nonclose || is_unknown_length()) { // unknown_length == connection: close == force stop connection
+			((dwhttp::detail::DownloaderBase *)(adapter))->stop();
+		}
 		adapter = nullptr;
 	}
 	if (recvbuf) free(recvbuf);
@@ -683,4 +690,13 @@ int dwhttp::Download::content_length() const {
 }
 bool dwhttp::Download::is_unknown_length() const {
 	return ((dwhttp::detail::DownloaderBase *)adapter)->is_unknown_length();
+}
+
+void dwhttp::close_connection(bool ssl) {
+	if (ssl) {
+		detail::dwnld_s.stop();
+	}
+	else {
+		detail::dwnld.stop();
+	}
 }
