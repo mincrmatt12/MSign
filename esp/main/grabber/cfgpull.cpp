@@ -46,6 +46,8 @@ namespace cfgpull {
 			crc_out = util::compute_crc(buf, len, crc_out);
 			if (f_write(&f, buf, len, &bw)) {
 				ESP_LOGW(TAG, "failed to write update");
+				f_close(&f);
+				return false;
 			}
 			remain -= len;
 		}
@@ -217,6 +219,8 @@ bool cfgpull::loop() {
 		}
 		// download files
 		uint16_t esp_csum, stm_csum;
+
+		f_mkdir("0:/upd");
 
 		if (!pull_single_file_for_update(
 			dwhttp::download_with_callback(pull_host_copy, "/a/esp.bin", headers),
