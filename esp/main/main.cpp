@@ -6,6 +6,7 @@
 #include "sd.h"
 #include "config.h"
 #include "grabber/grab.h"
+#include "webui.cfg.h"
 
 #include <esp_log.h>
 #include <esp_system.h>
@@ -85,8 +86,10 @@ extern "C" void app_main() {
 		return;
 	}
 
-	if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
-		ESP_LOGE(TAG, "Failed to create webui; running without it");
+	if (webui::mode != webui::WebuiMode::DISABLED) {
+		if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
+			ESP_LOGE(TAG, "Failed to create webui; running without it");
+		}
 	}
 
 	ESP_LOGI(TAG, "Created tasks (1)");

@@ -16,4 +16,8 @@ config SDCARD_MOSI_IO
 	int "SD_MOSI GPIO number"
 	default 4
 
+config DISABLE_CFGPULL
+	bool "Force disabling of auto-system update"
+	default n
+
 endmenu
