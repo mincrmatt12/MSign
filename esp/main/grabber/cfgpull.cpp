@@ -90,7 +90,7 @@ bool cfgpull::loop() {
 				if (new_system) ESP_LOGI(TAG, "detected new system version");
 #endif
 			}
-			else if (strcmp(stack[1]->name, "config") == 0) {
+			else if (strcmp(stack[1]->name, "config") == 0 && !only_firm) {
 				if (jv.int_val != version_id) {
 					new_config = true;
 					ESP_LOGI(TAG, "detected new config version");

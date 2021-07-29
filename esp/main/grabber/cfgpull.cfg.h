@@ -5,6 +5,9 @@ namespace cfgpull {
 	//!cfg: holds .cfgpull.enabled, default false
 	extern bool enabled;
 
+	//!cfg: holds .cfgpull.only_firm, default false
+	extern bool only_firm;
+
 	//!cfg: holds .cfgpull.host
 	extern const char * pull_host;
 
