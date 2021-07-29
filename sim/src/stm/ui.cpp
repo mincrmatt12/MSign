@@ -51,3 +51,7 @@ bool ui::Buttons::press(Button b) const {
 bool ui::Buttons::changed() const {
 	return current_held ^ last_held;
 }
+
+TickType_t ui::Buttons::frame_time() const {
+	return 16;
+}
