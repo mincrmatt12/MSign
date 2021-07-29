@@ -14,7 +14,46 @@
 #include <bearssl_hmac.h>
 #include <bearssl_hash.h>
 
+#include "../sd.h"
+#include "../common/util.h"
+#include "../serial.h"
+
 static const char * TAG = "cfgpull";
+
+namespace cfgpull {
+	bool pull_single_file_for_update(dwhttp::Download &&resp, const char *target_file, uint16_t &crc_out) {
+		if (!resp.ok()) {
+			return false;
+		}
+
+		crc_out = 0;
+
+		FIL f;
+		f_open(&f, target_file, FA_WRITE | FA_CREATE_ALWAYS);
+
+		ESP_LOGD(TAG, "downloading %s", target_file);
+
+		size_t remain = resp.content_length();
+		uint8_t buf[512];
+		while (remain) {
+			size_t len = resp(buf, std::min<size_t>(512, remain));
+			if (!len) {
+				ESP_LOGW(TAG, "failed to dw update");
+				f_close(&f);
+				return false;
+			}
+			UINT bw;
+			crc_out = util::compute_crc(buf, len, crc_out);
+			if (f_write(&f, buf, len, &bw)) {
+				ESP_LOGW(TAG, "failed to write update");
+			}
+			remain -= len;
+		}
+		f_close(&f);
+		resp.make_nonclose();
+		return true;
+	}
+}
 
 void cfgpull::init() {
 	if (!enabled) ESP_LOGI(TAG, "cfgpull is not turned on");
@@ -120,12 +159,12 @@ bool cfgpull::loop() {
 
 	// Perform config update first.
 	const char * pull_host_copy = pull_host; // if we overwrite config during this don't blow up.
+	const char * headers[][2] = {
+		{"Authorization", (char *)authbuf.get()},
+		{nullptr, nullptr}
+	};
 	
 	if (new_config) {
-		const char * headers[][2] = {
-			{"Authorization", (char *)authbuf.get()},
-			{nullptr, nullptr}
-		};
 		auto resp = dwhttp::download_with_callback(pull_host_copy, "/a/conf.json", headers);
 
 		if (!resp.ok()) {
@@ -135,9 +174,82 @@ bool cfgpull::loop() {
 
 		resp.make_nonclose();
 		// Pull config.
+		FIL f;
+		f_open(&f, "0:/config.json.tmp", FA_CREATE_ALWAYS | FA_WRITE);
 
+		size_t remain = resp.content_length();
+		uint8_t buf[64];
+		while (remain) {
+			size_t len = resp(buf, std::min<size_t>(64, remain));
+			if (!len) {
+				ESP_LOGW(TAG, "failed to dw cfg");
+				f_close(&f);
+				return false;
+			}
+			UINT bw;
+			if (f_write(&f, buf, len, &bw)) {
+				ESP_LOGW(TAG, "failed to write cfg");
+			}
+			remain -= len;
+		}
+		f_close(&f);
+		f_unlink("0:/config.json.old");
+		f_rename("0:/config.json", "0:/config.json.old");
+		f_rename("0:/config.json.tmp", "0:/config.json");
+		if (!config::parse_config_from_sd()) {
+			ESP_LOGW(TAG, "new config failed to parse, reinstating old config");
+			f_unlink("0:/config.json.bad");
+			f_rename("0:/config.json", "0:/config.json.bad");
+			f_rename("0:/config.json.old", "0:/config.json");
+			config::parse_config_from_sd();
+			enabled = false; //stop parsing
+			return false;
+		}
+		// new config installed ok
+		ESP_LOGI(TAG, "new config pulled succesfully");
+	}
+
+	if (new_system) {
+		{
+			slots::WebuiStatus current_status;
+			current_status.flags = slots::WebuiStatus::RECEIVING_SYSUPDATE;
+			serial::interface.update_slot(slots::WEBUI_STATUS, current_status);
+		}
+		// download files
+		uint16_t esp_csum, stm_csum;
+
+		if (!pull_single_file_for_update(
+			dwhttp::download_with_callback(pull_host_copy, "/a/esp.bin", headers),
+			"/upd/esp.bin",
+			esp_csum
+		) || !pull_single_file_for_update(
+			dwhttp::download_with_callback(pull_host_copy, "/a/stm.bin", headers),
+			"/upd/stm.bin",
+			stm_csum
+		)) {
+			ESP_LOGE(TAG, "failed to download sysupgrade files, bail");
+			return false;
+		}
+
+		// write checksums
+		FIL f;
+		f_open(&f, "/upd/chck.sum", FA_WRITE | FA_CREATE_ALWAYS);
+		UINT bw;
+		f_write(&f, &esp_csum, 2, &bw);
+		f_write(&f, &stm_csum, 2, &bw);
+		f_close(&f);
+
+		// Set the update state for update
+		f_open(&f, "/upd/state", FA_WRITE | FA_CREATE_ALWAYS);
+		f_putc(0, &f);
+		f_close(&f);
+
+		ESP_LOGI(TAG, "finished pulling update, rebooting");
 	}
 
 	dwhttp::close_connection(pull_host_copy[0] == '_');
+	
+	if (new_system) serial::interface.reset();
+
 	return true;
 }
