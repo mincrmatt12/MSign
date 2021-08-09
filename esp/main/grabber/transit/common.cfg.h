@@ -5,6 +5,6 @@ namespace transit {
 		GTFS
 	};
 
-	//!cfg: holds .transit_implementation, default transit::NONE
+	//!cfg: holds .transit_implementation, default transit::TTC
 	extern TransitImplementation impl;
 }
