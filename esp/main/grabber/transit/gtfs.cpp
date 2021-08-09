@@ -45,7 +45,11 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 			}
 
 			// Resort array
-			std::sort(hstate.times[i], hstate.times[i] + 6);
+			std::sort(hstate.times[i], hstate.times[i] + 6, [](auto a, auto b){
+				if (a == 0) return false;
+				if (b == 0) return true;
+				return a < b;
+			});
 
 			// Update flags
 			hstate.info.flags |= (hstate.info.EXIST_0 << i);
