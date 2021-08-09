@@ -3,6 +3,7 @@
 // begin grabbers
 #include "sccfg.h"
 #include "transit/ttc.h"
+#include "transit/gtfs.h"
 #include "weather.h"
 #include "modelserve.h"
 #include "cfgpull.h"
@@ -17,6 +18,7 @@
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
 		&transit::ttc::ttc_grabber,
+		&transit::gtfs::gtfs_grabber,
 		&weather::weather_grabber,
 		&sccfg::sccfg_grabber,
 		&modelserve::modelserve_grabber,

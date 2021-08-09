@@ -43,6 +43,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 		get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
 		list(APPEND msign_esp_srcs ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c)
 		list(APPEND msign_nmfus_gen ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.h)
+		set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c PROPERTIES COMPILE_OPTIONS "-Wno-unused-label;-Wno-type-limits")
 	endforeach(nmfu_file)
 
 	add_custom_target(msign_parsers DEPENDS ${msign_nmfus_gen})
@@ -52,6 +53,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(multipart_header "")
 	add_nmfu_target(tdsb_logintoken "")
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
+	add_nmfu_target(gtfs_tripupdate "-finclude-user-ptr")
 
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_LIST_DIR}/config.cpp
 		COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/../confgen/generator.py ${msign_esp_cfg_hdrs} ${CMAKE_CURRENT_LIST_DIR}/config.cpp
