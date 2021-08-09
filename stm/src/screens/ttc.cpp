@@ -164,6 +164,7 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 		if (times[i] < rtc_time) continue;
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
 		if (minutes > 15 && minutes < 32) scale_v = 4;
+		else if (minutes > 31 && minutes < 64) scale_v = 2;
 	}
 
 	for (int i = 0; i < 6; ++i) {
@@ -197,7 +198,7 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 
 		char buf[16] = {0};
 		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		if (minutes > 31) break;
+		if (minutes > 63) break;
 		snprintf(buf, 16, "%dm", (int)minutes);
 
 		if (minutes < 5) {
