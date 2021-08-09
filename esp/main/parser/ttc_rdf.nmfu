@@ -29,7 +29,10 @@ parser {
 
     loop rdf_body {
         case {
-            else -> {/./;}
+            else -> {
+				// explicitly read that character
+				/./;
+			}
             /<\s*channel/ -> {wait "</channel>";}
             /<\s*image/ -> {wait "</image>";}
             /<\s*item/ -> {
@@ -47,14 +50,43 @@ parser {
                         "<title>" -> {wait "</title>";}
                         "<link>" -> {wait "</link>";}
                         "<description>" -> {
-                            ows(); // eat all spaces before message
                             try {
-                                advisory += /\w[^\n\r<>]+/;
+                                optional {
+                                    /[\n\r]+/;
+                                }
+                                loop {
+                                    try {
+                                        case {
+                                            /[^\n\r<>&]/ -> {
+                                                if !($last == ' ' || $last == '\t') || advisory.len > 0 {
+                                                    if $last == '\t' {
+                                                        advisory += [' '];
+                                                    }
+                                                    else {
+                                                        advisory += [$last];
+                                                    }
+                                                }
+                                            }
+                                            "&" -> {
+                                                case {
+                                                    "amp;" -> {advisory += ['&'];}
+                                                    "apos;" -> {advisory += ['\''];}
+                                                    "quot;" -> {advisory += ['"'];}
+                                                    "lt;" -> {advisory += ['<'];}
+                                                    "gt;" -> {advisory += ['>'];}
+                                                    else -> {wait ";";}
+                                                }
+                                            }
+                                        }
+                                    }
+                                    catch (nomatch) {
+                                        break;
+                                    }
+                                }
                             }
                             catch (outofspace) {
                                 // ignore error
                             }
-                            "\n";
                             // TODO: parse "affecting"
                             wait "</description>";
                         }
@@ -63,13 +95,13 @@ parser {
 
                             try {
                                 try {
-                                    date += /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d+[\-+]\d{2}:\d{2}/;
+                                    date += /\d\d\d\d-\d\d-\d\dT\d\d:\d\d:\d\d\.\d+[\-+]\d\d:\d\d/;
                                 }
                                 catch (outofspace) {
                                     date = "";
                                 }
                             }
-                            catch (nomatch) {date = "";}
+                            catch (nomatch) {}
                             wait "</dc:date>";
                         }
                     }

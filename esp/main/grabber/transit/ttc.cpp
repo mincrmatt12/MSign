@@ -1,21 +1,18 @@
 #include "ttc.h"
-#include "../json.h"
-#include "../serial.h"
-#include "../dwhttp.h"
-#include "../wifitime.h"
-#include "../config.h"
+#include "../../json.h"
+#include "../../serial.h"
+#include "../../dwhttp.h"
+#include "../../wifitime.h"
 #include "ttc.cfg.h"
+#include "common.cfg.h"
 
 #include <algorithm>
 #include <esp_log.h>
-
-extern "C" {
 #include <ttc_rdf.h>
-};
 
 const static char * TAG = "ttc";
 
-namespace ttc {
+namespace transit::ttc {
 	void update_ttc_entry_name(size_t n, const char * value) {
 		serial::interface.update_slot(slots::TTC_NAME_1 + n, value);
 	}
@@ -26,7 +23,7 @@ namespace ttc {
 	// Populate the info and times with the information for this slot.
 	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6]) {
 		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=ttc&stopId=%d", entry.stopid);
+		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code, entry.stopid);
 
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
 		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
@@ -171,6 +168,8 @@ namespace ttc {
 	}
 
 	bool loop() {
+		if (transit::impl != transit::TTC) return true;
+
 		slots::TTCInfo x{};
 		for (uint8_t slot = 0; slot < 3; ++slot) {
 			uint64_t local_times[6];
@@ -193,34 +192,15 @@ namespace ttc {
 	}
 }
 
-const static char * xml_entities[] = {
-	"&amp;", "&",
-	"&apos;", "'",
-	nullptr
-};
-
-bool replace_xml_ent(char *in, const char* search, const char* repl) {
-	char * pos = strstr(in, search);
-	if (pos) {
-		char * newoff = pos + strlen(repl);
-		char * oldoff = pos + strlen(search);
-		char * end = in + strlen(in) + 1;
-
-		memmove(newoff, oldoff, end-oldoff);
-		memcpy(pos, repl, strlen(repl));
-	}
-	return pos;
-}
-
 extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
-	if (!ttc::alert_search) return;
-	ttc::AlertParserState& ps = *reinterpret_cast<ttc::AlertParserState *>(state->userptr);
+	if (!transit::ttc::alert_search) return;
+	transit::ttc::AlertParserState& ps = *reinterpret_cast<transit::ttc::AlertParserState *>(state->userptr);
 
 	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
 
 	// Check all semicolon separated entries
 	{
-		char * search_query = strdup(ttc::alert_search);
+		char * search_query = strdup(transit::ttc::alert_search);
 		char * token = strtok(search_query, ";");
 		bool found = false;
 		while (token && strlen(token)) {
@@ -255,15 +235,6 @@ extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) 
 		if (strcasestr(state->c.advisory, "no service")) {
 			ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
 		}
-	}
-
-	// Try and replace all known xml entities
-	while (true) {
-		bool any = false;
-		for (const char ** i = &xml_entities[0]; i[0] != nullptr; i += 2) {
-			any |= replace_xml_ent(state->c.advisory, i[0], i[1]);
-		}
-		if (!any) break;
 	}
 
 	size_t newlength = strlen(state->c.advisory);

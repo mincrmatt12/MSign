@@ -1,9 +1,9 @@
 #ifndef TTC_H
 #define TTC_H
 
-#include "grab.h"
+#include "../grab.h"
 
-namespace ttc {
+namespace transit::ttc {
 	void init();
 	bool loop();
 

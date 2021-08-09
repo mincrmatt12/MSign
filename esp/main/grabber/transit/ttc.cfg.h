@@ -1,10 +1,13 @@
 #include <stddef.h>
 #include <stdint.h>
-#include "../config.h"
+#include "../../config.h"
 
-namespace ttc {
+namespace transit::ttc {
 	//!cfg: holds .ttc.alert_search
 	extern const char * alert_search;
+
+	//!cfg: holds .ttc.agency_code, default "ttc"
+	extern const char * agency_code;
 
 	//!cfg: receives .ttc.entries[$n].name
 	void update_ttc_entry_name(size_t n, const char * value);
