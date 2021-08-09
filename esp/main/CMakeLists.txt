@@ -43,7 +43,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 		get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
 		list(APPEND msign_esp_srcs ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c)
 		list(APPEND msign_nmfus_gen ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.h)
-		set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c PROPERTIES COMPILE_OPTIONS "-Wno-unused-label;-Wno-type-limits")
+		set_source_files_properties(${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c PROPERTIES COMPILE_OPTIONS "-Wno-unused-label;-Wno-type-limits;-O3")
 	endforeach(nmfu_file)
 
 	add_custom_target(msign_parsers DEPENDS ${msign_nmfus_gen})

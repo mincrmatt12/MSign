@@ -509,7 +509,10 @@ namespace dwhttp {
 					}
 				}
 				last_server = host;
-				
+
+				// Initialize http request parser
+				http_client_start(&state);
+
 				// Send request
 				if (!(socket.write(method) && 
 					socket.write(" ") &&
@@ -566,9 +569,6 @@ namespace dwhttp {
 				}
 
 				socket.flush();
-
-				// Initialize http request parser
-				http_client_start(&state);
 
 				while (true) {
 					uint8_t buf;

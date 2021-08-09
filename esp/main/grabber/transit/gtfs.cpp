@@ -27,7 +27,7 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 		if (e.route_id == nullptr || e.stop_id == nullptr) break;
 
 		if (strcmp(state->c.route_id, e.route_id) == 0 && strcmp(state->c.stop_id, e.stop_id) == 0) {
-			ESP_LOGD(TAG, "matched on %s-%s, %d", state->c.route_id, state->c.stop_id, (int)(state->c.at_time / 1000));
+			ESP_LOGD(TAG, "matched on %s-%s, %d", state->c.route_id, state->c.stop_id, (int)(state->c.at_time));
 			auto& hstate = *reinterpret_cast<TripParserState *>(state->userptr);
 			// Update entry
 			auto minmax = std::minmax_element(hstate.times[i], hstate.times[i] + 6);
@@ -39,7 +39,8 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 
 			for (int j = 0; j < 6; ++j) {
 				if (hstate.times[i][j] == replace) {
-					hstate.times[i][j] = wifi::millis_to_local(state->c.at_time);
+					hstate.times[i][j] = wifi::millis_to_local(state->c.at_time * 1000);
+					break;
 				}
 			}
 
@@ -77,7 +78,7 @@ namespace transit::gtfs {
 		}
 
 		auto remain = req.content_length();
-		uint8_t buf[256];
+		uint8_t buf[768];
 
 		gtfs_tripupdate_state_t parser;
 		TripParserState tps;
@@ -89,7 +90,7 @@ namespace transit::gtfs {
 
 		while (remain) {
 			auto recvd = req(buf, std::min<size_t>(sizeof buf, remain));
-			if (recvd == -1) {
+			if (recvd == -1 || recvd == 0) {
 				ESP_LOGE(TAG, "eof during dw");
 				return false;
 			}
