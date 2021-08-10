@@ -13,6 +13,12 @@ const static char* TAG = "weather";
 void weather::init() {
 }
 
+namespace weather {
+	int16_t cvt_temp(float t) {
+		return (t * 100);
+	}
+}
+
 bool weather::loop() {
 	// Do a weather update.
 	
@@ -34,7 +40,7 @@ bool weather::loop() {
 	slots::WeatherInfo info;
 	slots::WeatherTimes suntimes;
 	slots::WeatherStateArrayCode state_data[24];
-	float temp_over_day[24];
+	int16_t temp_over_day[24];
 	bool use_next_hour_summary = false;
 
 	json::JSONParser w_parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
@@ -48,7 +54,7 @@ bool weather::loop() {
 			
 			if (strcmp(stack[2]->name, "apparentTemperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
-				info.ctemp = v.as_number();
+				info.ctemp = cvt_temp(v.as_number());
 				ESP_LOGD(TAG, "temp = %f", v.float_val);
 			}
 			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
@@ -57,7 +63,7 @@ bool weather::loop() {
 			}
 			else if (strcmp(stack[2]->name, "temperature") == 0 && v.is_number()) {
 				// Store the apparent temperature
-				info.crtemp = v.as_number();
+				info.crtemp = cvt_temp(v.as_number());
 				ESP_LOGD(TAG, "rtemp = %f", v.float_val);
 			}
 		}
@@ -83,7 +89,7 @@ bool weather::loop() {
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "hourly") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() &&
 				stack[2]->index < 24) {
 			if (strcmp(stack[3]->name, "apparentTemperature") == 0 && v.is_number()) {
-				temp_over_day[stack[2]->index] = v.as_number();
+				temp_over_day[stack[2]->index] = cvt_temp(v.as_number());
 			}
 			else if (strcmp(stack[3]->name, "icon") == 0 && v.type == json::Value::STR) {
 				// Part 1 of algorithm; assume we get icon first and set upper nybble
@@ -147,12 +153,12 @@ bool weather::loop() {
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
 			if (strcmp(stack[3]->name, "apparentTemperatureHigh") == 0 && v.is_number()) {
 				// Store the high apparent temperature
-				info.htemp = v.as_number();
+				info.htemp = cvt_temp(v.as_number());
 				ESP_LOGD(TAG, "htemp = %f", v.as_number());
 			}
 			else if (strcmp(stack[3]->name, "apparentTemperatureLow") == 0 && v.is_number()) {
 				// Store the low apparent temperature
-				info.ltemp = v.as_number();
+				info.ltemp = cvt_temp(v.as_number());
 				ESP_LOGD(TAG, "ltemp = %f", v.as_number());
 			}
 			else if (strcmp(stack[3]->name, "sunriseTime") == 0 && v.type == json::Value::INT) {

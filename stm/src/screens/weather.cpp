@@ -6,6 +6,7 @@
 #include "../fonts/dejavu_10.h"
 #include "../fonts/tahoma_9.h"
 #include "../fonts/lcdpixel_6.h"
+#include "../intmath.h"
 
 #include "../draw.h"
 #include <time.h>
@@ -221,40 +222,46 @@ screen::WeatherScreen::~WeatherScreen() {
 
 void screen::WeatherScreen::draw_currentstats() {
 	char disp_buf[16];
-	float ctemp = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ctemp;
-	snprintf(disp_buf, 16, "%.01f", ctemp);
+	auto ctemp = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ctemp;
+	{
+		auto v = intmath::round10(ctemp, (int16_t)10);
+		snprintf(disp_buf, 16, "%d.%d", v / 10, std::abs(v % 10));
+	}
 
 	uint16_t text_size;
 
 	text_size = draw::text_size(disp_buf, font::lato_bold_15::info);
 
-	if (ctemp > 10.0 && ctemp < 16.0) {
+	if (ctemp > 1000 && ctemp < 1600) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 240_c);
 	}
-	else if (ctemp < 10.0 && ctemp > -10.0) {
+	else if (ctemp < 1000 && ctemp > -1000) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100_c);
 	}
-	else if (ctemp >= 16.0 && ctemp < 30.0) {
+	else if (ctemp >= 1000 && ctemp < 3000) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {50_c, 240_c, 50_c});
 	}
-	else if (ctemp >= 30.0) {
+	else if (ctemp >= 3000) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {250_c, 30_c, 30_c});
 	}
 	else {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {40_c, 40_c, 255_c});
 	}
 
-	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp);
+	snprintf(disp_buf, 16, "%d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp));
 	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
 
-	snprintf(disp_buf, 16, "\xfd %.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
+	snprintf(disp_buf, 16, "\xfd %d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
-	snprintf(disp_buf, 16, "%.0f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp);
+	snprintf(disp_buf, 16, "%d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
 	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 69-text_size, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
 
-	snprintf(disp_buf, 16, "%.01f", servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp);
-	text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
-	draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c);
+	{
+		auto v = intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp, (int16_t)10);
+		snprintf(disp_buf, 16, "%d.%d", v / 10, std::abs(v % 10));
+		text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
+		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c);
+	}
 
 	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 3));
 
@@ -404,53 +411,58 @@ void screen::WeatherScreen::draw_graph(int left_, int bottom_) {
 	draw::rect(matrix.get_inactive_buffer(), left_, bottom_, 128, bottom_ + 1, 50_c);
 	draw::rect(matrix.get_inactive_buffer(), left_, 0, left_ + 1, bottom_ + 1, 50_c);
 
-	const float * tempgraph_data = *servicer.slot<float *>(slots::WEATHER_TEMP_GRAPH);
-	const float space = bottom_;
+	const int16_t * tempgraph_data = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
+	const int32_t space = bottom_;
 
-	float min_ = 10000, max_ = -10000;
+	int32_t min_ = INT16_MAX, max_ = INT16_MIN;
 	for (uint8_t i = 0; i < 24; ++i) {
-		min_ = std::min(min_, tempgraph_data[i]);
-		max_ = std::max(max_, tempgraph_data[i]);
+		min_ = std::min<int32_t>(min_, tempgraph_data[i]);
+		max_ = std::max<int32_t>(max_, tempgraph_data[i]);
 	}
 
 	// The actual min/max is rounded down/up +/- 1
-	min_ = std::floor(min_) - 1.f;
-	max_ = std::ceil(max_) + 1.f;
-	
-	auto tickmark = [bottom_, left_](int16_t x, int16_t y, float v){
-		matrix.get_inactive_buffer().at(x, y) = led::color_t(95_c);
+	min_ = intmath::floor10(min_)*100 - 100;
+	max_ = intmath::ceil10(max_)*100 + 100;
+
+	auto vert_mark = [left_](int16_t y, int32_t v){
+		matrix.get_inactive_buffer().at(left_ - 1, y) = led::color_t(95_c);
 
 		char buf[10] = {0};
-		snprintf(buf, 10, "%02.0f", v);
-		if (y == bottom_ + 1 && left_ < 32) {
-			snprintf(buf, 10, "%02.0f:00", v);
-		}
+		snprintf(buf, 10, "%d", intmath::round10(v));
 
-		if (x == left_ - 1) {
-			int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
-			x -= sz - 1;
-			y += 3;
-			if (y < 5) y = 5;
-		}
-		else {
-			y += 6;
-		}
+		int16_t sz = draw::text_size(buf, font::lcdpixel_6::info);
+		int16_t x = left_ - sz - 2;
+		y += 3;
+		if (y < 5) y = 5;
 
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 120_c);
 	};
 
+	auto hori_mark = [bottom_, left_](int16_t x, int hr) {
+		matrix.get_inactive_buffer().at(x, bottom_ + 1) = led::color_t(95_c);
+
+		char buf[10] = {0};
+		snprintf(buf, 10, "%02d", hr);
+
+		if (left_ < 64) {
+			draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, bottom_ + 7, buf, 0x9dd3e3_cc, ":00", 120_c);
+		}
+		else {
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, bottom_ + 7, 120_c);
+		}
+	};
+
 	// based on min/max, figure out minimum offset:
 	
-	float each_pixel_is = (max_ - min_) / space;
-	float tickmark_min = std::ceil(each_pixel_is * 6);
+	int32_t tickmark_min = intmath::ceil10(6 * (max_ - min_) / space);
 
 	for (int i = 0;; ++i) {
-		float value = tickmark_min * i;
-		int position = std::round((space - 1) - (space * value / (max_ - min_)));
+		int32_t value = (tickmark_min * i) * 100;
+		int32_t pos = intmath::round10((space*100 - 100) - ((space * value * 100) / (max_ - min_)));
 
-		if (position < 0) break;
+		if (pos < 0) break;
 
-		tickmark(left_ - 1, position, value + min_);
+		vert_mark(pos, value + min_);
 	}
 
 	struct tm timedat;
@@ -460,22 +472,16 @@ void screen::WeatherScreen::draw_graph(int left_, int bottom_) {
 
 
 	if (left_ < 64) {
-		const float horiztick = (128 - left_ - 1) / 6.f;
-
-		tickmark(left_ + 1, bottom_ + 1, first);
-		tickmark(left_ + 1 + horiztick, bottom_ + 1, (first + 4) % 24);
-		tickmark(left_ + 1 + horiztick * 2, bottom_ + 1, (first + 8) % 24);
-		tickmark(left_ + 1 + horiztick * 3, bottom_ + 1, (first + 12) % 24);
-		tickmark(left_ + 1 + horiztick * 4, bottom_ + 1, (first + 16) % 24);
-		tickmark(left_ + 1 + horiztick * 5, bottom_ + 1, (first + 20) % 24);
+		for (int i = 0; i < 6; ++i) {
+			int pos = left_ + 1 + (i*(128 - left_ - 1)) / 6;
+			hori_mark(pos, (first + i * 4) % 24);
+		}
 	}
 	else {
-		const float horiztick = (128 - left_ - 1) / 4.f;
-
-		tickmark(left_ + 1, bottom_ + 1, first);
-		tickmark(left_ + 1 + horiztick, bottom_ + 1, (first + 6) % 24);
-		tickmark(left_ + 1 + horiztick * 2, bottom_ + 1, (first + 12) % 24);
-		tickmark(left_ + 1 + horiztick * 3, bottom_ + 1, (first + 18) % 24);
+		for (int i = 0; i < 6; ++i) {
+			int pos = left_ + 1 + (i*(128 - left_ - 1)) / 4;
+			hori_mark(pos, (first + i * 6) % 24);
+		}
 	}
 
 	for (int hour = 0; hour < 24; ++hour) {
@@ -484,25 +490,24 @@ void screen::WeatherScreen::draw_graph(int left_, int bottom_) {
 		begin += left_ + 1;
 		end += left_ + 1;
 
-		float diff = space / (max_ - min_);
+		int16_t y0 = intmath::round10((int32_t(tempgraph_data[hour] - min_) * space * 100) / (max_ - min_));
+		int16_t y1 = (hour == 23 ? y0 : intmath::round10((int32_t(tempgraph_data[hour + 1] - min_) * space * 100) / (max_ - min_)));
 
-		int16_t y0 = std::round((tempgraph_data[hour] - min_) * diff);
-		int16_t y1 = (hour == 23 ? y0 : std::round((tempgraph_data[hour + 1] - min_) * diff));
 		y0 = bottom_ - 1 - y0;
 		y1 = bottom_ - 1 - y1;
 		if (hour == 23) y1 = y0;
 
-		float ctemp = tempgraph_data[hour];
-		if (ctemp >= 10.0 && ctemp < 16.0) {
+		auto ctemp = tempgraph_data[hour];
+		if (ctemp >= 1000 && ctemp < 1600) {
 			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, 255_c);
 		}
-		else if (ctemp > -10.0 && ctemp < 10.0) {
+		else if (ctemp > -1000 && ctemp < 1000) {
 			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {100_c, 100_c, 240_c});
 		}
-		else if (ctemp >= 16.0 && ctemp < 30.0) {
+		else if (ctemp >= 1600 && ctemp < 3000) {
 			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {50_c, 240_c, 50_c});
 		}
-		else if (ctemp >= 30.0) {
+		else if (ctemp >= 3000) {
 			draw::line(matrix.get_inactive_buffer(), begin, y0, end, y1, {250_c, 30_c, 30_c});
 		}
 		else {
@@ -535,7 +540,7 @@ void screen::WeatherScreen::draw() {
 		// TODO: more info, for now just draw the graph enlarged
 		if (!servicer.slot(slots::WEATHER_TEMP_GRAPH)) {
 			// show loading spinner (TODO)
-			draw::text(matrix.get_inactive_buffer(), "loading", font::dejavusans_10::info, 55, 34, 0xff_c);
+			draw::text(matrix.get_inactive_buffer(), "loading", font::dejavusans_10::info, 50, 34, 0xff_c);
 		}
 		else {
 			draw_graph(14, 64-8);

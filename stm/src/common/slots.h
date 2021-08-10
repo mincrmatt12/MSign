@@ -31,7 +31,7 @@ namespace slots {
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRING; weather status string
 		WEATHER_ARRAY = 0x46,       // STRING; list of ENUMS for the state per-hour
-		WEATHER_TEMP_GRAPH = 0x41,  // FLOAT[]; temp data per hour
+		WEATHER_TEMP_GRAPH = 0x41,  // INT16_T[]; temp data per hour (/100)
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
@@ -80,10 +80,11 @@ namespace slots {
 	};
 
 	struct WeatherInfo {
-		float ctemp;
-		float ltemp;
-		float htemp;
-		float crtemp;
+		// all temperatures are stored in centidegrees celsius
+		int16_t ctemp;
+		int16_t ltemp;
+		int16_t htemp;
+		int16_t crtemp;
 	};
 
 	struct WeatherTimes {
