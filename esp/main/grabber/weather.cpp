@@ -4,6 +4,7 @@
 #include "../dwhttp.h"
 #include "../json.h"
 #include "../wifitime.h"
+#include <memory>
 #include <string.h>
 #include <esp_log.h>
 #include "weather.cfg.h"
@@ -37,10 +38,14 @@ bool weather::loop() {
 		return false;
 	}
 
-	slots::WeatherInfo info;
+	slots::WeatherInfo info{};
 	slots::WeatherTimes suntimes;
 	slots::WeatherStateArrayCode state_data[24];
-	int16_t temp_over_day[24];
+	int16_t temp_over_day[24]{};
+	int16_t rtemp_over_day[24]{};
+	int16_t wind_over_day[24]{};
+	std::unique_ptr<slots::PrecipData []> hourly_precip;
+	std::unique_ptr<slots::PrecipData []> minutely_precip;
 	bool use_next_hour_summary = false;
 
 	json::JSONParser w_parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
@@ -91,6 +96,9 @@ bool weather::loop() {
 			if (strcmp(stack[3]->name, "apparentTemperature") == 0 && v.is_number()) {
 				temp_over_day[stack[2]->index] = cvt_temp(v.as_number());
 			}
+			else if (strcmp(stack[3]->name, "temperature") == 0 && v.is_number()) {
+				rtemp_over_day[stack[2]->index] = cvt_temp(v.as_number());
+			}
 			else if (strcmp(stack[3]->name, "icon") == 0 && v.type == json::Value::STR) {
 				// Part 1 of algorithm; assume we get icon first and set upper nybble
 				
@@ -133,7 +141,7 @@ bool weather::loop() {
 					else if (v.as_number() < 2.5) {
 						state_data[stack[2]->index] = slots::WeatherStateArrayCode::LIGHT_RAIN;
 					}
-					else if (v.as_number() < 10) {
+					else if (v.as_number() < 5) {
 						state_data[stack[2]->index] = slots::WeatherStateArrayCode::RAIN;
 					}
 					else {
@@ -148,6 +156,45 @@ bool weather::loop() {
 						state_data[stack[2]->index] = slots::WeatherStateArrayCode::HEAVY_SNOW;
 					}
 				}
+
+				if (v.as_number() > 0.f) {
+					// Additionally, load into/create precip array
+					if (!hourly_precip) hourly_precip.reset(new slots::PrecipData[24]{});
+					hourly_precip[stack[2]->index].amount = cvt_temp(v.as_number());
+				}
+			}
+			else if (strcmp(stack[3]->name, "precipIntensityError") == 0 && v.is_number()) {
+				if (!hourly_precip) hourly_precip.reset(new slots::PrecipData[24]{});
+				hourly_precip[stack[2]->index].stddev = cvt_temp(v.as_number());
+			}
+			else if (strcmp(stack[3]->name, "precipProbability") == 0 && v.is_number() && v.as_number() > 0.f) {
+				if (!hourly_precip) hourly_precip.reset(new slots::PrecipData[24]{});
+				hourly_precip[stack[2]->index].probability = uint8_t(v.as_number() * 255.f);
+			}
+			else if (strcmp(stack[3]->name, "precipType") == 0 && v.type == v.STR && strcmp(v.str_val, "rain")) {
+				if (!hourly_precip) hourly_precip.reset(new slots::PrecipData[24]{});
+				hourly_precip[stack[2]->index].is_snow = true;
+			}
+			else if (strcmp(stack[3]->name, "windSpeed") == 0 && v.is_number()) {
+				wind_over_day[stack[2]->index] = v.as_number() * 100;
+			}
+		}
+		else if (stack_ptr == 4 && strcmp(stack[1]->name, "minutely") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() && stack[2]->index < 60 && !stack[2]->index % 2) {
+			if (strcmp(stack[3]->name, "precipIntensity") ==0 && v.is_number() && v.as_number() > 0.f) {
+				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
+				minutely_precip[stack[2]->index / 2].amount = cvt_temp(v.as_number());
+			}
+			else if (strcmp(stack[3]->name, "precipIntensityError") == 0 && v.is_number()) {
+				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
+				minutely_precip[stack[2]->index / 2].stddev = cvt_temp(v.as_number());
+			}
+			else if (strcmp(stack[3]->name, "precipProbability") == 0 && v.is_number() && v.as_number() > 0.f) {
+				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
+				minutely_precip[stack[2]->index / 2].probability = uint8_t(v.as_number() * 255.f);
+			}
+			else if (strcmp(stack[3]->name, "precipType") == 0 && v.type == v.STR && strcmp(v.str_val, "rain")) {
+				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
+				minutely_precip[stack[2]->index / 2].is_snow = true;
 			}
 		}
 		else if (stack_ptr == 4 && strcmp(stack[1]->name, "daily") == 0 && stack[2]->is_array() && strcmp(stack[2]->name, "data") == 0 && stack[2]->index == 0) {
@@ -183,6 +230,19 @@ bool weather::loop() {
 	serial::interface.update_slot_nosync(slots::WEATHER_ARRAY, state_data);
 	serial::interface.update_slot_nosync(slots::WEATHER_TEMP_GRAPH, temp_over_day);
 	serial::interface.update_slot_nosync(slots::WEATHER_TIME_SUN, suntimes);
+
+	serial::interface.update_slot_nosync(slots::WEATHER_RTEMP_GRAPH, rtemp_over_day);
+	serial::interface.update_slot_nosync(slots::WEATHER_WIND_GRAPH, wind_over_day);
+
+	if (minutely_precip) {
+		serial::interface.update_slot_raw(slots::WEATHER_MPREC_GRAPH, minutely_precip.get(), sizeof(slots::PrecipData)*30, false);
+	}
+	else serial::interface.delete_slot(slots::WEATHER_MPREC_GRAPH);
+
+	if (hourly_precip) {
+		serial::interface.update_slot_raw(slots::WEATHER_HPREC_GRAPH, hourly_precip.get(), sizeof(slots::PrecipData)*24, false);
+	}
+	else serial::interface.delete_slot(slots::WEATHER_HPREC_GRAPH);
 
 	// Sync
 	serial::interface.sync();

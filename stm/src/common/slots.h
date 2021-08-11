@@ -31,8 +31,14 @@ namespace slots {
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRING; weather status string
 		WEATHER_ARRAY = 0x46,       // STRING; list of ENUMS for the state per-hour
-		WEATHER_TEMP_GRAPH = 0x41,  // INT16_T[]; temp data per hour (/100)
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
+
+		WEATHER_TEMP_GRAPH = 0x4a,  // INT16_T[]; feels like temp data per hour (/100)
+		WEATHER_RTEMP_GRAPH = 0x4b, // INT16_T[]; real temp data per hour (/100)
+		WEATHER_WIND_GRAPH = 0x4c,  // INT16_T[]; wind strength per hour (/100)
+
+		WEATHER_HPREC_GRAPH = 0x4d, // STRUCT[]; PrecipData, temp data per hour 
+		WEATHER_MPREC_GRAPH = 0x4d, // STRUCT[]; PrecipData, temp data per minute (decimated to every 2 minutes)
 
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
@@ -126,6 +132,13 @@ namespace slots {
 	struct ModelInfo {
 		uint16_t tri_count;
 		bool use_lighting;
+	};
+
+	struct PrecipData {
+		uint8_t is_snow; // is this preciptation snowy
+		uint8_t probability; // from 0-255 as 0.0-1.0
+		int16_t stddev; // precipitation error (0 if unknown) * 100
+		int16_t amount; // mm / hr * 100
 	};
 
 	struct Vec3 {
