@@ -38,7 +38,7 @@ namespace slots {
 		WEATHER_WIND_GRAPH = 0x4c,  // INT16_T[]; wind strength per hour (/100)
 
 		WEATHER_HPREC_GRAPH = 0x4d, // STRUCT[]; PrecipData, temp data per hour 
-		WEATHER_MPREC_GRAPH = 0x4d, // STRUCT[]; PrecipData, temp data per minute (decimated to every 2 minutes)
+		WEATHER_MPREC_GRAPH = 0x4e, // STRUCT[]; PrecipData, temp data per minute (decimated to every 2 minutes)
 
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data

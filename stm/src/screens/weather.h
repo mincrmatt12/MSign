@@ -21,7 +21,7 @@ namespace screen {
 		void draw_hourlybar(uint8_t hour);
 		void draw_status();
 
-		void draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax);
+		void draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax, bool show_decimal=false);
 		void draw_graph_xaxis(int16_t y, int16_t x0, int16_t y1, int min, bool interpret_as_hours=true);
 
 		void draw_graph_lines(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const int16_t * data, size_t amount, int32_t ymin, int32_t ymax, bool show_temp_colors=false);

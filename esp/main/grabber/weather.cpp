@@ -179,10 +179,11 @@ bool weather::loop() {
 				wind_over_day[stack[2]->index] = v.as_number() * 100;
 			}
 		}
-		else if (stack_ptr == 4 && strcmp(stack[1]->name, "minutely") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() && stack[2]->index < 60 && !stack[2]->index % 2) {
+		else if (stack_ptr == 4 && strcmp(stack[1]->name, "minutely") == 0 && strcmp(stack[2]->name, "data") == 0 && stack[2]->is_array() && stack[2]->index < 60 && stack[2]->index % 2 == 0) {
 			if (strcmp(stack[3]->name, "precipIntensity") ==0 && v.is_number() && v.as_number() > 0.f) {
 				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
 				minutely_precip[stack[2]->index / 2].amount = cvt_temp(v.as_number());
+				ESP_LOGD(TAG, "got minute precip %d = %d", stack[2]->index,	minutely_precip[stack[2]->index / 2].amount);
 			}
 			else if (strcmp(stack[3]->name, "precipIntensityError") == 0 && v.is_number()) {
 				if (!minutely_precip) minutely_precip.reset(new slots::PrecipData[30]{});
