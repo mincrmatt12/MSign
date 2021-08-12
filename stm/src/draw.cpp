@@ -256,6 +256,17 @@ namespace draw {
 				detail::line_impl_high(fb, x0, y0, x1, y1, rgb);
 		}
 	}
+
+	int32_t fastsin(int32_t in, int32_t fac, int32_t fac_out) {
+		if (fac_out == 0) return 0;
+		int32_t phase = in % (fac * 2);
+		if (phase > fac) return -fastsin(phase - fac, fac, fac_out);
+		if (phase > fac / 2) return fastsin(fac - phase, fac, fac_out);
+		if (phase == fac / 2) return fac_out;
+		int32_t raw = sin_table[(phase*512)/fac];
+		if (!fac_out) fac_out = fac;
+		return (raw * fac_out) / INT16_MAX;
+	}
 }
 
 uint8_t draw::frame_parity = 0;

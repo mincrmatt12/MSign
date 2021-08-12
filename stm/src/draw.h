@@ -77,16 +77,7 @@ namespace draw {
 	// Computes an approximation of sin((in/fac)*pi)*fac_out.
 	//
 	// If fac_out > INT16_MAX, overflow will occur
-	inline int32_t fastsin(int32_t in, int32_t fac=1500, int32_t fac_out=1500) {
-		if (fac_out == 0) return 0;
-		int32_t phase = in % (fac * 2);
-		if (phase > fac) return -fastsin(phase - fac, fac, fac_out);
-		if (phase > fac / 2) return fastsin(fac - phase, fac, fac_out);
-		if (phase == fac / 2) return fac_out;
-		int32_t raw = sin_table[(phase*512)/fac];
-		if (!fac_out) fac_out = fac;
-		return (raw * fac_out) / INT16_MAX;
-	}
+	int32_t fastsin(int32_t in, int32_t fac=1500, int32_t fac_out=1500); 
 
 	// Gamma correct an entire color
 	led::color_t cvt(led::color_t in);
