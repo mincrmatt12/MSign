@@ -338,12 +338,101 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 51, 52, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
 }
 
+void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, int16_t y1, slots::WeatherStateArrayCode code, const char* &text_out, int64_t hourstart, bool vert) {
+	led::color_t col(127), hatch(127);
+	bool do_hatch = false;
+
+	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
+
+	switch (code) {
+		case slots::WeatherStateArrayCode::CLEAR:
+			text_out = "Clear";
+			{
+				// Do sunrise filling
+				if (vert) {
+					for (auto y = y0; y < y1; ++y) {
+						int64_t effective = (((int64_t)(y - y0) * (1000*60*60)) / (y1 - y0) + hourstart);
+						if (effective > times.sunrise && effective < times.sunset) {
+							draw::rect(matrix.get_inactive_buffer(), x0, y, x1, y + 1, {210_c, 200_c, 0});
+						}
+						else {
+							draw::rect(matrix.get_inactive_buffer(), x0, y, x1, y + 1, 0);
+						}
+					}
+				}
+				else {
+					for (auto x = x0; x < x1; ++x) {
+						int64_t effective = (((int64_t)(x - x0) * (1000*60*60)) / (x1 - x0) + hourstart);
+						if (effective > times.sunrise && effective < times.sunset) {
+							draw::rect(matrix.get_inactive_buffer(), x, y0, x + 1, y1, {210_c, 200_c, 0});
+						}
+						else {
+							draw::rect(matrix.get_inactive_buffer(), x, y0, x + 1, y1, 0);
+						}
+					}
+				}
+			}
+			return;
+		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
+			text_out = "Partly cloudy";
+			col = led::color_t(130); break;
+		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
+			text_out = "Mostly cloudy";
+			col = led::color_t(80); break;
+		case slots::WeatherStateArrayCode::OVERCAST:
+			text_out = "Overcast";
+			col = led::color_t(50); break;
+
+		case slots::WeatherStateArrayCode::SNOW:
+			text_out = "Snow";
+			col = led::color_t(200);
+			hatch = led::color_t(80);
+			do_hatch = true;
+		    break;
+		case slots::WeatherStateArrayCode::HEAVY_SNOW:
+			text_out = "Heavy snow";
+			col = led::color_t(255);
+			hatch = led::color_t(40);
+			do_hatch = true;
+			break;
+		case slots::WeatherStateArrayCode::DRIZZLE:
+			text_out = "Drizzle";
+			col.r = col.g = 30_c;
+			col.b = 90_c;
+			break;
+		case slots::WeatherStateArrayCode::LIGHT_RAIN:
+			text_out = "Light rain";
+			col.r = col.g = 30_c;
+			col.b = 150_c;
+			break;
+		case slots::WeatherStateArrayCode::RAIN:
+			text_out = "Rain";
+			col.r = col.g = 55_c;
+			col.b = 220_c;
+			break;
+		case slots::WeatherStateArrayCode::HEAVY_RAIN:
+			text_out = "Heavy rain";
+			col.r = col.g = 60_c;
+			col.b = 255_c;
+			hatch.r = hatch.g = 50_c;
+			hatch.b = 100_c;
+			do_hatch = true;
+			break;
+		default:
+			text_out = "Unknown";
+			break;
+	}
+
+	if (do_hatch) 
+		draw::hatched_rect(matrix.get_inactive_buffer(), x0, y0, x1, y1, col, hatch);
+	else
+		draw::rect(matrix.get_inactive_buffer(), x0, y0, x1, y1, col);
+}
+
 void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	int start = 4 + hour * 5;
 	int end =   9 + hour * 5;
 
-	led::color_t col(127), hatch(127);
-	bool do_hatch = false;
     slots::WeatherStateArrayCode code = (*servicer.slot<slots::WeatherStateArrayCode *>(slots::WEATHER_ARRAY))[hour]; 
 	
 	struct tm timedat;
@@ -352,64 +441,89 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 	hour = (timedat.tm_hour + hour) % 24;
 	int64_t hourstart = (int64_t)hour * (1000*60*60);
 
+	const char* dummy;
+	fill_hourlybar(start, 40, end, 51, code, dummy, hourstart);
+}
+
+void screen::WeatherScreen::draw_big_hourlybar() {
+	// BIG HBAR:
+	//
+	// ---------------------------------
+	// |  
+	// |  |---| --- TEXT TEXT
+	// |  |///|
+	// |  |///|
+	// |   ... scrolls
+	
+	const int leftside = 20; // configurable to allow for potential icons on left gutter (like sunrise/sunset)
+	const int topside = 5;
+	const int barwidth = 8;
+	const int segmentheight = 10;
+	const int linewidth = 3;
+	const int labelheight = 9;
+	const int labelbase = 2;
+
+	slots::WeatherStateArrayCode last = slots::WeatherStateArrayCode::UNK;
+	auto& blk = servicer.slot<slots::WeatherStateArrayCode *>(slots::WEATHER_ARRAY);
 	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
 
-	switch (code) {
-		case slots::WeatherStateArrayCode::CLEAR:
-			if (hourstart > times.sunrise && hourstart < times.sunset) {
-				col.r = 210_c;
-				col.g = 200_c;
-				col.b = 0_c;
+	struct tm timedat;
+	time_t now = rtc_time / 1000;
+	gmtime_r(&now, &timedat);
+
+	bool forcehourlabel = true;
+
+	for (int hour = 0; hour < 24; ++hour) {
+		int offset_y = topside + hour * segmentheight - expanded_hrbar_scroll / 128;
+		if (offset_y + segmentheight < 0) continue; // don't update last to keep a label onscreen
+		if (offset_y > 63) break;
+
+		slots::WeatherStateArrayCode code = blk[hour], next = hour == 23 ? code : blk[hour + 1];
+		int effhour = (timedat.tm_hour + hour) % 24;
+		int64_t hourstart = (int64_t)effhour * (1000*60*60);
+		const char *label;
+
+		// Draw bar + lines
+		draw::rect(matrix.get_inactive_buffer(), leftside, std::max(0, offset_y), leftside + 1, std::max(0, offset_y + segmentheight), 0xff_c);
+		draw::rect(matrix.get_inactive_buffer(), leftside + 1 + barwidth, std::max(0, offset_y), leftside + 1 + barwidth + 1, std::max(0, offset_y + segmentheight), 0xff_c);
+		fill_hourlybar(leftside + 1, std::max(0, offset_y), leftside + 1 + barwidth, std::max(0, offset_y + segmentheight), code, label, hourstart, true);
+
+		// Check if we need a label
+		bool needlabel = std::exchange(last, code) != code;
+		if (needlabel) {
+			int labely = offset_y;
+			if (offset_y < 1) {
+				labely = 1;
+				int maxhgt = (next == code ? 2 * segmentheight : segmentheight);
+				if (labely + labelheight > offset_y + maxhgt) {
+					labely = offset_y + maxhgt - labelheight;
+				}
+			}
+
+			draw::rect(matrix.get_inactive_buffer(), leftside + barwidth + 2 + 2, labely, leftside + barwidth + 2 + 2 + linewidth, labely + 1, 0x99_c);
+			draw::text(matrix.get_inactive_buffer(), label, font::tahoma_9::info, leftside + barwidth + 2 + 2 + linewidth + 2, labely + labelheight - labelbase, 
+				(hourstart < times.sunrise || hourstart > times.sunset) ? 0x55_c : 0xff_c // darker at night
+			);
+		}
+
+		// Now do the same but for left-side labels (hour labels)
+		if (hour % 4 == 0 || forcehourlabel) {
+			int labely = offset_y;
+			int firstpos = std::max(1, topside + 1 - expanded_hrbar_scroll / 128);
+			if (forcehourlabel) {
+				labely = firstpos;
+				forcehourlabel = false;
 			}
 			else {
-				col = led::color_t{0};
+				if (labely < firstpos + 6) continue;
 			}
-			break;
-		
-		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
-			col = led::color_t(130); break;
-		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
-			col = led::color_t(80); break;
-		case slots::WeatherStateArrayCode::OVERCAST:
-			col = led::color_t(50); break;
 
-		case slots::WeatherStateArrayCode::SNOW:
-			col = led::color_t(200);
-			hatch = led::color_t(80);
-			do_hatch = true;
-		    break;
-		case slots::WeatherStateArrayCode::HEAVY_SNOW:
-			col = led::color_t(255);
-			hatch = led::color_t(40);
-			do_hatch = true;
-			break;
-		case slots::WeatherStateArrayCode::DRIZZLE:
-			col.r = col.g = 30_c;
-			col.b = 90_c;
-			break;
-		case slots::WeatherStateArrayCode::LIGHT_RAIN:
-			col.r = col.g = 30_c;
-			col.b = 150_c;
-			break;
-		case slots::WeatherStateArrayCode::RAIN:
-			col.r = col.g = 55_c;
-			col.b = 220_c;
-			break;
-		case slots::WeatherStateArrayCode::HEAVY_RAIN:
-			col.r = col.g = 60_c;
-			col.b = 255_c;
-			hatch.r = hatch.g = 50_c;
-			hatch.b = 100_c;
-			do_hatch = true;
-			break;
-		default:
-			break;
+			char buf[10];
+			snprintf(buf, 10, "%02d:00", effhour);
+			int x = leftside - draw::text_size(buf, font::lcdpixel_6::info);
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, labely + 5, 0xff_c);
+		}
 	}
-
-	if (do_hatch) 
-		draw::hatched_rect(matrix.get_inactive_buffer(), start, 40, end, 51, col, hatch);
-	else
-		draw::rect(matrix.get_inactive_buffer(), start, 40, end, 51, col);
 }
 
 void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax, bool decimals) {
@@ -541,7 +655,6 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const slots::PrecipData * data, size_t amount, int32_t ymin, int32_t ymax) {
 	int32_t space = (y1 - y0);
 
-
 	for (int x = x0; x < x1; ++x) {
 		auto i0 = ((x - x0) * amount) / (x1 - x0 - 1);
 		if (i0 >= amount) i0 = amount-1;
@@ -556,9 +669,10 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 			return data[i0].*memptr + (((int)(data[i1].*memptr) - (int)(data[i0].*memptr)) * (x - px - x0)) / (nx - px);
 		};
 
-		// no interpolation for now; also currently uses floats for trig
-
 		auto prob = interp(&slots::PrecipData::probability);
+
+		if (prob <= 10) continue;
+		int colprob = std::max(100, prob);
 
 		int wiggle = draw::fastsin(timekeeper.current_time + (x-x0)*20, 300, std::max(interp(&slots::PrecipData::stddev), 0));
 		int amt = interp(&slots::PrecipData::amount) + wiggle;
@@ -567,10 +681,18 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		if (pos >= y1) continue;
 		
 		if (data[i0].is_snow) {
-			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200, prob)), draw::cvt((0_ccu).mix(80, prob)));
+			if (prob < 80)
+				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, 60_cc, 30_cc);
+			else 
+				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200, colprob)), draw::cvt((0_ccu).mix(80, colprob)));
 		}
 		else {
-			draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55, 55, 220}, prob))); // todo: diff colors for diff intensities.
+			if (prob < 80) {
+				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, 0x404052_cc); // todo: diff colors for diff intensities.
+			}
+			else {
+				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55, 55, 220}, colprob))); // todo: diff colors for diff intensities.
+			}
 		}
 	}
 }
@@ -767,6 +889,9 @@ void screen::WeatherScreen::draw() {
 	case BIG_GRAPH:
 		draw_big_graphs();
 		break;
+	case BIG_HOURLY:
+		draw_big_hourlybar();
+		break;
 	}
 }
 
@@ -796,8 +921,13 @@ bool screen::WeatherScreen::interact() {
 				subscreen = highlight;
 
 				switch (subscreen) {
-					default: break;
-					case BIG_GRAPH: {
+					default: 
+					{
+						expanded_hrbar_scroll = 0;
+						break;
+					}
+					case BIG_GRAPH: 
+					{
 						graph = FEELS_TEMP;
 						show_graph_selector_timer = xTaskGetTickCount();
 						servicer.set_temperature_all<
@@ -851,6 +981,24 @@ bool screen::WeatherScreen::interact() {
 
 				break;
 			}
+		case BIG_HOURLY:
+			if (ui::buttons[ui::Buttons::NXT]) {
+				expanded_hrbar_scroll += 128*8;
+			}
+			else if (ui::buttons.held(ui::Buttons::NXT, pdMS_TO_TICKS(500))) {
+				expanded_hrbar_scroll += ui::buttons.frame_time() * 6;
+			}
+			else if (ui::buttons[ui::Buttons::PRV]) {
+				expanded_hrbar_scroll -= 128*8;
+			}
+			else if (ui::buttons.held(ui::Buttons::PRV, pdMS_TO_TICKS(500))) {
+				expanded_hrbar_scroll -= ui::buttons.frame_time() * 6;
+			}
+			else if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
+
+			if (expanded_hrbar_scroll < 0) expanded_hrbar_scroll = 0;
+			if (expanded_hrbar_scroll > (18*10 + 20) * 128) expanded_hrbar_scroll = (18*10 + 20) * 128;
+			break;
 		default:
 			if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
 			break;
