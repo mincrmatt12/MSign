@@ -194,6 +194,7 @@ void screen::WeatherScreen::prepare(bool) {
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
+		slots::WEATHER_MPREC_GRAPH,
 		slots::WEATHER_TIME_SUN
 	>(bheap::Block::TemperatureWarm);
 }
@@ -205,6 +206,7 @@ screen::WeatherScreen::WeatherScreen() {
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
+		slots::WEATHER_MPREC_GRAPH,
 		slots::WEATHER_TIME_SUN
 	>(bheap::Block::TemperatureHot);
 }
@@ -216,6 +218,10 @@ screen::WeatherScreen::~WeatherScreen() {
 		slots::WEATHER_INFO,
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
+		slots::WEATHER_MPREC_GRAPH,
+		slots::WEATHER_RTEMP_GRAPH,
+		slots::WEATHER_WIND_GRAPH,
+		slots::WEATHER_HPREC_GRAPH,
 		slots::WEATHER_TIME_SUN
 	>(bheap::Block::TemperatureCold);
 }
@@ -248,13 +254,14 @@ void screen::WeatherScreen::draw_currentstats() {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {40_c, 40_c, 255_c});
 	}
 
-	snprintf(disp_buf, 16, "%d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp));
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 19, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
-
-	snprintf(disp_buf, 16, "\xfd %d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
+	snprintf(disp_buf, 16, "\xfe %d \xfd %d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp), intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
 	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
+
+	snprintf(disp_buf, 16, "%d ", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp));
+	auto nxt = draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 42 - text_size / 2, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
+
 	snprintf(disp_buf, 16, "%d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 69-text_size, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
+	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, nxt, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
 
 	{
 		auto v = intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp, (int16_t)10);
@@ -555,7 +562,7 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 
 		float prob_scale = cosf(1.57f * (prob / 255.f));
 		float wiggle = interp(&slots::PrecipData::stddev) * sinf(((float)(timekeeper.current_time + (x-x0)*20) / 100.f));
-		int16_t amt = interp(&slots::PrecipData::amount) + wiggle / 2;
+		int16_t amt = interp(&slots::PrecipData::amount) + wiggle;
 		if (amt < 0) amt = 0;
 		int16_t pos = y1 - 1 - intmath::round10((int32_t(amt - ymin) * space * 100) / (ymax - ymin));
 		
@@ -586,6 +593,25 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 	draw_graph_yaxis(79, 0, 24, min_, max_);
 
 	draw_graph_lines(80, 0, 128, 24, tempgraph_data, 24, min_, max_, true);
+}
+
+void screen::WeatherScreen::draw_small_precgraph() {
+	const auto blk_precip = *servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH);
+
+	int32_t min_ = 10, max_ = INT16_MIN;
+	for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
+		max_ = std::max<int32_t>(max_, blk_precip[i].amount + blk_precip[i].stddev);
+	}
+	max_ = std::max<int32_t>(max_, 60); // really little amounts of rain often have high stddev and that looks really stupid
+
+	struct tm timedat;
+	time_t now = rtc_time / 1000;
+	gmtime_r(&now, &timedat);
+
+	draw_graph_xaxis(24, 79, 128, timedat.tm_min, false);
+	draw_graph_yaxis(79, 0, 24, min_, max_, true);
+
+	draw_graph_precip(80, 0, 128, 24, blk_precip, 30, min_, max_);
 }
 
 void screen::WeatherScreen::draw_big_graphs() {
@@ -650,8 +676,9 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 				min_ = 10;
 				for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
-					max_ = std::max<int32_t>(max_, blk_precip[i].amount + blk_precip[i].stddev / 2);
+					max_ = std::max<int32_t>(max_, blk_precip[i].amount + blk_precip[i].stddev);
 				}
+				max_ = std::max<int32_t>(max_, 90); // really little amounts of rain often have high stddev and that looks really stupid
 
 				break;
 			default:
@@ -721,8 +748,19 @@ void screen::WeatherScreen::draw() {
 					draw_hourlybar(i);
 				}
 			}
-			if (servicer.slot(slots::WEATHER_TEMP_GRAPH))  {
+			if (servicer.slot(slots::WEATHER_TEMP_GRAPH) && servicer.slot(slots::WEATHER_MPREC_GRAPH)) {
+				if (rtc_time % 7000 < 3500) {
+					draw_small_tempgraph();
+				}
+				else {
+					draw_small_precgraph();
+				}
+			}
+			else if (servicer.slot(slots::WEATHER_TEMP_GRAPH))  {
 				draw_small_tempgraph();
+			}
+			else if (servicer.slot(slots::WEATHER_MPREC_GRAPH)) {
+				draw_small_precgraph();
 			}
 		}
 		break;
@@ -765,7 +803,6 @@ bool screen::WeatherScreen::interact() {
 						servicer.set_temperature_all<
 							slots::WEATHER_RTEMP_GRAPH,
 							slots::WEATHER_HPREC_GRAPH,
-							slots::WEATHER_MPREC_GRAPH,
 							slots::WEATHER_WIND_GRAPH
 						>(bheap::Block::TemperatureWarm);
 						break;
@@ -783,7 +820,6 @@ bool screen::WeatherScreen::interact() {
 						case REAL_TEMP: servicer.set_temperature(slots::WEATHER_RTEMP_GRAPH, temp); break;
 						case WIND: servicer.set_temperature(slots::WEATHER_WIND_GRAPH, temp); break;
 						case PRECIP_DAY: servicer.set_temperature(slots::WEATHER_HPREC_GRAPH, temp); break;
-						case PRECIP_HOUR: servicer.set_temperature(slots::WEATHER_MPREC_GRAPH, temp); break;
 					}
 				};
 
@@ -791,7 +827,6 @@ bool screen::WeatherScreen::interact() {
 					servicer.set_temperature_all<
 						slots::WEATHER_RTEMP_GRAPH,
 						slots::WEATHER_HPREC_GRAPH,
-						slots::WEATHER_MPREC_GRAPH,
 						slots::WEATHER_WIND_GRAPH
 					>(bheap::Block::TemperatureCold);
 					subscreen = MAIN;

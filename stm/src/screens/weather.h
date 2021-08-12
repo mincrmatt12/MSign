@@ -28,6 +28,7 @@ namespace screen {
 		void draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const slots::PrecipData * data, size_t amount, int32_t ymin, int32_t ymax);
 
 		void draw_small_tempgraph();
+		void draw_small_precgraph();
 		void draw_big_graphs();
 
 		enum Subscreen : uint8_t {
