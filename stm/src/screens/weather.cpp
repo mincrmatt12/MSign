@@ -463,7 +463,7 @@ void screen::WeatherScreen::draw_graph_xaxis(int16_t y, int16_t x0, int16_t x1, 
 
 	// min width for full hour text is 108 pixels
 	
-	if ((x1 - x0) > 48) {
+	if ((x1 - x0) > 56) {
 		for (int i = 0; i < 6; ++i) {
 			int x = x0 + 1 + (i*(x1 - x0 - 1)) / 6;
 			int val = ashours ? (start + i * 4) % 24 : (start + i * 10) % 60;
