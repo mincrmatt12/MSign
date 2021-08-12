@@ -270,7 +270,7 @@ void screen::WeatherScreen::draw_currentstats() {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c);
 	}
 
-	int16_t y = (int16_t)(std::round(2.5f * sinf((float)(timekeeper.current_time) / 700.0f) + 3));
+	int16_t y = 3 + draw::fastsin(timekeeper.current_time, 1900, 3);
 
 	const char * icon = (char*)*servicer[slots::WEATHER_ICON];
 
@@ -560,11 +560,11 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 
 		auto prob = interp(&slots::PrecipData::probability);
 
-		float prob_scale = cosf(1.57f * (prob / 255.f));
-		float wiggle = interp(&slots::PrecipData::stddev) * sinf(((float)(timekeeper.current_time + (x-x0)*20) / 100.f));
-		int16_t amt = interp(&slots::PrecipData::amount) + wiggle;
-		if (amt < 0) amt = 0;
+		int wiggle = draw::fastsin(timekeeper.current_time + (x-x0)*20, 300, std::max(interp(&slots::PrecipData::stddev), 0));
+		int amt = interp(&slots::PrecipData::amount) + wiggle;
+		if (amt < 0) continue;
 		int16_t pos = y1 - 1 - intmath::round10((int32_t(amt - ymin) * space * 100) / (ymax - ymin));
+		if (pos >= y1) continue;
 		
 		if (data[i0].is_snow) {
 			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, (0_cc).mix(200_c, prob), (0_cc).mix(80_c, prob));

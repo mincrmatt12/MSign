@@ -71,6 +71,24 @@ namespace draw {
 		return gamma_cvt[in] >> (32 - Precision);
 	}
 
+	// Stores 1/4 of a sinewave, fractional components such that 0 is 0 and INT16_MAX is 1.
+	extern const int16_t sin_table[256];
+
+	// Computes an approximation of sin((in/fac)*pi)*fac_out.
+	//
+	// if fac_out is 0, fac_out=fac.
+	//
+	// If fac_out > INT16_MAX, overflow will occur
+	inline int32_t fastsin(int32_t in, int32_t fac=1500, int32_t fac_out=0) {
+		int32_t phase = in % (fac * 2);
+		if (phase > fac) return -fastsin(phase - fac, fac, fac_out);
+		if (phase > fac / 2) return fastsin(fac - phase, fac, fac_out);
+		if (phase == fac / 2) return fac_out;
+		int32_t raw = sin_table[(phase*512)/fac];
+		if (!fac_out) fac_out = fac;
+		return (raw * fac_out) / INT16_MAX;
+	}
+
 	// Gamma correct an entire color
 	led::color_t cvt(led::color_t in);
 
