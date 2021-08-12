@@ -138,7 +138,7 @@ target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
 target_compile_options(stmsim PRIVATE -DSIM )
 add_dependencies(stmsim copy_stm_src)
 
-target_link_libraries(stmsim stm_freertos)
+target_link_libraries(stmsim stm_freertos rt)
 
 # ----- section three: setup ESP build -----
 # A lot of this is stolen from https://github.com/esp8266/Arduino/blob/master/tests/host/Makefile

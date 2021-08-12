@@ -1,7 +1,20 @@
 #include "ui.h"
 #include "srv.h"
 
+#include <sys/shm.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <stdint.h>
+
+#include <fcntl.h>
+
 extern srv::Servicer servicer;
+
+static int ui_shm_fd = -1;
+
+static struct SharedData {
+	uint16_t GPIOA_IDR;
+} *ui_shm_dat = nullptr;
 
 ui::Buttons ui::buttons;
 
@@ -9,6 +22,32 @@ void ui::Buttons::init() {
 	if (servicer.ready()) {
 		// Ask for button map to be made warm for remote control.
 		servicer.set_temperature(slots::VIRTUAL_BUTTONMAP, bheap::Block::TemperatureWarm);
+	}
+
+	// Check if we can open the msign button communicator
+	if (ui_shm_fd != -1) return;
+
+	int fd = shm_open("/msign_buttons", O_RDONLY, 0);
+
+	if (fd >= 0) {
+		// map object
+		ui_shm_fd = fd;
+		ui_shm_dat = (SharedData *)mmap(NULL, sizeof(SharedData), PROT_READ, MAP_SHARED, fd, 0);
+
+		if (ui_shm_dat == MAP_FAILED) {
+			ui_shm_fd = -1;
+			ui_shm_dat = nullptr;
+
+			perror("opening mapped");
+			exit(1);
+		}
+	}
+	else {
+		if (errno == EINVAL || errno == ENOENT) {
+			// ok, no data
+			ui_shm_dat = nullptr;
+			ui_shm_fd = -1;
+		}
 	}
 }
 
@@ -20,6 +59,10 @@ void ui::Buttons::update() {
 
 	last_held = current_held;
 	current_held = 0;
+
+	if (ui_shm_dat != nullptr && ui_shm_fd >= 0) {
+		current_held = ui_shm_dat->GPIOA_IDR;
+	}
 
 	if (servicer.ready()) {
 		srv::ServicerLockGuard g(servicer);
