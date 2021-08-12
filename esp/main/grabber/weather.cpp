@@ -236,6 +236,13 @@ bool weather::loop() {
 	serial::interface.update_slot_nosync(slots::WEATHER_WIND_GRAPH, wind_over_day);
 
 	if (minutely_precip) {
+		if (std::none_of(minutely_precip.get(), minutely_precip.get() + 30, [](const auto& x){return x.amount > 0 && x.probability != 0;})) minutely_precip.reset();
+	}
+	if (hourly_precip) {
+		if (std::none_of(hourly_precip.get(), hourly_precip.get() + 24, [](const auto& x){return x.amount > 0 && x.probability != 0;})) hourly_precip.reset();
+	}
+
+	if (minutely_precip) {
 		serial::interface.update_slot_raw(slots::WEATHER_MPREC_GRAPH, minutely_precip.get(), sizeof(slots::PrecipData)*30, false);
 	}
 	else serial::interface.delete_slot(slots::WEATHER_MPREC_GRAPH);
