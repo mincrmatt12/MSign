@@ -55,7 +55,11 @@ void ui::Buttons::update() {
 	if (!last_update) last_update = xTaskGetTickCount();
 	auto now = xTaskGetTickCount();
 	TickType_t duration = now - last_update;
-	if (duration) last_update = now;
+	if (duration) {
+		last_duration = duration;
+		last_update = now;
+	}
+	else last_duration = 0;
 
 	last_held = current_held;
 	current_held = 0;
@@ -96,5 +100,5 @@ bool ui::Buttons::changed() const {
 }
 
 TickType_t ui::Buttons::frame_time() const {
-	return 16;
+	return last_duration;
 }
