@@ -567,10 +567,10 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		if (pos >= y1) continue;
 		
 		if (data[i0].is_snow) {
-			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, (0_cc).mix(200_c, prob), (0_cc).mix(80_c, prob));
+			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200, prob)), draw::cvt((0_ccu).mix(80, prob)));
 		}
 		else {
-			draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, (0_cc).mix({55_c, 55_c, 220_c}, prob)); // todo: diff colors for diff intensities.
+			draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55, 55, 220}, prob))); // todo: diff colors for diff intensities.
 		}
 	}
 }
