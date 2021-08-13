@@ -40,6 +40,8 @@ namespace led {
 		make_op(/)
 		make_op(*)
 
+#undef make_op
+
 		color_t mix(const color_t& other, uint8_t factor /* from 0-255 */) {
 			return color_t(
 				r + ((((int)other.r - (int)this->r) * (int)factor) / 255),
