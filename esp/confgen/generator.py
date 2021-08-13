@@ -1097,7 +1097,7 @@ def generate_assignment_path_for(locator: ObjectLocator, point_to_lazy_only=Fals
     for j, i in enumerate(locator):
         if path:
             path += "->" if pygccxml.declarations.is_pointer(segments[j-1].target_declaration.decl_type) else "."
-        path += i.target_declaration.decl_string if not isinstance(locator, ObjectLocatorDelegated) else pygccxml.declarations.full_name(i.target_declaration)
+        path += i.target_declaration.decl_string if not isinstance(i, ObjectLocatorDelegated) else pygccxml.declarations.full_name(i.target_declaration)
         # Add array refs
         if not isinstance(i, ObjectLocatorDelegated):
             _, __, is_lazy = helper_array_dimensions_and_underlying_lazy(i.target_declaration.decl_type)
