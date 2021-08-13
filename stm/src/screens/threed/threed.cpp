@@ -15,8 +15,8 @@ extern tasks::DispMan dispman;
 namespace threed {
 	constexpr DefaultMeshHolder default_mesh{};
 
-	float Vec3::length() const {
-		return sqrtf(
+	m::fixed_t Vec3::length() const {
+		return m::sqrt(
 				this->x*this->x +
 				this->y*this->y +
 				this->z*this->z
@@ -24,7 +24,9 @@ namespace threed {
 	}
 
 	Vec3 Vec3::normalize() const {
-		return *this / length();
+		auto len = length();
+		if (len == 0) return *this;
+		return *this / len;
 	}
 
 	Vec3 Vec3::cross(const Vec3 & other) const {
@@ -34,33 +36,33 @@ namespace threed {
 		};
 	}
 
-	float Vec3::dot(const Vec3 & other) const {
+	m::fixed_t Vec3::dot(const Vec3 & other) const {
 		return this->x * other.x + this->y * other.y + this->z * other.z;
 	}
 
 	Mat4 Mat4::translate(const Vec3 & by) {
-		return {1.f, 0.f, 0.f, by.x,
-				0.f, 1.f, 0.f, by.y,
-		        0.f, 0.f, 1.f, by.z,
-				0.f, 0.f, 0.f, 1.f};
+		return {1, 0, 0, by.x,
+				0, 1, 0, by.y,
+		        0, 0, 1, by.z,
+				0, 0, 0, 1};
 	}
 
-	Mat4 Mat4::perspective(float aspect, float fov, float zn, float zf) {
-		float t = tanf(fov/2.0f) * zn;
-		float b = -t;
-		float l = b * aspect;
-		float r = t * aspect;
-		return {(2.f*zn)/(r-l), 0.f, (r+l)/(r-l), 0.f,
-				0.f, (2.f*zn)/(t-b), (t+b)/(t-b), 0.f,
-				0.f, 0.f, -((zf+zn)/(zf-zn)), -((2.f*zf*zn)/(zf-zn)),
-				0.f, 0.f, -1.f, 0.f};
+	Mat4 Mat4::perspective(m::fixed_t aspect, m::fixed_t fov, m::fixed_t zn, m::fixed_t zf) {
+		m::fixed_t t = m::tan(fov/2) * zn;
+		m::fixed_t b = -t;
+		m::fixed_t l = b * aspect;
+		m::fixed_t r = t * aspect;
+		return {(2*zn)/(r-l), 0, (r+l)/(r-l), 0,
+				0, (2*zn)/(t-b), (t+b)/(t-b), 0,
+				0, 0, -((zf+zn)/(zf-zn)), -((2*zf*zn)/(zf-zn)),
+				0, 0, -1, 0};
 	}
 
-	Mat4 Mat4::rotate(const Vec3 &u, float t) {
-		return {cosf(t) + u.x*u.x * (1.f - cosf(t)), u.x*u.y*(1.f-cosf(t) - u.z*sinf(t)), u.x*u.z*(1.f-cosf(t)) + u.y*sinf(t), 0,
-				u.y*u.z*(1.f-cosf(t)) + u.z*sinf(t), cosf(t) + u.y*u.y * (1.f - cosf(t)), u.y*u.z*(1.f-cosf(t)) - u.x*sinf(t), 0,
-				u.z*u.x*(1.f-cosf(t)) - u.y*sinf(t), u.z*u.y*(1.f-cosf(t)) + u.x*sinf(t), cosf(t) + u.z*u.z * (1.f - cosf(t)), 0,
-				0.f,                                 0.f,                                 0.f,                                 1.f
+	Mat4 Mat4::rotate(const Vec3 &u, m::fixed_t t) {
+		return {m::cos(t) + u.x*u.x * (1 - m::cos(t)), u.x*u.y*(1-m::cos(t) - u.z*m::sin(t)), u.x*u.z*(1-m::cos(t)) + u.y*m::sin(t), 0,
+				u.y*u.z*(1-m::cos(t)) + u.z*m::sin(t), m::cos(t) + u.y*u.y * (1 - m::cos(t)), u.y*u.z*(1-m::cos(t)) - u.x*m::sin(t), 0,
+				u.z*u.x*(1-m::cos(t)) - u.y*m::sin(t), u.z*u.y*(1-m::cos(t)) + u.x*m::sin(t), m::cos(t) + u.z*u.z * (1 - m::cos(t)), 0,
+				0,                                     0,                                     0,                                     1
 		};
 	} 
 
@@ -121,14 +123,21 @@ namespace threed {
 		}
 
 		servicer.take_lock();
-		const auto& x = servicer.slot<Tri*>(slots::MODEL_DATA);
+		const auto& x = servicer.slot<slots::Tri *>(slots::MODEL_DATA);
 		servicer.give_lock();
 
 		while (current_tri < tri_count) {
 			if (x) {
-				if (sizeof(Tri)*current_tri < x.datasize) {
+				if (sizeof(slots::Tri)*current_tri < x.datasize) {
+					Tri embiggened; const slots::Tri& shortened = x.data()[current_tri];
+					embiggened.r = shortened.r;
+					embiggened.g = shortened.g;
+					embiggened.b = shortened.b;
+					embiggened.p1 = shortened.p1;
+					embiggened.p2 = shortened.p2;
+					embiggened.p3 = shortened.p3;
 					// Lock separately to allow the servicer to respond during a potentially >0.5s frame
-					draw_triangle(x.data()[current_tri], enable_lighting);
+					draw_triangle(embiggened, enable_lighting);
 				}
 			}
 			else {
@@ -152,22 +161,25 @@ namespace threed {
 			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0 || 
 				!servicer.slot(slots::MODEL_CAM_MINPOS) || !servicer.slot(slots::MODEL_CAM_MAXPOS)) {
 				camera_target = Vec3{
-					rng::getrange(-1.0f, 1.0f),
-					rng::getrange(0, 1.0f),
-					rng::getrange(0, 1.0f)
+					m::random(-2, 2),
+					m::random(0, m::fixed_t(3, 2)),
+					m::random(0, 1)
 				};
 				if (rng::get() % 2 == 0) {
 					camera_look_target = Vec3{0, 0, 0};
 				}
 				else {
-					camera_look_target = Vec3{-0.5, 0.1, 0};
+					camera_look_target = Vec3{m::fixed_t(1), m::fixed_t(1), 0};
 				}
 			}
 			else {
+				auto minpos = threed::Vec3(*servicer.slot<slots::Vec3>(slots::MODEL_CAM_MINPOS));
+				auto maxpos = threed::Vec3(*servicer.slot<slots::Vec3>(slots::MODEL_CAM_MAXPOS));
+
 				camera_target = Vec3{
-					rng::getrange(servicer.slot<slots::Vec3>(slots::MODEL_CAM_MINPOS)->x, servicer.slot<slots::Vec3>(slots::MODEL_CAM_MAXPOS)->x),
-					rng::getrange(servicer.slot<slots::Vec3>(slots::MODEL_CAM_MINPOS)->y, servicer.slot<slots::Vec3>(slots::MODEL_CAM_MAXPOS)->y),
-					rng::getrange(servicer.slot<slots::Vec3>(slots::MODEL_CAM_MINPOS)->z, servicer.slot<slots::Vec3>(slots::MODEL_CAM_MAXPOS)->z)
+					m::random(minpos.x, maxpos.x),
+					m::random(minpos.y, maxpos.y),
+					m::random(minpos.z, maxpos.z)
 				};
 
 				int num_focuses = servicer.slot(slots::MODEL_CAM_FOCUS).datasize / sizeof(slots::Vec3);
@@ -177,11 +189,11 @@ namespace threed {
 		}
 
 		if (!dispman.interacting()) {
-			current_pos = camera_pos + (camera_target - camera_pos) * ((float)interp_progress / 4500.0f);
-			current_look = camera_look + (camera_look_target - camera_look) * ((float)interp_progress / 4500.0f);
+			current_pos = camera_pos + (camera_target - camera_pos) * m::fixed_t(interp_progress, 4500);
+			current_look = camera_look + (camera_look_target - camera_look) * m::fixed_t(interp_progress, 4500);
 		}
 
-		perpview = Mat4::perspective(2.0f, 1.0f, 0.05f, 20.0f) * Mat4::lookat(current_pos, current_look, {0.f, 1.f, 0.f});
+		perpview = Mat4::perspective(2, 1, m::fixed_t(5, 100), 20) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
 		led::color_t fill(0);
 		fill.set_spare(INT16_MAX);
@@ -195,16 +207,16 @@ namespace threed {
 
 	bool Renderer::interact() {
 		Vec3 target{0};
-		float amt = ui::buttons.held(ui::Buttons::MENU) ? -0.4f : 0.4f;
+		m::fixed_t amt = ui::buttons.held(ui::Buttons::MENU) ? -m::fixed_t(4, 10): m::fixed_t(4, 10);
 		amt *= ui::buttons.frame_time();
-		amt /= 1000.f;
+		amt /= 1000;
 		if (ui::buttons.held(ui::Buttons::PRV)) target.x += amt;
 		if (ui::buttons.held(ui::Buttons::NXT)) target.z += amt;
 		if (ui::buttons.held(ui::Buttons::SEL)) target.y += amt;
 
 		Vec3 for_ = (current_look - current_pos).normalize();
 		if (im == MOVE_POS) {
-			Vec3 left_ = -(Vec3{0.f, 1.f, 0.f}.cross(for_));
+			Vec3 left_ = -(Vec3{0, 1, 0}.cross(for_));
 			current_pos += for_ * target.x + left_ * target.z;
 			current_pos.y += target.y;
 			current_look += for_ * target.x + left_ * target.z;
@@ -213,7 +225,7 @@ namespace threed {
 		else {
 			for_.y = 0;
 			for_ = for_.normalize();
-			Vec3 left_ = -(Vec3{0.f, 1.f, 0.f}.cross(for_));
+			Vec3 left_ = -(Vec3{0, 1, 0}.cross(for_));
 			current_look += for_ * target.x + left_ * target.z;
 			current_look.y += target.y;
 		}
@@ -228,9 +240,13 @@ namespace threed {
 	}
 
 	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {
-		Vec4 a = perpview * Vec4(t.p1, 1.f);
-		Vec4 b = perpview * Vec4(t.p2, 1.f);
-		Vec4 c = perpview * Vec4(t.p3, 1.f);
+		Vec4 a = perpview * Vec4(t.p1, 1);
+		Vec4 b = perpview * Vec4(t.p2, 1);
+		Vec4 c = perpview * Vec4(t.p3, 1);
+		
+		if (a.w == 0) return;
+		if (b.w == 0) return;
+		if (c.w == 0) return;
 
 		a = a / a.w;
 		b = b / b.w;
@@ -241,28 +257,28 @@ namespace threed {
 		c.y = -c.y;
 
 		Vec3 projnormal = (Vec3{b} - Vec3{a}).cross(Vec3{c} - Vec3{a});
-		if (projnormal.z < 0.f) return;
+		if (projnormal.z < 0) return;
 
-		int16_t ax = round(((a.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
-		int16_t bx = round(((b.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
-		int16_t cx = round(((c.x + 1.f) / 2.f) * matrix_type::framebuffer_type::width);
+		int16_t ax = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+		int16_t bx = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+		int16_t cx = (((c.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
 
-		int16_t ay = round(((a.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
-		int16_t by = round(((b.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
-		int16_t cy = round(((c.y + 1.f) / 2.f) * matrix_type::framebuffer_type::height);
+		int16_t ay = (((a.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		int16_t by = (((b.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		int16_t cy = (((c.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
 
 		uint16_t cr;
         uint16_t cg;
         uint16_t cb;
 
 		if (enable_lighting) {
-			float avg = std::min((t.p1 - current_pos).length(), std::min(
+			m::fixed_t avg = std::min((t.p1 - current_pos).length(), std::min(
 						 (t.p2 - current_pos).length(),
 						 (t.p3 - current_pos).length()));
-			avg = std::min(0.58f, (avg * avg * 0.25f));
-			cr = powf((float)t.r / 255.0f * (1.f - avg), 2.6f) * 4095.f;
-			cg = powf((float)t.g / 255.0f * (1.f - avg), 2.6f) * 4095.f;
-			cb = powf((float)t.b / 255.0f * (1.f - avg), 2.6f) * 4095.f;
+			avg = std::min(m::fixed_t(58, 100), (avg * avg * m::fixed_t(3, 8)));
+			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (1 - avg)).ceil());
+			cg = draw::cvt((uint8_t)(m::fixed_t(t.g) * (1 - avg)).ceil());
+			cb = draw::cvt((uint8_t)(m::fixed_t(t.b) * (1 - avg)).ceil());
 		}
 		else {
 			cr = draw::cvt(t.r);
@@ -270,11 +286,11 @@ namespace threed {
 			cb = draw::cvt(t.b);
 		}
 
-		if (1.f > a.z && -1.f < a.z && 1.f > b.z && -1.f < b.z)
+		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
 			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);
-		if (1.f > b.z && -1.f < b.z && 1.f > c.z && -1.f < c.z)
+		if (1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z)
 			line(matrix.get_inactive_buffer(), bx, by, cx, cy, b.z, c.z, cr, cg, cb);
-		if (1.f > a.z && -1.f < a.z && 1.f > c.z && -1.f < c.z)
+		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
 			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, cr, cg, cb);
 	}
 

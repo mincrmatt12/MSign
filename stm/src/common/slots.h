@@ -142,12 +142,22 @@ namespace slots {
 	};
 
 	struct Vec3 {
-		//!cfg: holds .x, default 0.0
-		float x;
-		//!cfg: holds .y, default 0.0
-		float y;
-		//!cfg: holds .z, default 0.0
-		float z;
+		int16_t x;
+		int16_t y;
+		int16_t z;
+
+		//!cfg: receives .x
+		void set_x(float value) {
+			x = (int16_t)(value * 512.f);
+		}
+		//!cfg: receives .y
+		void set_y(float value) {
+			y = (int16_t)(value * 512.f);
+		}
+		//!cfg: receives .z
+		void set_z(float value) {
+			z = (int16_t)(value * 512.f);
+		}
 	};
 
 	struct Tri { // effective declaration for ESP only; actual triangle struct is used and declared in threed.h

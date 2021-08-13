@@ -80,17 +80,17 @@ namespace modelserve {
 
 			for (int triangle = 0; triangle < remaining_triangles; ++triangle) {
 				f_read(&f, &buf[0], sizeof(buf), &x); // reads p1
-				chunk[triangle].p1.x = buf[0];
-				chunk[triangle].p1.y = buf[1];
-				chunk[triangle].p1.z = buf[2];
+				chunk[triangle].p1.set_x(buf[0]);
+				chunk[triangle].p1.set_y(buf[1]);
+				chunk[triangle].p1.set_z(buf[2]);
 				f_read(&f, &buf[0], sizeof(buf), &x); // reads p2
-				chunk[triangle].p2.x = buf[0];
-				chunk[triangle].p2.y = buf[1];
-				chunk[triangle].p2.z = buf[2];
+				chunk[triangle].p2.set_x(buf[0]);
+				chunk[triangle].p2.set_y(buf[1]);
+				chunk[triangle].p2.set_z(buf[2]);
 				f_read(&f, &buf[0], sizeof(buf), &x); // reads p3
-				chunk[triangle].p3.x = buf[0];
-				chunk[triangle].p3.y = buf[1];
-				chunk[triangle].p3.z = buf[2];
+				chunk[triangle].p3.set_x(buf[0]);
+				chunk[triangle].p3.set_y(buf[1]);
+				chunk[triangle].p3.set_z(buf[2]);
 				f_read(&f, &buf[0], sizeof(buf), &x); // reads rgb
 				chunk[triangle].r = buf[0];
 				chunk[triangle].g = buf[1];
