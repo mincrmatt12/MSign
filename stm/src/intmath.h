@@ -1,3 +1,6 @@
+#ifndef INTMATH_H
+#define INTMATH_H
+
 #include <stdint.h>
 #include <type_traits>
 
@@ -49,3 +52,5 @@ namespace intmath {
 		}
 	}
 }
+
+#endif
