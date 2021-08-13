@@ -1,5 +1,6 @@
 #include "rng.h"
 
+#include "draw.h"
 #include "stm32f2xx.h"
 #include "stm32f2xx_ll_rng.h"
 #include "stm32f2xx_ll_bus.h"
@@ -25,5 +26,5 @@ uint32_t rng::get() {
 }
 
 uint16_t rng::getclr() {
-	return std::pow((get() % 4096) / 4096.0, 2.6) * 4096;
+	return draw::cvt(get() % 256);
 }
