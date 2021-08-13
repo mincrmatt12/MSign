@@ -64,16 +64,13 @@ namespace threed::m {
 #undef make_op
 
 		fixed_t operator*(fixed_t other) const {
-			int64_t a = value;
-			int64_t b = other.value;
-			a *= b; // TODO: saturate this
-			return fixed_t(a / Mul, nullptr);
+			int64_t res = (int64_t)value * (int64_t)other.value; // try and convince the compiler to use SMULL
+			return fixed_t(res / Mul, nullptr);
 		}
 
 		fixed_t operator/(fixed_t other) const {
-			int64_t a = value;
+			int64_t a = (int64_t)value * (int64_t)Mul; // done here to try and get the compiler to use SMULL
 			int64_t b = other.value;
-			a *= Mul; // TODO: saturate this
 			return fixed_t(a / b, nullptr);
 		}
 

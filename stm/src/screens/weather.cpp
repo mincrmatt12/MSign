@@ -538,7 +538,7 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 		ymax = intmath::ceil10(ymax)*100 + 100;
 	}
 	else {
-		ymin = intmath::floor10<int32_t>(ymin, 10)*10 - 10;
+		ymin = 0;
 		ymax = intmath::ceil10<int32_t>(ymax, 10)*10 + 10;
 	}
 
@@ -652,6 +652,27 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 	}
 }
 
+namespace screen {
+	int wigglerange_from(int stddev, int amount, int probability) {
+		// We can express unconfidence as stddev / amount, and then rescale and cap
+		
+		stddev = (stddev * 255) / probability;
+
+		int unconf = (stddev * 100) / amount;
+
+		if (unconf > 60) {
+			unconf = 60 + (unconf - 60) / 2;
+		}
+		if (unconf > 85) {
+			unconf = 85 + (unconf - 85) / 2;
+		}
+
+		unconf = std::min(unconf, 120) / 3;
+
+		return (amount * unconf) / 100;
+	}
+}
+
 void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const slots::PrecipData * data, size_t amount, int32_t ymin, int32_t ymax) {
 	int32_t space = (y1 - y0);
 
@@ -671,14 +692,16 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 
 		auto prob = interp(&slots::PrecipData::probability);
 
-		if (prob <= 4) continue;
 		uint8_t colprob = prob < 30 ? 30 : (uint8_t)prob;
 
-		int wiggle = draw::fastsin(timekeeper.current_time + (x-x0)*20, 300, std::max(interp(&slots::PrecipData::stddev), 0));
-		int amt = interp(&slots::PrecipData::amount) + wiggle;
+		int amt = interp(&slots::PrecipData::amount);
+		int wigrange = wigglerange_from(interp(&slots::PrecipData::stddev), amt, prob);
+		int wiggle = draw::fastsin(timekeeper.current_time + (x-x0)*20, 300, std::max(wigrange, 0));
+		amt += wiggle;
 		if (amt < 0) continue;
 		int16_t pos = y1 - 1 - intmath::round10((int32_t(amt - ymin) * space * 100) / (ymax - ymin));
 		if (pos >= y1) continue;
+		pos = std::max<int16_t>(0, pos);
 		
 		if (data[i0].is_snow) {
 			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200_cu, colprob)), draw::cvt((0_ccu).mix(80_cu, colprob)));
@@ -712,11 +735,19 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 void screen::WeatherScreen::draw_small_precgraph() {
 	const auto blk_precip = *servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH);
 
+	uint8_t max_prob = 0;
+
 	int32_t min_ = 10, max_ = INT16_MIN;
 	for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
-		max_ = std::max<int32_t>(max_, blk_precip[i].amount + blk_precip[i].stddev);
+		max_ = std::max<int32_t>(max_, blk_precip[i].amount + wigglerange_from(blk_precip[i].stddev, blk_precip[i].amount, blk_precip[i].probability) * 4 / 5);
+		max_prob = std::max(max_prob, blk_precip[i].probability);
 	}
 	max_ = std::max<int32_t>(max_, 60); // really little amounts of rain often have high stddev and that looks really stupid
+
+	if (max_prob < 39) {
+		draw_small_tempgraph(); // if there's less than a 15% chance of rain, just draw the temperature graph
+		return;
+	}
 
 	struct tm timedat;
 	time_t now = rtc_time / 1000;
@@ -790,7 +821,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 				min_ = 10;
 				for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
-					max_ = std::max<int32_t>(max_, blk_precip[i].amount + blk_precip[i].stddev);
+					max_ = std::max<int32_t>(max_, blk_precip[i].amount + wigglerange_from(blk_precip[i].stddev, blk_precip[i].amount, blk_precip[i].probability) * 4 / 5);
 				}
 				max_ = std::max<int32_t>(max_, 90); // really little amounts of rain often have high stddev and that looks really stupid
 
@@ -801,16 +832,27 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 		// draw axes
 
-		int leftside = blk_precip == nullptr ? 14 : 19;
+		int leftside = blk_precip == nullptr ? 14 : 17;
+		int top = blk_precip == nullptr ? 0 : 5;
 
 		draw_graph_xaxis(64-8, leftside, 128, graph == PRECIP_HOUR ? timedat.tm_min : timedat.tm_hour, graph != PRECIP_HOUR);
-		draw_graph_yaxis(leftside, 0, 64-8, min_, max_, blk_precip != nullptr);
+		draw_graph_yaxis(leftside, top, 64-8, min_, max_, blk_precip != nullptr);
 
 		if (blk_16) {
 			draw_graph_lines(leftside + 1, 0, 128, 64-8, blk_16, 24, min_, max_, graph != WIND);
 		}
 		else {
-			draw_graph_precip(leftside + 1, 0, 128, 64-8, blk_precip, (graph == PRECIP_DAY ? 24 : 30), min_, max_);
+			draw_graph_precip(leftside + 1, top, 128, 64-8, blk_precip, (graph == PRECIP_DAY ? 24 : 30), min_, max_);
+			// draw a precipitation bar
+
+			int ps = 32;
+			int pl = leftside + 1 + ((128 - leftside + 1) / 2) - (ps / 2);
+			int pr = pl + ps;
+
+			draw::gradient_rect(matrix.get_inactive_buffer(), pl, 0, pr, 5, 0, {55_cu, 55_cu, 220_cu});
+			draw::rect(matrix.get_inactive_buffer(), pl, 4, pr, 5, 0x77_c); // divider
+			draw::text(matrix.get_inactive_buffer(), "0%", font::lcdpixel_6::info, pl - 8, 5, 0xee_c);
+			draw::text(matrix.get_inactive_buffer(), "100%", font::lcdpixel_6::info, pr, 5, 0xee_c);
 		}
 	}
 
