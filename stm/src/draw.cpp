@@ -259,6 +259,7 @@ namespace draw {
 
 	int32_t fastsin(int32_t in, int32_t fac, int32_t fac_out) {
 		if (fac_out == 0) return 0;
+		if (in < 0) return -fastsin(-in, fac, fac_out);
 		int32_t phase = in % (fac * 2);
 		if (phase > fac) return -fastsin(phase - fac, fac, fac_out);
 		if (phase > fac / 2) return fastsin(fac - phase, fac, fac_out);
