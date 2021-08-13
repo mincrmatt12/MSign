@@ -123,8 +123,6 @@ target_link_options(stm
 	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic
-	-Wl,-u 
-	-Wl,_printf_float
 	-Wl,-Map=stm.map
 	--specs=nano.specs
 )
