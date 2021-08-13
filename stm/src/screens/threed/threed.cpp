@@ -162,14 +162,14 @@ namespace threed {
 				!servicer.slot(slots::MODEL_CAM_MINPOS) || !servicer.slot(slots::MODEL_CAM_MAXPOS)) {
 				camera_target = Vec3{
 					m::random(-2, 2),
-					m::random(0, m::fixed_t(3, 2)),
-					m::random(0, 1)
+					m::random(m::fixed_t(1, 2), 2),
+					m::random(0, m::fixed_t(3, 2))
 				};
 				if (rng::get() % 2 == 0) {
 					camera_look_target = Vec3{0, 0, 0};
 				}
 				else {
-					camera_look_target = Vec3{m::fixed_t(1), m::fixed_t(1), 0};
+					camera_look_target = Vec3{-m::fixed_t(1), 0, -m::fixed_t(1)};
 				}
 			}
 			else {
