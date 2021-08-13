@@ -671,8 +671,8 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 
 		auto prob = interp(&slots::PrecipData::probability);
 
-		if (prob <= 10) continue;
-		int colprob = std::max(100, prob);
+		if (prob <= 4) continue;
+		uint8_t colprob = prob < 30 ? 30 : (uint8_t)prob;
 
 		int wiggle = draw::fastsin(timekeeper.current_time + (x-x0)*20, 300, std::max(interp(&slots::PrecipData::stddev), 0));
 		int amt = interp(&slots::PrecipData::amount) + wiggle;
@@ -681,18 +681,10 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		if (pos >= y1) continue;
 		
 		if (data[i0].is_snow) {
-			if (prob < 80)
-				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, 60_cc, 30_cc);
-			else 
-				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200, colprob)), draw::cvt((0_ccu).mix(80, colprob)));
+			draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200_cu, colprob)), draw::cvt((0_ccu).mix(80_cu, colprob)));
 		}
 		else {
-			if (prob < 80) {
-				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, 0x404052_cc); // todo: diff colors for diff intensities.
-			}
-			else {
-				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55, 55, 220}, colprob))); // todo: diff colors for diff intensities.
-			}
+			draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob))); // todo: diff colors for diff intensities.
 		}
 	}
 }
@@ -986,13 +978,13 @@ bool screen::WeatherScreen::interact() {
 				expanded_hrbar_scroll += 128*8;
 			}
 			else if (ui::buttons.held(ui::Buttons::NXT, pdMS_TO_TICKS(500))) {
-				expanded_hrbar_scroll += ui::buttons.frame_time() * 6;
+				expanded_hrbar_scroll += ui::buttons.frame_time() * 8;
 			}
 			else if (ui::buttons[ui::Buttons::PRV]) {
 				expanded_hrbar_scroll -= 128*8;
 			}
 			else if (ui::buttons.held(ui::Buttons::PRV, pdMS_TO_TICKS(500))) {
-				expanded_hrbar_scroll -= ui::buttons.frame_time() * 6;
+				expanded_hrbar_scroll -= ui::buttons.frame_time() * 8;
 			}
 			else if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
 
