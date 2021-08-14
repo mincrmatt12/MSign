@@ -6,6 +6,7 @@ import Form from 'react-bootstrap/Form'
 import _ from 'lodash';
 
 import ConfigContext from '../ctx.js';
+import VersionTag from "./common/vertag";
 
 function GlobalPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
@@ -45,6 +46,8 @@ function GlobalPane() {
 		</Form.Group>
 
 		<hr className="hr-gray" />
+
+		<VersionTag />
 	</div>
 }
 

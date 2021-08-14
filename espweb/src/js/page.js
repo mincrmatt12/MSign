@@ -25,6 +25,7 @@ import ModelPane from "./pane/model"
 import RawPane from "./pane/raw"
 
 import ConfigContext from "./ctx"
+import BackendVersionContext from "./ver.js"
 
 import _ from 'lodash';
 
@@ -33,6 +34,7 @@ function App() {
 	const [dirty, setDirty] = React.useState(false);
 	const [error, setError] = React.useState(false);
 	const [cfg, setCfg] = React.useState({});
+	const [fetchedVer, setFetchedVer] = React.useState("cfgserver");
 
 	React.useEffect(() => {
 		fetch("/a/conf.json") 
@@ -50,6 +52,18 @@ function App() {
 				setError(true);
 				setLoading(false);
 			});
+	}, []);
+
+	React.useEffect(() => {
+		fetch("/a/version")
+			.then((resp) => {
+				if (response.headers.get("Content-Type") == "text/html") return;
+				if (resp.ok) {
+					return resp.text();
+				}
+			})
+			.then((text) => {setFetchedVer(text);})
+			.catch(() => {});
 	}, []);
 
 	const saveConfig = () => {
@@ -110,39 +124,41 @@ function App() {
 							</Nav>
 						</Card>
 					</Col>
-					<Col xs="7" sm="8" md="9" lg="10" className="mb-2">
-						{error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
-						{loading ? <Alert variant='info'>loading...</Alert> : <ConfigContext.Provider value={[cfg, (path, value) => {
-							if (path === "*") {
-								setCfg(value);
-							}
-							else {
-								setCfg(_.setWith(_.clone(cfg), path, value, _.clone));
-							}
-							setDirty(true);
-						}]}>
-							<Route path="/" exact>
-								<GlobalPane  />
-							</Route>
-							<Route path="/ttc">
-								<TTCPane     />
-							</Route>
-							<Route path="/weather">
-								<WeatherPane />
-							</Route>
-							<Route path="/apikey">
-								<ApiPane     />
-							</Route>
-							<Route path="/sccfg">
-								<ScCfgPane   />
-							</Route>
-							<Route path="/model">
-								<ModelPane   />
-							</Route>
-							<Route path="/upd" component={UpdatePane} />
-							<Route path="/raw" component={RawPane} />
-						</ConfigContext.Provider>}
-					</Col>
+					<BackendVersionContext.Provider value={fetchedVer}>
+						<Col xs="7" sm="8" md="9" lg="10" className="mb-2">
+							{error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
+							{loading ? <Alert variant='info'>loading...</Alert> : <ConfigContext.Provider value={[cfg, (path, value) => {
+								if (path === "*") {
+									setCfg(value);
+								}
+								else {
+									setCfg(_.setWith(_.clone(cfg), path, value, _.clone));
+								}
+								setDirty(true);
+							}]}>
+								<Route path="/" exact>
+									<GlobalPane  />
+								</Route>
+								<Route path="/ttc">
+									<TTCPane     />
+								</Route>
+								<Route path="/weather">
+									<WeatherPane />
+								</Route>
+								<Route path="/apikey">
+									<ApiPane     />
+								</Route>
+								<Route path="/sccfg">
+									<ScCfgPane   />
+								</Route>
+								<Route path="/model">
+									<ModelPane   />
+								</Route>
+								<Route path="/upd" component={UpdatePane} />
+								<Route path="/raw" component={RawPane} />
+							</ConfigContext.Provider>}
+						</Col>
+					</BackendVersionContext.Provider>
 				</Row>
 			</Container>
 		</Router>

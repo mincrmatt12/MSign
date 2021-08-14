@@ -5,6 +5,8 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 
+import VersionTag from "./common/vertag";
+
 class UpdatePane extends React.Component {
 	constructor(props) {
 		super(props)
@@ -96,6 +98,8 @@ class UpdatePane extends React.Component {
 			</Form>
 
 			<hr className="hr-gray" />
+
+			<VersionTag />
 		</div>
 	}
 }

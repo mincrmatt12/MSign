@@ -5,6 +5,10 @@ const MiniCssExtractPlugin  = require("mini-css-extract-plugin")
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const webpack = require('webpack');
 
+let verstr = require('child_process')
+	.execSync("git describe --tags --always")
+	.toString();
+
 module.exports = (env, options) => {
 	const config = {
 		entry: {
@@ -67,6 +71,9 @@ module.exports = (env, options) => {
 			new MiniCssExtractPlugin({
 				filename: "[name].css",
 				chunkFilename: "[id].[chunkhash].css"
+			}),
+			new webpack.DefinePlugin({
+				VERSION: JSON.stringify(verstr)
 			})
 		]
 	}
