@@ -34,6 +34,7 @@ extern uint64_t rtc_time;
 extern matrix_type matrix;
 extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
+extern tasks::DispMan dispman;
 
 void screen::TTCScreen::draw() {
 	// Lock the data
@@ -87,7 +88,7 @@ void screen::TTCScreen::draw_alertstr() {
 	if (alertstr_size >= 120) {
 		pos = draw::scroll(rtc_time / 8, alertstr_size);
 	}
-	if (alertstr_size >= 290) {
+	if (alertstr_size >= 290 && !dispman.interacting()) {
 		pos = draw::scroll(rtc_time / 6, alertstr_size);
 	}
 

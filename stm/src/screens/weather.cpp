@@ -16,6 +16,7 @@ extern uint64_t rtc_time;
 extern tasks::Timekeeper timekeeper;
 extern matrix_type matrix;
 extern srv::Servicer servicer;
+extern tasks::DispMan dispman;
 
 namespace bitmap::weather {
 // w=20, h=20, stride=3, color=202, 252, 17
@@ -312,7 +313,9 @@ void screen::WeatherScreen::draw_status() {
 			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, 64 - text_size / 2, 61, 240_c);
 		}
 		else {
-			int16_t t_pos = draw::scroll(timekeeper.current_time / std::min<uint64_t>(10, std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7))), text_size);
+			auto current_speed_div = std::min<uint64_t>(10, std::max<uint64_t>(5, 40 - (strlen((char*)*servicer[slots::WEATHER_STATUS]) / 7)));
+			if (dispman.interacting()) current_speed_div = 9;
+			int16_t t_pos = draw::scroll(timekeeper.current_time / current_speed_div, text_size);
 			draw::text(matrix.get_inactive_buffer(), *servicer[slots::WEATHER_STATUS], font::tahoma_9::info, t_pos, 61, 240_c);
 		}
 	}
