@@ -7,16 +7,15 @@
 #include "upd.h"
 #include "wifitime.h"
 #include "webui.cfg.h"
-
-extern "C" {
 #include <http_serve.h>
 #include <multipart_header.h>
-}
-
 #include <b64/cencode.h>
-
 #include <lwip/sockets.h>
 #include <esp_system.h>
+
+#ifndef SIM
+#include "esp_ota_ops.h"
+#endif
 
 #undef connect
 #undef read
@@ -449,6 +448,17 @@ reachedend:
 			send_static_response(503, "Service Unavailable", "the tasks function was not compiled into this build");
 		}
 #endif
+		else if (strcasecmp(tgt, "version") == 0) {
+			const char * verstr =
+#ifndef SIM
+					esp_ota_get_app_description()->version
+#else
+					"fakesim"
+#endif
+			;
+
+			send_static_response(200, "OK", verstr);
+		}
 		else if (strcasecmp(tgt, "newmodel") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
