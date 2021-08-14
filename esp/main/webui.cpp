@@ -117,6 +117,7 @@ namespace webui {
 			UINT chunkSize;
 			if (f_read(f, sendbuf, 128, &chunkSize)) {
 				ESP_LOGE(TAG, "failed to read from file");
+				return;
 			}
 			if (lwip_send(client_sock, sendbuf, chunkSize, 0) < 0) {
 				ESP_LOGE(TAG, "client closed conn/fail");

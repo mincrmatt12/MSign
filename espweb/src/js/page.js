@@ -57,7 +57,7 @@ function App() {
 	React.useEffect(() => {
 		fetch("/a/version")
 			.then((resp) => {
-				if (response.headers.get("Content-Type") == "text/html") return;
+				if (resp.headers.get("Content-Type") == "text/html") return;
 				if (resp.ok) {
 					return resp.text();
 				}
