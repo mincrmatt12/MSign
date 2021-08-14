@@ -6,6 +6,7 @@
 #include "../common/slots.h"
 #include "../rng.h"
 #include "../draw.h"
+#include "../tasks/screen.h"
 
 namespace bitmap {
 	const uint8_t bus[] = { // really shitty bus

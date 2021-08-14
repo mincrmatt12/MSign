@@ -7,6 +7,7 @@
 #include "../fonts/tahoma_9.h"
 #include "../fonts/lcdpixel_6.h"
 #include "../intmath.h"
+#include "../tasks/screen.h"
 
 #include "../draw.h"
 #include <time.h>
