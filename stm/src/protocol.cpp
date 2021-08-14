@@ -83,6 +83,23 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 	}
 }
 
+void srv::ProtocolImpl::switch_fast() {
+	// TODO: ensure no transmissions are occuring
+	LL_USART_Disable(ESP_USART);
+	
+	LL_USART_InitTypeDef usart_init = {0};
+	usart_init.BaudRate = 230400;
+	usart_init.OverSampling = LL_USART_OVERSAMPLING_8;
+	usart_init.HardwareFlowControl = LL_USART_HWCONTROL_NONE;
+	usart_init.DataWidth = LL_USART_DATAWIDTH_9B;
+	usart_init.Parity = LL_USART_PARITY_EVEN;
+	usart_init.StopBits = LL_USART_STOPBITS_1;
+	usart_init.TransferDirection = LL_USART_DIRECTION_TX_RX;
+	
+	LL_USART_Init(ESP_USART, &usart_init);
+	LL_USART_Enable(ESP_USART);
+}
+
 void srv::ProtocolImpl::setup_uart_dma() {
 	// Enable clocks
 

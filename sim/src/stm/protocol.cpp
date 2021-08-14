@@ -38,6 +38,8 @@ void pump_faux_dma_task(void*) {
 	}
 }
 
+void srv::ProtocolImpl::switch_fast() {}
+
 void srv::ProtocolImpl::dma_finish(bool incoming) {
 	if (incoming) {
 		// check for error

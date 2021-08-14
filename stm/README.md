@@ -44,6 +44,8 @@ DMA is triggered off of TIM1 update event; the delay between different bits of c
 
 ## Serial Protocol
 
+Serial communications run at 115200 baud with even parity, except where specified otherwise.
+
 The protocol starts with a handshake, initiated from the STM32, and continues asynchronously.
 
 The system is mostly based around the sharing and storage of various "slots" of data, which have variable length, which while being capped at 65k by technical restrictions
@@ -285,7 +287,10 @@ The above three commands have no payload.
 
 The update procedure is rather complicated due to the requirement to update two things.
 The first step is the ESP receiving an update package. While it is downloading the package, it updates various status slots to inform. Once it has finished, it will send a `RESET` command to reset the device.
-When the system reboots, the ESP shall respond with `HANDSHAKE_UOK` on successful handshaking. Once this occurs, the STM enter update mode. Once the update finishes for the STM, it must send an appropriate `UPDATE_STATUS` to the ESP. Once this occurs,
+When the system reboots, the ESP shall respond with `HANDSHAKE_UOK` on successful handshaking. Once this occurs, the STM enter update mode. When this occurs, the baudrate is doubled until
+the terminating `RESET`.
+
+Once the update finishes for the STM, it must send an appropriate `UPDATE_STATUS` to the ESP. Once this occurs,
 the ESP will update itself. When it finishes, the STM will hear a `UPDATE_CMD` to reset itself to normal mode. At this point, the system is updated.
 
 #### Detailed flow

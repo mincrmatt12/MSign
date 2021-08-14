@@ -234,7 +234,9 @@ void srv::Servicer::do_handshake() {
 
 	// Check if the system has just updated
 	if (bootcmd_did_just_update()) {
-		// We did! Send out an update state finished
+		// We did! Change the baudrate since the ESP is still waiting at 921600.
+		switch_fast();
+		// Send out an update state finished
 		dma_out_buffer[0] = 0xa5;
 		dma_out_buffer[1] = 0x01;
 		dma_out_buffer[2] = 0x63;
@@ -293,6 +295,8 @@ retry_handshake:
 			}
 		case ProtocolState::UPDATE_STARTING:
 			{
+				// Before entering the update mode, switch baudrate
+				switch_fast();
 				// Enter update mode, and tell the ESP we did
 				
 				dma_out_buffer[0] = 0xa5;

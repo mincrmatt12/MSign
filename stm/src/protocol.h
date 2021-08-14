@@ -41,6 +41,9 @@ namespace srv {
 
 		// Interrupt
 		void dma_finish(bool incoming); // returns whether or not we should call process_command
+		
+		// Switch to "fast mode" for update: 230400 baud
+		void switch_fast();
 
 	protected:
 		virtual void process_command() = 0;

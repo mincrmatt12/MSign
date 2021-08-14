@@ -273,7 +273,7 @@ failure: // clean up
 		// setup uart
 		{
 			uart_config_t cfg;
-			cfg.baud_rate = 115200;
+			cfg.baud_rate = update_state == USTATE_READY_TO_START ? 115200 : 230400;
 			cfg.data_bits = UART_DATA_8_BITS;
 			cfg.stop_bits = UART_STOP_BITS_1;
 			cfg.flow_ctrl = UART_HW_FLOWCTRL_DISABLE;
@@ -326,6 +326,10 @@ failure: // clean up
 
 					uart_write_bytes(UART_NUM_0, (char*)buf, 3);
 
+					// Change baudrate here
+					uart_wait_tx_done(UART_NUM_0, portMAX_DELAY);
+					uart_set_baudrate(UART_NUM_0, 230400);
+
 					slots::protocol::UpdateStatus status;
 
 					if (!retrieve_update_status(status)) goto try_again;
@@ -348,6 +352,7 @@ failure: // clean up
 					// image is ready, send the image command
 					
 					FIL stm_firmware; f_open(&stm_firmware, "/upd/stm.bin", FA_READ);
+					vTaskDelay(2);
 					auto chunk = send_update_start(crc_stm, f_size(&stm_firmware));
 					uint8_t current_chunk_buffer[253];
 					uint8_t current_chunk_size = 0;
