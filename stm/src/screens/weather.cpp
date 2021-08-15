@@ -594,6 +594,9 @@ void screen::WeatherScreen::draw_graph_xaxis(int16_t y, int16_t x0, int16_t x1, 
 			if (ashours && (x1 - x0) > 108) {
 				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, buf, 0x9dd3e3_cc, ":00", 120_c);
 			}
+			else if (!ashours && (x1 - x0) > 96) {
+				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, "+", 120_c, buf, 0x9dd3e3_cc, "m", 120_c);
+			}
 			else {
 				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
 			}
@@ -753,11 +756,7 @@ void screen::WeatherScreen::draw_small_precgraph() {
 		return;
 	}
 
-	struct tm timedat;
-	time_t now = rtc_time / 1000;
-	gmtime_r(&now, &timedat);
-
-	draw_graph_xaxis(24, 79, 128, timedat.tm_min, false);
+	draw_graph_xaxis(24, 79, 128, 0, false);
 	draw_graph_yaxis(79, 0, 24, min_, max_, true);
 
 	draw_graph_precip(80, 0, 128, 24, blk_precip, 30, min_, max_);
@@ -839,7 +838,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 		int leftside = blk_precip == nullptr ? 14 : 17;
 		int top = blk_precip == nullptr ? 0 : 5;
 
-		draw_graph_xaxis(64-8, leftside, 128, graph == PRECIP_HOUR ? timedat.tm_min : timedat.tm_hour, graph != PRECIP_HOUR);
+		draw_graph_xaxis(64-8, leftside, 128, graph == PRECIP_HOUR ? 0 : timedat.tm_hour, graph != PRECIP_HOUR);
 		draw_graph_yaxis(leftside, top, 64-8, min_, max_, blk_precip != nullptr);
 
 		if (blk_16) {
