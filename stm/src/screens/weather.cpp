@@ -552,9 +552,9 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 
 	for (int i = 0;; ++i) {
 		int32_t value = (tickmark_min * i) * (decimals ? 10 : 100);
-		int32_t pos = intmath::round10((space*100 - 100) - ((space * value * 100) / (ymax - ymin)));
+		int32_t pos = y0 + intmath::round10((space*100 - 100) - ((space * value * 100) / (ymax - ymin)));
 
-		if (pos < 0) break;
+		if (pos < y0) break;
 
 		matrix.get_inactive_buffer().at(x - 1, pos) = led::color_t(95_c);
 
