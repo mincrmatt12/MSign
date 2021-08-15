@@ -225,7 +225,9 @@ namespace slots {
 			UPDATE_IMG_START,
 			UPDATE_STATUS,
 
-			CONSOLE_MSG = 0x70
+			CONSOLE_MSG = 0x70,
+
+			REFRESH_GRABBER = 0x80
 		};
 
 		enum struct TimeStatus : uint8_t {
@@ -269,6 +271,13 @@ namespace slots {
 
 			ESP_WROTE_SECTOR = 0x50,
 			ESP_COPYING
+		};
+
+		enum struct GrabberID : uint8_t {
+			TRANSIT = 0,
+			WEATHER = 1,
+			MODELSERVE = 2,
+			CFGPULL = 3
 		};
 	}
 

@@ -1042,3 +1042,7 @@ bool screen::WeatherScreen::interact() {
 	}
 	return false;
 }
+
+void screen::WeatherScreen::refresh() {
+	servicer.refresh_grabber(slots::protocol::GrabberID::WEATHER);
+}

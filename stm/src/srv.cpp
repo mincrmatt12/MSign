@@ -126,7 +126,21 @@ void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
 	pr.type = PendRequest::TypeChangeTemp;
 	pr.slotid = slotid;
 	pr.temperature = temp;
+	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+}
+
+void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
+	PendRequest pr;
+	pr.type = PendRequest::TypeRefreshGrabber;
+	pr.refresh = gid;
+	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+}
+
+void srv::Servicer::reset() {
+	PendRequest pr;
+	pr.type = PendRequest::TypeReset;
 	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+	while (1) {vTaskDelay(portMAX_DELAY);}
 }
 
 void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, const uint16_t * sids) {
@@ -139,7 +153,7 @@ void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, co
 }
 
 bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
-	bool is_dirty = std::any_of(arena.begin(slotid), arena.end(slotid), [](const auto& b){return b.flags & bheap::Block::FlagDirty;});
+	bool is_dirty = std::any_of(arena.cbegin(slotid), arena.cend(slotid), [](const auto& b){return b.flags & bheap::Block::FlagDirty;});
 	if (is_dirty && clear) {
 		for (auto it = arena.begin(slotid); it != arena.end(slotid); ++it) {
 			it->flags &= ~bheap::Block::FlagDirty;
@@ -341,6 +355,22 @@ void srv::Servicer::run() {
 
 	// Otherwise, begin processing packets/requests
 	while (true) {
+		// End active request if it doesn't have any loop actions
+		switch (active_request.type) {
+			default: break;
+			case PendRequest::TypeRefreshGrabber:
+			case PendRequest::TypeDumpLogOut:
+				// End request
+				active_request_send_retries = 0;
+				// Consume this request.
+				active_request.type = PendRequest::TypeNone;
+				// Try tail-chaining it
+				if (xQueueReceive(pending_requests, &active_request, 0)) {
+					start_pend_request(active_request);
+				}
+				break;
+		}
+
 		// Wait for a packet to come in over DMA. If this returns 0 (i.e. no packet but we still interrupted) then check the queue for a new task.
 		//
 		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
@@ -1093,6 +1123,28 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[2] = slots::protocol::QUERY_TIME;
 				req.rx_req->start_out = timekeeper.current_time;
 				send();
+			}
+			break;
+		case PendRequest::TypeRefreshGrabber:
+			{
+				wait_for_not_sending();
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x01;
+				dma_out_buffer[2] = slots::protocol::REFRESH_GRABBER;
+				dma_out_buffer[3] = (uint8_t)req.refresh;
+				send();
+			}
+			break;
+		case PendRequest::TypeReset:
+			{
+				// send message, delay, then reset
+				wait_for_not_sending();
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x00;
+				dma_out_buffer[2] = slots::protocol::RESET;
+				send();
+				wait_for_not_sending();
+				NVIC_SystemReset();
 			}
 		default:
 			break;

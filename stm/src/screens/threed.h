@@ -184,6 +184,8 @@ namespace threed {
 
 		bool interact();
 		constexpr static inline bool require_clearing() {return false;}
+
+		void refresh();
 	private:
 		void draw_triangle(const Tri& t, bool enable_lighting);
 		void update_matricies();

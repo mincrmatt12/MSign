@@ -12,6 +12,7 @@ namespace screen {
 		static void prepare(bool);
 
 		void draw();
+		void refresh();
 	private:
 		void draw_bus();
 		bool draw_slot(uint16_t y, const uint8_t * name, const uint64_t times[6], bool alert, bool delay);

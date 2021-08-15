@@ -323,4 +323,8 @@ namespace threed {
 			slots::MODEL_DATA
 		>(bheap::Block::TemperatureCold);
 	}
+
+	void Renderer::refresh() {
+		servicer.refresh_grabber(slots::protocol::GrabberID::MODELSERVE);
+	}
 }

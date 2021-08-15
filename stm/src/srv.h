@@ -84,6 +84,13 @@ namespace srv {
 		// Request time information from the ESP
 		slots::protocol::TimeStatus request_time(uint64_t& reponse, uint64_t &time_when_sent);
 
+		// Ask ESP to refresh a specific grabber (dataset)
+		void refresh_grabber(slots::protocol::GrabberID which);
+
+		// Reset system
+		[[noreturn]]
+		void reset();
+
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
@@ -159,13 +166,16 @@ namespace srv {
 
 				TimeRequest * rx_req;
 				MultiTempRequest mt_req;
+				slots::protocol::GrabberID refresh;
 			};
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
 				TypeChangeTemp,
 				TypeDumpLogOut,
 				TypeRxTime,
-				TypeChangeTempMulti
+				TypeChangeTempMulti,
+				TypeRefreshGrabber,
+				TypeReset
 			} type;
 		};
 

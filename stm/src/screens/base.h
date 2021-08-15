@@ -28,6 +28,8 @@ namespace screen {
 		//
 		// Note that calls to interact() can end whenever due to both inactivity timeouts and the catch all exit shortcut (hold power for 1.5 seconds)
 		bool interact() {return ui::buttons[ui::Buttons::POWER];};
+
+		void refresh() {};
 	};
 
 	// A screen which layers multiple other screens
@@ -39,6 +41,10 @@ namespace screen {
 
 		void draw() {
 			(std::get<Layered>(screens).draw(), ...);
+		}
+
+		void refresh() {
+			(std::get<Layered>(screens).refresh(), ...);
 		}
 
 		constexpr static inline bool require_clearing() {
@@ -94,6 +100,11 @@ namespace screen {
 		}
 
 		template<size_t ...Idx>
+		inline void _refresh(size_t idx, std::index_sequence<Idx...>) {
+			(void)((idx == Idx && (reinterpret_cast<Screens *>(&storage)->refresh(), true)) || ...);
+		}
+
+		template<size_t ...Idx>
 		inline bool _interact(size_t idx, std::index_sequence<Idx...>) {
 			return ((idx == Idx ? reinterpret_cast<Screens *>(&storage)->interact() : false) || ...);
 		}
@@ -115,6 +126,11 @@ namespace screen {
 			if (selected != npos)
 				return _interact(selected, std::index_sequence_for<Screens...>{});
 			return true;
+		}
+
+		void refresh() {
+			if (selected != npos)
+				_refresh(selected, std::index_sequence_for<Screens...>{});
 		}
 
 		void transition(size_t which) {

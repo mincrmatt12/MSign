@@ -8,7 +8,10 @@ namespace transit::ttc {
 	bool loop();
 
 	// There's no rate limit so....
-	constexpr static auto ttc_grabber = grabber::make_https_grabber(init, loop, pdMS_TO_TICKS(45000));
+	constexpr static auto ttc_grabber = grabber::make_refreshable_grabber(
+			grabber::make_https_grabber(init, loop, pdMS_TO_TICKS(45000)),
+			slots::protocol::GrabberID::TRANSIT
+	);
 }
 
 #endif

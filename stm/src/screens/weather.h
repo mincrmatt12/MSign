@@ -13,6 +13,7 @@ namespace screen {
 		static void prepare(bool);
 
 		void draw();
+		void refresh();
 
 		bool interact();
 	private:

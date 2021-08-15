@@ -263,3 +263,7 @@ screen::TTCScreen::~TTCScreen() {
 		slots::TTC_ALERTSTR
 	>(bheap::Block::TemperatureCold);
 }
+
+void screen::TTCScreen::refresh() {
+	servicer.refresh_grabber(slots::protocol::GrabberID::TRANSIT);
+}

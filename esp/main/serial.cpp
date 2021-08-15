@@ -7,6 +7,8 @@
 #include <esp_log.h>
 #include <sys/time.h>
 
+#include "grabber/grab.h"
+
 serial::SerialInterface serial::interface;
 
 static const char * TAG = "servicer";
@@ -29,6 +31,14 @@ void serial::SerialInterface::process_packet() {
 			}
 
 			return;
+
+		case REFRESH_GRABBER:
+			{
+				ESP_LOGD(TAG, "Refreshing grabber");
+
+				grabber::refresh((slots::protocol::GrabberID)rx_buf[3]);
+			}
+			break;
 
 		case QUERY_TIME:
 			{
@@ -78,6 +88,12 @@ void serial::SerialInterface::process_packet() {
 			}
 			
 			return;
+
+		case RESET:
+			{
+				ESP_LOGW(TAG, "Got reset from STM; resetting.");
+				esp_restart();
+			}
 
 		case slots::protocol::HANDSHAKE_INIT:
 			{

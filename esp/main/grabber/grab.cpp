@@ -37,15 +37,30 @@ namespace grabber {
 
 	constexpr TickType_t max_delay_between_runs = get_max_delay();
 
+	bool refresh_requested = false;
+	slots::protocol::GrabberID refresh_for;
+
+	TaskHandle_t gt = nullptr;
+
+	void refresh(slots::protocol::GrabberID gid) {
+		refresh_requested = true;
+		refresh_for = gid;
+
+		xTaskAbortDelay(gt);
+	}
+
 	TickType_t wants_to_run_at[grabber_count]{};
 
 	void run_grabber(size_t i, const Grabber * const grabber) {
 		auto ticks = xTaskGetTickCount();
-		if (ticks < wants_to_run_at[i]) return;
+		if (!(refresh_requested && refresh_for == grabber->associated && grabber->refreshable)) {
+			if (ticks < wants_to_run_at[i]) return;
+		}
 		wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
 	}
 
 	void run(void*) {
+		gt = xTaskGetCurrentTaskHandle();
 		// Wait for wifi
 		xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
 		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
@@ -68,6 +83,8 @@ namespace grabber {
 			for (size_t i = 0; i < grabber_count; ++i) {
 				if (grabbers[i]->ssl) run_grabber(i, grabbers[i]);
 			}
+
+			refresh_requested = false;
 
 			// Wait for minimum element
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);

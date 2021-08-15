@@ -2,6 +2,7 @@
 #define MSN_GRAB_H
 
 #include <FreeRTOS.h>
+#include "../common/slots.h"
 
 namespace grabber {
 	// Start a-grabbin!
@@ -15,6 +16,8 @@ namespace grabber {
 		TickType_t fail_time = pdMS_TO_TICKS(1000);
 
 		bool ssl = false;
+		slots::protocol::GrabberID associated{};
+		bool refreshable = false;
 	};
 
 	constexpr Grabber make_http_grabber(void (*_if)(), bool (*_gf)(), TickType_t loop, TickType_t fail=pdMS_TO_TICKS(5000)) {
@@ -36,6 +39,15 @@ namespace grabber {
 		g.ssl = true;
 		return g;
 	}
+
+	constexpr Grabber make_refreshable_grabber(const Grabber& base, slots::protocol::GrabberID gid) {
+		Grabber g = base;
+		g.refreshable = true;
+		g.associated = gid;
+		return g;
+	}
+
+	void refresh(slots::protocol::GrabberID gid);
 }
 
 #endif

@@ -106,7 +106,8 @@ pnames = {
     0x61: "UPDATE_IMG_DATA",
     0x62: "UPDATE_IMG_START",
     0x63: "UPDATE_STATUS",
-    0x70: "CONSOLE_MSG"
+    0x70: "CONSOLE_MSG",
+    0x80: "REFRESH_GRABBER"
 }
 
 pktcolors = {
