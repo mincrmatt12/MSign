@@ -13,7 +13,7 @@ namespace slots {
 	// to indicate the same as previous
 	// the structs with flags must be in the form uint<>_t something_bla, enum SomethingBla
 	enum DataID : uint16_t {
-		WIFI_STATUS = 0x01,			// BOOL; 0 - disconnected, 1 - connected
+		WIFI_STATUS = 0x01,			// STRUCT; WifiStatus, info about wifi connection
 		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
 
 		VIRTUAL_BUTTONMAP = 0x10, 	// UINT16_T; bitmap, override of the data on GPIOA for the buttons
@@ -61,6 +61,12 @@ namespace slots {
 
 			LAST_RX_FAILED = 16,
 		};
+	};
+
+	struct WifiStatus {
+		bool connected;
+		uint8_t ipaddr[4];
+		uint8_t gateway[4];
 	};
 
 	struct TTCInfo {

@@ -16,6 +16,23 @@ extern uint64_t rtc_time;
 
 namespace tasks {
 	namespace {
+		// w=12, h=12, stride=2, color=255, 255, 255
+		const uint8_t nowifi[] = {
+			0b00000000,0b00000000,
+			0b00000000,0b00000000,
+			0b00001111,0b00000000,
+			0b00110000,0b11000000,
+			0b01000000,0b00100000,
+			0b10011111,0b10010000,
+			0b00100000,0b01000000,
+			0b01001111,0b00100000,
+			0b00010000,0b10000000,
+			0b00100000,0b01000000,
+			0b00000110,0b00000000,
+			0b00000110,0b00000000
+		};
+
+
 		template <typename FB>
 		void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 			fb.clear();
@@ -47,17 +64,29 @@ namespace tasks {
 		}
 
 		void show_overlays() {
-			slots::WebuiStatus status;
+			slots::WebuiStatus status{};
+			bool connected = true;
+
 			{
 				srv::ServicerLockGuard g(servicer);
 				auto& blk = servicer.slot<slots::WebuiStatus>(slots::WEBUI_STATUS);
 				if (blk) {
 					status = *blk;
 				}
-				else return;
+				if (auto &wf = servicer.slot<slots::WifiStatus>(slots::WIFI_STATUS); wf && !wf->connected) connected = false;
 			}
 
 			int x = 128;
+
+			// show wifi fail
+			if (!connected) {
+				draw::rect(matrix.get_inactive_buffer(), x - 14, 0, x, 12, 0);
+
+				x -= 14;
+				// icon
+				draw::bitmap(matrix.get_inactive_buffer(), nowifi, 12, 12, 2, x, 0, 0xbb_c);
+				draw::line(matrix.get_inactive_buffer(), x, 0, x + 11, 11, 0xff3333_cc);
+			}
 			
 			// try to draw sysupgrade
 			if (status.flags & slots::WebuiStatus::RECEIVING_SYSUPDATE) {
@@ -146,7 +175,7 @@ namespace tasks {
 		}
 
 		// Tell servicer to grab the sccfg
-		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING, slots::WEBUI_STATUS);
+		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING, slots::WEBUI_STATUS, slots::WIFI_STATUS);
 
 		swapper.notify_before_transition(0, true);
 		swapper.transition(0);

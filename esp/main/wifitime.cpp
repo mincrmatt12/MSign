@@ -18,18 +18,30 @@ static const char * T_TAG = "sntp";
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
+	slots::WifiStatus newstatus;
 
 	switch (event->event_id) {
 		case SYSTEM_EVENT_STA_START:
 			tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, "msign");
+			// Send disconnected message
+			newstatus.connected = false;
+			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
 			esp_wifi_connect();
 			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
 			ESP_LOGI(TAG, "Connected with IP %s", ip4addr_ntoa(&info.got_ip.ip_info.ip));
+			newstatus.connected = true;
+			for (int i = 0; i < 4; ++i) {
+				newstatus.ipaddr[i] = ip4_addr_get_byte_val(info.got_ip.ip_info.ip, i);
+				newstatus.gateway[i] = ip4_addr_get_byte_val(info.got_ip.ip_info.gw, i);
+			}
+			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
 			xEventGroupSetBits(wifi::events, wifi::WifiConnected);
 			break;
 		case SYSTEM_EVENT_STA_DISCONNECTED:
 			ESP_LOGW(TAG, "Disconnected from AP (%d)", info.disconnected.reason);
+			newstatus.connected = false;
+			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
 			xEventGroupClearBits(wifi::events, wifi::WifiConnected);
 			if (info.disconnected.reason == WIFI_REASON_BASIC_RATE_NOT_SUPPORT) {
 				esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
