@@ -663,6 +663,8 @@ namespace screen {
 	int wigglerange_from(int stddev, int amount, int probability) {
 		// We can express unconfidence as stddev / amount, and then rescale and cap
 		
+		if (probability == 0 || amount == 0 || stddev == 0) return 0;
+
 		stddev = (stddev * 255) / probability;
 
 		int unconf = (stddev * 100) / amount;
