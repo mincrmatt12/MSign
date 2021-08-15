@@ -8,6 +8,10 @@
 #include "../ui.h"
 #include "../crash/main.h"
 
+#ifndef SIM
+#include <stm32f2xx.h>
+#endif
+
 extern srv::Servicer servicer;
 extern matrix_type matrix;
 extern uint64_t rtc_time;
@@ -408,6 +412,7 @@ namespace tasks {
 			"crash (nf panic)",
 			"crash (mem)",
 			"crash (wdog)",
+			"enable div0 trp",
 			nullptr
 		};
 
@@ -475,6 +480,12 @@ namespace tasks {
 					}
 					else if (ms.selected == 4) {
 						vTaskDelay(pdMS_TO_TICKS(30'000));
+					}
+					else if (ms.selected == 5) {
+#ifndef SIM
+						SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
+#endif
+						goto close;
 					}
 				}
 				break;
