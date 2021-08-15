@@ -40,7 +40,25 @@ namespace tasks {
 		uint64_t last_swapped_at = 0;
 		uint32_t interact_timeout = 0;
 
+		struct MS {
+			uint8_t selected = 0;
+			enum Submenu : uint8_t {
+				SubmenuMain = 0,
+				SubmenuConnInfo = 1,
+				SubmenuSelectScreen = 2,
+				SubmenuDebug = 3
+			} submenu = SubmenuMain;
+
+			void reset() {
+				new (this) MS{};
+			}
+		} ms;
+
 		int next_screen_idx(bool prev=false);
+
+		void draw_conn_panel();
+		void draw_menu_list(const char ** entries, bool last_is_close=true);
+		void do_menu_overlay();
 	};
 }
 

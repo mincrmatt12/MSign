@@ -2,9 +2,11 @@
 #include "../draw.h"
 #include "../fonts/dejavu_10.h"
 #include "../fonts/lcdpixel_6.h"
+#include "../fonts/tahoma_9.h"
 #include "../common/bootcmd.h"
 #include "../srv.h"
 #include "../ui.h"
+#include "../crash/main.h"
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -234,19 +236,22 @@ namespace tasks {
 						interact_mode = InteractByScreen;
 						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 					}
-					/*else if (ui::buttons[ui::Buttons::MENU]) {
+					else if (ui::buttons[ui::Buttons::MENU]) {
 						interact_mode = InteractMenuOpen;
 						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
-					}*/
+						ms.reset();
+					}
 					break;
 				case InteractByScreen:
-					// TODO: draw overlay?
 					draw::rect(matrix.get_inactive_buffer(), 126, 62, 128, 64, 0x00ff00_cc);
 					if (swapper.interact()) {
 						// reset swapper timer to avoid the screen instantly going away.
 						last_swapped_at = rtc_time;
 						interact_mode = InteractNone;
 					}
+					break;
+				case InteractMenuOpen:
+					do_menu_overlay();
 					break;
 				default:
 					break;
@@ -278,6 +283,217 @@ namespace tasks {
 			)
 		);
 		return retval;
+	}
+
+	void DispMan::draw_conn_panel() {
+		srv::ServicerLockGuard g(servicer);
+
+		const auto& conndata = servicer.slot<slots::WifiStatus>(slots::WIFI_STATUS);
+
+		int padding = 2; // 1 pixel both sides
+		int border = 2; // 1 pixel both sides
+
+		int leftoffset = 1 + padding / 2 + border / 2;
+
+		int contentwidth = 0;
+		int contentheight = 0;
+
+		char ipbuf[32];
+
+		int y = 1 + padding / 2 + 7 + border / 2;
+
+		if (!conndata) {
+			contentheight = 9;
+			contentwidth = draw::text_size("unknown", font::tahoma_9::info);
+		}
+		else {
+			if (conndata->connected) {
+				contentheight = 27;
+				contentwidth = draw::text_size("gw: 000.000.000.000", font::tahoma_9::info);
+			}
+			else {
+				contentheight = 9;
+				contentwidth = draw::text_size("connected: no", font::tahoma_9::info);
+			}
+		}
+
+		draw::rect(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0);
+		draw::outline(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0xff_c);
+
+		if (!conndata) {
+			draw::text(matrix.get_inactive_buffer(), "unknown", font::tahoma_9::info, leftoffset, y, 0x80_c);
+		}
+		else {
+			if (conndata->connected) {
+				draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, leftoffset, y, "connected: ", 0xff_c, "yes", 0x44ff44_cc);
+				snprintf(ipbuf, 32, "ip: %d.%d.%d.%d", conndata->ipaddr[0], conndata->ipaddr[1], conndata->ipaddr[2], conndata->ipaddr[3]);
+				draw::text(matrix.get_inactive_buffer(), ipbuf, font::tahoma_9::info, leftoffset, y + 9, 0xff_c);
+				snprintf(ipbuf, 32, "gw: %d.%d.%d.%d", conndata->gateway[0], conndata->gateway[1], conndata->gateway[2], conndata->gateway[3]);
+				draw::text(matrix.get_inactive_buffer(), ipbuf, font::tahoma_9::info, leftoffset, y + 18, 0xff_c);
+			}
+			else {
+				draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, leftoffset, y, "connected: ", 0xff_c, "no", 0xff4444_cc);
+			}
+		}
+	}
+
+	void DispMan::draw_menu_list(const char ** entries, bool last_is_close) {
+		// Compute size
+
+		int padding = 2; // 1 pixel both sides
+		int border = 2; // 1 pixel both sides
+
+		int leftoffset = 1 + padding / 2 + border / 2;
+
+		int contentwidth = 0;
+		int contentheight = 0;
+		int caretsize = draw::text_size("> ", font::tahoma_9::info);
+		int max = 0;
+
+		for (auto entry = entries; *entry; entry++) {
+			contentwidth = std::max(contentwidth, draw::text_size(*entry, font::tahoma_9::info) + caretsize);
+			contentheight += 9;
+			++max;
+		}
+
+		// Draw a rectangle onscreen
+		draw::rect(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0);
+		draw::outline(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0xff_c);
+
+		// Draw entries
+		int y = 1 + padding / 2 + 7 + border / 2;
+		for (int i = 0; i < max; ++i) {
+			auto tc = (i == max - 1 && last_is_close) ? 0xcc_c : 0xff_c;
+			if (ms.selected == i) {
+				draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, leftoffset, y, "> ", 0x3344fc_cc, entries[i], tc);
+			}
+			else {
+				draw::multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, leftoffset, y, entries[i], tc);
+			}
+			y += 9;
+		}
+
+		if (ui::buttons[ui::Buttons::NXT]) {
+			ms.selected += 1;
+			ms.selected %= max;
+		}
+		else if (ui::buttons[ui::Buttons::PRV]) {
+			if (ms.selected == 0) ms.selected = max - 1;
+			else --ms.selected;
+		}
+	}
+
+	void DispMan::do_menu_overlay() {
+		const static char* menu_entries[] = {
+			"refresh",
+			"goto",
+			"connection",
+			"check for update",
+			"close",
+			nullptr
+		};
+
+		const static char * screen_names[] = {
+			"transit",
+			"weather",
+			"clock",
+
+			"back",
+			nullptr
+		};
+
+		const static char * debug_entries[] = {
+			"reset",
+			"crash (panic)",
+			"crash (nf panic)",
+			"crash (mem)",
+			"crash (wdog)",
+			nullptr
+		};
+
+		switch (ms.submenu) {
+			case MS::SubmenuMain:
+				draw_menu_list(menu_entries);
+
+				if (ui::buttons[ui::Buttons::SEL]) {
+					if (ms.selected == 0) {
+						swapper.refresh();
+						goto close;
+					}
+					else if (ms.selected == 1) {
+						ms.selected = 0;
+						ms.submenu = MS::SubmenuSelectScreen;
+						return;
+					}
+					else if (ms.selected == 2) {
+						ms.selected = 0;
+						ms.submenu = MS::SubmenuConnInfo;
+						return;
+					}
+					else if (ms.selected == 3) {
+						servicer.refresh_grabber(slots::protocol::GrabberID::CFGPULL);
+						goto close;
+					}
+					else if (ms.selected == 4) goto close;
+				}
+				else if (ui::buttons.held(ui::Buttons::MENU, pdMS_TO_TICKS(1800))) {
+					ms.selected = 0;
+					ms.submenu = MS::SubmenuDebug;
+					return;
+				}
+
+				break;
+			case MS::SubmenuConnInfo:
+				draw_conn_panel();
+				break;
+			case MS::SubmenuSelectScreen:
+				draw_menu_list(screen_names);
+
+				if (ui::buttons[ui::Buttons::SEL]) {
+					if (ms.selected == 3) goto back;
+
+					swapper.transition(ms.selected);
+					goto close;
+				}
+				break;
+			case MS::SubmenuDebug:
+				draw_menu_list(debug_entries);
+
+				if (ui::buttons[ui::Buttons::SEL]) {
+					if (ms.selected == 0) {
+						servicer.reset();
+					}
+					else if (ms.selected == 1) {
+						crash::panic("test panic");
+					}
+					else if (ms.selected == 2) {
+						crash::panic_nonfatal("test nonfatal");
+					}
+					else if (ms.selected == 3) {
+						volatile uint32_t * the_void = (uint32_t *)(0x6432'1234);
+						*the_void = 567;
+					}
+					else if (ms.selected == 4) {
+						vTaskDelay(pdMS_TO_TICKS(30'000));
+					}
+				}
+				break;
+		}
+
+		if (ui::buttons[ui::Buttons::POWER]) {
+			switch (ms.submenu) {
+				case MS::SubmenuMain:
+				case MS::SubmenuDebug:
+close:
+					last_swapped_at = rtc_time;
+					interact_mode = InteractNone;
+					break;
+				default:
+back:
+					ms.submenu = MS::SubmenuMain;
+					break;
+			}
+		}
 	}
 }
 
