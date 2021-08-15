@@ -14,6 +14,21 @@ index 574dfe7e..6c9849e4 100644
  endif()
  
  register_component()
+diff --git a/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h b/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
+index 44b2f72b..35e05d84 100644
+--- a/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
++++ b/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
+@@ -103,6 +103,10 @@ to exclude the API function. */
+ #define INCLUDE_vTaskDelayUntil			1
+ #define INCLUDE_vTaskDelay				1
+ 
++// for msign:
++#define INCLUDE_xTaskAbortDelay         1
++#define INCLUDE_eTaskGetState           1
++
+ /*set the #define for debug info*/
+ #define INCLUDE_xTaskGetCurrentTaskHandle 1
+ #define INCLUDE_uxTaskGetStackHighWaterMark 1
 diff --git a/components/freertos/port/esp8266/include/freertos/portmacro.h b/components/freertos/port/esp8266/include/freertos/portmacro.h
 index b546cd7b..5443fb33 100644
 --- a/components/freertos/port/esp8266/include/freertos/portmacro.h
