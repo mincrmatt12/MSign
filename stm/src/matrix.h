@@ -194,10 +194,13 @@ namespace led {
 		const static uint_fast16_t EffectiveWidth = 256;
 
 		inline static color_t & _at(color_t * data, uint16_t x, uint16_t y) {
+			x = 127 - x;
+			y = 63 - y;
+
 			if (y > 31) 
-				return data[x + (y & 0x1f)*EffectiveWidth];
+				return data[(x + 128) + (y & 0x1f)*EffectiveWidth];
 			else
-				return data[(EffectiveWidth - 1 - x) + (31 - y)*EffectiveWidth];
+				return data[(x) + (y & 0x1f)*EffectiveWidth];
 		}
 	};
 
