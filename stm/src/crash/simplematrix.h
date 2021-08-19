@@ -96,12 +96,14 @@ namespace crash {
 		uint8_t frame[256*32];
 
 		uint8_t & color(uint16_t x, uint16_t y) {
+			x = 127 - x;
+			y = 63 - y;
 			if (y > 31) {
-				return frame[x + (y & 0x1f)*256];
+				x += 128;
 			}
-			else {
-				return frame[(255 - x) + (31 - y)*256];
-			}
+			y &= 0x1f;
+
+			return frame[x + y*256];
 		}
 
 		void dma_finished() {
