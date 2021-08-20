@@ -792,14 +792,18 @@ void screen::WeatherScreen::draw_big_graphs() {
 		time_t now = rtc_time / 1000;
 		gmtime_r(&now, &timedat);
 		
-		const int16_t * blk_16 = nullptr;
+		const int16_t * blk_16 = nullptr, *blk_alt_16 = nullptr;
 		const slots::PrecipData * blk_precip = nullptr;
 
 		switch (graph) {
 			case FEELS_TEMP:
-				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH); break;
+				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
+				if (servicer.slot(slots::WEATHER_RTEMP_GRAPH)) blk_alt_16 = *servicer.slot<int16_t *>(slots::WEATHER_RTEMP_GRAPH);
+				break;
 			case REAL_TEMP:
-				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_RTEMP_GRAPH); break;
+				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_RTEMP_GRAPH);
+				if (servicer.slot(slots::WEATHER_TEMP_GRAPH)) blk_alt_16 = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
+				break;
 			case WIND:
 				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_WIND_GRAPH); break;
 			case PRECIP_HOUR:
@@ -814,6 +818,13 @@ void screen::WeatherScreen::draw_big_graphs() {
 		switch (graph) {
 			case FEELS_TEMP:
 			case REAL_TEMP:
+				if (blk_alt_16) {
+					for (uint8_t i = 0; i < 24; ++i) {
+						min_ = std::min<int32_t>(min_, blk_alt_16[i]);
+						max_ = std::max<int32_t>(max_, blk_alt_16[i]);
+					}
+				}
+				[[fallthrough]];
 			case WIND:
 				for (uint8_t i = 0; i < 24; ++i) {
 					min_ = std::min<int32_t>(min_, blk_16[i]);
@@ -823,13 +834,10 @@ void screen::WeatherScreen::draw_big_graphs() {
 				break;
 			case PRECIP_HOUR:
 			case PRECIP_DAY:
-
-				min_ = 10;
 				for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
 					max_ = std::max<int32_t>(max_, blk_precip[i].amount + wigglerange_from(blk_precip[i].stddev, blk_precip[i].amount, blk_precip[i].probability) * 4 / 5);
 				}
 				max_ = std::max<int32_t>(max_, 90); // really little amounts of rain often have high stddev and that looks really stupid
-
 				break;
 			default:
 				return;
