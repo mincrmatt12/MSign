@@ -74,7 +74,7 @@ bool wifi::init() {
 	ESP_LOGW(TAG, "Fake wifi init: ok");
 
 	slots::WifiStatus fakestatus;
-	fakestatus.connected = false;
+	fakestatus.connected = true;
 	fakestatus.ipaddr[0] = 192;
 	fakestatus.ipaddr[1] = 168;
 	fakestatus.ipaddr[2] = 122;
