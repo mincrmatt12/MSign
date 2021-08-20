@@ -476,7 +476,7 @@ namespace tasks {
 					}
 					else if (ms.selected == 3) {
 						volatile uint32_t * the_void = (uint32_t *)(0x20021234);
-						*the_void = 567;
+						(void)(*the_void);
 					}
 					else if (ms.selected == 4) {
 						vTaskDelay(pdMS_TO_TICKS(30'000));
