@@ -226,7 +226,7 @@ namespace led {
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
-			tim_init.Prescaler  = 3;
+			tim_init.Prescaler  = 2;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM4, &tim_init);
 
