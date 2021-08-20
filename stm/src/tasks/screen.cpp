@@ -475,7 +475,7 @@ namespace tasks {
 						crash::panic_nonfatal("test nonfatal");
 					}
 					else if (ms.selected == 3) {
-						volatile uint32_t * the_void = (uint32_t *)(0x6432'1234);
+						volatile uint32_t * the_void = (uint32_t *)(0x20021234);
 						*the_void = 567;
 					}
 					else if (ms.selected == 4) {
