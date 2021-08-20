@@ -24,8 +24,8 @@ void nvic::init() {
 	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,1)); // sequence after each other
-	NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
+	NVIC_SetPriority(TIM4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,1)); // sequence after each other
+	NVIC_EnableIRQ(TIM4_IRQn);
 
 	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6,0));
 	NVIC_EnableIRQ(NVIC_SRV_TX_IRQ_NAME);
@@ -57,9 +57,9 @@ extern "C" void DMA2_Stream5_IRQHandler() {
 	}
 }
 
-extern "C" void TIM1_BRK_TIM9_IRQHandler() {
-	if (LL_TIM_IsActiveFlag_UPDATE(TIM9)) {
-		LL_TIM_ClearFlag_UPDATE(TIM9);
+extern "C" void TIM4_IRQHandler() {
+	if (LL_TIM_IsActiveFlag_UPDATE(TIM4)) {
+		LL_TIM_ClearFlag_UPDATE(TIM4);
 		matrix.tim_elapsed();
 	}
 }

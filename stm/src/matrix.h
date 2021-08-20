@@ -214,7 +214,8 @@ namespace led {
 		}
 		void init() {
 			// Enable clocks
-			LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1 | LL_APB2_GRP1_PERIPH_TIM9);	 // timer
+			LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);	 // timer
+			LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_TIM4);
 			LL_AHB1_GRP1_EnableClock(SIGN_GPIO_PERIPH | LL_AHB1_GRP1_PERIPH_GPIOB | LL_AHB1_GRP1_PERIPH_DMA2); // gpios
 
 			// Setup the timer.
@@ -225,11 +226,11 @@ namespace led {
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
-			tim_init.Prescaler  = 6;
+			tim_init.Prescaler  = 3;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
-			LL_TIM_Init(TIM9, &tim_init);
+			LL_TIM_Init(TIM4, &tim_init);
 
-			LL_TIM_EnableDMAReq_UPDATE(TIM1);
+			LL_TIM_EnableDMAReq_UPDATE(TIM1); // trigger dma requests every cycle of tim1
 
 			// setup gpios
 			LL_GPIO_InitTypeDef gpio_init = {0};
@@ -239,11 +240,26 @@ namespace led {
 			gpio_init.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
 			gpio_init.Pull = LL_GPIO_PULL_DOWN;
 			LL_GPIO_Init(SIGN_DATA_Port, &gpio_init);
-			gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5 | LL_GPIO_PIN_6;
+			gpio_init.Pin = LL_GPIO_PIN_0 | LL_GPIO_PIN_1 | LL_GPIO_PIN_2 | LL_GPIO_PIN_3 | LL_GPIO_PIN_4 | LL_GPIO_PIN_5;
 			gpio_init.Pull = LL_GPIO_PULL_NO;
 			LL_GPIO_Init(GPIOB, &gpio_init);
+			gpio_init.Pin = LL_GPIO_PIN_6;
+			gpio_init.Alternate = LL_GPIO_AF_2;
+			gpio_init.Mode = LL_GPIO_MODE_ALTERNATE;
+			LL_GPIO_Init(GPIOB, &gpio_init);
 
-			LL_TIM_EnableIT_UPDATE(TIM9);
+			// enable interrupt on oe wait finish
+			LL_TIM_EnableIT_UPDATE(TIM4);
+
+			LL_TIM_OC_InitTypeDef tim_oc_init = {0};
+			tim_oc_init.CompareValue = 1; // compare to 1
+			tim_oc_init.OCMode = LL_TIM_OCMODE_PWM2; // output active while value is not less than 1
+			tim_oc_init.OCPolarity = LL_TIM_OCPOLARITY_LOW; // output is active low
+			tim_oc_init.OCState = LL_TIM_OCSTATE_ENABLE; // channel is enabled
+			LL_TIM_OC_Init(TIM4, LL_TIM_CHANNEL_CH1, &tim_oc_init);
+
+			// set one pulse mode
+			LL_TIM_SetOnePulseMode(TIM4, LL_TIM_ONEPULSEMODE_SINGLE);
 
 			// Setup le dma
 			LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
@@ -269,8 +285,6 @@ namespace led {
 			delaying = false;
 			should_swap = false;
 			delay_counter = 0;
-			// blank the thing
-			oe = true; // active high
 			// start the whole procedure
 			blast_row();
 		}
@@ -297,19 +311,16 @@ namespace led {
 
 		void dma_finish() {
 			// blast is finished, stop dma + timer output
-			LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
-			LL_DMA_ClearFlag_TC5(DMA2);
 			LL_TIM_DisableCounter(TIM1);
+			LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
 			// check show
 			if (show) do_next();
 			else show = true;
 		}
 
 		void tim_elapsed() {
-			oe = true;
 			if (!delaying) return;
-			LL_TIM_DisableCounter(TIM9);
-			LL_TIM_ClearFlag_UPDATE(TIM9);
+			// we don't bother clearing counter enable since OPM will do it for us.
 			delaying = false;
 			if (show) do_next();
 			else {
@@ -339,7 +350,6 @@ namespace led {
 
 		// pins
 		gpio::Pin<GPIOB_BASE, 5> strobe;
-		gpio::Pin<GPIOB_BASE, 6> oe;
 		
 		// clock is tied to tim2_ch3
 
@@ -363,16 +373,14 @@ namespace led {
 			delaying = true;
 			delay_counter = (ticks);
 			// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
-			LL_TIM_SetCounter(TIM9, 0);
-			LL_TIM_SetAutoReload(TIM9, ticks-1);
-			oe = false;
-			LL_TIM_EnableCounter(TIM9);
+			LL_TIM_SetCounter(TIM4, 0); // this isn't really necessary but may as well
+			LL_TIM_SetAutoReload(TIM4, ticks); // 1 tick for the 0 state.
+			LL_TIM_EnableCounter(TIM4);
 		}
 
 		void do_next() {
 			const static uint16_t draw_ticks_table[] = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
 
-			oe = true;
 			show = false;
 			uint16_t drawn_pos = draw_ticks_table[pos];
 			// set address pins
