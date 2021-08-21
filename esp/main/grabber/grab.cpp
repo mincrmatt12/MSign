@@ -14,6 +14,7 @@
 #include <algorithm>
 #include "../sd.h"
 #include "esp_log.h"
+#include "../serial.h"
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
@@ -53,10 +54,10 @@ namespace grabber {
 
 	void run_grabber(size_t i, const Grabber * const grabber) {
 		auto ticks = xTaskGetTickCount();
-		if (!(refresh_requested && refresh_for == grabber->associated && grabber->refreshable)) {
+		if (!(refresh_requested && refresh_for == grabber->associated && grabber->refreshable) || (refresh_requested && refresh_for == slots::protocol::GrabberID::ALL)) {
 			if (ticks < wants_to_run_at[i]) return;
 		}
-		wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time);
+		wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time) * (serial::interface.is_sleeping() ? 5 : 1);
 	}
 
 	void run(void*) {

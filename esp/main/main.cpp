@@ -21,6 +21,11 @@ const static char * TAG = "app_main";
 #define STACK_MULT 1
 #endif
 
+int msign_putchar(int c) {
+	if (serial::interface.is_sleeping()) return c;
+	return putchar(c);
+}
+
 extern "C" void app_main() {
 	ESP_LOGI(TAG, "Starting MSign...");
 
@@ -58,6 +63,7 @@ extern "C" void app_main() {
 	// sd::install_log();
 
 	serial::interface.init();
+	esp_log_set_putchar(msign_putchar);
 
 	// Create event handle early
 	wifi::events = xEventGroupCreate();

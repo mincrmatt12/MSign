@@ -88,7 +88,8 @@ is limited to around 8k in practice.
 | `UPDATE_IMG_START` | `0x62` |
 | `UPDATE_STATUS` | `0x63` |
 | `CONSOLE_MSG` | `0x70` |
-
+| `REFRESH_GRABBER` | `0x80` |
+| `SLEEP_ENABLE` | `0x81` |
 
 ### Handshake
 
@@ -274,6 +275,21 @@ The status code can be one of
 | ---- | ------- |
 | `0x00` | OK |
 | `0x01` | Time is still being retrieved, try again in a bit |
+
+### Refresh
+
+The STM can ask the ESP to refresh data from a certain grabber (see the esp source) by sending the `REFRESH_GRABBER` with a single byte payload indicating which ID to refresh.
+
+### Sleep mode
+
+The MSign has a sort of pseudo sleep mode which can by enabled or disabled by either devices by sending the `SLEEP_ENABLE` message with a singly byte payload indicating whether
+or not to enable/disable (`00` being disabled, anything else being enabled)
+
+When in sleep mode, the following things occur:
+
+- all log output is prevented from reaching the serial port (to avoid blinking the led)
+- the screen is turned off
+- update frequency is made much slower
 
 ### Other commands
 

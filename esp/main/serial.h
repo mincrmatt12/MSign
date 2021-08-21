@@ -85,6 +85,10 @@ namespace serial {
 		// Operation sync barrier (not per slot as requests are processed strictly in-order)
 		void sync();
 
+		// SLEEP MODE
+
+		bool is_sleeping() const {return in_sleep_mode;}
+
 	private:
 		// Data update manager: handles requests for data separately
 		DataUpdateManager dum;
@@ -99,7 +103,7 @@ namespace serial {
 
 		// Last time we received comms with the STM (for autoreset)
 		TickType_t last_comms = 0;
-		bool waiting_for_ping = false;
+		bool waiting_for_ping = false, in_sleep_mode = false;
 	};
 
 	extern SerialInterface interface;

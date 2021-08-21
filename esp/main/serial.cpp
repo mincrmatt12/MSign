@@ -66,6 +66,28 @@ void serial::SerialInterface::process_packet() {
 			}
 
 			return;
+		case SLEEP_ENABLE:
+			{
+				bool entering = rx_pkt.data()[0];
+				
+				if (entering) {
+					ESP_LOGI(TAG, "Entering sleep mode... (logs will quieten)");
+
+					// ... logs are now shutupped
+					
+					in_sleep_mode = true;
+				}
+				else {
+					// Exit sleep mode
+					ESP_LOGI(TAG, "Exited sleep mode");
+					
+					in_sleep_mode = false;
+
+					// refresh all grabbers
+					grabber::refresh(slots::protocol::GrabberID::ALL);
+				}
+			}
+			return;
 		case DATA_TEMP:
 			{
 				DataUpdateRequest dur;
