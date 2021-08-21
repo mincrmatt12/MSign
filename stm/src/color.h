@@ -22,7 +22,7 @@ namespace led {
 			uint16_t components[3];
 		};
 
-		uint16_t get_spare() {
+		uint16_t get_spare() const {
 			return ((r & 0xf000) >> 4) | ((g & 0xf000) >> 8) | ((b & 0xf000) >> 12);
 		}
 
@@ -42,7 +42,7 @@ namespace led {
 
 #undef make_op
 
-		color_t mix(const color_t& other, uint8_t factor /* from 0-255 */) {
+		color_t mix(const color_t& other, uint8_t factor /* from 0-255 */) const {
 			return color_t(
 				r + ((((int)other.r - (int)this->r) * (int)factor) / 255),
 				g + ((((int)other.g - (int)this->g) * (int)factor) / 255),

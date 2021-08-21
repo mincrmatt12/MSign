@@ -23,6 +23,10 @@ namespace led {
 		inline static color_t & _at(color_t * data, uint16_t x, uint16_t y) {
 			return data[x + y*Width];
 		}
+
+		inline static const color_t & _at(const color_t * data, uint16_t x, uint16_t y) {
+			return data[x + y*Width];
+		}
 	};
 
 	template<uint16_t Width, uint16_t Height, typename Storage=BasicFrameBufferStorage<Width>>
@@ -194,6 +198,16 @@ namespace led {
 		const static uint_fast16_t EffectiveWidth = 256;
 
 		inline static color_t & _at(color_t * data, uint16_t x, uint16_t y) {
+			x = 127 - x;
+			y = 63 - y;
+
+			if (y > 31) 
+				return data[(x + 128) + (y & 0x1f)*EffectiveWidth];
+			else
+				return data[(x) + (y & 0x1f)*EffectiveWidth];
+		}
+
+		inline static const color_t & _at(const color_t * data, uint16_t x, uint16_t y) {
 			x = 127 - x;
 			y = 63 - y;
 
