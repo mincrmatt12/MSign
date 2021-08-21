@@ -136,6 +136,13 @@ void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
 	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
 }
 
+void srv::Servicer::set_sleep_mode(bool enabled) {
+	PendRequest pr;
+	pr.type = PendRequest::TypeSleepMode;
+	pr.sleeping = enabled;
+	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+}
+
 void srv::Servicer::reset() {
 	PendRequest pr;
 	pr.type = PendRequest::TypeReset;
@@ -359,6 +366,7 @@ void srv::Servicer::run() {
 		switch (active_request.type) {
 			default: break;
 			case PendRequest::TypeRefreshGrabber:
+			case PendRequest::TypeSleepMode:
 			case PendRequest::TypeDumpLogOut:
 				// End request
 				active_request_send_retries = 0;
@@ -1132,6 +1140,16 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[1] = 0x01;
 				dma_out_buffer[2] = slots::protocol::REFRESH_GRABBER;
 				dma_out_buffer[3] = (uint8_t)req.refresh;
+				send();
+			}
+			break;
+		case PendRequest::TypeSleepMode:
+			{
+				wait_for_not_sending();
+				dma_out_buffer[0] = 0xa5;
+				dma_out_buffer[1] = 0x01;
+				dma_out_buffer[2] = slots::protocol::SLEEP_ENABLE;
+				dma_out_buffer[3] = (uint8_t)req.sleeping;
 				send();
 			}
 			break;

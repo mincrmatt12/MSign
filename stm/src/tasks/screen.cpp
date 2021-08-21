@@ -245,6 +245,7 @@ namespace tasks {
 						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 						ms.reset();
 					}
+					else if (ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(2000))) do_sleep_mode();
 					break;
 				case InteractByScreen:
 					draw::rect(matrix.get_inactive_buffer(), 126, 62, 128, 64, 0x00ff00_cc);
@@ -267,6 +268,27 @@ namespace tasks {
 			// Sync on swap buffer
 			matrix.swap_buffers();
 		}
+	}
+
+	void DispMan::do_sleep_mode() {
+		servicer.set_sleep_mode(true);
+
+		bool ig = true;
+
+		// Spin
+		while (true) {
+			matrix.get_inactive_buffer().clear();
+			matrix.swap_buffers();
+			// check for power button
+			ui::buttons.update();
+			if (ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(1000))) {
+				if (ig == true) continue;
+				break;
+			}
+			else ig = false;
+		}
+
+		servicer.set_sleep_mode(false);
 	}
 	
 	int DispMan::next_screen_idx(bool prev) {

@@ -91,6 +91,9 @@ namespace srv {
 		[[noreturn]]
 		void reset();
 
+		// Enter/exit sleep mode
+		void set_sleep_mode(bool enabled);
+
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
@@ -167,6 +170,7 @@ namespace srv {
 				TimeRequest * rx_req;
 				MultiTempRequest mt_req;
 				slots::protocol::GrabberID refresh;
+				bool sleeping;
 			};
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
@@ -175,6 +179,7 @@ namespace srv {
 				TypeRxTime,
 				TypeChangeTempMulti,
 				TypeRefreshGrabber,
+				TypeSleepMode,
 				TypeReset
 			} type;
 		};

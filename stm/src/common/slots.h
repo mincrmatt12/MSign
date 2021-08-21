@@ -227,7 +227,8 @@ namespace slots {
 
 			CONSOLE_MSG = 0x70,
 
-			REFRESH_GRABBER = 0x80
+			REFRESH_GRABBER = 0x80,
+			SLEEP_ENABLE = 0x81
 		};
 
 		enum struct TimeStatus : uint8_t {
@@ -277,7 +278,9 @@ namespace slots {
 			TRANSIT = 0,
 			WEATHER = 1,
 			MODELSERVE = 2,
-			CFGPULL = 3
+			CFGPULL = 3,
+			
+			ALL = 0xfa
 		};
 	}
 
