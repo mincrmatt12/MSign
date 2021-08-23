@@ -68,7 +68,7 @@ namespace led {
 			}
 
 			inline uint8_t _remap(uint16_t prev) {                                    
-				return std::pow((prev & 0xFFF) / 4095.0, (1/2.2)) * 255;
+				return std::pow((prev & 0xFFF) / 4095.0, (1/2.6)) * 255;
 			}                                                                        
 
 
