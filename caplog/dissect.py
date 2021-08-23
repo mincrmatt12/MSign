@@ -77,6 +77,7 @@ else:
         for f in ok:
             header = read_exact(f, 3)
             while header[0] not in (0xa5, 0xa6):
+                print("??? : {:02x}".format(header[0]))
                 header[0:1] = header[1:2]
                 header[2] = read_exact(f, 1)[0]
             yield bytes(header + read_exact(f, header[1]))
@@ -107,7 +108,8 @@ pnames = {
     0x62: "UPDATE_IMG_START",
     0x63: "UPDATE_STATUS",
     0x70: "CONSOLE_MSG",
-    0x80: "REFRESH_GRABBER"
+    0x80: "REFRESH_GRABBER",
+    0x81: "SLEEP_ENABLE"
 }
 
 pktcolors = {
