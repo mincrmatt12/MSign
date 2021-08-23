@@ -194,7 +194,7 @@ namespace threed {
 			current_look = camera_look + (camera_look_target - camera_look) * m::fixed_t(interp_progress, 4500);
 		}
 
-		perpview = Mat4::perspective(2, 1, m::fixed_t(5, 100), 12) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
+		perpview = Mat4::perspective(2, m::HALFPI, m::fixed_t(5, 100), 12) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
 		led::color_t fill(0);
 		fill.set_spare(INT16_MAX);
