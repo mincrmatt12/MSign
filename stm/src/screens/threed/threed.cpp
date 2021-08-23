@@ -114,6 +114,7 @@ namespace threed {
 		{
 			srv::ServicerLockGuard g(servicer);
 			update_matricies();
+			current_lookdir = -(current_look - current_pos).normalize();
 			current_tri = 0;
 			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0) tri_count = default_mesh.tri_count;
 			else {
@@ -193,7 +194,7 @@ namespace threed {
 			current_look = camera_look + (camera_look_target - camera_look) * m::fixed_t(interp_progress, 4500);
 		}
 
-		perpview = Mat4::perspective(2, 1, m::fixed_t(5, 100), 20) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
+		perpview = Mat4::perspective(2, 1, m::fixed_t(5, 100), 12) * Mat4::lookat(current_pos, current_look, {0, 1, 0});
 
 		led::color_t fill(0);
 		fill.set_spare(INT16_MAX);
@@ -256,16 +257,19 @@ namespace threed {
 		b.y = -b.y;
 		c.y = -c.y;
 
-		Vec3 projnormal = (Vec3{b} - Vec3{a}).cross(Vec3{c} - Vec3{a});
-		if (projnormal.z < 0) return;
+		// Compute normal
+		Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
+		m::fixed_t facingness = normal.dot(current_lookdir);
 
-		int16_t ax = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
-		int16_t bx = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
-		int16_t cx = (((c.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+		if (facingness < 0) return;
 
-		int16_t ay = (((a.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
-		int16_t by = (((b.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
-		int16_t cy = (((c.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		int_fast16_t x0 = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+		int_fast16_t x1 = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+		int_fast16_t x2 = (((c.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+
+		int_fast16_t y0 = (((a.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		int_fast16_t y1 = (((b.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		int_fast16_t y2 = (((c.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
 
 		uint16_t cr;
         uint16_t cg;
@@ -275,10 +279,12 @@ namespace threed {
 			m::fixed_t avg = std::min((t.p1 - current_pos).length(), std::min(
 						 (t.p2 - current_pos).length(),
 						 (t.p3 - current_pos).length()));
-			avg = std::min(m::fixed_t(38, 100), (avg * avg * m::fixed_t(32, 100)));
-			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (1 - avg)).ceil());
-			cg = draw::cvt((uint8_t)(m::fixed_t(t.g) * (1 - avg)).ceil());
-			cb = draw::cvt((uint8_t)(m::fixed_t(t.b) * (1 - avg)).ceil());
+			avg = (1 - std::min(m::fixed_t(1, 4), (avg * avg * m::fixed_t(28, 100))));
+			if (facingness < m::fixed_t(1, 4)) facingness = m::fixed_t(1, 4);
+			if (facingness > 1) facingness = 1;
+			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (facingness * avg)).ceil());
+			cg = draw::cvt((uint8_t)(m::fixed_t(t.g) * (facingness * avg)).ceil());
+			cb = draw::cvt((uint8_t)(m::fixed_t(t.b) * (facingness * avg)).ceil());
 		}
 		else {
 			cr = draw::cvt(t.r);
@@ -286,12 +292,53 @@ namespace threed {
 			cb = draw::cvt(t.b);
 		}
 
-		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z)
-			line(matrix.get_inactive_buffer(), ax, ay, bx, by, a.z, b.z, cr, cg, cb);
-		if (1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z)
-			line(matrix.get_inactive_buffer(), bx, by, cx, cy, b.z, c.z, cr, cg, cb);
-		if (1 > a.z && -1 < a.z && 1 > c.z && -1 < c.z)
-			line(matrix.get_inactive_buffer(), cx, cy, ax, ay, c.z, a.z, cr, cg, cb);
+		led::color_t color{cr, cg, cb};
+
+		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z) {
+			// compute bounding box of triangle
+			int_fast16_t minx = std::max<int16_t>(0, std::min(std::min(x0, x1), x2));
+			int_fast16_t maxx = std::min<int16_t>(matrix.get_inactive_buffer().width-1, std::max(std::max(x0, x1), x2));
+			int_fast16_t miny = std::max<int16_t>(0, std::min(std::min(y0, y1), y2));
+			int_fast16_t maxy = std::min<int16_t>(matrix.get_inactive_buffer().height-1, std::max(std::max(y0, y1), y2));
+			
+			// point is inside triangle if barycentric weights are all positive, and barycentric weights can be computed as a delta.
+
+			int w0_dx = y1 - y2, w0_dy = x2 - x1;
+			int w1_dx = y2 - y0, w1_dy = x0 - x2;
+			int w2_dx = y0 - y1, w2_dy = x1 - x0;
+
+			auto edgeweight = [](int ax, int ay, int bx, int by, int cx, int cy){
+				return (bx-ax)*(cy-ay) - (by-ay)*(cx-ax);
+			};
+
+			int w0_row = edgeweight(x1, y1, x2, y2, minx, miny);
+			int w1_row = edgeweight(x2, y2, x0, y0, minx, miny);
+			int w2_row = edgeweight(x0, y0, x1, y1, minx, miny);
+
+			for (int_fast16_t y = miny; y <= maxy; ++y) {
+				int w0 = w0_row;
+				int w1 = w1_row;
+				int w2 = w2_row;
+
+				for (int_fast16_t x = minx; x <= maxx; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
+					if ((w0|w1|w2) >= 0) {
+						// point is guaranteed to be on screen since min/max are capped in screen.
+						// compute depth:
+
+						int sum = (w0 + w1 + w2);
+						if (!sum) continue;
+						m::fixed_t d = ((a.z * w0) + (b.z * w1) + (c.z * w2)) / sum;
+						if ((d * 2047).round() > (int16_t)matrix.get_inactive_buffer().at(x, y).get_spare()) continue; // z-test
+						color.set_spare((d * 2047).round());
+						matrix.get_inactive_buffer().at(x, y) = color;
+					}
+				}
+
+				w0_row += w0_dy;
+				w1_row += w1_dy;
+				w2_row += w2_dy;
+			}
+		}
 	}
 
 	void Renderer::prepare(bool) {

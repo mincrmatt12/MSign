@@ -194,7 +194,7 @@ namespace threed {
 
 		Mat4 perpview;
 		Vec3 camera_pos, camera_target;
-		Vec3 current_pos, current_look;
+		Vec3 current_pos, current_look, current_lookdir;
 		Vec3 camera_look, camera_look_target;
 		uint16_t interp_progress = 20000;
 		uint64_t last_update, last_new_data;
@@ -203,79 +203,6 @@ namespace threed {
 			MOVE_POS,
 			MOVE_LOOK
 		} im=MOVE_POS;
-
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, m::fixed_t d1, m::fixed_t d2, uint16_t r, uint16_t g, uint16_t b) {
-			int dx = x1 - x0;
-			int dy = y1 - y0;
-			int yi = 1;
-			if (dy < 0) {
-				yi = -1;
-				dy = -dy;
-			}
-			int D = 2*dy - dx;
-			int16_t y = y0;
-
-			m::fixed_t d = d1, d_off = (d2 - d1) / (m::fixed_t)(dx + 1);
-			led::color_t c(r, g, b);
-
-			for (int16_t x = x0; x <= x1; ++x) {
-				if (fb.on_screen(x, y) && (d * 410).round() < fb.at(x, y).get_spare()) {
-					c.set_spare((d * 410).round());
-					fb.at(x, y) = c;
-				}
-				if (D > 0) {
-					y += yi;
-					D -= 2*dx;
-				}
-				D += 2*dy;
-				d += d_off;
-			}
-		}
-
-		
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, m::fixed_t d1, m::fixed_t d2, uint16_t r, uint16_t g, uint16_t b) {
-			int dx = x1 - x0;
-			int dy = y1 - y0;
-			int xi = 1;
-			if (dx < 0) {
-				xi = -1;
-				dx = -dx;
-			}
-			int D = 2*dx - dy;
-			int16_t x = x0;
-
-			m::fixed_t d = d1, d_off = (d2 - d1) / (m::fixed_t)(dy + 1);
-			led::color_t c(r, g, b);
-
-			for (int16_t y = y0; y <= y1; ++y) {
-				if (fb.on_screen(x, y) && (d * 410).round() < fb.at(x, y).get_spare()) {
-					c.set_spare((d * 410).round());
-					fb.at(x, y) = c;
-				}
-				if (D > 0) {
-					x += xi;
-					D -= 2*dy;
-				}
-				D += 2*dx;
-				d += d_off;
-			}
-		}
-
-		
-		void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, m::fixed_t d1, m::fixed_t d2, uint16_t r, uint16_t g, uint16_t b) {
-			if (abs(y1 - y0) < abs(x1 - x0)) {
-				if (x0 > x1)
-					line_impl_low(fb, x1, y1, x0, y0, d2, d1, r, g, b);
-				else
-					line_impl_low(fb, x0, y0, x1, y1, d1, d2, r, g, b);
-			}
-			else {
-				if (y0 > y1)
-					line_impl_high(fb, x1, y1, x0, y0, d2, d1, r, g, b);
-				else
-					line_impl_high(fb, x0, y0, x1, y1, d1, d2, r, g, b);
-			}
-		}
 	};
 
 	extern size_t tri_count;
