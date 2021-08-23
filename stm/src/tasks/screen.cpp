@@ -273,6 +273,19 @@ namespace tasks {
 	void DispMan::do_sleep_mode() {
 		servicer.set_sleep_mode(true);
 
+		// Wait 10 frames for fade
+		for (int i = 0; i < 10; ++i) {
+			// Draw active screen
+			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();
+			swapper.draw();
+			// Fade out
+			for (int j = 0; j < 128; ++j)
+				for (int k = 0; k < 64; ++k)
+					matrix.get_inactive_buffer().at(j, k) = matrix.get_inactive_buffer().at(j, k).mix(0, i * 255 / 10);
+			// swap buffers
+			matrix.swap_buffers();
+		}
+
 		bool ig = true;
 
 		// Spin
