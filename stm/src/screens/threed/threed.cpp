@@ -257,11 +257,8 @@ namespace threed {
 		b.y = -b.y;
 		c.y = -c.y;
 
-		// Compute normal
-		Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
-		m::fixed_t facingness = normal.dot(current_lookdir);
-
-		if (facingness < 0) return;
+		// Do facing check
+		if (Vec3(b - a).cross(c - a).z < 0) return;
 
 		int_fast16_t x0 = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
 		int_fast16_t x1 = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
@@ -276,12 +273,26 @@ namespace threed {
         uint16_t cb;
 
 		if (enable_lighting) {
-			m::fixed_t avg = std::min((t.p1 - current_pos).length(), std::min(
-						 (t.p2 - current_pos).length(),
-						 (t.p3 - current_pos).length()));
-			avg = (1 - std::min(m::fixed_t(1, 4), (avg * avg * m::fixed_t(28, 100))));
+			// Find centre of triangle (for distance calculations and lighting direction)
+			Vec3 centre = (t.p1 + t.p2 + t.p3) / 3;
+			// Compute normal (using the good ol sideA cross sideB trick)
+			Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
+			// Direction towards light (or since the light comes from the camera, current_pos)
+			Vec3 lightdir = (current_pos - centre);
+			// Calculate distance only once
+			m::fixed_t lightdist = lightdir.length();
+			// avoid div0
+			if (lightdist == 0) return;
+			// Normalize light direction
+			lightdir /= lightdist;
+			// "facingness", or really cos(angle between lightdir and normal)
+			m::fixed_t facingness = normal.dot(lightdir);
+			// Fiddle with distance to turn into 1.0-0.75 color scale
+			m::fixed_t avg = (1 - std::min(m::fixed_t(1, 4), (lightdist * lightdist * m::fixed_t(28, 100))));
+			// Adjust facingness to be in 0.25-1.0 range
 			if (facingness < m::fixed_t(1, 4)) facingness = m::fixed_t(1, 4);
 			if (facingness > 1) facingness = 1;
+			// Scale colours.
 			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (facingness * avg)).ceil());
 			cg = draw::cvt((uint8_t)(m::fixed_t(t.g) * (facingness * avg)).ceil());
 			cb = draw::cvt((uint8_t)(m::fixed_t(t.b) * (facingness * avg)).ceil());
