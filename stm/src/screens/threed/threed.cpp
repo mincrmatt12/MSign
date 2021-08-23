@@ -275,7 +275,7 @@ namespace threed {
 			m::fixed_t avg = std::min((t.p1 - current_pos).length(), std::min(
 						 (t.p2 - current_pos).length(),
 						 (t.p3 - current_pos).length()));
-			avg = std::min(m::fixed_t(58, 100), (avg * avg * m::fixed_t(3, 8)));
+			avg = std::min(m::fixed_t(38, 100), (avg * avg * m::fixed_t(32, 100)));
 			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (1 - avg)).ceil());
 			cg = draw::cvt((uint8_t)(m::fixed_t(t.g) * (1 - avg)).ceil());
 			cb = draw::cvt((uint8_t)(m::fixed_t(t.b) * (1 - avg)).ceil());
