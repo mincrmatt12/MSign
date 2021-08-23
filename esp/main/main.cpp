@@ -23,7 +23,11 @@ const static char * TAG = "app_main";
 
 int msign_putchar(int c) {
 	if (serial::interface.is_sleeping()) return c;
+#ifdef SIM
+	return fputc(c, stderr);
+#else
 	return putchar(c);
+#endif
 }
 
 extern "C" void app_main() {
