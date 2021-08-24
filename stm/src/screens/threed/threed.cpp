@@ -100,12 +100,50 @@ namespace threed {
 #undef h
 
 	Vec4 Mat4::operator*(const Vec4& o) const {
+#ifdef SIM
 		return {
 			a[0] * o.x + a[1] * o.y + a[2] * o.z + a[3] * o.w,
 			b[0] * o.x + b[1] * o.y + b[2] * o.z + b[3] * o.w,
 			c[0] * o.x + c[1] * o.y + c[2] * o.z + c[3] * o.w,
 			d[0] * o.x + d[1] * o.y + d[2] * o.z + d[3] * o.w,
 		};
+#else
+		Vec4 result;
+		int32_t _scratch;
+
+		// Initialize scratch
+#define doEntry(structattr, rowname) \
+		asm ( \
+			"smull %[ResultValue], %[Clobber], %[ROW0], %[OX]\n\t" \
+			: [ResultValue] "=r" (result.structattr.value), [Clobber] "=r" (_scratch) \
+			: [ROW0] "r" (rowname[0]), [OX] "r" (o.x) \
+		); \
+		asm ( \
+			"smlal %[ResultValue], %[Clobber], %[ROW1], %[OY]\n\t" \
+			: [ResultValue] "+r" (result.structattr.value), [Clobber] "+r" (_scratch) \
+			: [ROW1] "r" (rowname[1]), [OY] "r" (o.y) \
+		); \
+		asm ( \
+			"smlal %[ResultValue], %[Clobber], %[ROW2], %[OZ]\n\t" \
+			: [ResultValue] "+r" (result.structattr.value), [Clobber] "+r" (_scratch) \
+			: [ROW2] "r" (rowname[2]), [OZ] "r" (o.z) \
+		); \
+		asm ( \
+			"smlal %[ResultValue], %[Clobber], %[ROW3], %[OW]\n\t" \
+			"bfi %[ResultValue], %[Clobber], #0, %[Fac]\n\t" \
+			"ror %[ResultValue], %[ResultValue], %[Fac]\n\t" \
+			: [ResultValue] "+r" (result.structattr.value), [Clobber] "+r" (_scratch) \
+			: [ROW3] "r" (rowname[3]), [OW] "r" (o.w), [Fac] "i" (m::fixed_t::Fac) \
+		);
+
+		doEntry(x, a);
+		doEntry(y, b);
+		doEntry(z, c);
+		doEntry(w, d);
+#undef doEntry
+
+		return result;
+#endif
 	}
 
 	void Renderer::draw() {

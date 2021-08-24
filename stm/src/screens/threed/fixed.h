@@ -64,8 +64,29 @@ namespace threed::m {
 #undef make_op
 
 		fixed_t operator*(fixed_t other) const {
-			int64_t res = (int64_t)value * (int64_t)other.value; // try and convince the compiler to use SMULL
+
+			// Converted to assembly because gcc is dumb and doesn't know how to use shift rights properly..
+			//
+			// Implements:
+#ifdef SIM
+			int64_t res = (int64_t)value * (int64_t)other.value; 
 			return fixed_t(res / Mul, nullptr);
+#else
+			
+			fixed_t result;
+			uint32_t _scratch;
+			
+			// implemented without naked to try and let gcc optimize out loads
+			asm (
+				"smull %[ResultValue], %[ClobberB], %[InputA], %[InputB]\n\t" // (ClobberB:ResultValue) [res] = (a*b)
+				"bfi %[ResultValue], %[ClobberB], #0, %[Fac]\n\t" // copy low Fac bits of the high word into the low word
+				"ror %[ResultValue], %[ResultValue], %[Fac]\n\t" // rotate so that those bits are now at the top.
+				: [ResultValue] "=r" (result.value), [ClobberB] "=r"(_scratch) // output
+				: [InputA] "r" (value), [InputB] "r" (other.value), [Fac] "i" (Fac) // input
+			);
+			
+			return result;
+#endif
 		}
 
 		fixed_t operator/(fixed_t other) const {
