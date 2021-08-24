@@ -57,7 +57,7 @@ namespace tasks {
 		int next_screen_idx(bool prev=false);
 
 		void draw_conn_panel();
-		void draw_menu_list(const char ** entries, bool last_is_close=true);
+		void draw_menu_list(const char * const * entries, bool last_is_close=true);
 
 		void do_menu_overlay();
 		void do_sleep_mode();

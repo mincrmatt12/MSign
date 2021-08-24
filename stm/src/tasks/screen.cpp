@@ -376,7 +376,7 @@ namespace tasks {
 		}
 	}
 
-	void DispMan::draw_menu_list(const char ** entries, bool last_is_close) {
+	void DispMan::draw_menu_list(const char * const * entries, bool last_is_close) {
 		// Compute size
 
 		int padding = 2; // 1 pixel both sides
@@ -423,7 +423,7 @@ namespace tasks {
 	}
 
 	void DispMan::do_menu_overlay() {
-		const static char* menu_entries[] = {
+		const static char* const menu_entries[] = {
 			"refresh",
 			"goto",
 			"connection",
@@ -432,7 +432,7 @@ namespace tasks {
 			nullptr
 		};
 
-		const static char * screen_names[] = {
+		const static char * const screen_names[] = {
 			"transit",
 			"weather",
 			"clock",
@@ -441,7 +441,7 @@ namespace tasks {
 			nullptr
 		};
 
-		const static char * debug_entries[] = {
+		const static char * const debug_entries[] = {
 			"reset",
 			"crash (panic)",
 			"crash (nf panic)",
