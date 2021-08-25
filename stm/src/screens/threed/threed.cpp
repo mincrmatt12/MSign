@@ -295,11 +295,7 @@ namespace threed {
 		b.y = -b.y;
 		c.y = -c.y;
 
-		// Compute normal
-		Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
-		m::fixed_t facingness = normal.dot(current_lookdir);
-
-		if (facingness < 0) return;
+		if (Vec3(b - a).cross(c - a).z < 0) return;
 
 		int_fast16_t x0 = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
 		int_fast16_t x1 = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
@@ -314,9 +310,11 @@ namespace threed {
         uint16_t cb;
 
 		if (enable_lighting) {
-			m::fixed_t avg = std::min((t.p1 - current_pos).length(), std::min(
-						 (t.p2 - current_pos).length(),
-						 (t.p3 - current_pos).length()));
+			// Compute normal
+			Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
+			m::fixed_t facingness = normal.dot(current_lookdir);
+			Vec3 centre = (t.p1 + t.p2 + t.p3) / 3;
+			m::fixed_t avg = (centre - current_pos).length();
 			avg = (1 - std::min(m::fixed_t(1, 4), (avg * avg * m::fixed_t(28, 100))));
 			if (facingness < m::fixed_t(1, 4)) facingness = m::fixed_t(1, 4);
 			if (facingness > 1) facingness = 1;
