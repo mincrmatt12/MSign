@@ -89,11 +89,19 @@ namespace led {
 			return junk;
 		}
 
+		inline color_t & at_unsafe(uint16_t x, uint16_t y) {
+			return Storage::_at(data, x, y);
+		}
+
 		inline const color_t & at(uint16_t x, uint16_t y) const {
 			if (on_screen(x, y)) {
 				return Storage::_at(data, x, y);
 			}
 			return junk;
+		}
+
+		inline const color_t & at_unsafe(uint16_t x, uint16_t y) const {
+			return Storage::_at(data, x, y);
 		}
 
 		inline bool on_screen(uint16_t x, uint16_t y) const {
