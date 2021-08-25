@@ -16,12 +16,13 @@ import {LinkContainer} from 'react-router-bootstrap'
 import "regenerator-runtime/runtime";
 
 import GlobalPane from "./pane/global"
-import TTCPane from "./pane/ttc"
+import TransitPane from "./pane/transit"
 import WeatherPane from "./pane/weather"
 import ApiPane from "./pane/apikeys"
 import ScCfgPane from "./pane/sc"
 import UpdatePane from "./pane/upd"
 import ModelPane from "./pane/model"
+import CfgPullPane from "./pane/cfgpull"
 import RawPane from "./pane/raw"
 
 import ConfigContext from "./ctx"
@@ -57,7 +58,7 @@ function App() {
 	React.useEffect(() => {
 		fetch("/a/version")
 			.then((resp) => {
-				if (resp.headers.get("Content-Type") == "text/html") return;
+				if (resp.headers.get("Content-Type").startsWith("text/html")) return "cfgserver";
 				if (resp.ok) {
 					return resp.text();
 				}
@@ -100,7 +101,7 @@ function App() {
 									<Nav.Link>global</Nav.Link>
 								</LinkContainer>
 								<LinkContainer to="/ttc">
-									<Nav.Link>ttc</Nav.Link>
+									<Nav.Link>transit</Nav.Link>
 								</LinkContainer>
 								<LinkContainer to="/weather">
 									<Nav.Link>weather</Nav.Link>
@@ -140,7 +141,7 @@ function App() {
 									<GlobalPane  />
 								</Route>
 								<Route path="/ttc">
-									<TTCPane     />
+									<TransitPane />
 								</Route>
 								<Route path="/weather">
 									<WeatherPane />

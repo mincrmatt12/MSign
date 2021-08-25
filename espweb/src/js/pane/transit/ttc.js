@@ -7,17 +7,14 @@ import Card from 'react-bootstrap/Card'
 import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../../ctx.js';
 import _ from 'lodash';
 
 function TTCPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
-
 	const entries = _.get(cfg, "ttc.entries", []);
 
 	return <div>
-		<hr className="hr-gray" />
-		
 		<p><a href="http://retro.umoiq.com/service/publicJSONFeed?command=routeList&a=ttc" target="_blank">route list</a> • <a href="http://retro.umoiq.com/service/publicJSONFeed?command=routeConfig&a=ttc&r=" target="_blank">stop list</a> • <a href="http://retro.umoiq.com/service/publicJSONFeed?command=predictions&a=ttc&stopId=" target="_blank">predictions</a>
 		</p>
 
