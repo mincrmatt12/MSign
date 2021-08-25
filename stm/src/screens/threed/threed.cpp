@@ -239,7 +239,7 @@ namespace threed {
 
 		for (int i = 0; i < matrix_type::framebuffer_type::width; ++i) {
 			for (int j = 0; j < matrix_type::framebuffer_type::height; ++j) {
-				matrix.get_inactive_buffer().at(i, j) = fill;
+				matrix.get_inactive_buffer().at_unsafe(i, j) = fill;
 			}
 		}
 	}
@@ -351,6 +351,10 @@ namespace threed {
 			int w1_row = edgeweight(x2, y2, x0, y0, minx, miny);
 			int w2_row = edgeweight(x0, y0, x1, y1, minx, miny);
 
+			int scaled_az = a.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
+			int scaled_bz = b.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
+			int scaled_cz = c.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
+
 			for (int_fast16_t y = miny; y <= maxy; ++y) {
 				int w0 = w0_row;
 				int w1 = w1_row;
@@ -363,10 +367,10 @@ namespace threed {
 
 						int sum = (w0 + w1 + w2);
 						if (!sum) continue;
-						m::fixed_t d = ((a.z * w0) + (b.z * w1) + (c.z * w2)) / sum;
-						if ((d * 2047).round() > (int16_t)matrix.get_inactive_buffer().at(x, y).get_spare()) continue; // z-test
-						color.set_spare((d * 2047).round());
-						matrix.get_inactive_buffer().at(x, y) = color;
+						int16_t d = (scaled_az * w0 + scaled_bz * w1 + scaled_cz * w2) / sum;
+						if (d > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
+						color.set_spare(d);
+						matrix.get_inactive_buffer().at_unsafe(x, y) = color;
 					}
 				}
 
