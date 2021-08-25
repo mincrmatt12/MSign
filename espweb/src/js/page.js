@@ -115,6 +115,9 @@ function App() {
 								<LinkContainer to="/model">
 									<Nav.Link>model</Nav.Link>
 								</LinkContainer>
+								<LinkContainer to="/cfgpull">
+									<Nav.Link>cfgpull</Nav.Link>
+								</LinkContainer>
 								<LinkContainer to="/upd">
 									<Nav.Link>sysupdate</Nav.Link>
 								</LinkContainer>
@@ -154,6 +157,9 @@ function App() {
 								</Route>
 								<Route path="/model">
 									<ModelPane   />
+								</Route>
+								<Route path="/cfgpull">
+									<CfgPullPane />
 								</Route>
 								<Route path="/upd" component={UpdatePane} />
 								<Route path="/raw" component={RawPane} />

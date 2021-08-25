@@ -89,9 +89,8 @@ class ModelRenderer extends React.Component {
 		geometry.computeVertexNormals();
 
 		const material = new THREE.MeshBasicMaterial({
-			wireframe: true,
 			vertexColors: THREE.FaceColors,
-			wireframeLinewidth: 3.5,
+			side: THREE.DoubleSide
 		});
 
 		this.mesh = new THREE.Mesh(geometry, material);
