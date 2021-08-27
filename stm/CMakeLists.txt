@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(msign-stm C CXX ASM)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
    add_compile_options (-fdiagnostics-color=always)
@@ -94,7 +94,7 @@ target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register>
+	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register -Wno-volatile>
 )
 
 target_include_directories(stm

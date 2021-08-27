@@ -13,7 +13,7 @@ namespace intmath {
 	//         |            |
 	//         \-- = 4.53 * 100
 	template<typename T>
-	T round10(T v, T pos=100) {
+	constexpr T round10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
 			if (-(pos / 2) < rem && rem < (pos / 2)) return res;
@@ -28,7 +28,7 @@ namespace intmath {
 
 	// Same as round10, except rounds to lowest. Multiply by pos again to keep fixedpoint.
 	template<typename T>
-	T floor10(T v, T pos=100) {
+	constexpr T floor10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
 			if (rem >= 0) return res;
@@ -41,7 +41,7 @@ namespace intmath {
 
 	// Same as round10, except rounds to lowest. Multiply by pos again to keep fixedpoint.
 	template<typename T>
-	T ceil10(T v, T pos=100) {
+	constexpr T ceil10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
 			if (rem <= 0) return res;

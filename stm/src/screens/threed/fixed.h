@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "../../intmath.h"
+#include <bit>
 
 // m for math
 namespace threed::m {
@@ -19,51 +20,51 @@ namespace threed::m {
 		// fixed_t(float f) : value(f * (1 << Fac)) {}
 		constexpr fixed_t() : value{} {};
 
-		int32_t round() const {
+		constexpr int32_t round() const {
 			return intmath::round10(value, Mul);
 		}
 
-		int32_t ceil() const {
+		constexpr int32_t ceil() const {
 			return intmath::ceil10(value, Mul);
 		}
 
-		int32_t floor() const {
+		constexpr int32_t floor() const {
 			return intmath::floor10(value, Mul);
 		}
 
-		int32_t trunc() const {
+		constexpr int32_t trunc() const {
 			return value / Mul;
 		}
 
-		explicit operator int32_t() const {
+		constexpr explicit operator int32_t() const {
 			return trunc();
 		}
 
-#define make_op(x) inline fixed_t operator x(int other) const { return fixed_t(value x other * Mul, nullptr); } \
-			inline fixed_t& operator x##= (int other) {value x##= other * Mul; return *this;}
+#define make_op(x) constexpr inline fixed_t operator x(int other) const { return fixed_t(value x other * Mul, nullptr); } \
+			constexpr inline fixed_t& operator x##= (int other) {value x##= other * Mul; return *this;}
 
 		make_op(+);
 		make_op(-);
 
 #undef make_op
 
-#define make_op(x) inline fixed_t operator x(int other) const { return fixed_t(value x other, nullptr); } \
-			inline fixed_t& operator x##= (int other) {value x##= other; return *this;}
+#define make_op(x) constexpr inline fixed_t operator x(int other) const { return fixed_t(value x other, nullptr); } \
+			constexpr inline fixed_t& operator x##= (int other) {value x##= other; return *this;}
 
 		make_op(/);
 		make_op(*);
 
 #undef make_op
 
-#define make_op(x) inline fixed_t operator x(fixed_t other) const { return fixed_t(value x other.value, nullptr); } \
-			inline fixed_t& operator x##= (fixed_t other) {value x##= other.value; return *this;}
+#define make_op(x) constexpr inline fixed_t operator x(fixed_t other) const { return fixed_t(value x other.value, nullptr); } \
+			constexpr inline fixed_t& operator x##= (fixed_t other) {value x##= other.value; return *this;}
 
 		make_op(+)
 		make_op(-)
 
 #undef make_op
 
-		fixed_t operator*(fixed_t other) const {
+		constexpr fixed_t operator*(fixed_t other) const {
 
 			// Converted to assembly because gcc is dumb and doesn't know how to use shift rights properly..
 			//
@@ -72,42 +73,45 @@ namespace threed::m {
 			int64_t res = (int64_t)value * (int64_t)other.value; 
 			return fixed_t(res / Mul, nullptr);
 #else
+			if (std::is_constant_evaluated()) {
+				int64_t res = (int64_t)value * (int64_t)other.value; 
+				return fixed_t(res / Mul, nullptr);
+			}
 			
-			fixed_t result;
+			uint32_t result_value;
 			uint32_t _scratch;
 			
 			// implemented without naked to try and let gcc optimize out loads
 			asm (
 				"smull %[ResultValue], %[ClobberB], %[InputA], %[InputB]\n\t" // (ClobberB:ResultValue) [res] = (a*b)
 				"bfi %[ResultValue], %[ClobberB], #0, %[Fac]\n\t" // copy low Fac bits of the high word into the low word
-				"ror %[ResultValue], %[ResultValue], %[Fac]\n\t" // rotate so that those bits are now at the top.
-				: [ResultValue] "=r" (result.value), [ClobberB] "=r"(_scratch) // output
+				: [ResultValue] "=r" (result_value), [ClobberB] "=r"(_scratch) // output
 				: [InputA] "r" (value), [InputB] "r" (other.value), [Fac] "i" (Fac) // input
 			);
 			
-			return result;
+			return fixed_t((int32_t)std::rotr(result_value, Fac), nullptr); // This rotate is performed in c to let gcc potentially optimize it into a following alu op2
 #endif
 		}
 
-		fixed_t operator/(fixed_t other) const {
+		constexpr fixed_t operator/(fixed_t other) const {
 			int64_t a = (int64_t)value * (int64_t)Mul; // done here to try and get the compiler to use SMULL
 			int64_t b = other.value;
 			return fixed_t(a / b, nullptr);
 		}
 
-#define make_op(x) inline fixed_t& operator x##= (fixed_t other) {return (*this = *this x other);}
+#define make_op(x) inline constexpr fixed_t& operator x##= (fixed_t other) {return (*this = *this x other);}
 
 		make_op(*)
 		make_op(/)
 
 #undef make_op
 
-		fixed_t operator-() const {
+		constexpr fixed_t operator-() const {
 			return fixed_t{-value, nullptr};
 		}
 
-#define make_op(x) inline bool operator x (fixed_t other) const {return value x other.value;} \
-				   inline bool operator x (int     other) const {return value x (other * Mul);}
+#define make_op(x) constexpr inline bool operator x (fixed_t other) const {return value x other.value;} \
+				   constexpr inline bool operator x (int     other) const {return value x (other * Mul);}
 
 		make_op(<)
 		make_op(>)
