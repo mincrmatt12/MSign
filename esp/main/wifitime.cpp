@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include <esp_wifi.h>
 #include <esp_event_loop.h>
+#include <esp_wpa2.h>
 
 #include "wifitime.cfg.h"
 
@@ -156,6 +157,28 @@ void wifi::receive_config(const char * field, const char * value) {
 	else if (strcmp(field, "psk") == 0) {
 		strncpy((char *)wifi_config_data->sta.password, value, 64);
 		wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+		esp_wifi_sta_wpa2_ent_disable();
+	}
+	else if (strcmp(field, "username") == 0) {
+		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
+			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
+			esp_wifi_sta_wpa2_ent_enable();
+		}
+		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
+	}
+	else if (strcmp(field, "identity") == 0) {
+		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
+			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
+			esp_wifi_sta_wpa2_ent_enable();
+		}
+		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
+	}
+	else if (strcmp(field, "password") == 0) {
+		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
+			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
+			esp_wifi_sta_wpa2_ent_enable();
+		}
+		esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)value, strlen(value));
 	}
 	else {
 		ESP_LOGW(TAG, "unknown wifi config param %s", field);
