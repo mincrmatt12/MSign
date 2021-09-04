@@ -69,7 +69,7 @@ namespace tasks {
 			}
 		}
 
-		void show_overlays() {
+		void show_overlays(TickType_t& last_had_wifi_at) {
 			slots::WebuiStatus status{};
 			bool connected = true;
 
@@ -85,13 +85,16 @@ namespace tasks {
 			int x = 128;
 
 			// show wifi fail
-			if (!connected) {
+			if (!connected && xTaskGetTickCount() - last_had_wifi_at > pdMS_TO_TICKS(1800)) {
 				draw::rect(matrix.get_inactive_buffer(), x - 14, 0, x, 12, 0);
 
 				x -= 14;
 				// icon
 				draw::bitmap(matrix.get_inactive_buffer(), nowifi, 12, 12, 2, x, 0, 0xbb_c);
 				draw::line(matrix.get_inactive_buffer(), x, 0, x + 11, 11, 0xff3333_cc);
+			}
+			else if (connected) {
+				last_had_wifi_at = xTaskGetTickCount();
 			}
 			
 			// try to draw sysupgrade
@@ -263,7 +266,7 @@ namespace tasks {
 			}
 
 			// show overlays
-			show_overlays();
+			show_overlays(last_had_wifi_at);
 
 			// Sync on swap buffer
 			matrix.swap_buffers();

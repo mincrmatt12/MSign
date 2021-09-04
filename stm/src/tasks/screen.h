@@ -39,6 +39,7 @@ namespace tasks {
 
 		uint64_t last_swapped_at = 0;
 		uint32_t interact_timeout = 0;
+		TickType_t last_had_wifi_at = 0;
 
 		struct MS {
 			uint8_t selected = 0;
