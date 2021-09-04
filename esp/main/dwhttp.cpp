@@ -245,7 +245,9 @@ namespace dwhttp {
 			// The rest of the context is freed as necessary (as it technically isn't required while the HTTP one is running)
 			//
 			// Placed in IRAM to avoid putting unnecessary pressure on DRAM heap to allow more tasks to be allocated
-			IRAM_ATTR uint8_t ssl_io_buffer_in[BR_SSL_BUFSIZE_INPUT];
+
+			// Allocated once used, to allow wpa2 enterprise stuff to work
+			uint8_t * ssl_io_buffer_in = nullptr;
 			uint8_t ssl_io_buffer_out[1024 + 85]; // 1K out buffer + 85 bytes overhead
 
 			struct HttpsAdapter : HttpAdapter {
@@ -274,8 +276,16 @@ namespace dwhttp {
 
 					// Begin initializing bearssl
 					br_ssl_client_init_full(ssl_cc, ssl_xc, nullptr, 0);
+					
+					if (ssl_io_buffer_in == nullptr) {
+						ssl_io_buffer_in = (uint8_t *)malloc(BR_SSL_BUFSIZE_INPUT);
+						if (ssl_io_buffer_in == nullptr) {
+							ESP_LOGE(TAG, "failed to alloc ssl buf");
+						}
+					}
+
 					// Set the buffers
-					br_ssl_engine_set_buffers_bidi(&ssl_cc->eng, ssl_io_buffer_in, sizeof ssl_io_buffer_in, ssl_io_buffer_out, sizeof ssl_io_buffer_out);
+					br_ssl_engine_set_buffers_bidi(&ssl_cc->eng, ssl_io_buffer_in, BR_SSL_BUFSIZE_INPUT, ssl_io_buffer_out, sizeof ssl_io_buffer_out);
 					// Feed some entropy into bearssl
 					uint32_t block[8];
 					for (int i = 0; i < 8; ++i) block[i] = esp_random();
@@ -360,6 +370,8 @@ namespace dwhttp {
 					ssl_ic = nullptr;
 					active_host = nullptr;
 					held_ta = nullptr;
+					free(ssl_io_buffer_in);
+					ssl_io_buffer_in = nullptr;
 				}
 
 				void flush() {
