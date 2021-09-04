@@ -146,6 +146,7 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 }
 
 wifi_config_t * wifi_config_data = nullptr;
+bool enterprise_wifi_enable = false;
 
 void wifi::receive_config(const char * field, const char * value) {
 	if (!wifi_config_data) {
@@ -160,25 +161,28 @@ void wifi::receive_config(const char * field, const char * value) {
 		esp_wifi_sta_wpa2_ent_disable();
 	}
 	else if (strcmp(field, "username") == 0) {
-		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
-			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
-			esp_wifi_sta_wpa2_ent_enable();
-		}
+		enterprise_wifi_enable = true;
+		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
+		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
+	}
+	else if (strcmp(field, "username_only") == 0) {
+		enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "identity") == 0) {
-		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
-			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
-			esp_wifi_sta_wpa2_ent_enable();
-		}
+		enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "password") == 0) {
-		if (wifi_config_data->sta.threshold.authmode != WIFI_AUTH_WPA2_ENTERPRISE) {
-			wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
-			esp_wifi_sta_wpa2_ent_enable();
-		}
+		enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)value, strlen(value));
+	}
+	else if (strcmp(field, "channel") == 0) {
+		wifi_config_data->sta.channel = atoi(value);
+	}
+	else if (strcmp(field, "bssid") == 0) {
+		sscanf(value, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8, &wifi_config_data->sta.bssid[0], &wifi_config_data->sta.bssid[1], &wifi_config_data->sta.bssid[2], &wifi_config_data->sta.bssid[3], &wifi_config_data->sta.bssid[4] ,&wifi_config_data->sta.bssid[5]);
+		wifi_config_data->sta.bssid_set = true;
 	}
 	else {
 		ESP_LOGW(TAG, "unknown wifi config param %s", field);
@@ -204,7 +208,9 @@ bool wifi::init() {
 	// Setup with config data
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config_data));
+	if (enterprise_wifi_enable) esp_wifi_sta_wpa2_ent_enable();
 	ESP_ERROR_CHECK(esp_wifi_start());
+	ESP_ERROR_CHECK(esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N));
 	delete wifi_config_data; wifi_config_data = nullptr;
 
 	// Start the time wait service
