@@ -315,7 +315,7 @@ namespace threed {
 			m::fixed_t facingness = normal.dot(current_lookdir);
 			Vec3 centre = (t.p1 + t.p2 + t.p3) / 3;
 			m::fixed_t avg = (centre - current_pos).length();
-			avg = (1 - std::min(m::fixed_t(1, 4), (avg * avg * m::fixed_t(28, 100))));
+			avg = (1 - std::min(m::fixed_t(1, 3), (avg * avg * m::fixed_t(21, 100))));
 			if (facingness < m::fixed_t(1, 4)) facingness = m::fixed_t(1, 4);
 			if (facingness > 1) facingness = 1;
 			cr = draw::cvt((uint8_t)(m::fixed_t(t.r) * (facingness * avg)).ceil());
