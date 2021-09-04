@@ -54,61 +54,84 @@ index d69e2533..7b295d11 100644
      0,  //  ESP_LOG_DEBUG
      0,  //  ESP_LOG_VERBOSE
  };
+diff --git a/components/nvs_flash/CMakeLists.txt b/components/nvs_flash/CMakeLists.txt
+index 7ce2871c..295cabd2 100644
+--- a/components/nvs_flash/CMakeLists.txt
++++ b/components/nvs_flash/CMakeLists.txt
+@@ -35,15 +35,15 @@ if(${target} STREQUAL "linux")
+     target_compile_options(${COMPONENT_LIB} PUBLIC "-DLINUX_TARGET")
+ else()
+     # TODO: this is a workaround until IDF-2085 is fixed
+-    idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
+-    target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
++	#idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
++	#target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
+ endif()
+ 
+-if(CONFIG_NVS_ENCRYPTION)
+-    target_sources(${COMPONENT_LIB} PRIVATE "src/nvs_encrypted_partition.cpp")
+-    idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
+-    target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
+-endif()
++#if(CONFIG_NVS_ENCRYPTION)
++#target_sources(${COMPONENT_LIB} PRIVATE "src/nvs_encrypted_partition.cpp")
++#idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
++#target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
++#endif()
+ 
+ if(${target} STREQUAL "linux")
+     target_compile_options(${COMPONENT_LIB} PUBLIC --coverage)
 diff --git a/components/wpa_supplicant/CMakeLists.txt b/components/wpa_supplicant/CMakeLists.txt
-index 3300647e..549d4f73 100644
+index 3300647e..ae31edd5 100644
 --- a/components/wpa_supplicant/CMakeLists.txt
 +++ b/components/wpa_supplicant/CMakeLists.txt
-@@ -3,9 +3,7 @@ set(srcs "port/os_xtensa.c"
+@@ -3,9 +3,9 @@ set(srcs "port/os_xtensa.c"
      "src/ap/ieee802_1x.c"
      "src/ap/wpa_auth.c"
      "src/ap/wpa_auth_ie.c"
 -    "src/common/sae.c"
++	#"src/common/sae.c"
      "src/common/wpa_common.c"
 -    "src/common/dpp.c"
++	#"src/common/dpp.c"
      "src/utils/bitfield.c"
      "src/crypto/aes-ctr.c"
      "src/crypto/aes-siv.c"
-@@ -21,14 +19,10 @@ set(srcs "port/os_xtensa.c"
-     "src/crypto/aes-omac1.c"
-     "src/crypto/bignum.c"
-     "src/crypto/ccmp.c"
--    "src/crypto/crypto_mbedtls.c"
--    "src/crypto/crypto_mbedtls-bignum.c"
--    "src/crypto/crypto_mbedtls-ec.c"
-     "src/crypto/crypto_ops.c"
-     "src/crypto/crypto_internal-cipher.c"
-     "src/crypto/crypto_internal-modexp.c"
-     "src/crypto/crypto_internal-rsa.c"
--    "src/crypto/crypto_mbedtls-rsa.c"
-     "src/crypto/crypto_internal.c"
-     "src/crypto/des-internal.c"
-     "src/crypto/dh_group5.c"
-@@ -85,6 +79,7 @@ set(srcs "port/os_xtensa.c"
- 
- if(CONFIG_WPA_MBEDTLS_CRYPTO)
-     set(tls_src "src/crypto/tls_mbedtls.c")
-+	set(tls_dep mbedtls)
- else()
-     set(tls_src
-     "src/tls/asn1.c"
-@@ -105,6 +100,7 @@ else()
-     "src/tls/tlsv1_server_write.c"
-     "src/tls/x509v3.c"
-     )
-+	set(tls_dep "")
- endif()
+@@ -81,31 +81,8 @@ set(srcs "port/os_xtensa.c"
+     "src/wps/wps_dev_attr.c"
+     "src/wps/wps_enrollee.c"
+     "src/wps/wps_registrar.c"
+-    "src/wps/wps_validate.c")
+-
+-if(CONFIG_WPA_MBEDTLS_CRYPTO)
+-    set(tls_src "src/crypto/tls_mbedtls.c")
+-else()
+-    set(tls_src
+-    "src/tls/asn1.c"
+-    "src/tls/bignum.c"
+-    "src/tls/pkcs1.c"
+-    "src/tls/pkcs5.c"
+-    "src/tls/pkcs8.c"
+-    "src/tls/rsa.c"
+-    "src/tls/tls_internal.c"
+-    "src/tls/tlsv1_client.c"
+-    "src/tls/tlsv1_client_read.c"
+-    "src/tls/tlsv1_client_write.c"
+-    "src/tls/tlsv1_common.c"
+-    "src/tls/tlsv1_cred.c"
+-    "src/tls/tlsv1_record.c"
+-    "src/tls/tlsv1_server.c"
+-    "src/tls/tlsv1_server_read.c"
+-    "src/tls/tlsv1_server_write.c"
+-    "src/tls/x509v3.c"
+-    )
+-endif()
++    "src/wps/wps_validate.c"
++   "src/crypto/tls_mbedtls.c")
  
  if (CONFIG_WPA_11KV_SUPPORT)
-@@ -124,7 +120,7 @@ endif()
- idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
-                     INCLUDE_DIRS include port/include include/esp_supplicant
-                     PRIV_INCLUDE_DIRS src
--                    PRIV_REQUIRES mbedtls freertos heap newlib)
-+					PRIV_REQUIRES freertos heap newlib ${tls_dep})
- 
- set_source_files_properties(
-     src/crypto/crypto_ops.c
-@@ -150,8 +146,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
+     set(roaming_src
+@@ -150,8 +127,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
      ESP8266_WORKAROUND
      CONFIG_ECC
      CONFIG_IEEE80211W
@@ -116,9 +139,93 @@ index 3300647e..549d4f73 100644
 +	#CONFIG_WPA3_SAE
      #CONFIG_SHA256
 -    CONFIG_DPP
-+	#CONFIG_DPP
++	# CONFIG_DPP
      CONFIG_WNM
      )
+diff --git a/components/wpa_supplicant/src/crypto/crypto_internal.c b/components/wpa_supplicant/src/crypto/crypto_internal.c
+index 8d6af0c9..0964046b 100644
+--- a/components/wpa_supplicant/src/crypto/crypto_internal.c
++++ b/components/wpa_supplicant/src/crypto/crypto_internal.c
+@@ -59,8 +59,10 @@ struct crypto_hash *  crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
+ 	size_t i;
+ 
+ 	ctx = (struct crypto_hash *)os_zalloc(sizeof(*ctx));
+-	if (ctx == NULL)
++	if (ctx == NULL) {
++		ESP_LOGE(TAG, "Failed to allocate crypto  hash %d, sz %d", alg, sizeof(*ctx));
+ 		return NULL;
++	}
+ 
+ 	ctx->alg = alg;
+ 
+@@ -155,6 +157,7 @@ struct crypto_hash *  crypto_hash_init(enum crypto_hash_alg alg, const u8 *key,
+ 		break;
+ #endif /* CONFIG_SHA256 */
+ 	default:
++		ESP_LOGE(TAG, "unknown hash alg %d", alg);
+ 		os_free(ctx);
+ 		return NULL;
+ 	}
+diff --git a/components/wpa_supplicant/src/crypto/tls_mbedtls.c b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+index 409281ff..dcf2c1b5 100644
+--- a/components/wpa_supplicant/src/crypto/tls_mbedtls.c
++++ b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+@@ -468,7 +468,7 @@ static int tls_create_mbedtls_handle(const struct tls_connection_params *params,
+ 	}
+ 
+ 	/* Enable debug prints in case supplicant's prints are enabled */
+-#if defined(DEBUG_PRINT) && defined(CONFIG_MBEDTLS_DEBUG) && defined(ESPRESSIF_USE)
++#if defined(CONFIG_MBEDTLS_DEBUG) && defined(ESPRESSIF_USE)
+ 	mbedtls_esp_enable_debug_log(&tls->conf, 2);
+ #endif
+ 	return 0;
+@@ -523,6 +523,8 @@ int tls_connection_established(void *tls_ctx, struct tls_connection *conn)
+ 		return 1;
+ 	}
+ 
++	wpa_printf(MSG_INFO, "TLS: conn status == %d", ssl->state);
++
+ 	return 0;
+ }
+ 
+@@ -576,7 +578,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
+ 	}
+ 
+ 	/* Already read sever data till hello done */
+-	if (tls->ssl.state == MBEDTLS_SSL_CLIENT_CERTIFICATE) {
++	if (tls->ssl.state == MBEDTLS_SSL_CLIENT_CERTIFICATE || tls->ssl.state == MBEDTLS_SSL_SERVER_HELLO_DONE) {
+ 		/* Read random data before session completes, not present after handshake */
+ 		if (tls->ssl.handshake) {
+ 			os_memcpy(conn->randbytes, tls->ssl.handshake->randbytes,
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_peap.c b/components/wpa_supplicant/src/eap_peer/eap_peap.c
+index 54e0ac0c..ce3e3077 100644
+--- a/components/wpa_supplicant/src/eap_peer/eap_peap.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_peap.c
+@@ -1087,14 +1087,17 @@ eap_peap_process(struct eap_sm *sm, void *priv,
+ 	resp = NULL;
+ 	if (tls_connection_established(sm->ssl_ctx, data->ssl.conn) &&
+ 	    !data->resuming) {
++		wpa_printf(MSG_DEBUG, "EAP-PEAP: conn established no resume");
+ 		struct wpabuf msg;
+ 		wpabuf_set(&msg, pos, left);
+ 		res = eap_peap_decrypt(sm, data, ret, req, &msg, &resp);
+ 	} else {
++		wpa_printf(MSG_DEBUG, "EAP-PEAP: conn established fail");
+ 		res = eap_peer_tls_process_helper(sm, &data->ssl,
+ 						  EAP_TYPE_PEAP,
+ 						  data->peap_version, id, pos,
+ 						  left, &resp);
++		wpa_printf(MSG_DEBUG, "EAP-PEAP: tls proc help done");
+ 
+ 		if (tls_connection_established(sm->ssl_ctx, data->ssl.conn)) {
+ 			char label[24];
+@@ -1349,4 +1352,4 @@ eap_peer_peap_register(void)
+ 	return ret;
+ }
+ 
+-#endif /* EAP_PEAP */
+\ No newline at end of file
++#endif /* EAP_PEAP */
 diff --git a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c b/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
 index 7b37a6c0..46929125 100644
 --- a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
@@ -133,3 +240,25 @@ index 7b37a6c0..46929125 100644
              wpa_sta_clear_curr_pmksa();
              break;
          default:
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_client.c b/components/wpa_supplicant/src/tls/tlsv1_client.c
+index d9f038b9..6ab2f2a7 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_client.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_client.c
+@@ -7,6 +7,7 @@
+  */
+ 
+ #include "utils/includes.h"
++#include <esp_system.h>
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+@@ -451,6 +452,9 @@ struct tlsv1_client * tlsv1_client_init(void)
+ 	conn->state = CLIENT_HELLO;
+ 
+ 	if (tls_verify_hash_init(&conn->verify) < 0) {
++
++		ESP_LOGE(TAG, "tlsv1 got free heap: %d", esp_get_free_heap_size());
++
+ 		wpa_printf(MSG_DEBUG, "TLSv1: Failed to initialize verify "
+ 			   "hash");
+ 		os_free(conn);
