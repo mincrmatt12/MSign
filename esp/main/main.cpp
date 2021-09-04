@@ -90,6 +90,9 @@ extern "C" void app_main() {
 		// TODO: make this setup softap mode for netcfg
 	}
 
+	// Wait till WIFI is ready to start grab tasks (all for memory optimization crapola in wpa2)
+	xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
+
 	// Start the grabber
 	if (xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create grab");
@@ -101,6 +104,7 @@ extern "C" void app_main() {
 			ESP_LOGE(TAG, "Failed to create webui; running without it");
 		}
 	}
+	else ESP_LOGW(TAG, "webui is disabled");
 
 	ESP_LOGI(TAG, "Created tasks (1)");
 	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(pvMALLOC_DRAM));
