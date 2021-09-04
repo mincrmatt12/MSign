@@ -181,8 +181,15 @@ void wifi::receive_config(const char * field, const char * value) {
 		wifi_config_data->sta.channel = atoi(value);
 	}
 	else if (strcmp(field, "bssid") == 0) {
-		sscanf(value, "%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8 ":%" SCNx8, &wifi_config_data->sta.bssid[0], &wifi_config_data->sta.bssid[1], &wifi_config_data->sta.bssid[2], &wifi_config_data->sta.bssid[3], &wifi_config_data->sta.bssid[4] ,&wifi_config_data->sta.bssid[5]);
+		int a, b, c, d, e, f;
+		sscanf(value, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
 		wifi_config_data->sta.bssid_set = true;
+		wifi_config_data->sta.bssid[0] = a;
+		wifi_config_data->sta.bssid[1] = b;
+		wifi_config_data->sta.bssid[2] = c;
+		wifi_config_data->sta.bssid[3] = d;
+		wifi_config_data->sta.bssid[4] = e;
+		wifi_config_data->sta.bssid[5] = f;
 	}
 	else {
 		ESP_LOGW(TAG, "unknown wifi config param %s", field);
