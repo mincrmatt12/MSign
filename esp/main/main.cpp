@@ -13,6 +13,10 @@
 #include <FreeRTOS.h>
 #include <task.h>
 
+#ifndef SIM
+#include <esp_wifi.h>
+#endif
+
 const static char * TAG = "app_main";
 
 #ifdef SIM
@@ -79,6 +83,7 @@ extern "C" void app_main() {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;
 	}
+
 
 	// Load the config from the SD card
 	if (!config::parse_config_from_sd()) {
