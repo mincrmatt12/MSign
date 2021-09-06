@@ -478,7 +478,7 @@ namespace tasks {
 			case MS::SubmenuMain:
 				draw_menu_list(menu_entries);
 
-				if (ui::buttons[ui::Buttons::SEL]) {
+				if (ui::buttons.rel(ui::Buttons::SEL)) {
 					if (ms.selected == 0) {
 						swapper.refresh();
 						goto close;
@@ -503,6 +503,10 @@ namespace tasks {
 					ms.selected = 0;
 					ms.submenu = MS::SubmenuDebug;
 					return;
+				}
+				else if (ui::buttons.held(ui::Buttons::SEL, pdMS_TO_TICKS(800)) && ms.selected == 0) {
+					servicer.refresh_grabber(slots::protocol::GrabberID::ALL);
+					goto close;
 				}
 
 				break;
