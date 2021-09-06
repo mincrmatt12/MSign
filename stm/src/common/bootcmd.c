@@ -76,7 +76,8 @@ const char * bootcmd_get_bl_revision() {
 	return "fake";
 }
 
-static bool fakesilent = true;
+#ifdef SIM
+static bool fakesilent = false;
 
 bool bootcmd_get_silent() {
 	return fakesilent;
@@ -85,5 +86,14 @@ bool bootcmd_get_silent() {
 void bootcmd_set_silent(bool c) {
 	fakesilent = c;
 }
+#else
+bool bootcmd_get_silent() {
+	return false;
+}
+
+void bootcmd_set_silent(bool c) {
+}
+#endif
+
 #endif
 
