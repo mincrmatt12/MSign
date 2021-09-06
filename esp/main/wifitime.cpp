@@ -123,6 +123,12 @@ namespace {
 
 		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 	}
+
+	struct wifi_blob {
+		wifi_config_t wifi_config_data{};
+		wifi_country_t country{};
+		bool enterprise_wifi_enable = false;
+	} *wifi_cfg_blob;
 }
 
 uint64_t wifi::get_localtime() {
@@ -145,13 +151,13 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 	return ((uint64_t)now * 1000) + millis % 1000;
 }
 
-wifi_config_t * wifi_config_data = nullptr;
-bool enterprise_wifi_enable = false;
-
 void wifi::receive_config(const char * field, const char * value) {
-	if (!wifi_config_data) {
-		wifi_config_data = new wifi_config_t{};
+	if (!wifi_cfg_blob) {
+		wifi_cfg_blob = new wifi_blob{};
 	}
+
+	auto wifi_config_data = &wifi_cfg_blob->wifi_config_data;
+
 	if (strcmp(field, "ssid") == 0) {
 		strncpy((char *)wifi_config_data->sta.ssid, value, 32);
 	}
@@ -161,20 +167,20 @@ void wifi::receive_config(const char * field, const char * value) {
 		esp_wifi_sta_wpa2_ent_disable();
 	}
 	else if (strcmp(field, "username") == 0) {
-		enterprise_wifi_enable = true;
+		wifi_cfg_blob->enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
 		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "username_only") == 0) {
-		enterprise_wifi_enable = true;
+		wifi_cfg_blob->enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "identity") == 0) {
-		enterprise_wifi_enable = true;
+		wifi_cfg_blob->enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "password") == 0) {
-		enterprise_wifi_enable = true;
+		wifi_cfg_blob->enterprise_wifi_enable = true;
 		esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)value, strlen(value));
 	}
 	else if (strcmp(field, "channel") == 0) {
@@ -191,6 +197,16 @@ void wifi::receive_config(const char * field, const char * value) {
 		wifi_config_data->sta.bssid[4] = e;
 		wifi_config_data->sta.bssid[5] = f;
 	}
+	else if (strcmp(field, "country_settings") == 0) {
+
+		int schan, fchan, maxtx;
+
+		sscanf(value, "%2s:%d:%d:%d", wifi_cfg_blob->country.cc, &schan, &fchan, &maxtx);
+		wifi_cfg_blob->country.schan = schan;
+		wifi_cfg_blob->country.nchan = fchan - schan + 1;
+		wifi_cfg_blob->country.max_tx_power = maxtx * 4;
+		wifi_cfg_blob->country.policy = WIFI_COUNTRY_POLICY_MANUAL;
+	}
 	else {
 		ESP_LOGW(TAG, "unknown wifi config param %s", field);
 	}
@@ -199,7 +215,7 @@ void wifi::receive_config(const char * field, const char * value) {
 bool wifi::init() {
 	// Verify we have ssid/psk
 	
-	if (!wifi_config_data) {
+	if (!wifi_cfg_blob) {
 		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
 		return false;
 	}
@@ -208,17 +224,17 @@ bool wifi::init() {
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
 
-	// Initialize wifi
+	// Initialize wifi -- performed here so config can call wifi funcs
 	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
 	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
 
 	// Setup with config data
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, wifi_config_data));
-	if (enterprise_wifi_enable) esp_wifi_sta_wpa2_ent_enable();
+	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_cfg_blob->wifi_config_data));
+	if (wifi_cfg_blob->enterprise_wifi_enable) esp_wifi_sta_wpa2_ent_enable();
 	ESP_ERROR_CHECK(esp_wifi_start());
-	ESP_ERROR_CHECK(esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N));
-	delete wifi_config_data; wifi_config_data = nullptr;
+	ESP_ERROR_CHECK(esp_wifi_set_country(&wifi_cfg_blob->country));
+	delete wifi_cfg_blob; wifi_cfg_blob = nullptr;
 
 	// Start the time wait service
 	xTaskCreate(sntp_task, "tWAIT", 2048, NULL, 7, NULL);
