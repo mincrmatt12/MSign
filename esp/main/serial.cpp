@@ -78,10 +78,10 @@ void serial::SerialInterface::process_packet() {
 					in_sleep_mode = true;
 				}
 				else {
+					in_sleep_mode = false;
+
 					// Exit sleep mode
 					ESP_LOGI(TAG, "Exited sleep mode");
-					
-					in_sleep_mode = false;
 
 					// refresh all grabbers
 					grabber::refresh(slots::protocol::GrabberID::ALL);
