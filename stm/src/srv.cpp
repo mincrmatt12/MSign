@@ -1151,6 +1151,7 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[2] = slots::protocol::SLEEP_ENABLE;
 				dma_out_buffer[3] = (uint8_t)req.sleeping;
 				send();
+				bootcmd_set_silent(req.sleeping);
 			}
 			break;
 		case PendRequest::TypeReset:

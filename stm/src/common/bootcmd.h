@@ -23,6 +23,8 @@ bootcmd_t bootcmd_get_cmd();
 uint32_t bootcmd_update_size();
 void     bootcmd_request_update(uint32_t size);
 void 	 bootcmd_service_update();
+void     bootcmd_set_silent(bool on);
+bool     bootcmd_get_silent();
 
 const char * bootcmd_get_bl_revision();
 
@@ -33,6 +35,7 @@ const char * bootcmd_get_bl_revision();
 // 01 - did just update flag, cleared by application
 // 02 - requested update size
 // 03 - bootloader revision string (max 4 chars)
+// 04 - is silent/sleep mode (do updates/reboots without turning on the screen)
 
 #ifdef __cplusplus
 };

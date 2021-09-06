@@ -139,55 +139,72 @@ namespace tasks {
 	}
 
 	void DispMan::run() {
-		show_test_pattern(0, matrix.get_inactive_buffer());
-
-		matrix.swap_buffers();
-
-		// Init esp comms
-		while (!servicer.ready()) {
-			show_test_pattern(1, matrix.get_inactive_buffer());
+		// Short-circuit for sleep mode
+		if (bootcmd_get_silent()) {
+			matrix.get_inactive_buffer().clear();
 			matrix.swap_buffers();
-		}
+			matrix.get_inactive_buffer().clear();
+			matrix.swap_buffers();
 
-		if (servicer.updating()) {
-			// Go into a simple servicer only update mode
-			while (true) {
-				show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
+			while (!servicer.ready()) {
+				matrix.swap_buffers();
+			}
+		}
+		else {
+			show_test_pattern(0, matrix.get_inactive_buffer());
+
+			matrix.swap_buffers();
+
+			// Init esp comms
+			while (!servicer.ready()) {
+				show_test_pattern(1, matrix.get_inactive_buffer());
 				matrix.swap_buffers();
 			}
 
-			// Servicer will eventually reset the STM.
+			if (servicer.updating()) {
+				// Go into a simple servicer only update mode
+				while (true) {
+					show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
+					matrix.swap_buffers();
+				}
+
+				// Servicer will eventually reset the STM.
+			}
+
+			show_test_pattern(2, matrix.get_inactive_buffer());
+			matrix.swap_buffers();
+			show_test_pattern(2, matrix.get_inactive_buffer());
+			matrix.swap_buffers();
+
+			uint16_t finalize_counter = 60;
+			while (finalize_counter--) {
+				if (finalize_counter >= 50) matrix.swap_buffers();
+				else if (finalize_counter >= 34) {
+					draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0xff0000_ccu);
+					matrix.swap_buffers();
+				}
+				else if (finalize_counter >= 18) {
+					draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x00ff00_ccu);
+					matrix.swap_buffers();
+				}
+				else {
+					draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x0000ff_ccu);
+					matrix.swap_buffers();
+				}
+			}
 		}
 
 		ui::buttons.init();
-
-		show_test_pattern(2, matrix.get_inactive_buffer());
-		matrix.swap_buffers();
-		show_test_pattern(2, matrix.get_inactive_buffer());
-		matrix.swap_buffers();
-
-		uint16_t finalize_counter = 60;
-		while (finalize_counter--) {
-			if (finalize_counter >= 50) matrix.swap_buffers();
-			else if (finalize_counter >= 34) {
-				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0xff0000_ccu);
-				matrix.swap_buffers();
-			}
-			else if (finalize_counter >= 18) {
-				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x00ff00_ccu);
-				matrix.swap_buffers();
-			}
-			else {
-				draw::gradient_rect(matrix.get_inactive_buffer(), 0, 0, 128, 64, 0, 0x0000ff_ccu);
-				matrix.swap_buffers();
-			}
-		}
 
 		// Tell servicer to grab the sccfg
 		servicer.set_temperature_all(bheap::Block::TemperatureHot, slots::SCCFG_INFO, slots::SCCFG_TIMING, slots::WEBUI_STATUS, slots::WIFI_STATUS);
 
 		swapper.notify_before_transition(0, true);
 		swapper.transition(0);
+
+		if (bootcmd_get_silent()) {
+			do_sleep_mode();
+		}
 
 		while (1) {
 			ui::buttons.update();

@@ -38,6 +38,14 @@ void bootcmd_service_update() {
 	LL_RTC_BAK_SetRegister(RTC, 1, 0xfece5);
 }
 
+void bootcmd_set_silent(bool on) {
+	LL_RTC_BAK_SetRegister(RTC, 4, on);
+}
+
+bool bootcmd_get_silent() {
+	return LL_RTC_BAK_GetRegister(RTC, 4) != 0;
+}
+
 const char * bootcmd_get_bl_revision() {
 	return (const char *)&RTC->BKP3R;
 }
@@ -66,6 +74,16 @@ void bootcmd_service_update() {
 
 const char * bootcmd_get_bl_revision() {
 	return "fake";
+}
+
+static bool fakesilent = true;
+
+bool bootcmd_get_silent() {
+	return fakesilent;
+}
+
+void bootcmd_set_silent(bool c) {
+	fakesilent = c;
 }
 #endif
 
