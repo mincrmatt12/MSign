@@ -49,6 +49,14 @@ namespace led {
 				return junk;
 			}
 
+			color_t & at_unsafe(uint16_t x, uint16_t y) {
+				return _at(x, y);
+			}
+
+			const color_t & at_unsafe(uint16_t x, uint16_t y) const {
+				return _at(x, y);
+			}
+
 			inline bool on_screen(uint16_t x, uint16_t y) const {
 				return (x < Width && y < Height);
 			}
