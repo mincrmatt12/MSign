@@ -745,7 +745,6 @@ end_temp_request:
 					// Read the slot ID
 					if (!xStreamBufferReceive(dma_rx_queue, &msgbuf, 4, portMAX_DELAY)) continue;
 
-					// Erase the contents. This doesn't screw up anything per se, but could cause dual-access problems with the cache
 					{
 						ServicerLockGuard g(*this);
 
@@ -766,6 +765,9 @@ end_temp_request:
 								}
 							}
 						}
+
+						// Homogenize all new blocks for hot slots
+						if (auto &first = arena.get(msgbuf_x16[0]); first.temperature == bheap::Block::TemperatureHot && first.next()) arena.homogenize(msgbuf_x16[0]);
 					}
 
 					// Send an ack
