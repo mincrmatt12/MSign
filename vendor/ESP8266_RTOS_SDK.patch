@@ -167,7 +167,7 @@ index 8d6af0c9..0964046b 100644
  		return NULL;
  	}
 diff --git a/components/wpa_supplicant/src/crypto/tls_mbedtls.c b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
-index 409281ff..dcf2c1b5 100644
+index 409281ff..49d8fe98 100644
 --- a/components/wpa_supplicant/src/crypto/tls_mbedtls.c
 +++ b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
 @@ -468,7 +468,7 @@ static int tls_create_mbedtls_handle(const struct tls_connection_params *params,
@@ -179,7 +179,24 @@ index 409281ff..dcf2c1b5 100644
  	mbedtls_esp_enable_debug_log(&tls->conf, 2);
  #endif
  	return 0;
-@@ -523,6 +523,8 @@ int tls_connection_established(void *tls_ctx, struct tls_connection *conn)
+@@ -502,10 +502,12 @@ struct tls_connection * tls_connection_init(void *tls_ctx)
+ 
+ void tls_connection_deinit(void *tls_ctx, struct tls_connection *conn)
+ {
+-	/* Free ssl ctx and data */
+-	tls_mbedtls_conn_delete((tls_context_t *) conn->tls);
+-	os_free(conn->tls);
+-	conn->tls = NULL;
++	/* Free ssl ctx and data XXX: added check in case this is called before initting tls */
++	if (conn->tls != NULL) {
++		tls_mbedtls_conn_delete((tls_context_t *) conn->tls);
++		os_free(conn->tls);
++		conn->tls = NULL;
++	}
+ 	/* Data in in ssl ctx, free connection */
+ 	os_free(conn);
+ }
+@@ -523,6 +525,8 @@ int tls_connection_established(void *tls_ctx, struct tls_connection *conn)
  		return 1;
  	}
  
@@ -188,7 +205,7 @@ index 409281ff..dcf2c1b5 100644
  	return 0;
  }
  
-@@ -576,7 +578,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
+@@ -576,7 +580,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx,
  	}
  
  	/* Already read sever data till hello done */
