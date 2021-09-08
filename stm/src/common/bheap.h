@@ -16,9 +16,9 @@
 
 #if defined(STM32F205xx) || defined(STM32F207xx)
 #include "../crash/main.h"
-#define assert msign_assert
+#define ms_assert msign_assert
 #else
-#define assert(x, r) (void)0;
+#define ms_assert(x, r) (void)0;
 #endif
 
 #define MAX_BHEAP_BLOCK_SIZE ((1 << 14) - 1)
@@ -150,7 +150,7 @@ namespace bheap {
 		//
 		// Offset is relative to the block header (i.e. offset = 0 will overwrite the block, offset = 4 will zero-size this block, etc.)
 		void insert(const Block& b, uint32_t offset) {
-			assert(offset % 4 == 0 && offset < datasize + 4, "invalid location for insert");
+			ms_assert(offset % 4 == 0 && offset < datasize + 4, "invalid location for insert");
 			// Use the power of recursion to make this only have to deal with the case for offset = 0
 			if (offset != 0) {
 				// Shrink this block to size = offset - 4
@@ -342,7 +342,7 @@ namespace bheap {
 		//
 		// If this is the first block, the temperature is initialized to cold, otherwise it is kept correct
 		bool add_block(uint32_t slotid, uint32_t datalocation, size_t datasize) {
-			assert(datasize < MAX_BHEAP_BLOCK_SIZE, "block too big");
+			ms_assert(datasize < MAX_BHEAP_BLOCK_SIZE, "block too big");
 			// First, check if there's enough space to fit in this block.
 			uint32_t free_space = this->free_space();
 			if (contains(slotid)) {
@@ -823,7 +823,7 @@ finish_setting:
 			for (const Block& x : *this) {
 				if (x.slotid == slotid || x.slotid == Block::SlotEnd) return x;
 			}
-			assert(false, "no end blk");
+			ms_assert(false, "no end blk");
 			__builtin_unreachable();
 		}
 
@@ -834,7 +834,7 @@ finish_setting:
 					for (Block& x : *this) {
 						if (x.slotid == slotid || x.slotid == Block::SlotEnd) return bptr_to_cache(&x);
 					}
-					assert(false, "no end blk");
+					ms_assert(false, "no end blk");
 					__builtin_unreachable();
 				})
 			);
@@ -853,7 +853,7 @@ finish_setting:
 				if (offset >= pos && offset < pos + x.datasize) return x;
 				pos += x.datasize;
 			}
-			assert(false, "no end blk");
+			ms_assert(false, "no end blk");
 			__builtin_unreachable();
 		}
 		Block& get(uint32_t slotid, uint32_t offset) {
@@ -864,7 +864,7 @@ finish_setting:
 				if (offset >= pos && offset < pos + x.datasize) return x;
 				pos += x.datasize;
 			}
-			assert(false, "no end blk");
+			ms_assert(false, "no end blk");
 			__builtin_unreachable();
 		}
 
@@ -1019,7 +1019,7 @@ finish_setting:
 				else {
 					// Be slightly more intelligent, do the same as above but write a new block at the end.
 					Block old_empty = *next_empty;
-					assert(old_empty.datasize >= remaining_new_alloc_space, "bad space");
+					ms_assert(old_empty.datasize >= remaining_new_alloc_space, "bad space");
 					old_empty.datasize -= remaining_new_alloc_space;
 
 					memmove(((uint8_t *)move_region_start) + remaining_new_alloc_space, move_region_start, reinterpret_cast<uintptr_t>(next_empty) - reinterpret_cast<uintptr_t>(move_region_start));
@@ -1093,7 +1093,7 @@ copy_data:
 		void move_left(Block& to_move, Block& in_front_of) {
 			if (in_front_of.adjacent() == &to_move) return;
 
-			assert(&to_move > &in_front_of, "move_left backwards");
+			ms_assert(&to_move > &in_front_of, "move_left backwards");
 
 			// Invalidate everything between in_front_of.adjacent() and to_move inclusive
 			invalidate(iterator(*in_front_of.adjacent()), iterator(*to_move.adjacent()));
