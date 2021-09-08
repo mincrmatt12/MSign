@@ -62,7 +62,6 @@ void screen::TTCScreen::draw() {
 		// Check first slot
 		for (uint8_t slot = 0; slot < 5; ++slot) {
 			if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
-				if (!servicer.slot(slots::TTC_TIME_1a + slot)) continue;
 				int unscrolled = y + y_suboff;
 				int h = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
 					false, false, // todo
