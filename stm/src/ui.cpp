@@ -38,7 +38,13 @@ void ui::Buttons::update() {
 	else last_duration = 0;
 
 	last_held = current_held;
-	current_held = GPIOA->IDR;
+	current_held = GPIOA->IDR & (
+		 (1 << POWER) |
+		 (1 << NXT) |
+		 (1 << PRV) |
+		 (1 << SEL) |
+		 (1 << MENU)
+	);
 
 	if (servicer.ready()) {
 		srv::ServicerLockGuard g(servicer);
