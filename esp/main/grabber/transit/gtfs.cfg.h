@@ -1,4 +1,5 @@
 #include "../../config.h"
+#include "./common.cfg.h"
 
 namespace transit::gtfs {
 	//!cfg: holds .gtfs.feed.host, default "_webapps.regionofwaterloo.ca"
@@ -16,8 +17,24 @@ namespace transit::gtfs {
 
 		//!cfg: holds .stop
 		const char * stop_id;
+
+		//!cfg: holds .route_alt
+		const char * route_id_alt;
+
+		//!cfg: holds .stop_alt
+		const char * stop_id_alt;
+
+		//!cfg: holds .dircode[0]
+		TransitDirectionCode dir_a = NA;
+
+		//!cfg: holds .dircode[1]
+		TransitDirectionCode dir_b = NA;
+
+		operator bool() const {return route_id && stop_id;}
+
+		bool has_alt() const {return route_id_alt && stop_id_alt;}
 	};
 
 	//!cfg: holds .gtfs.entries
-	extern GtfsEntry entries[3];
+	extern config::lazy_t<GtfsEntry> entries[5];
 }

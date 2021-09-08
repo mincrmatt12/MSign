@@ -21,7 +21,7 @@ namespace transit::ttc {
 	}
 
 	// Populate the info and times with the information for this slot.
-	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6]) {
+	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6], uint64_t times_b[6]) {
 		char url[80];
 		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code, entry.stopid);
 
@@ -43,10 +43,10 @@ namespace transit::ttc {
 
 			uint64_t epoch = 0;
 			bool layover = false;
-			bool tag = false;
+			int tag = 0;
 		} state;
 
-		int max_e = 0;
+		int max_e = 0, max_e_alt = 0;
 		
 		json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 			if (stack_ptr < 2) return;
@@ -76,7 +76,13 @@ namespace transit::ttc {
 					for (int i = 0; i < 4 && entry.dirtag[i]; ++i) {
 						if (strcmp(entry.dirtag[i], v.str_val) == 0) {
 							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i]);
-							state.tag = true; break;
+							state.tag = 1; break;
+						}
+					}
+					for (int i = 0; i < 4 && entry.alt_dirtag[i]; ++i) {
+						if (strcmp(entry.alt_dirtag[i], v.str_val) == 0) {
+							ESP_LOGD(TAG, "matched on %s (alt)", entry.alt_dirtag[i]);
+							state.tag = 2; break;
 						}
 					}
 				}
@@ -88,25 +94,27 @@ namespace transit::ttc {
 			else if ((top.is_array() || top.is_obj()) && strcmp(top.name, "prediction") == 0 && v.type == json::Value::OBJ) {
 				if (state.tag && state.e2 < 6) {
 					info.flags |= (slots::TTCInfo::EXIST_0 << slot);
-					if (state.layover) {
-						info.flags |= (slots::TTCInfo::DELAY_0 << slot);
-					}
-					if (max_e < 6) {
-						ESP_LOGD(TAG, "Got an entry at %d, idx=%d", (int)(state.epoch/1000), max_e);
-						times[max_e++] = state.epoch;
-						if (max_e == 6) {
+					//if (state.layover) {
+						//info.flags |= (slots::TTCInfo::DELAY_0 << slot);
+					//}
+					auto& relevant_length = (state.tag == 1 ? max_e : max_e_alt);
+					auto& relevant_times  = (state.tag == 1 ? times : times_b);
+					if (relevant_length < 6) {
+						ESP_LOGD(TAG, "Got an entry at %d, idx=%d", (int)(state.epoch/1000), relevant_length);
+						relevant_times[relevant_length++] = state.epoch;
+						if (relevant_length == 6) {
 							// Sort here too so that the sorted add will work
-							std::sort(times, times+6);
+							std::sort(relevant_times, relevant_times+6);
 						}
 					}
 					else {
-						auto lb = std::lower_bound(times, times+6, state.epoch);
-						if (lb < (times + 5)) {
-							ESP_LOGD(TAG, "Got sorted entry <5 at %d, idx=%d", (int)(state.epoch/1000), (int)std::distance(times, lb));
-							std::move(lb, times+5, lb+1);
+						auto lb = std::lower_bound(relevant_times, relevant_times+6, state.epoch);
+						if (lb < (relevant_times + 5)) {
+							ESP_LOGD(TAG, "Got sorted entry <5 at %d, idx=%d", (int)(state.epoch/1000), (int)std::distance(relevant_times, lb));
+							std::move(lb, relevant_times+5, lb+1);
 							*lb = state.epoch;
 						}
-						else if (lb != (times + 6)) {
+						else if (lb != (relevant_times + 6)) {
 							ESP_LOGD(TAG, "Got sorted entry =6 at %d", (int)(state.epoch/1000));
 							*lb = state.epoch;
 						}
@@ -128,6 +136,9 @@ namespace transit::ttc {
 		// Ensure the array is sorted
 		if (max_e && max_e < 6)
 			std::sort(times, times+max_e);
+
+		if (max_e_alt && max_e_alt < 6)
+			std::sort(times_b, times+max_e_alt);
 
 		return ok;
 	}
@@ -171,13 +182,21 @@ namespace transit::ttc {
 		if (transit::impl != transit::TTC) return true;
 
 		slots::TTCInfo x{};
-		for (uint8_t slot = 0; slot < 3; ++slot) {
-			uint64_t local_times[6];
+		for (uint8_t slot = 0; slot < 5; ++slot) {
+			uint64_t local_times[6], local_times_b[6];
 			memset(local_times, 0, sizeof(local_times));
+			memset(local_times_b, 0, sizeof(local_times_b));
 
 			if (entries[slot] && *entries[slot]) {
-				if (update_slot_times_and_info(*entries[slot], slot, x, local_times)) {
-					serial::interface.update_slot_raw(slots::TTC_TIME_1 + slot, local_times, sizeof(local_times));
+				if (update_slot_times_and_info(*entries[slot], slot, x, local_times, local_times_b)) {
+					if (local_times[0])
+						serial::interface.update_slot_raw(slots::TTC_TIME_1a + slot, local_times, sizeof(uint64_t) * std::count_if(std::begin(local_times), std::end(local_times), [](auto x){return x != 0;}));
+					if (local_times_b[0])
+						serial::interface.update_slot_raw(slots::TTC_TIME_1b + slot, local_times_b, sizeof(uint64_t) * std::count_if(std::begin(local_times_b), std::end(local_times_b), [](auto x){return x != 0;}));
+
+					// set slot altcodes
+					x.altdircodes_a[slot] = (char)entries[slot]->dir_a;
+					x.altdircodes_b[slot] = (char)entries[slot]->dir_b;
 				}
 				else return false;
 			}

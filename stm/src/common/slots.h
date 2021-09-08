@@ -22,9 +22,18 @@ namespace slots {
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
 		TTC_NAME_3 = 0x23,			// ''
-		TTC_TIME_1 = 0x24,			// UINT64_T[]; TTCTime - time of next up to six buses
-		TTC_TIME_2 = 0x25,			// ''
-		TTC_TIME_3 = 0x26,			// ''
+		TTC_NAME_4 = 0x24,			// ''
+		TTC_NAME_5 = 0x25,			// ''
+		TTC_TIME_1a = 0x30,			// UINT64_T[]; TTCTime - time of next up to six buses (row a)
+		TTC_TIME_2a = 0x31,			// ''
+		TTC_TIME_3a = 0x32,			// ''
+		TTC_TIME_4a = 0x33,			// ''
+		TTC_TIME_5a = 0x34,			// ''
+		TTC_TIME_1b = 0x3a,			// UINT64_T[]; TTCTime - time of next up to six buses (row b)
+		TTC_TIME_2b = 0x3b,			// ''
+		TTC_TIME_3b = 0x3c,			// ''
+		TTC_TIME_4b = 0x3d,			// ''
+		TTC_TIME_5b = 0x3e,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
 
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
@@ -70,25 +79,23 @@ namespace slots {
 	};
 
 	struct TTCInfo {
-		uint16_t flags;
+		uint32_t flags;
+		char altdircodes_a[5]; // direction code for times_a
+		char altdircodes_b[5]; // direction code for times_b (if null, no data should be present there)
 
-		enum Flags : uint16_t {
-			ALERT_0 = 1,
-			ALERT_1 = 2,  // there is an alert, and the relevant message is available in the VSTR.
-			ALERT_2 = 4,
+		enum Flags : uint32_t {
+			EXIST_0 = (1 << 0),
+			EXIST_1 = (1 << 1),  // the slot has data r.n.
+			EXIST_2 = (1 << 2),
+			EXIST_3 = (1 << 3),
+			EXIST_4 = (1 << 4),
 
-			EXIST_0 = 8,
-			EXIST_1 = 16,  // the slot has data r.n.
-			EXIST_2 = 32,
-
-			DELAY_0 = 64,
-			DELAY_1 = 128, // the slot is reported as delayed
-			DELAY_2 = 256,
-
-			SUBWAY_ALERT = 512, // there is an alert for the subway
-			SUBWAY_DELAYED = 1024, // we think the alert means there's a delay
-			SUBWAY_OFF = 2048, // we think the alert means the subway is currently broken / out of service / off
+			SUBWAY_ALERT = (1 << 20), // there is an alert for the subway
+			SUBWAY_DELAYED = (1 << 21), // we think the alert means there's a delay
+			SUBWAY_OFF = (1 << 22), // we think the alert means the subway is currently broken / out of service / off
 		};
+
+		const static inline uint32_t EXIST_MASK = 0b11111;
 	};
 
 	struct WeatherInfo {

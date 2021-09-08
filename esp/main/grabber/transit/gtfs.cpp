@@ -15,22 +15,32 @@ const static char * TAG = "gtfs";
 namespace {
 	struct TripParserState {
 		slots::TTCInfo info;
-		uint64_t times[3][6];
+		uint64_t times_a[5][6];
+		uint64_t times_b[5][6];
 	};
 }
 
 extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, uint8_t) {
 	// Check if this matches any entry
 	
-	for (int i = 0; i < 3; ++i) {
-		const auto& e = transit::gtfs::entries[i];
+	int which_slot = 0;
+	for (const auto& e_ : transit::gtfs::entries) {
+		if (!e_ || !*e_) break;
+		const auto& e = *e_;
 		if (e.route_id == nullptr || e.stop_id == nullptr) break;
 
-		if (strcmp(state->c.route_id, e.route_id) == 0 && strcmp(state->c.stop_id, e.stop_id) == 0) {
+		auto& hstate = *reinterpret_cast<TripParserState *>(state->userptr);
+		
+		bool matched_a = strcmp(state->c.route_id, e.route_id) == 0 && strcmp(state->c.stop_id, e.stop_id) == 0;
+		bool matched_b = e.has_alt() && strcmp(state->c.route_id, e.route_id_alt) == 0 && strcmp(state->c.stop_id, e.stop_id_alt) == 0;
+
+		if (matched_a || matched_b) {
 			ESP_LOGD(TAG, "matched on %s-%s, %d", state->c.route_id, state->c.stop_id, (int)(state->c.at_time));
-			auto& hstate = *reinterpret_cast<TripParserState *>(state->userptr);
+
+			auto& times = matched_a ? hstate.times_a[which_slot] : hstate.times_b[which_slot];
+
 			// Update entry
-			auto minmax = std::minmax_element(hstate.times[i], hstate.times[i] + 6);
+			auto minmax = std::minmax_element(times, times + 6);
 			uint64_t replace;
 			if (*minmax.first == 0) {
 				replace = 0;
@@ -38,22 +48,24 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 			else replace = *minmax.second;
 
 			for (int j = 0; j < 6; ++j) {
-				if (hstate.times[i][j] == replace) {
-					hstate.times[i][j] = wifi::millis_to_local(state->c.at_time * 1000);
+				if (times[j] == replace) {
+					times[j] = wifi::millis_to_local(state->c.at_time * 1000);
 					break;
 				}
 			}
 
 			// Resort array
-			std::sort(hstate.times[i], hstate.times[i] + 6, [](auto a, auto b){
+			std::sort(times, times + 6, [](auto a, auto b){
 				if (a == 0) return false;
 				if (b == 0) return true;
 				return a < b;
 			});
 
 			// Update flags
-			hstate.info.flags |= (hstate.info.EXIST_0 << i);
+			hstate.info.flags |= (hstate.info.EXIST_0 << which_slot);
 		}
+
+		++which_slot;
 	}
 }
 
@@ -114,10 +126,19 @@ namespace transit::gtfs {
 
 		ESP_LOGD(TAG, "parsed gtfs ok");
 
-		for (int i = 0; i < 3; ++i) {
+		for (int i = 0; i < 5; ++i) {
 			if (!(tps.info.flags & (tps.info.EXIST_0 << i))) continue;
 
-			serial::interface.update_slot_nosync(slots::TTC_TIME_1 + i, tps.times[i]);
+			if (tps.times_a[i][0])
+				serial::interface.update_slot_raw(slots::TTC_TIME_1a + i, tps.times_a[i], sizeof(uint64_t) * std::count_if(std::begin(tps.times_a[i]), std::end(tps.times_a[i]), [](auto x){return x != 0;}), false);
+			else serial::interface.delete_slot(slots::TTC_TIME_1a + i);
+			if (tps.times_b[i][0])
+				serial::interface.update_slot_raw(slots::TTC_TIME_1b + i, tps.times_b[i], sizeof(uint64_t) * std::count_if(std::begin(tps.times_b[i]), std::end(tps.times_b[i]), [](auto x){return x != 0;}), false);
+			else serial::interface.delete_slot(slots::TTC_TIME_1b + i);
+
+			// set slot altcodes
+			tps.info.altdircodes_a[i] = (char)entries[i]->dir_a;
+			tps.info.altdircodes_b[i] = (char)entries[i]->dir_b;
 		}
 
 		serial::interface.update_slot(slots::TTC_INFO, tps.info);
