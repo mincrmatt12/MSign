@@ -8,6 +8,8 @@
 #include "../draw.h"
 #include "../tasks/screen.h"
 
+#include <bit>
+
 namespace bitmap {
 	const uint8_t bus[] = { // really shitty bus
 		0b11111111, 0b11111100,
@@ -44,27 +46,53 @@ void screen::TTCScreen::draw() {
 	// Ensure there's data
 	bool ready = servicer.slot(slots::TTC_INFO); // just don't display anything
 
+	const static int holdScroll = 280;
+	const static int scrollTime = 1900;
+
 	if (ready) {
-
 		// Alright, now we have to work out what to show
-		const auto& info = servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
-
-		int16_t y = 10;
-		if (((~info->flags) & (slots::TTCInfo::SUBWAY_ALERT | slots::TTCInfo::EXIST_0 | slots::TTCInfo::EXIST_1 | slots::TTCInfo::EXIST_2)) == 0) {
-			y = 10 - draw::distorted_ease_wave(rtc_time, 1000, 4500, 18);
+		auto& info = servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
+		if (servicer.slot_dirty(slots::TTC_INFO)) {
+			servicer.give_lock();
+			request_slots(bheap::Block::TemperatureHot);
+			servicer.take_lock();
 		}
 
+		int y_suboff = draw::distorted_ease_wave(rtc_time - last_scrolled_at, holdScroll, scrollTime, scroll_target - scroll_offset), y_start = 10 - scroll_offset - y_suboff, y = y_start, height_onscreen = 0;
 		// Check first slot
-		for (uint8_t slot = 0; slot < 3; ++slot) {
+		for (uint8_t slot = 0; slot < 5; ++slot) {
 			if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
-				if (!servicer.slot(slots::TTC_TIME_1 + slot)) continue;
-				if (draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), *servicer.slot<uint64_t *>(slots::TTC_TIME_1 + slot), 
-							info->flags & (slots::TTCInfo::ALERT_0 << slot),
-							info->flags & (slots::TTCInfo::DELAY_0 << slot)
-							)) {
-					y += 18;
-				}
+				if (!servicer.slot(slots::TTC_TIME_1a + slot)) continue;
+				int unscrolled = y + y_suboff;
+				int h = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
+					false, false, // todo
+					info->altdircodes_a[slot],
+					info->altdircodes_b[slot]
+				);
+				y += h;
+				if (unscrolled + h < 56 && unscrolled >= 10) height_onscreen += h;
 			}
+		}
+
+		total_current_height = y - y_start;
+
+		// Can we scroll?
+		if (total_current_height > 53) {
+			if (rtc_time - last_scrolled_at > (holdScroll + scrollTime - 16)) {
+				scroll_offset = scroll_target;
+				last_scrolled_at = rtc_time;
+			}
+			// What is the scroll target?
+			if (10 - scroll_offset + total_current_height < 53) {
+				scroll_target = 0;
+			}
+			else {
+				scroll_target = scroll_offset + height_onscreen;
+			}
+		}
+		else {
+			scroll_offset = 0;
+			scroll_target = 0;
 		}
 	}
 
@@ -142,9 +170,73 @@ void screen::TTCScreen::draw_bus() {
 
 }
 
-bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64_t times[6], bool alert, bool delay) {
-	if (!name) return false;
-	uint32_t t_pos = ((timekeeper.current_time / 50));
+bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::TypedBlock<uint64_t *> &times) {
+	// Compute scale
+	
+	int min_moving_pos = 0; // rightmost place currently occupied.
+	int scale_v = 8;
+	int count = times.datasize / 8;
+
+	bool drawn_anything = false;
+	
+	// compute scale
+	for (int i = 0; i < std::min(count, 4); ++i) {
+		if (times[i] < rtc_time) continue; 
+		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
+		if (minutes > 15 && minutes < 32) scale_v = 4;
+		else if (minutes > 31 && minutes < 64) scale_v = 2;
+	}
+	
+	// positions: +7: bar, +6: text
+	
+	for (int i = 0; i < count; ++i) {
+		if (rtc_time > times[i]) continue;
+
+		// Compute "desired" position
+		int minutes = ((times[i] - rtc_time) / 60'000);
+		int position = minutes * scale_v;
+
+		// Move if overlapping
+		position = std::max(min_moving_pos, position);
+
+		led::color_t textcolor = 0xff_c;
+		// TODO: make this configurable per entry?
+		if (minutes < 5) {
+			textcolor = 0xff2020_cc;
+		}
+		else if (minutes < 20) {
+			textcolor = 0x70ff70_cc;
+		}
+
+		if (position < 128) drawn_anything = true;
+
+		char buf[16] = {0};
+		snprintf(buf, 16, "%dm", minutes);
+		min_moving_pos = draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, position, y + 7, textcolor);
+	}
+
+	if (!drawn_anything) return false;
+
+	// draw line
+	draw::rect(matrix.get_inactive_buffer(), 0, y + 7, 128, y + 8, 50_c);
+
+	// draw blade if necessary
+	if (dircode != 0 && !isspace(dircode)) {
+		char str[2] = {dircode, 0};
+		// draw bg 
+		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00758f_cc);
+		// draw lines
+		draw::line(matrix.get_inactive_buffer(), 128 - 6, y, 128 - 7, y + 7, 50_c);
+		// draw text
+		draw::text(matrix.get_inactive_buffer(), str, font::lcdpixel_6::info, 128 - 4, y + 7, 0xff_c);
+	}
+
+	return true;
+}
+
+int16_t screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const bheap::TypedBlock<uint64_t *> &times_a, const bheap::TypedBlock<uint64_t *> &times_b, bool alert, bool delay, char code_a, char code_b) {
+	if (!name) return y;
+	uint32_t t_pos = ((timekeeper.current_time / 10));
 	uint16_t size = draw::text_size(name, font::tahoma_9::info);
 
 	// If the size doesn't need scrolling, don't scroll it.
@@ -156,110 +248,76 @@ bool screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const uint64
 		t_pos = draw::scroll(t_pos, size);
 	}
 
-	int16_t write_pos[6];
-	memset(write_pos, 0xff, sizeof write_pos);
-	int16_t min_pos = 0;
-	int64_t scale_v = 8;
+	int height = 0;
 
-	// Only consider the first 4 entries for auto-scaling
-	for (int i = 0; i < 4; ++i) {
-		if (times[i] < rtc_time) continue;
-		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		if (minutes > 15 && minutes < 32) scale_v = 4;
-		else if (minutes > 31 && minutes < 64) scale_v = 2;
+	if (draw_subslot(y + 9, code_a, times_a)) height += 7;
+	if (draw_subslot(y + 9 + height, code_b, times_b)) height += 7;
+
+	if (height) {
+		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c);
+		draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 35_c);
+
+		height += 10;
 	}
 
-	for (int i = 0; i < 6; ++i) {
-		if (rtc_time > times[i]) continue;
-
-		// Scale is 8 pixels per minute
-		int16_t position = static_cast<int16_t>((times[i] - rtc_time) / (60'000 / scale_v));
-
-		if (position > 128) {
-			break;
-		}
-
-		if (position < min_pos) {
-			position = min_pos;
-		}
-
-		write_pos[i] = position + 2;
-		char buf[16] = {0};
-		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		snprintf(buf, 16, "%dm", (int)minutes);
-
-		min_pos = position + draw::text_size(buf, font::lcdpixel_6::info);
-	}
-
-	draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c);
-	draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 35_c);
-
-	for (int i = 0; i < 6; ++i) {
-		if (write_pos[i] < 0) continue;
-		if (times[i] < rtc_time) continue;
-
-		char buf[16] = {0};
-		uint64_t minutes = ((times[i] - rtc_time) / 60'000);
-		if (minutes > 63) break;
-		snprintf(buf, 16, "%dm", (int)minutes);
-
-		if (minutes < 5) {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, 255_c);
-		}
-		else if (minutes < 13) {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, {100_c, 255_c, 100_c});
-		}
-		else {
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, write_pos[i], y+16, {255_c, 70_c, 70_c});
-		}
-	}
-
-	draw::rect(matrix.get_inactive_buffer(), 0, y+16, 128, y+17, 50_c);
-
-	return true;
+	return height;
 }
 
-void screen::TTCScreen::prepare(bool) {
+void screen::TTCScreen::prepare(bool step) {
 	servicer.set_temperature_all<
 		slots::TTC_INFO,
-		slots::TTC_NAME_1,
-		slots::TTC_NAME_2,
-		slots::TTC_NAME_3,
-		slots::TTC_TIME_1,
-		slots::TTC_TIME_2,
-		slots::TTC_TIME_3,
 		slots::TTC_ALERTSTR
 	>(bheap::Block::TemperatureWarm);
+	if (step) request_slots(bheap::Block::TemperatureWarm);
 }
 
 screen::TTCScreen::TTCScreen() {
 	servicer.set_temperature_all<
 		slots::TTC_INFO,
-		slots::TTC_NAME_1,
-		slots::TTC_NAME_2,
-		slots::TTC_NAME_3,
-		slots::TTC_TIME_1,
-		slots::TTC_TIME_2,
-		slots::TTC_TIME_3,
 		slots::TTC_ALERTSTR
 	>(bheap::Block::TemperatureHot);
+	request_slots(bheap::Block::TemperatureHot);
 	bus_type = rng::get() % 3;
 	bus_type += 1;
 	bus_state = ((rng::get() % 10) == 0);
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
+	last_scrolled_at = rtc_time;
+}
+
+void screen::TTCScreen::request_slots(uint32_t temp) {
+	servicer.take_lock();
+	const auto info = *servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
+	servicer.give_lock();
+
+	for (int slot = 0; slot < 5; ++slot) {
+		if (info.flags & (info.EXIST_0 << slot)) {
+			servicer.set_temperature(slots::TTC_NAME_1 + slot, temp);
+			if (info.altdircodes_a[slot] || !(info.altdircodes_a[slot] || info.altdircodes_b[slot])) servicer.set_temperature(slots::TTC_TIME_1a + slot, temp);
+			if (info.altdircodes_b[slot]) servicer.set_temperature(slots::TTC_TIME_1b + slot, temp);
+		}
+	}
 }
 
 screen::TTCScreen::~TTCScreen() {
 	servicer.set_temperature_all<
 		slots::TTC_INFO,
+		slots::TTC_TIME_1a,
+		slots::TTC_TIME_2a,
+		slots::TTC_TIME_3a,
+		slots::TTC_TIME_4a,
+		slots::TTC_TIME_5a,
+		slots::TTC_TIME_1b,
+		slots::TTC_TIME_2b,
+		slots::TTC_TIME_3b,
+		slots::TTC_TIME_4b,
+		slots::TTC_TIME_5b,
 		slots::TTC_NAME_1,
 		slots::TTC_NAME_2,
 		slots::TTC_NAME_3,
-		slots::TTC_TIME_1,
-		slots::TTC_TIME_2,
-		slots::TTC_TIME_3,
+		slots::TTC_NAME_4,
+		slots::TTC_NAME_5,
 		slots::TTC_ALERTSTR
 	>(bheap::Block::TemperatureCold);
 }
