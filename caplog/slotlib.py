@@ -199,6 +199,8 @@ declarations_in_file = parser.parse_string(full_text, xml_generator_config)
 def _create_member_list(struct_info):
     new_type_members = []
     for i in struct_info.variables():
+        if i.type_qualifiers.has_static:
+            continue
         bitfield = None
         if declarations.is_integral(i.decl_type):
             try:
