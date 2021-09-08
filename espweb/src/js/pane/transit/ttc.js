@@ -61,7 +61,7 @@ function TTCPane() {
 			</Card>)
 		)}
 		<hr className="hr-gray" />
-		<Button variant="dark" disabled={entries.length == 3} onClick={() => {
+		<Button variant="dark" disabled={entries.length == 5} onClick={() => {
 			updateCfg('ttc.entries', _.concat(entries, {
 				dirtag: [],
 				stopid: -1,
