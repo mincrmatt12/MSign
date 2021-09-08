@@ -223,7 +223,7 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 	if (dircode != 0 && !isspace(dircode)) {
 		char str[2] = {dircode, 0};
 		// draw bg 
-		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00758f_cc);
+		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00556f_cc);
 		// draw lines
 		draw::line(matrix.get_inactive_buffer(), 128 - 6, y, 128 - 7, y + 7, 50_c);
 		// draw text
