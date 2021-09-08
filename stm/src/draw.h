@@ -155,14 +155,21 @@ namespace draw {
 
 	// ```
 	//           .......            --U
-	//         ..| tS  |..
+	//         ..| tS  |..|tT |
 	//        .           .
 	//       .             .
-	//     ..               ..| tS |
+	// |tS|..               ..| tS |
 	// .... | tT |            ......--0
+	// |                      |
+	// 0                  2(tS+tT)
 	// ```
 	//
-	// Creates a wave of the above pattern. Generally used to show two "screens" of data at once.
+	// Creates a wave of the above pattern. Generally used to show two "screens" of data at once (or more, if used correctly)
+	//
+	// timebase: Current time (in units same as tT & tS)
+	// tT: time Transition: how long the easing lasts
+	// tS: time Stable: how long before the easing starts
+	// U:  Upper value: where to ease to.
 	int16_t distorted_ease_wave(int64_t timebase, int64_t tT, int64_t tS, int16_t U);
 }
 
