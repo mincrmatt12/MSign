@@ -189,7 +189,9 @@ namespace srv {
 		StaticQueue_t pending_requests_private;
 		uint8_t       pending_requests_data[32 * sizeof(PendRequest)];
 
-		void start_pend_request(PendRequest req);
+		// Returns if no continuation is requred
+		bool start_pend_request(PendRequest req);
+		bool needs_temperature_update(uint16_t slotid, uint16_t temperature);
 		
 		// Stream buffers for dma-ing
 		//

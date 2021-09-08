@@ -121,12 +121,18 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 }
 
 void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
-	if (std::as_const(arena).get(slotid) && std::as_const(arena).get(slotid).temperature == temp) return;
+	if (!needs_temperature_update(slotid, temp)) return;
 	PendRequest pr;
 	pr.type = PendRequest::TypeChangeTemp;
 	pr.slotid = slotid;
 	pr.temperature = temp;
 	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+}
+
+bool srv::Servicer::needs_temperature_update(uint16_t slotid, uint16_t temp) {
+	if (std::as_const(arena).get(slotid) && std::as_const(arena).get(slotid).temperature == temp) return false;
+	else if (!std::as_const(arena).get(slotid) && temp == bheap::Block::TemperatureCold) return false;
+	return true;
 }
 
 void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
@@ -360,22 +366,27 @@ void srv::Servicer::run() {
 	uint16_t last_slotid = 0xfff; uint8_t last_slotid_tries = 0;
 	uint8_t active_request_statemachine = 0;
 
+	auto end_active_request = [&]() {
+poll_another_pr:
+		// End request
+		active_request_send_retries = 0;
+		// Consume this request.
+		active_request.type = PendRequest::TypeNone;
+		// Try tail-chaining it
+		if (xQueueReceive(pending_requests, &active_request, 0)) {
+			if (start_pend_request(active_request)) goto poll_another_pr;
+		}
+	};
+
 	// Otherwise, begin processing packets/requests
 	while (true) {
-		// End active request if it doesn't have any loop actions
+		// End active request if it doesn't have any loop actions (in theory this should never happen, but useful to keep around anyways)
 		switch (active_request.type) {
 			default: break;
 			case PendRequest::TypeRefreshGrabber:
 			case PendRequest::TypeSleepMode:
 			case PendRequest::TypeDumpLogOut:
-				// End request
-				active_request_send_retries = 0;
-				// Consume this request.
-				active_request.type = PendRequest::TypeNone;
-				// Try tail-chaining it
-				if (xQueueReceive(pending_requests, &active_request, 0)) {
-					start_pend_request(active_request);
-				}
+				end_active_request();
 				break;
 		}
 
@@ -388,11 +399,16 @@ void srv::Servicer::run() {
 		// Check for a new queue operation if we're not still processing one.
 		if (amount < 3) {
 			if (active_request.type == PendRequest::TypeNone) {
+poll_another_pr:
 				// Check for new queue operation
 				if (xQueueReceive(pending_requests, &active_request, 0)) {
 					// Start handling it.
 					active_request_send_retries = 0;
-					start_pend_request(active_request);
+					if (start_pend_request(active_request)) {
+						active_request_send_retries = 0;
+						active_request.type = PendRequest::TypeNone;
+						goto poll_another_pr;
+					}
 				}
 				// Otherwise, do various random tasks.
 				else {
@@ -417,13 +433,7 @@ void srv::Servicer::run() {
 					++active_request_send_retries;
 					if (active_request_send_retries > 2) {
 						// Failed to do a request
-						active_request_send_retries = 0;
-						// Consume this request.
-						active_request.type = PendRequest::TypeNone;
-						// Try tail-chaining it
-						if (xQueueReceive(pending_requests, &active_request, 0)) {
-							start_pend_request(active_request);
-						}
+						end_active_request();
 					}
 					else {
 						// Re-start request
@@ -458,13 +468,8 @@ void srv::Servicer::run() {
 					// Notify the task that requested the time
 					xTaskNotify(active_request.rx_req->notify, 1, eSetValueWithOverwrite);
 
-					// Consume this request.
-					active_request.type = PendRequest::TypeNone;
-					active_request_send_retries = 0;
-					// Try tail-chaining it
-					if (xQueueReceive(pending_requests, &active_request, 0)) {
-						start_pend_request(active_request);
-					}
+					// Finish query
+					end_active_request();
 				}
 				break;
 			case ACK_DATA_TEMP:
@@ -493,12 +498,7 @@ void srv::Servicer::run() {
 					if (active_request.type == PendRequest::TypeChangeTemp) {
 end_temp_request:
 						// Consume this request.
-						active_request.type = PendRequest::TypeNone;
-						active_request_send_retries = 0;
-						// Try tail-chaining it
-						if (xQueueReceive(pending_requests, &active_request, 0)) {
-							start_pend_request(active_request);
-						}
+						end_active_request();
 					}
 					else if (active_request.type == PendRequest::TypeChangeTempMulti) {
 						// Are there more entries left?
@@ -1071,10 +1071,11 @@ void srv::Servicer::give_lock() {
 	xSemaphoreGive(bheap_mutex);
 }
 
-void srv::Servicer::start_pend_request(PendRequest req) {
+bool srv::Servicer::start_pend_request(PendRequest req) {
 	switch (req.type) {
 		case PendRequest::TypeChangeTemp:
 			{
+				if (!needs_temperature_update(req.slotid, req.temperature)) return true;
 				// Send a DATA_TEMP
 
 				wait_for_not_sending();
@@ -1093,6 +1094,12 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 			break;
 		case PendRequest::TypeChangeTempMulti:
 			{
+				while (req.mt_req.amount && !needs_temperature_update(req.mt_req.entries[0], req.mt_req.temperature)) {
+					req.mt_req.amount--;
+					req.mt_req.entries++;
+				}
+
+				if (req.mt_req.amount == 0) return true;
 				// Send the next entry.
 
 				wait_for_not_sending();
@@ -1123,6 +1130,8 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 
 					send();
 				}
+
+				return true;
 			}
 			break;
 		case PendRequest::TypeRxTime:
@@ -1143,6 +1152,8 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[2] = slots::protocol::REFRESH_GRABBER;
 				dma_out_buffer[3] = (uint8_t)req.refresh;
 				send();
+
+				return true;
 			}
 			break;
 		case PendRequest::TypeSleepMode:
@@ -1154,6 +1165,8 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 				dma_out_buffer[3] = (uint8_t)req.sleeping;
 				send();
 				bootcmd_set_silent(req.sleeping);
+
+				return true;
 			}
 			break;
 		case PendRequest::TypeReset:
@@ -1170,6 +1183,7 @@ void srv::Servicer::start_pend_request(PendRequest req) {
 		default:
 			break;
 	}
+	return false;
 }
 
 void srv::Servicer::wait_for_not_sending() {
