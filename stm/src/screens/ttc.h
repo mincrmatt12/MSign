@@ -29,7 +29,7 @@ namespace screen {
 		uint8_t bus_state = 0;
 
 		int16_t total_current_height = -1, scroll_offset = 0, scroll_target = 0;
-		TickType_t last_scrolled_at;
+		uint64_t last_scrolled_at;
 	};
 }
 

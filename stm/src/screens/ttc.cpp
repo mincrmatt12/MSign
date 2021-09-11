@@ -62,7 +62,6 @@ void screen::TTCScreen::draw() {
 		// Check first slot
 		for (uint8_t slot = 0; slot < 5; ++slot) {
 			if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
-				if (!servicer.slot(slots::TTC_TIME_1a + slot)) continue;
 				int unscrolled = y + y_suboff;
 				int h = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
 					false, false, // todo
@@ -224,7 +223,7 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 	if (dircode != 0 && !isspace(dircode)) {
 		char str[2] = {dircode, 0};
 		// draw bg 
-		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00758f_cc);
+		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00556f_cc);
 		// draw lines
 		draw::line(matrix.get_inactive_buffer(), 128 - 6, y, 128 - 7, y + 7, 50_c);
 		// draw text
