@@ -18,7 +18,12 @@
 #include "../crash/main.h"
 #define ms_assert msign_assert
 #else
-#define ms_assert(x, r) (void)0;
+#ifdef BHEAP_TEST
+#include <cassert>
+#define ms_assert(x, r) assert((r, x))
+#else
+#define ms_assert(x, r) (void)0
+#endif
 #endif
 
 #define MAX_BHEAP_BLOCK_SIZE ((1 << 14) - 1)
@@ -1005,7 +1010,7 @@ finish_setting:
 				// If the remaining space in e is more than 4 (rounded to the nearest 4), we shrink the datasize, otherwise we delete the chunk entirely.
 				// After reclaiming we memmove
 
-				uint32_t remaining_new_alloc_space = containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
+				uint32_t remaining_new_alloc_space = *containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
 				uint32_t reclaimable_space = next_empty->total_size();
 
 				uint32_t total_reclaimed = 0;
