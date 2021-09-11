@@ -291,13 +291,16 @@ void screen::TTCScreen::request_slots(uint32_t temp) {
 	const auto info = *servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
 	servicer.give_lock();
 
-	for (int slot = 0; slot < 5; ++slot) {
-		if (info.flags & (info.EXIST_0 << slot)) {
-			servicer.set_temperature(slots::TTC_NAME_1 + slot, temp);
-			if (info.altdircodes_a[slot] || !(info.altdircodes_a[slot] || info.altdircodes_b[slot])) servicer.set_temperature(slots::TTC_TIME_1a + slot, temp);
-			if (info.altdircodes_b[slot]) servicer.set_temperature(slots::TTC_TIME_1b + slot, temp);
-		}
-	}
+#define DO(x, y) if (info.flags & info.EXIST_ ## x ) servicer.set_temperature_all<slots::TTC_NAME_ ## y, slots::TTC_TIME_ ## y ## a, slots::TTC_TIME_ ## y ## b>(temp)
+
+	// We use this format to avoid filling the request queue too much.
+	DO(0, 1);
+	DO(1, 2);
+	DO(2, 3);
+	DO(3, 4);
+	DO(4, 5);
+
+#undef DO
 }
 
 screen::TTCScreen::~TTCScreen() {
