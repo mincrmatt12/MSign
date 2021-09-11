@@ -156,13 +156,19 @@ void srv::Servicer::reset() {
 	while (1) {vTaskDelay(portMAX_DELAY);}
 }
 
-void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, const uint16_t * sids) {
+void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, const uint16_t * sids, bool sync) {
 	PendRequest pr;
 	pr.type = PendRequest::TypeChangeTempMulti;
 	pr.mt_req.temperature = temperature;
 	pr.mt_req.amount = amt;
 	pr.mt_req.entries = sids;
 	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+	if (sync) {
+		pr.type = PendRequest::TypeSync;
+		pr.sync_with = xTaskGetCurrentTaskHandle();
+		xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+		xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+	}
 }
 
 bool srv::Servicer::slot_dirty(uint16_t slotid, bool clear) {
@@ -386,6 +392,7 @@ poll_another_pr:
 			case PendRequest::TypeRefreshGrabber:
 			case PendRequest::TypeSleepMode:
 			case PendRequest::TypeDumpLogOut:
+			case PendRequest::TypeSync:
 				end_active_request();
 				break;
 		}
@@ -1180,8 +1187,13 @@ bool srv::Servicer::start_pend_request(PendRequest req) {
 				wait_for_not_sending();
 				NVIC_SystemReset();
 			}
+		case PendRequest::TypeSync:
+			{
+				xTaskNotify(req.sync_with, 0xffff'ffff, eSetValueWithOverwrite);
+				return true;
+			}
 		default:
-			break;
+			return true;
 	}
 	return false;
 }

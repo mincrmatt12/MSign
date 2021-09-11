@@ -39,7 +39,7 @@ namespace srv {
 
 		// Data request methods
 		void set_temperature(uint16_t slotid, uint32_t temperature);
-		void set_temperature_group(uint32_t temperature, uint16_t len, const uint16_t * slotids);
+		void set_temperature_group(uint32_t temperature, uint16_t len, const uint16_t * slotids, bool sync=false);
 
 		template<uint16_t ...Slots>
 		void set_temperature_all(uint32_t temperature) {
@@ -171,6 +171,7 @@ namespace srv {
 				MultiTempRequest mt_req;
 				slots::protocol::GrabberID refresh;
 				bool sleeping;
+				TaskHandle_t sync_with;
 			};
 			enum PendRequestType : uint8_t {
 				TypeNone = 0,
@@ -180,14 +181,15 @@ namespace srv {
 				TypeChangeTempMulti,
 				TypeRefreshGrabber,
 				TypeSleepMode,
-				TypeReset
+				TypeReset,
+				TypeSync
 			} type;
 		};
 
 		QueueHandle_t pending_requests;
 		// Static queue allocation
 		StaticQueue_t pending_requests_private;
-		uint8_t       pending_requests_data[32 * sizeof(PendRequest)];
+		uint8_t       pending_requests_data[40 * sizeof(PendRequest)];
 
 		// Returns if no continuation is requred
 		bool start_pend_request(PendRequest req);
