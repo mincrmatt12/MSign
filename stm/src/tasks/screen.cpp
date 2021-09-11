@@ -230,6 +230,7 @@ namespace tasks {
 					swapper.notify_before_transition(next_to_show, false);
 					servicer.take_lock();
 					last_swapped_at = rtc_time;
+					early_transition_informed = false;
 				}
 				else if (ui::buttons[ui::Buttons::PRV]) {
 					screen_list_idx = next_screen_idx(true);
@@ -241,6 +242,16 @@ namespace tasks {
 					swapper.notify_before_transition(next_to_show, false);
 					servicer.take_lock();
 					last_swapped_at = rtc_time;
+					early_transition_informed = false;
+				}
+
+				// Let screen perform more early initialization at least 1.5 seconds before it's shown.
+				if ((rtc_time - last_swapped_at + 1500) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled && !early_transition_informed) {
+					early_transition_informed = true;
+					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id;
+					servicer.give_lock();
+					swapper.notify_before_transition(about_to_show, true);
+					servicer.take_lock();
 				}
 			}
 

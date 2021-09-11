@@ -41,6 +41,8 @@ namespace tasks {
 		uint32_t interact_timeout = 0;
 		TickType_t last_had_wifi_at = 0;
 
+		bool early_transition_informed = false;
+
 		struct MS {
 			uint8_t selected = 0;
 			enum Submenu : uint8_t {
