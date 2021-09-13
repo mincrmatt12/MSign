@@ -717,8 +717,8 @@ end_temp_request:
 							}
 						}
 
-						// If this is a hot packet and not homogenous we also homogenize it
-						if (arena.get(sid_frame).temperature == bheap::Block::TemperatureHot && arena.get(sid_frame).next()) {
+						// If this is a warm packet we homogenize too
+						if (arena.get(sid_frame).temperature >= bheap::Block::TemperatureWarm && arena.get(sid_frame).next()) {
 							arena.homogenize(sid_frame);
 						}
 					}
@@ -774,7 +774,7 @@ end_temp_request:
 						}
 
 						// Homogenize all new blocks for hot slots
-						if (auto &first = arena.get(msgbuf_x16[0]); first.temperature == bheap::Block::TemperatureHot && first.next()) arena.homogenize(msgbuf_x16[0]);
+						if (auto &first = arena.get(msgbuf_x16[0]); first.temperature >= bheap::Block::TemperatureWarm && first.next()) arena.homogenize(msgbuf_x16[0]);
 					}
 
 					// Send an ack
