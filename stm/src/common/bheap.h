@@ -1016,7 +1016,7 @@ finish_setting:
 				uint32_t total_reclaimed = 0;
 
 				// If we reclaim the entire thing...
-				if (reclaimable_space <= remaining_new_alloc_space) {
+				if (reclaimable_space - 4 <= remaining_new_alloc_space) {
 					// Just do a boring memmove
 					memmove(((uint8_t *)move_region_start) + reclaimable_space, move_region_start, reinterpret_cast<uintptr_t>(next_empty) - reinterpret_cast<uintptr_t>(move_region_start));
 					total_reclaimed = reclaimable_space;
