@@ -15,7 +15,10 @@ namespace wifi {
 	enum Events : EventBits_t {
 		WifiConnected = 1,
 		TimeSynced = 2,
-		StmConnected = 4
+		StmConnected = 4,
+		GrabRequested = 8,
+		GrabTaskStop = 16,
+		GrabTaskDead = 32
 	};
 }
 

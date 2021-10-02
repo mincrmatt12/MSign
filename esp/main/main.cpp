@@ -98,12 +98,6 @@ extern "C" void app_main() {
 	// Wait till WIFI is ready to start grab tasks (all for memory optimization crapola in wpa2)
 	xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
 
-	// Start the grabber
-	if (xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
-		ESP_LOGE(TAG, "Failed to create grab");
-		return;
-	}
-
 	if (webui::mode != webui::WebuiMode::DISABLED) {
 		if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
 			ESP_LOGE(TAG, "Failed to create webui; running without it");

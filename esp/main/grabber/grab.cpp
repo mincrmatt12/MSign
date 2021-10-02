@@ -15,6 +15,7 @@
 #include "../sd.h"
 #include "esp_log.h"
 #include "../serial.h"
+#include "../dwhttp.h"
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
@@ -37,17 +38,15 @@ namespace grabber {
 	}
 
 	constexpr TickType_t max_delay_between_runs = get_max_delay();
-
-	bool refresh_requested = false;
-	slots::protocol::GrabberID refresh_for;
-
-	TaskHandle_t gt = nullptr;
+	slots::protocol::GrabberID refresh_for = slots::protocol::GrabberID::NONE;
 
 	void refresh(slots::protocol::GrabberID gid) {
-		refresh_requested = true;
+		if (refresh_for != slots::protocol::GrabberID::NONE) {
+			refresh_for = slots::protocol::GrabberID::ALL;
+			return;
+		}
 		refresh_for = gid;
-
-		xTaskAbortDelay(gt);
+		xEventGroupSetBits(wifi::events, wifi::GrabRequested);
 	}
 
 	TickType_t wants_to_run_at[grabber_count]{};
@@ -56,8 +55,8 @@ namespace grabber {
 		auto ticks = xTaskGetTickCount();
 		
 		if (
-			(refresh_requested && refresh_for == grabber->associated && grabber->refreshable) || 
-			(refresh_requested && refresh_for == slots::protocol::GrabberID::ALL) ||
+			(refresh_for == grabber->associated && grabber->refreshable) || 
+			(refresh_for == slots::protocol::GrabberID::ALL) ||
 			(ticks > wants_to_run_at[i])
 		) { 
 			wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time) * (serial::interface.is_sleeping() ? 5 : 1);
@@ -65,16 +64,22 @@ namespace grabber {
 	}
 
 	void run(void*) {
-		gt = xTaskGetCurrentTaskHandle();
+#define stoppable(x) if (xEventGroupWaitBits(wifi::events, (x) | wifi::GrabTaskStop, false, true, portMAX_DELAY) & wifi::GrabTaskStop) { \
+	xEventGroupClearBits(wifi::events, wifi::GrabTaskStop); \
+	goto exit; \
+}
+		// Clear stop flag if it was set on entry
+		xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
+
 		// Wait for wifi
-		xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
+		stoppable(wifi::WifiConnected);
 		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 
 		// Init all grabbers
 		for (size_t i = 0; i < grabber_count; ++i) grabbers[i]->init_func();
 
 		while (true) {
-			xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY); // Ensure wifi again (might disconnect at some point)
+			stoppable(wifi::WifiConnected);
 
 			// Run all non-ssl grabbers
 			for (size_t i = 0; i < grabber_count; ++i) {
@@ -82,28 +87,42 @@ namespace grabber {
 			}
 
 			// Wait for time
-			xEventGroupWaitBits(wifi::events, wifi::TimeSynced, false, true, portMAX_DELAY);
+			stoppable(wifi::TimeSynced);
 
 			// Run all ssl grabbers
 			for (size_t i = 0; i < grabber_count; ++i) {
 				if (grabbers[i]->ssl) run_grabber(i, grabbers[i]);
 			}
 
-			refresh_requested = false;
+			refresh_for = slots::protocol::GrabberID::NONE;
 
 			// Wait for minimum element
 			auto target = *std::min_element(wants_to_run_at, wants_to_run_at + grabber_count);
 			auto now = xTaskGetTickCount();
+			auto delay = max_delay_between_runs;
 			if (target < now || target - now > max_delay_between_runs) {
 				ESP_LOGW("grab", "got out of sync in grabber sched (wanted to delay from %u to %u)", now, target);
-				if (!(target < now)) {
-					vTaskDelay(max_delay_between_runs);
+				if (target < now) {
+					delay = 0;
 				}
 			}
-			else vTaskDelay(target - now);
+			else delay = target - now;
+
+			if (delay) {
+				if (xEventGroupWaitBits(wifi::events, wifi::GrabRequested | wifi::GrabTaskStop, true, false, delay) & wifi::GrabTaskStop) {
+					goto exit;
+				}
+			}
 
 			// Right before re-grabbing, flush logs; this should happen at a fairly unbusy time usually.
 			sd::flush_logs();
 		}
+
+exit:
+	dwhttp::close_connection(false);
+	dwhttp::close_connection(true);
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
+	vTaskDelete(NULL);
+	while (1) {vTaskDelay(portMAX_DELAY);}
 	}
 };

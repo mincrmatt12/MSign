@@ -287,7 +287,8 @@ namespace slots {
 			MODELSERVE = 2,
 			CFGPULL = 3,
 			
-			ALL = 0xfa
+			ALL = 0xfa,
+			NONE = 0xfb
 		};
 	}
 

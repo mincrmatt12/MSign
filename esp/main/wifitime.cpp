@@ -11,11 +11,63 @@
 #include "wifitime.cfg.h"
 
 #include <lwip/apps/sntp.h>
+#include "grabber/grab.h"
 
 EventGroupHandle_t wifi::events;
 
 static const char * TAG = "wifiman";
 static const char * T_TAG = "sntp";
+
+#ifdef SIM
+#define STACK_MULT 8
+#else
+#define STACK_MULT 1
+#endif
+
+void sntp_timer_cb(TimerHandle_t xTimer) {
+	// Wait for time to be set
+    time_t now = 0;
+    struct tm timeinfo = { };
+
+	if (!(xEventGroupGetBits(wifi::events) & wifi::WifiConnected)) goto exit;
+
+	time(&now);
+	localtime_r(&now, &timeinfo);
+
+    if (timeinfo.tm_year < (2020 - 1900)) {
+        ESP_LOGI(T_TAG, "Still waiting for time..");
+		return;
+    }
+
+	ESP_LOGI(T_TAG, "Time is %s", asctime(&timeinfo));
+	xEventGroupSetBits(wifi::events, wifi::TimeSynced);
+	ESP_LOGI(T_TAG, "Free heap after connect %d", esp_get_free_heap_size());
+	// Stop this timer
+exit:
+	xTimerDelete(xTimer, pdMS_TO_TICKS(100));
+}
+
+void kill_grab_task(TimerHandle_t xTimer) {
+	ESP_LOGW(TAG, "killing grabber task");
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
+}
+
+void start_grab_task(TimerHandle_t xTimer) {
+	static bool die = false;
+
+	if (die || xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) == pdPASS) {
+		if (!xTimerStop(xTimer, pdMS_TO_TICKS(5))) {
+			die = true;
+		}
+		else die = false;
+	}
+	else if (!die) {
+		ESP_LOGW(TAG, "failed to start grabber again...");
+	}
+}
+
+TimerHandle_t grab_killer = nullptr;
+TimerHandle_t grab_starter = nullptr;
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
@@ -38,6 +90,46 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			}
 			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
 			xEventGroupSetBits(wifi::events, wifi::WifiConnected);
+
+			if (grab_killer) {
+				ESP_LOGD(TAG, "disabling grab killer");
+				xTimerDelete(grab_killer, pdMS_TO_TICKS(100));
+				grab_killer = nullptr;
+			}
+
+			if ((xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead) && xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
+				ESP_LOGE(TAG, "Failed to create grabber task! scheduling for later");
+				if (grab_starter == nullptr) grab_starter = xTimerCreate("grs", pdMS_TO_TICKS(500), true, nullptr, start_grab_task);
+				xTimerReset(grab_starter, pdMS_TO_TICKS(100));
+			}
+			else {
+				xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
+			}
+
+			// Check if time is set
+			if (xEventGroupGetBits(wifi::events) & wifi::TimeSynced) {
+				break;
+			}
+			
+			// Otherwise, start the sntp server.
+			ESP_LOGI(T_TAG, "Setting up SNTP");
+
+			sntp_setoperatingmode(SNTP_OPMODE_POLL);
+			// This is ugly, but I'm _fairly_ sure lwip doesn't screw with this [citation needed]; plus the examples pass in a constant here so /shrug
+			sntp_setservername(0, const_cast<char *>(wifi::time_server));
+			sntp_init();
+			
+			// Set the timezone
+			ESP_LOGI(T_TAG, "Timezone is %s", wifi::time_zone_str);
+			setenv("TZ", wifi::time_zone_str, 1);
+			tzset();
+
+			// Start a software timer to check for sntp
+			{
+				auto tmr = xTimerCreate("snwa", pdMS_TO_TICKS(2000), true, NULL, sntp_timer_cb);
+				if (tmr) xTimerStart(tmr, pdMS_TO_TICKS(2000));
+				else ESP_LOGW(TAG, "out of timers!");
+			}
 			break;
 		case SYSTEM_EVENT_STA_DISCONNECTED:
 			ESP_LOGW(TAG, "Disconnected from AP (%d)", info.disconnected.reason);
@@ -46,6 +138,11 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			xEventGroupClearBits(wifi::events, wifi::WifiConnected);
 			if (info.disconnected.reason == WIFI_REASON_BASIC_RATE_NOT_SUPPORT) {
 				esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
+			}
+			else if (grab_killer == nullptr) {
+				grab_killer = xTimerCreate("grk", pdMS_TO_TICKS(4000), false, nullptr, kill_grab_task);
+				xTimerStart(grab_killer, pdMS_TO_TICKS(5));
+				ESP_LOGD(TAG, "scheduled grab killer");
 			}
 			ESP_LOGW(TAG, "Trying to reconnect...");
 			esp_wifi_connect();
@@ -56,41 +153,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 	return ESP_OK;
 }
 
-void sntp_task(void *) {
-	// This task deletes itself once the time is set.
-	xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
 
-	// Setup SNTP
-	ESP_LOGI(T_TAG, "Setting up SNTP");
-
-	sntp_setoperatingmode(SNTP_OPMODE_POLL);
-	// This is ugly, but I'm _fairly_ sure lwip doesn't screw with this [citation needed]; plus the examples pass in a constant here so /shrug
-	sntp_setservername(0, const_cast<char *>(wifi::time_server));
-	sntp_init();
-	
-	// Set the timezone
-	ESP_LOGI(T_TAG, "Timezone is %s", wifi::time_zone_str);
-	setenv("TZ", wifi::time_zone_str, 1);
-	tzset();
-
-	// Wait for time to be set
-    time_t now = 0;
-    struct tm timeinfo = { };
-    int retry = 0;
-
-    while (timeinfo.tm_year < (2020 - 1900)) {
-        ESP_LOGI(T_TAG, "Still waiting for time (%d/)", retry);
-		++retry;
-        vTaskDelay(pdMS_TO_TICKS(2000));
-        time(&now);
-        localtime_r(&now, &timeinfo);
-    }
-
-	ESP_LOGI(T_TAG, "Time is %s", asctime(&timeinfo));
-	xEventGroupSetBits(wifi::events, wifi::TimeSynced);
-	ESP_LOGI(T_TAG, "Free heap after connect %d", esp_get_free_heap_size());
-	vTaskDelete(NULL);
-}
 
 namespace {
 	// stolen from stackoverflow
@@ -237,7 +300,7 @@ bool wifi::init() {
 	delete wifi_cfg_blob; wifi_cfg_blob = nullptr;
 
 	// Start the time wait service
-	xTaskCreate(sntp_task, "tWAIT", 2048, NULL, 7, NULL);
+	xTaskCreate(sntp_timer_cb, "tWAIT", 2048, NULL, 7, NULL);
 
 	return true;
 }
