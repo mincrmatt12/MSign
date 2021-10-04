@@ -66,7 +66,8 @@ void screen::TTCScreen::draw() {
 				int h = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
 					false, false, // todo
 					info->altdircodes_a[slot],
-					info->altdircodes_b[slot]
+					info->altdircodes_b[slot],
+					info->stopdistance[slot]
 				);
 				y += h;
 				if (unscrolled + h < 56 && unscrolled >= 10) height_onscreen += h;
