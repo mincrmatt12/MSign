@@ -68,6 +68,7 @@ void start_grab_task(TimerHandle_t xTimer) {
 
 TimerHandle_t grab_killer = nullptr;
 TimerHandle_t grab_starter = nullptr;
+bool grab_never_started = true;
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
@@ -97,12 +98,14 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				grab_killer = nullptr;
 			}
 
-			if ((xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead) && xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
+			if ((grab_never_started || (xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead)) && xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
 				ESP_LOGE(TAG, "Failed to create grabber task! scheduling for later");
 				if (grab_starter == nullptr) grab_starter = xTimerCreate("grs", pdMS_TO_TICKS(500), true, nullptr, start_grab_task);
 				xTimerReset(grab_starter, pdMS_TO_TICKS(100));
 			}
 			else {
+				if (grab_never_started) grab_never_started = false;
+				ESP_LOGI(TAG, "started grab task!");
 				xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
 			}
 
@@ -277,6 +280,7 @@ void wifi::receive_config(const char * field, const char * value) {
 
 bool wifi::init() {
 	// Verify we have ssid/psk
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
 	
 	if (!wifi_cfg_blob) {
 		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
@@ -298,9 +302,6 @@ bool wifi::init() {
 	ESP_ERROR_CHECK(esp_wifi_start());
 	ESP_ERROR_CHECK(esp_wifi_set_country(&wifi_cfg_blob->country));
 	delete wifi_cfg_blob; wifi_cfg_blob = nullptr;
-
-	// Start the time wait service
-	xTaskCreate(sntp_timer_cb, "tWAIT", 2048, NULL, 7, NULL);
 
 	return true;
 }

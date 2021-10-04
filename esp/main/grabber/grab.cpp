@@ -64,7 +64,7 @@ namespace grabber {
 	}
 
 	void run(void*) {
-#define stoppable(x) if (xEventGroupWaitBits(wifi::events, (x) | wifi::GrabTaskStop, false, true, portMAX_DELAY) & wifi::GrabTaskStop) { \
+#define stoppable(x) if (xEventGroupWaitBits(wifi::events, (x) | wifi::GrabTaskStop, false, false, portMAX_DELAY) & wifi::GrabTaskStop) { \
 	xEventGroupClearBits(wifi::events, wifi::GrabTaskStop); \
 	goto exit; \
 }
@@ -121,6 +121,7 @@ namespace grabber {
 exit:
 	dwhttp::close_connection(false);
 	dwhttp::close_connection(true);
+	ESP_LOGI("grab", "killing done grab task!");
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
 	vTaskDelete(NULL);
 	while (1) {vTaskDelay(portMAX_DELAY);}
