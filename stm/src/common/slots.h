@@ -82,6 +82,7 @@ namespace slots {
 		uint32_t flags;
 		char altdircodes_a[5]; // direction code for times_a
 		char altdircodes_b[5]; // direction code for times_b (if null, no data should be present there)
+		uint8_t stopdistance[5]; // minutes to walk to a given stop. if 0, assume a sane default.
 
 		enum Flags : uint32_t {
 			EXIST_0 = (1 << 0),

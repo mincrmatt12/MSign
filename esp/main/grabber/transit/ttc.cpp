@@ -197,6 +197,7 @@ namespace transit::ttc {
 					// set slot altcodes
 					x.altdircodes_a[slot] = (char)entries[slot]->dir_a;
 					x.altdircodes_b[slot] = (char)entries[slot]->dir_b;
+					x.stopdistance[slot] = entries[slot]->distance_minutes;
 				}
 				else return false;
 			}

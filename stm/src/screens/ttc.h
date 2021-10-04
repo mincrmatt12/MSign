@@ -18,9 +18,9 @@ namespace screen {
 	private:
 		void draw_bus();
 		// Draw an entire slot 
-		int16_t draw_slot(uint16_t y, const uint8_t * name, const bheap::TypedBlock<uint64_t *> &times_a, const bheap::TypedBlock<uint64_t *> &times_b, bool alert, bool delay, char a_code, char b_code);
+		int16_t draw_slot(uint16_t y, const uint8_t * name, const bheap::TypedBlock<uint64_t *> &times_a, const bheap::TypedBlock<uint64_t *> &times_b, bool alert, bool delay, char a_code, char b_code, int distance);
 		// Helper routine, draws (if data available) a subrow
-		bool draw_subslot(uint16_t y, char dircode, const bheap::TypedBlock<uint64_t *> &times);
+		bool draw_subslot(uint16_t y, char dircode, const bheap::TypedBlock<uint64_t *> &times, int distance);
 		void draw_alertstr();
 
 		static void request_slots(uint32_t temp);

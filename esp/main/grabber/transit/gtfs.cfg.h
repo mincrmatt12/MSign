@@ -39,6 +39,9 @@ namespace transit::gtfs {
 		//!cfg: holds .dircode[1]
 		TransitDirectionCode dir_b = NA;
 
+		//!cfg: holds .distance
+		uint8_t distance_minutes = 5;
+
 		operator bool() const {return route_id && stop_id;}
 
 		bool has_alt() const {return route_id_alt && stop_id_alt;}

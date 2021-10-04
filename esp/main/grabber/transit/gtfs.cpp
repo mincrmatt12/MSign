@@ -158,6 +158,7 @@ namespace transit::gtfs {
 			// set slot altcodes
 			tps.info.altdircodes_a[i] = (char)entries[i]->dir_a;
 			tps.info.altdircodes_b[i] = (char)entries[i]->dir_b;
+			tps.info.stopdistance[i] = entries[i]->distance_minutes;
 		}
 
 		serial::interface.update_slot(slots::TTC_INFO, tps.info);

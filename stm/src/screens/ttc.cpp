@@ -169,7 +169,7 @@ void screen::TTCScreen::draw_bus() {
 
 }
 
-bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::TypedBlock<uint64_t *> &times) {
+bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::TypedBlock<uint64_t *> &times, int distance) {
 	// Compute scale
 	
 	int min_moving_pos = 0; // rightmost place currently occupied.
@@ -199,11 +199,10 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 		position = std::max(min_moving_pos, position);
 
 		led::color_t textcolor = 0xff_c;
-		// TODO: make this configurable per entry?
-		if (minutes < 5) {
+		if (minutes < distance) {
 			textcolor = 0xff2020_cc;
 		}
-		else if (minutes < 20) {
+		else if (minutes < std::min(distance * 2 + (distance / 2), 30)) {
 			textcolor = 0x70ff70_cc;
 		}
 
@@ -233,7 +232,7 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 	return true;
 }
 
-int16_t screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const bheap::TypedBlock<uint64_t *> &times_a, const bheap::TypedBlock<uint64_t *> &times_b, bool alert, bool delay, char code_a, char code_b) {
+int16_t screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const bheap::TypedBlock<uint64_t *> &times_a, const bheap::TypedBlock<uint64_t *> &times_b, bool alert, bool delay, char code_a, char code_b, int distance) {
 	if (!name) return y;
 	uint32_t t_pos = ((timekeeper.current_time / 10));
 	uint16_t size = draw::text_size(name, font::tahoma_9::info);
@@ -249,8 +248,8 @@ int16_t screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const bhe
 
 	int height = 0;
 
-	if (draw_subslot(y + 9, code_a, times_a)) height += 7;
-	if (draw_subslot(y + 9 + height, code_b, times_b)) height += 7;
+	if (draw_subslot(y + 9, code_a, times_a, distance)) height += 7;
+	if (draw_subslot(y + 9 + height, code_b, times_b, distance)) height += 7;
 
 	if (height) {
 		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c);
