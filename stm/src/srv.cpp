@@ -390,6 +390,8 @@ poll_another_pr:
 		}
 	};
 
+	size_t hdramount = 0, amount = 0;
+
 	// Otherwise, begin processing packets/requests
 	while (true) {
 		// End active request if it doesn't have any loop actions (in theory this should never happen, but useful to keep around anyways)
@@ -403,14 +405,21 @@ poll_another_pr:
 				break;
 		}
 
+		// If no active request is pending, check if any requests were made while processing a packet
+		if (active_request.type == PendRequest::TypeNone) {
+			end_active_request(); // perhaps a misnomer but will restart as well.
+		}
+
 		// Wait for a packet to come in over DMA. If this returns 0 (i.e. no packet but we still interrupted) then check the queue for a new task.
 		//
 		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
 		// Additionally, a queue event will only ever cause a write and "wait" for a read in response.
 
-		auto amount = xStreamBufferReceive(dma_rx_queue, msgbuf, 3, pdMS_TO_TICKS(400)); // every 100 ms we also try and look for cleanup-problems
+		can_interrupt_with_notification = true;
+		hdramount += xStreamBufferReceive(dma_rx_queue, msgbuf + hdramount, 3 - hdramount, pdMS_TO_TICKS(400)); // every 100 ms we also try and look for cleanup-problems
+		can_interrupt_with_notification = false;
 		// Check for a new queue operation if we're not still processing one.
-		if (amount < 3) {
+		if (hdramount < 3) {
 			if (active_request.type == PendRequest::TypeNone) {
 poll_another_pr:
 				// Check for new queue operation
@@ -457,6 +466,7 @@ poll_another_pr:
 			// TODO: handle request timeouts
 			continue;
 		}
+		hdramount = 0;
 		// This message will come pre-verified from the protocol layer, but we'll check anyways in case something overran
 		if (msgbuf[0] != slots::PacketWrapper<>::FromEsp) continue;
 		//
@@ -1244,7 +1254,8 @@ slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint
 }
 
 void srv::Servicer::immediately_process() {
-	if (this_task) xTaskNotify(this_task, 0xffff0000, eSetValueWithoutOverwrite);
+	if (this_task && can_interrupt_with_notification) xTaskNotify(this_task, 0xffff0000, eSetValueWithoutOverwrite);
+	// if can_interrupt_with_notification is false, the main task is going to check for new data _anyways_
 }
 
 void srv::Servicer::process_update_cmd(slots::protocol::UpdateCmd cmd) {

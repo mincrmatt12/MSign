@@ -216,7 +216,12 @@ namespace srv {
 		// This (ab)uses a fun property of stream buffers in that they use tasknotifications to work
 		// and due to how the function is implemented (to deal with timeouts) if we send a bogus notification
 		// ourselves whenever we update the queue we can avoid having to do weird hacks.
+		//
+		// We also store a bool that is only true when waiting in the main xStreamBufferReceive to avoid interrupting ones
+		// that are designed not to be interrupted.
 		TaskHandle_t this_task;
+
+		volatile bool can_interrupt_with_notification = false;
 	};
 	
 	struct ServicerLockGuard {
