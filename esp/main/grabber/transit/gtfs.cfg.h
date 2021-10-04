@@ -8,6 +8,12 @@ namespace transit::gtfs {
 	//!cfg: holds .gtfs.feed.url, default "/api/grt-routes/api/tripupdates"
 	extern const char * feed_url;
 
+	//!cfg: holds .gtfs.alt_feed.host, default nullptr
+	extern const char * alt_feed_host;
+
+	//!cfg: holds .gtfs.alt_feed.url, default nullptr
+	extern const char * alt_feed_url;
+
 	//!cfg: receives .gtfs.entries[$n].name
 	void update_ttc_entry_name(size_t n, const char * value);
 
@@ -19,10 +25,13 @@ namespace transit::gtfs {
 		const char * stop_id;
 
 		//!cfg: holds .route_alt
-		const char * route_id_alt;
+		const char * route_id_alt{};
 
 		//!cfg: holds .stop_alt
-		const char * stop_id_alt;
+		const char * stop_id_alt{};
+
+		//!cfg: holds .use_alt_feed
+		bool use_alt_feed = false;
 
 		//!cfg: holds .dircode[0]
 		TransitDirectionCode dir_a = NA;

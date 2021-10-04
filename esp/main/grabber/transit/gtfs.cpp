@@ -17,6 +17,7 @@ namespace {
 		slots::TTCInfo info;
 		uint64_t times_a[5][6];
 		uint64_t times_b[5][6];
+		bool parsing_alt_feed;
 	};
 }
 
@@ -30,12 +31,13 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 		if (e.route_id == nullptr || e.stop_id == nullptr) break;
 
 		auto& hstate = *reinterpret_cast<TripParserState *>(state->userptr);
+		if (e.use_alt_feed != hstate.parsing_alt_feed) continue;
 		
 		bool matched_a = strcmp(state->c.route_id, e.route_id) == 0 && strcmp(state->c.stop_id, e.stop_id) == 0;
 		bool matched_b = e.has_alt() && strcmp(state->c.route_id, e.route_id_alt) == 0 && strcmp(state->c.stop_id, e.stop_id_alt) == 0;
 
 		if (matched_a || matched_b) {
-			ESP_LOGD(TAG, "matched on %s-%s, %d", state->c.route_id, state->c.stop_id, (int)(state->c.at_time));
+			ESP_LOGD(TAG, "matched on %s-%s, %d (feed %d)", state->c.route_id, state->c.stop_id, (int)(state->c.at_time), hstate.parsing_alt_feed);
 
 			auto& times = matched_a ? hstate.times_a[which_slot] : hstate.times_b[which_slot];
 
@@ -77,11 +79,9 @@ namespace transit::gtfs {
 	void init() {
 	}
 
-	bool loop() {
-		if (transit::impl != GTFS) return true;
-
+	bool parse_feed(const char * host, const char * url, TripParserState& tps) {
 		// Start a request
-		auto req = dwhttp::download_with_callback(feed_host, feed_url);
+		auto req = dwhttp::download_with_callback(host, url);
 
 		if (!req.ok()) {
 			ESP_LOGW(TAG, "failed to connect to gtfs host");
@@ -97,9 +97,6 @@ namespace transit::gtfs {
 		uint8_t buf[768];
 
 		gtfs_tripupdate_state_t parser;
-		TripParserState tps;
-
-		memset(&tps, 0, sizeof tps);
 
 		parser.userptr = &tps;
 		gtfs_tripupdate_start(&parser);
@@ -125,6 +122,28 @@ namespace transit::gtfs {
 		}
 
 		ESP_LOGD(TAG, "parsed gtfs ok");
+		return true;
+	}
+
+	bool loop() {
+		if (transit::impl != GTFS) return true;
+
+		TripParserState tps;
+		memset(&tps, 0, sizeof tps);
+		tps.parsing_alt_feed = false;
+		if (!(feed_host && feed_url)) {
+			ESP_LOGE(TAG, "no feed set");
+			return true;
+		}
+
+		bool have_update = false;
+		have_update = parse_feed(feed_host, feed_url, tps);
+		if (alt_feed_host && alt_feed_url) {
+			tps.parsing_alt_feed = true;
+			have_update = have_update || parse_feed(alt_feed_host, alt_feed_url, tps);
+		}
+
+		if (!have_update) return false;
 
 		for (int i = 0; i < 5; ++i) {
 			if (!(tps.info.flags & (tps.info.EXIST_0 << i))) continue;
