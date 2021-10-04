@@ -17,6 +17,8 @@ export default function GTFSPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
 	const entries = _.get(cfg, "gtfs.entries", []);
 
+	const has_alt = _.get(cfg, "gtfs.feed_alt.url", "") != "";
+
 	return <div>
 		<Form.Group className="my-2">
 			<Form.Label>feed host</Form.Label>
@@ -27,6 +29,17 @@ export default function GTFSPane() {
 			<InputGroup>
 				<InputGroup.Text>{getURLPrefix(_.get(cfg, "gtfs.feed.host", "_webapps.regionofwaterloo.ca"))}</InputGroup.Text>
 				<FormControl type="text" value={_.get(cfg, "gtfs.feed.url")} placeholder={"/api/grt-routes/api/tripupdates"} onChange={(e) => updateCfg("gtfs.feed.url", e.target.value)} />
+			</InputGroup>
+		</Form.Group>
+		<Form.Group className="my-2">
+			<Form.Label>secondary feed host</Form.Label>
+			<HostnameEdit value={_.get(cfg, "gtfs.feed_alt.host")} onChange={(v) => updateCfg("gtfs.feed_alt.host", v)} />
+		</Form.Group>
+		<Form.Group>
+			<Form.Label>secondary feed (tripupdates) url</Form.Label>
+			<InputGroup>
+				<InputGroup.Text>{getURLPrefix(_.get(cfg, "gtfs.feed_alt.host", ""))}</InputGroup.Text>
+				<FormControl type="text" value={_.get(cfg, "gtfs.feed_alt.url")} onChange={(e) => updateCfg("gtfs.feed_alt.url", e.target.value)} />
 			</InputGroup>
 		</Form.Group>
 		<hr className="hr-gray" />
@@ -93,6 +106,14 @@ export default function GTFSPane() {
 								<Form.Label>display name</Form.Label>
 								<Form.Control type='text' value={x.name} onChange={(e) => {updateCfg(['gtfs', 'entries', idx, 'name'], e.target.value);}} />
 							</Form.Group>
+							<Form.Group className="my-2">
+								<Form.Label>distance on foot (minutes)</Form.Label>
+								<Form.Control type="number" step={1} defaultValue={5} onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'distance'], e.target.value)} value={x.minutes}/>
+							</Form.Group>
+							{has_alt &&
+								<Form.Check type="checkbox" label="use secondary feed" value={_.get(['gtfs', 'entries', idx, 'use_alt_feed'], false)} 
+									onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'use_alt_feed'], e.target.checked)} />
+							}
 						</Col>
 						<Col sm="1" xs="2">
 							<Button variant="danger" onClick={() => {
