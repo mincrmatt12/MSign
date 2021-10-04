@@ -41,7 +41,7 @@ int main() {
 	servicer.init();
 
 	tskmem::srvc.create(servicer, "srvc", 5);
-	tskmem::screen.create(dispman, "srvc", 4);
+	tskmem::screen.create(dispman, "screen", 4);
 	tskmem::dbgtim.create(dbgtim, "dbtim", 2);
 
 	matrix.start_display();
