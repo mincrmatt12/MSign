@@ -518,7 +518,7 @@ end_temp_request:
 						active_request.mt_req.amount--;
 						active_request.mt_req.entries++;
 						if (active_request.mt_req.amount) {
-							start_pend_request(active_request);
+							if (start_pend_request(active_request)) end_active_request();
 						}
 						else {
 							goto end_temp_request;
