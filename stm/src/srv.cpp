@@ -140,6 +140,7 @@ void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
 	pr.type = PendRequest::TypeRefreshGrabber;
 	pr.refresh = gid;
 	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+	immediately_process();
 }
 
 void srv::Servicer::set_sleep_mode(bool enabled) {
@@ -147,6 +148,7 @@ void srv::Servicer::set_sleep_mode(bool enabled) {
 	pr.type = PendRequest::TypeSleepMode;
 	pr.sleeping = enabled;
 	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+	immediately_process();
 }
 
 void srv::Servicer::reset() {
@@ -167,7 +169,11 @@ void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, co
 		pr.type = PendRequest::TypeSync;
 		pr.sync_with = xTaskGetCurrentTaskHandle();
 		xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+		immediately_process();
 		xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+	}
+	else {
+		immediately_process();
 	}
 }
 
@@ -1230,11 +1236,15 @@ slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint
 	PendRequest pr;
 	pr.type = PendRequest::TypeRxTime;
 	pr.rx_req = &tr;
-	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY); // we only send to the queue for time requests since they aren't particularly important.
 	// Wait for task notification
 	xTaskNotifyWait(0, 0xffff'ffff, NULL, portMAX_DELAY);
 	// Return status
 	return s;
+}
+
+void srv::Servicer::immediately_process() {
+	if (this_task) xTaskNotify(this_task, 0xffff0000, eSetValueWithoutOverwrite);
 }
 
 void srv::Servicer::process_update_cmd(slots::protocol::UpdateCmd cmd) {

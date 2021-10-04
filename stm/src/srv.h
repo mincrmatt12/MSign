@@ -50,6 +50,7 @@ namespace srv {
 		template<typename... Args>
 		void set_temperature_all(uint32_t temperature, Args... args) {
 			(set_temperature(args, temperature), ...);
+			immediately_process();
 		}
 
 		const bheap::TypedBlock<uint8_t *>& slot(uint16_t slotid) {return slot<uint8_t *>(slotid);}
@@ -93,6 +94,9 @@ namespace srv {
 
 		// Enter/exit sleep mode
 		void set_sleep_mode(bool enabled);
+
+		// Immediately request that the servicer respond to all pending requests, instead of every 400ms
+		void immediately_process();
 
 	private:
 
