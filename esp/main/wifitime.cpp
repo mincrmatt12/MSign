@@ -18,12 +18,6 @@ EventGroupHandle_t wifi::events;
 static const char * TAG = "wifiman";
 static const char * T_TAG = "sntp";
 
-#ifdef SIM
-#define STACK_MULT 8
-#else
-#define STACK_MULT 1
-#endif
-
 void sntp_timer_cb(TimerHandle_t xTimer) {
 	// Wait for time to be set
     time_t now = 0;
@@ -55,7 +49,7 @@ void kill_grab_task(TimerHandle_t xTimer) {
 void start_grab_task(TimerHandle_t xTimer) {
 	static bool die = false;
 
-	if (die || xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) == pdPASS) {
+	if (die || xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, NULL) == pdPASS) {
 		if (!xTimerStop(xTimer, pdMS_TO_TICKS(5))) {
 			die = true;
 		}
@@ -98,7 +92,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				grab_killer = nullptr;
 			}
 
-			if ((grab_never_started || (xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead)) && xTaskCreate(grabber::run, "grab", 6240 * STACK_MULT, nullptr, 6, NULL) != pdPASS) {
+			if ((grab_never_started || (xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead)) && xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, NULL) != pdPASS) {
 				ESP_LOGE(TAG, "Failed to create grabber task! scheduling for later");
 				if (grab_starter == nullptr) grab_starter = xTimerCreate("grs", pdMS_TO_TICKS(500), true, nullptr, start_grab_task);
 				xTimerReset(grab_starter, pdMS_TO_TICKS(100));
