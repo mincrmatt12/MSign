@@ -506,7 +506,7 @@ ok:
 			size_t selected_reclaim = 0;
 
 			for (auto& block : arena) {
-				if (!block || &block != &arena.get(block.slotid)) continue;
+				if (!block || &block != &arena.get(block.slotid) || !arena.contents_size(block.slotid)) continue;
 				size_t this_reclaim = std::accumulate(arena.begin(block.slotid), arena.end(block.slotid), (size_t)0, [pred = std::forward<Pred>(from_blocks_matching)](auto& a, auto& b){
 					return pred(b) ? a + b.datasize : a;
 				});
@@ -925,7 +925,7 @@ common_remote_use_end:
 		auto ship_out_blk = [&](const auto& blk, size_t len){return move_block_to_stm(blk, len);};
 		// we prioritize moving warm/hot things since if they're hot/warm they're guaranteed to have space in the budget
 		if (free_space_matching_using(needed_space, [](const bheap::Block& b){
-			return b && b.temperature == bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationCanonical;
+			return b && b.temperature == bheap::Block::TemperatureWarm && b.location == bheap::Block::LocationCanonical && b.datasize;
 		}, ship_out_blk) >= needed_space) {
 			arena.defrag();
 			return;
@@ -939,7 +939,7 @@ common_remote_use_end:
 		}
 		// ship out cold blocks too, as long as there's enough space for them.
 		if (free_space_matching_using(needed_space, [](const bheap::Block& b){
-			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationCanonical;
+			return b && b.temperature == bheap::Block::TemperatureCold && b.location == bheap::Block::LocationCanonical && b.datasize;
 		}, ship_out_blk) < needed_space) {
 			ESP_LOGE(TAG, "failed to free up enough space, bailing.");
 		}

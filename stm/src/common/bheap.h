@@ -572,7 +572,7 @@ finish_setting:
 			while (contents_size(slotid) > size) {
 				auto& endptr = last(slotid);
 				uint32_t should_reclaim = contents_size(slotid) - size;
-				if (should_reclaim >= endptr.datasize) {
+				if (should_reclaim >= endptr.datasize && (&endptr != &get(slotid) || endptr.temperature == Block::TemperatureCold)) {
 					// delete the block
 					if (endptr.location == Block::LocationRemote) endptr.datasize = 0;
 					else {
@@ -581,7 +581,7 @@ finish_setting:
 					endptr.slotid = Block::SlotEmpty;
 				}
 				else {
-					// truncate 
+					// truncate
 					endptr.shrink(endptr.datasize - should_reclaim);
 				}
 			}
