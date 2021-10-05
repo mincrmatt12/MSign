@@ -6,6 +6,7 @@
 #include "../../serial.h"
 #include "../../dwhttp.h"
 #include "../../wifitime.h"
+#include "../sccfg.h"
 
 #include <gtfs_tripupdate.h>
 #include "esp_log.h"
@@ -145,8 +146,12 @@ namespace transit::gtfs {
 
 		if (!have_update) return false;
 
+		bool have_any_buses = false;;
+
 		for (int i = 0; i < 5; ++i) {
 			if (!(tps.info.flags & (tps.info.EXIST_0 << i))) continue;
+
+			have_any_buses = true;
 
 			if (tps.times_a[i][0])
 				serial::interface.update_slot_raw(slots::TTC_TIME_1a + i, tps.times_a[i], sizeof(uint64_t) * std::count_if(std::begin(tps.times_a[i]), std::end(tps.times_a[i]), [](auto x){return x != 0;}), false);
@@ -162,6 +167,8 @@ namespace transit::gtfs {
 		}
 
 		serial::interface.update_slot(slots::TTC_INFO, tps.info);
+		sccfg::set_force_disable_screen(slots::ScCfgInfo::TTC, !have_any_buses);
+
 		return true;
 	}
 
