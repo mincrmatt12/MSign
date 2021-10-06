@@ -196,7 +196,9 @@ namespace slots {
 		HEAVY_RAIN,
 
 		SNOW = 0x30,
-		HEAVY_SNOW
+		HEAVY_SNOW,
+
+		FOG = 0x40
 	};
 
 	// PROTOCOL DEFINITIONS

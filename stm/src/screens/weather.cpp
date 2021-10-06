@@ -379,24 +379,29 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 			return;
 		case slots::WeatherStateArrayCode::PARTLY_CLOUDY:
 			text_out = "Partly cloudy";
-			col = led::color_t(130); break;
+			col = led::color_t(100_c); break;
 		case slots::WeatherStateArrayCode::MOSTLY_CLOUDY:
 			text_out = "Mostly cloudy";
-			col = led::color_t(80); break;
+			col = led::color_t(50_c); break;
 		case slots::WeatherStateArrayCode::OVERCAST:
 			text_out = "Overcast";
-			col = led::color_t(50); break;
+			col = led::color_t(30_c); break;
+
+		case slots::WeatherStateArrayCode::FOG:
+			text_out = "Fog";
+			col = led::color_t(225_c);
+		    break;
 
 		case slots::WeatherStateArrayCode::SNOW:
 			text_out = "Snow";
-			col = led::color_t(200);
-			hatch = led::color_t(80);
+			col = led::color_t(200_c);
+			hatch = led::color_t(80_c);
 			do_hatch = true;
 		    break;
 		case slots::WeatherStateArrayCode::HEAVY_SNOW:
 			text_out = "Heavy snow";
-			col = led::color_t(255);
-			hatch = led::color_t(40);
+			col = led::color_t(255_c);
+			hatch = led::color_t(40_c);
 			do_hatch = true;
 			break;
 		case slots::WeatherStateArrayCode::DRIZZLE:

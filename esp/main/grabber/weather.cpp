@@ -117,6 +117,9 @@ bool weather::loop() {
 				else if (strcmp(v.str_val, "rain") == 0) {
 					state_data[stack[2]->index] = slots::WeatherStateArrayCode::DRIZZLE;
 				}
+				else if (strcmp(v.str_val, "fog") == 0) {
+					state_data[stack[2]->index] = slots::WeatherStateArrayCode::FOG;
+				}
 			}
 			else if (strcmp(stack[3]->name, "cloudCover") == 0 && v.is_number()) {
 				// Part 2a: is the thing a cloud?
