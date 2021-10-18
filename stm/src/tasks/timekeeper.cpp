@@ -20,6 +20,7 @@ void tasks::Timekeeper::loop() {
 				first = false;
 			case slots::protocol::TimeStatus::NotSet:
 				vTaskDelay(1000);
+			default:
 				break;
 		}
 	}
