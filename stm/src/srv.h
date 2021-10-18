@@ -158,6 +158,11 @@ namespace srv {
 				slots::protocol::TimeStatus &status_out;
 				uint64_t &timestamp_out;
 				uint64_t &start_out;
+				// used to avoid writing into weird memory
+				volatile int magic = 0x1234abcd;
+
+				~TimeRequest() {magic = 0;}
+				operator bool() const {return magic == 0x1234abcd;}
 			};
 			// Does _not_ sync, intended for "groups" in flash -- see set_temperature_all's template version
 			struct MultiTempRequest {

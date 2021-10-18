@@ -478,7 +478,7 @@ poll_another_pr:
 			case QUERY_TIME:
 				{
 					// Check to ensure we're processing this request
-					if (active_request.type != PendRequest::TypeRxTime) {
+					if (active_request.type != PendRequest::TypeRxTime || !*active_request.rx_req) {
 						// Just dump it
 						xStreamBufferReceive(dma_rx_queue, msgbuf, 9, portMAX_DELAY);
 						continue;
@@ -1159,6 +1159,7 @@ bool srv::Servicer::start_pend_request(PendRequest req) {
 			break;
 		case PendRequest::TypeRxTime:
 			{
+				if (!*req.rx_req) return true;
 				wait_for_not_sending();
 				dma_out_buffer[0] = 0xa5;
 				dma_out_buffer[1] = 0x00;
@@ -1236,7 +1237,7 @@ void srv::Servicer::send_update_status(slots::protocol::UpdateStatus us) {
 }
 
 slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint64_t &time_when_sent) {
-	slots::protocol::TimeStatus s;
+	slots::protocol::TimeStatus s = slots::protocol::TimeStatus::Timeout;
 	PendRequest::TimeRequest tr {
 		.notify = xTaskGetCurrentTaskHandle(),
 		.status_out = s,
@@ -1246,9 +1247,9 @@ slots::protocol::TimeStatus srv::Servicer::request_time(uint64_t &response, uint
 	PendRequest pr;
 	pr.type = PendRequest::TypeRxTime;
 	pr.rx_req = &tr;
-	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY); // we only send to the queue for time requests since they aren't particularly important.
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(5000)) != pdPASS) return s; // we only send to the queue for time requests since they aren't particularly important.
 	// Wait for task notification
-	xTaskNotifyWait(0, 0xffff'ffff, NULL, portMAX_DELAY);
+	xTaskNotifyWait(0, 0xffff'ffff, NULL, pdMS_TO_TICKS(10000));
 	// Return status
 	return s;
 }

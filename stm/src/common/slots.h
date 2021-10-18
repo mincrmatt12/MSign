@@ -243,7 +243,9 @@ namespace slots {
 
 		enum struct TimeStatus : uint8_t {
 			Ok = 0,
-			NotSet = 1
+			NotSet = 1,
+
+			Timeout = 0xff
 		};
 
 		enum struct DataStoreFulfillResult : uint8_t {
