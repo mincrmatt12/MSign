@@ -275,6 +275,13 @@ namespace bheap {
 
 			Iterator(T& f) {
 				ptr = &f;
+#if __cpp_if_constexpr >= 201603
+				if constexpr (!Adjacent) {
+#else
+				if (!Adjacent) {
+#endif
+					if (!f) ptr = nullptr;
+				}
 			}
 
 			Iterator() {
@@ -759,11 +766,10 @@ finish_setting:
 			return npos;
 		}
 
-		// Get the total size of a given slotid (returns npos if not found)
+		// Get the total size of a given slotid (returns 0 if not found _or_ empty)
 		uint32_t contents_size(uint32_t slotid) const {
-			uint32_t total = npos;
+			uint32_t total = 0;
 			for (auto x = cbegin(slotid); x != cend(slotid); ++x) {
-				if (total == npos) total = 0;
 				total += x->datasize;
 			}
 			return total;

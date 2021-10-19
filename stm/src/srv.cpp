@@ -672,7 +672,7 @@ end_temp_request:
 
 							// Ensure there's enough space in the buffer and decide how to setup the buffer for this new data.
 							auto currsize = arena.contents_size(sid_frame);
-							if (currsize == arena.npos || (offset + total_upd_len > currsize)) {
+							if (offset + total_upd_len > currsize) {
 								move_update_errcode = slots::protocol::DataStoreFulfillResult::InvalidOrNak;
 							}
 							// If all that succeeded...
@@ -772,8 +772,6 @@ end_temp_request:
 						ServicerLockGuard g(*this);
 
 						auto currsize = arena.contents_size(msgbuf_x16[0]);
-						if (currsize == arena.npos) currsize = 0;
-
 						if (currsize != msgbuf_x16[1]) {
 							if (currsize > msgbuf_x16[1]) {
 								arena.truncate_contents(msgbuf_x16[0], msgbuf_x16[1]);
