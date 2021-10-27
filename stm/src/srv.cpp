@@ -139,7 +139,7 @@ void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
 	PendRequest pr;
 	pr.type = PendRequest::TypeRefreshGrabber;
 	pr.refresh = gid;
-	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000)) != pdPASS) return;
 	immediately_process();
 }
 
@@ -147,7 +147,7 @@ void srv::Servicer::set_sleep_mode(bool enabled) {
 	PendRequest pr;
 	pr.type = PendRequest::TypeSleepMode;
 	pr.sleeping = enabled;
-	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000)) != pdPASS) return;
 	immediately_process();
 }
 
@@ -164,7 +164,7 @@ void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, co
 	pr.mt_req.temperature = temperature;
 	pr.mt_req.amount = amt;
 	pr.mt_req.entries = sids;
-	xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000)) != pdPASS) return;
 	if (sync) {
 		pr.type = PendRequest::TypeSync;
 		pr.sync_with = xTaskGetCurrentTaskHandle();
@@ -459,7 +459,7 @@ poll_another_pr:
 					}
 					else {
 						// Re-start request
-						start_pend_request(active_request);
+						if (start_pend_request(active_request)) end_active_request();
 					}
 				}
 			}
@@ -468,8 +468,13 @@ poll_another_pr:
 		}
 		hdramount = 0;
 		// This message will come pre-verified from the protocol layer, but we'll check anyways in case something overran
-		if (msgbuf[0] != slots::PacketWrapper<>::FromEsp) continue;
-		//
+		if (msgbuf[0] != slots::PacketWrapper<>::FromEsp) {
+			// Cycle forwards.
+			msgbuf[0] = msgbuf[1];
+			msgbuf[1] = msgbuf[2];
+			hdramount = 2;
+			continue;
+		}
 		// Now we dispatch based on command
 
 		switch (slots::protocol::Command(msgbuf[2])) {
@@ -481,6 +486,7 @@ poll_another_pr:
 					if (active_request.type != PendRequest::TypeRxTime || !*active_request.rx_req) {
 						// Just dump it
 						xStreamBufferReceive(dma_rx_queue, msgbuf, 9, portMAX_DELAY);
+						if (active_request.type == PendRequest::TypeRxTime) end_active_request();
 						continue;
 					}
 
