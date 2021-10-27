@@ -376,7 +376,6 @@ void srv::Servicer::run() {
 	int active_request_send_retries = 0;
 	slots::protocol::DataStoreFulfillResult move_update_errcode = slots::protocol::DataStoreFulfillResult::Ok;
 	uint16_t last_slotid = 0xfff; uint8_t last_slotid_tries = 0;
-	uint8_t active_request_statemachine = 0;
 
 	auto end_active_request = [&]() {
 poll_another_pr:
@@ -449,18 +448,14 @@ poll_another_pr:
 			else {
 				check_connection_ping();
 
-				++active_request_statemachine;
-				if (active_request_statemachine == 2) {
-					active_request_statemachine = 0;
-					++active_request_send_retries;
-					if (active_request_send_retries > 2) {
-						// Failed to do a request
-						end_active_request();
-					}
-					else {
-						// Re-start request
-						if (start_pend_request(active_request)) end_active_request();
-					}
+				++active_request_send_retries;
+				if (active_request_send_retries > 2) {
+					// Failed to do a request
+					end_active_request();
+				}
+				else {
+					// Re-start request
+					if (start_pend_request(active_request)) end_active_request();
 				}
 			}
 			// TODO: handle request timeouts
