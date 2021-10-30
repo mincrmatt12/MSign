@@ -67,7 +67,6 @@ namespace grabber {
 
 	void run(void*) {
 #define stoppable(x) if (xEventGroupWaitBits(wifi::events, (x) | wifi::GrabTaskStop, false, false, portMAX_DELAY) & wifi::GrabTaskStop) { \
-	xEventGroupClearBits(wifi::events, wifi::GrabTaskStop); \
 	goto exit; \
 }
 		// Wait for wifi
