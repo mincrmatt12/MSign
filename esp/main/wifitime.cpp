@@ -41,28 +41,18 @@ exit:
 	xTimerDelete(xTimer, pdMS_TO_TICKS(100));
 }
 
-void kill_grab_task(TimerHandle_t xTimer) {
-	ESP_LOGW(TAG, "killing grabber task");
-	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
-}
-
-void start_grab_task(TimerHandle_t xTimer) {
-	static bool die = false;
-
-	if (die || xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, NULL) == pdPASS) {
-		if (!xTimerStop(xTimer, pdMS_TO_TICKS(5))) {
-			die = true;
-		}
-		else die = false;
-	}
-	else if (!die) {
-		ESP_LOGW(TAG, "failed to start grabber again...");
-	}
+void start_grab_task() {
+	xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
 }
 
 TimerHandle_t grab_killer = nullptr;
-TimerHandle_t grab_starter = nullptr;
 bool grab_never_started = true;
+
+void kill_grab_task(TimerHandle_t xTimer) {
+	if (grab_killer == nullptr) return;
+	ESP_LOGW(TAG, "killing grabber task");
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
+}
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
@@ -92,16 +82,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				grab_killer = nullptr;
 			}
 
-			if ((grab_never_started || (xEventGroupGetBits(wifi::events) & wifi::GrabTaskDead)) && xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, NULL) != pdPASS) {
-				ESP_LOGE(TAG, "Failed to create grabber task! scheduling for later");
-				if (grab_starter == nullptr) grab_starter = xTimerCreate("grs", pdMS_TO_TICKS(500), true, nullptr, start_grab_task);
-				xTimerReset(grab_starter, pdMS_TO_TICKS(100));
-			}
-			else {
-				if (grab_never_started) grab_never_started = false;
-				ESP_LOGI(TAG, "started grab task!");
-				xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
-			}
+			start_grab_task();
 
 			// Check if time is set
 			if (xEventGroupGetBits(wifi::events) & wifi::TimeSynced) {
@@ -137,7 +118,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
 			}
 			else if (grab_killer == nullptr) {
-				grab_killer = xTimerCreate("grk", pdMS_TO_TICKS(4000), false, nullptr, kill_grab_task);
+				grab_killer = xTimerCreate("grk", pdMS_TO_TICKS(7000), false, nullptr, kill_grab_task);
 				xTimerStart(grab_killer, pdMS_TO_TICKS(5));
 				ESP_LOGD(TAG, "scheduled grab killer");
 			}
@@ -273,9 +254,8 @@ void wifi::receive_config(const char * field, const char * value) {
 }
 
 bool wifi::init() {
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
 	// Verify we have ssid/psk
-	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
-	
 	if (!wifi_cfg_blob) {
 		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
 		return false;

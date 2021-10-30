@@ -16,6 +16,7 @@
 #include "esp_log.h"
 #include "../serial.h"
 #include "../dwhttp.h"
+#include <esp_system.h>
 
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
@@ -50,6 +51,7 @@ namespace grabber {
 	}
 
 	TickType_t wants_to_run_at[grabber_count]{};
+	TaskHandle_t grabber_task = nullptr;
 
 	void run_grabber(size_t i, const Grabber * const grabber) {
 		auto ticks = xTaskGetTickCount();
@@ -68,12 +70,8 @@ namespace grabber {
 	xEventGroupClearBits(wifi::events, wifi::GrabTaskStop); \
 	goto exit; \
 }
-		// Clear stop flag if it was set on entry
-		xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
-
 		// Wait for wifi
 		stoppable(wifi::WifiConnected);
-		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 
 		// Init all grabbers
 		for (size_t i = 0; i < grabber_count; ++i) grabbers[i]->init_func();
@@ -119,11 +117,35 @@ namespace grabber {
 		}
 
 exit:
-	dwhttp::close_connection(false);
-	dwhttp::close_connection(true);
-	ESP_LOGI("grab", "killing done grab task!");
-	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
-	vTaskDelete(NULL);
-	while (1) {vTaskDelay(portMAX_DELAY);}
+		dwhttp::close_connection(false);
+		dwhttp::close_connection(true);
+		ESP_LOGI("grab", "killing done grab task!");
+		grabber_task = nullptr;
+		vTaskDelete(NULL);
+		while (1) {vTaskDelay(portMAX_DELAY);}
+	}
+
+	void check_and_restart_grabber_timer(TimerHandle_t handle) {
+		if (grabber_task != nullptr) return;
+		if (xEventGroupGetBits(wifi::events) & wifi::GrabTaskStop) return;
+		// try and restart task
+		if (xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, &grabber_task) != pdPASS) {
+			grabber_task = nullptr;
+			ESP_LOGW("grab", "unable to restart grabber task; waiting again");
+		}
+		else {
+			ESP_LOGI("grab", "started grabber task");
+		}
+	}
+
+	void start() {
+		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
+		auto tmr = xTimerCreate("gtmr", pdMS_TO_TICKS(3000), true, nullptr, check_and_restart_grabber_timer);
+		if (tmr == nullptr || xTimerStart(tmr, pdMS_TO_TICKS(2500)) != pdPASS) {
+			ESP_LOGE("grab", "unable to start grabber timer...");
+			vTaskDelay(1000);
+			esp_restart();
+		}
 	}
 };
+

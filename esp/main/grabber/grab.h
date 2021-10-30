@@ -5,8 +5,8 @@
 #include "../common/slots.h"
 
 namespace grabber {
-	// Start a-grabbin!
-	void run(void*);
+	// Start the timer that ensure grabber is running when requested.
+	void start();
 
 	struct Grabber {
 		void (*init_func)(){};

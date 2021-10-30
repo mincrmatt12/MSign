@@ -89,7 +89,6 @@ bool wifi::init() {
 	serial::interface.update_slot(slots::WIFI_STATUS, fakestatus);
 
 	xEventGroupSetBits(events, wifi::WifiConnected|wifi::TimeSynced);
-	xTaskCreate(grabber::run, "grab", 6240 * 8, nullptr, 6, NULL);
 
 	return true;
 }

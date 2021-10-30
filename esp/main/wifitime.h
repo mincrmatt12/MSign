@@ -17,8 +17,7 @@ namespace wifi {
 		TimeSynced = 2,
 		StmConnected = 4,
 		GrabRequested = 8,
-		GrabTaskStop = 16,
-		GrabTaskDead = 32
+		GrabTaskStop = 16, // set when the task should stop
 	};
 }
 

@@ -151,6 +151,7 @@ add_library(esp_freertos STATIC
 	${SIM_FREERTOS_DIR}/queue.c
 	${SIM_FREERTOS_DIR}/stream_buffer.c
 	${SIM_FREERTOS_DIR}/tasks.c
+	${SIM_FREERTOS_DIR}/timers.c
 
 	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/port.c
 	${SIM_FREERTOS_DIR}/portable/ThirdParty/GCC/Posix/utils/wait_for_event.c

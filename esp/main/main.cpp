@@ -105,6 +105,8 @@ extern "C" void app_main() {
 	}
 	else ESP_LOGW(TAG, "webui is disabled");
 
+	grabber::start();
+
 	ESP_LOGI(TAG, "Created tasks (1)");
 	ESP_LOGI(TAG, "Free heap available is %d", (int)heap_caps_get_free_size(pvMALLOC_DRAM));
 }
