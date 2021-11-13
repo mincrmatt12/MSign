@@ -51,9 +51,6 @@ namespace serial {
 		// Put a request into the queue.
 		bool queue_request(const DataUpdateRequest &req);
 
-		// Ensure all pending requests have been completed (or a timeout occured)
-		bool sync_fence(TickType_t timeout=portMAX_DELAY);
-
 		void run();
 
 		// PACKET API
