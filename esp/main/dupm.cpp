@@ -1043,10 +1043,19 @@ common_remote_use_end:
 			pkt.init(slots::protocol::DATA_SET_SIZE);
 			pkt.put(dur.d_chsize.slotid, 0);
 			pkt.put(dur.d_chsize.size, 2);
-			serial::interface.send_pkt(pkt);
 
+			int tries = 0;
+retry_chsize:
+			serial::interface.send_pkt(pkt);
 			// Wait for an acknowledgement TODO proper retry logic here
-			wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;});
+			if (!wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;}, pdMS_TO_TICKS(1200))) {
+				ESP_LOGW(TAG, "timeout waiting for acksetsize");
+				if (tries < 2) {
+					++tries;
+					goto retry_chsize;
+				}
+				return;
+			}
 			finished_with_last_packet();
 		}
 
@@ -1134,10 +1143,21 @@ retry_allocation:
 			pkt.init(slots::protocol::DATA_SET_SIZE);
 			pkt.put(dur.d_chsize.slotid, 0);
 			pkt.put(original_size, 2);
+
+			int tries = 0;
+retry_chsize2:
 			serial::interface.send_pkt(pkt);
 
 			// Wait for an acknowledgement TODO proper retry logic here
-			wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;});
+			if (!wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;}, pdMS_TO_TICKS(1200))) {
+				if (tries < 2) {
+					ESP_LOGW(TAG, "timeout chsize2");
+					++tries;
+					goto retry_chsize2;
+				}
+				ESP_LOGW(TAG, "broken stm state");
+				return;
+			}
 			finished_with_last_packet();
 		}
 	}
