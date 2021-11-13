@@ -409,6 +409,9 @@ poll_another_pr:
 			end_active_request(); // perhaps a misnomer but will restart as well.
 		}
 
+		// Send pings occasionally
+		check_connection_ping();
+
 		// Wait for a packet to come in over DMA. If this returns 0 (i.e. no packet but we still interrupted) then check the queue for a new task.
 		//
 		// This loop is effectively managing two separate tasks, one static - normal packets - and one that changes based on the top of the queue.
@@ -433,7 +436,6 @@ poll_another_pr:
 				}
 				// Otherwise, do various random tasks.
 				else {
-					check_connection_ping();
 					send_data_requests();
 
 					if (xStreamBufferBytesAvailable(log_out) > 100) {
@@ -447,8 +449,6 @@ poll_another_pr:
 				}
 			}
 			else {
-				check_connection_ping();
-
 				++active_request_send_retries;
 				if (active_request_send_retries > 2) {
 					// Failed to do a request
