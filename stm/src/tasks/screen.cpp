@@ -321,6 +321,7 @@ namespace tasks {
 		}
 
 		bool ig = true;
+		matrix.force_off = true;
 
 		// Spin
 		while (true) {
@@ -334,7 +335,7 @@ namespace tasks {
 			}
 			else ig = false;
 		}
-
+		matrix.force_off = false;
 		servicer.set_sleep_mode(false);
 	}
 	

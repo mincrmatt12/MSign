@@ -301,6 +301,8 @@ namespace led {
 			delaying = false;
 			should_swap = false;
 			delay_counter = 0;
+			// update timer mode to blank screen / proper
+			LL_TIM_OC_SetMode(TIM4, LL_TIM_CHANNEL_CH1, force_off ? LL_TIM_OCMODE_FORCED_INACTIVE : LL_TIM_OCMODE_PWM2);
 			// start the whole procedure
 			blast_row();
 		}
@@ -345,6 +347,7 @@ namespace led {
 		}
 
 		int16_t frames_without_refresh = 0;
+		volatile bool force_off = false;
 
 	private:
 		FB fb0, fb1;

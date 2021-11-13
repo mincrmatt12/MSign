@@ -115,12 +115,14 @@ namespace led {
 
 			FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}                
 			const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}            
+
+			volatile bool force_off = false;
 		private:                                                                         
 			tskmem::TaskHolder<1024> dispinttask;
 
 			void disptask() {
 				while (true) {
-					_get_active_buffer().show();
+					if (!force_off) _get_active_buffer().show();
 					vTaskDelay(pdMS_TO_TICKS(1000/60));
 					// We have finished clocking out a row, process buffer swaps
 					if (should_swap) {
