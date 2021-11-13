@@ -201,7 +201,7 @@ namespace srv {
 		uint8_t       pending_requests_data[40 * sizeof(PendRequest)];
 
 		// Returns if no continuation is requred
-		bool start_pend_request(PendRequest req);
+		bool start_pend_request(PendRequest &req);
 		bool needs_temperature_update(uint16_t slotid, uint16_t temperature);
 		
 		// Stream buffers for dma-ing

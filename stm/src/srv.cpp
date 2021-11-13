@@ -439,9 +439,10 @@ poll_another_pr:
 					if (xStreamBufferBytesAvailable(log_out) > 100) {
 						// Do a flush
 						active_request_send_retries = 0;
-						start_pend_request(PendRequest{
+						auto tr = PendRequest{
 							.type = PendRequest::TypeDumpLogOut
-						});
+						};
+						start_pend_request(tr);
 					}
 				}
 			}
@@ -1093,7 +1094,7 @@ void srv::Servicer::give_lock() {
 	xSemaphoreGive(bheap_mutex);
 }
 
-bool srv::Servicer::start_pend_request(PendRequest req) {
+bool srv::Servicer::start_pend_request(PendRequest &req) {
 	switch (req.type) {
 		case PendRequest::TypeChangeTemp:
 			{
