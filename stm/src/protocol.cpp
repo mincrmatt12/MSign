@@ -21,7 +21,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 			// it also "reads" a byte off of the serial port but eh.
 			LL_USART_ClearFlag_ORE(ESP_USART);
 
-			start_recv();
+			start_recv(state < ProtocolState::DMA_WAIT_SIZE ? state : ProtocolState::DMA_WAIT_SIZE);
 			return;
 		}
 
