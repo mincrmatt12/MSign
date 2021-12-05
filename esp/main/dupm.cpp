@@ -260,7 +260,7 @@ block_ok:
 
 			pkt.put(length, 4);
 			size_t bytes_without_pause = 0;
-			for (uint16_t suboff = 0; suboff < length; suboff += (255-6)) {
+			for (size_t suboff = 0; suboff < length; suboff += (255-6)) {
 				if (bytes_without_pause > 768) { // ensure we don't send too much data too quickly, as this can confuse the STM and cause it to get stuck.
 					vTaskDelay(pdMS_TO_TICKS(2));
 					bytes_without_pause = 0;
