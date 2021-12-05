@@ -20,12 +20,14 @@ namespace sd {
 		size_t pos = 0;
 
 		void putc(char c) {
-			if (mask && c != 'm') return;
+			if (mask) {
+				if (c == 'm') mask = false;
+				return;
+			}
 			if (c == 0x1b) {
 				mask = true;
 				return;
 			}
-			mask = false;
 
 			if (in_use) return;
 			if (pos == Len) {
