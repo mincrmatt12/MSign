@@ -94,7 +94,9 @@ void serial::SerialInterface::process_packet() {
 				dur.type = DataUpdateRequest::TypeSetTemp;
 				dur.d_temp.slotid = rx_pkt.at<uint16_t>(0);
 				dur.d_temp.newtemperature = rx_buf[5];
-				dum.queue_request(dur);
+				if (!dum.queue_request(dur)) {
+					ESP_LOGW(TAG, "dum busy?");
+				}
 			}
 
 			return;
@@ -106,7 +108,9 @@ void serial::SerialInterface::process_packet() {
 				dur.d_dirty.slotid = rx_pkt.at<uint16_t>(0); 
 				dur.d_dirty.offset = rx_pkt.at<uint16_t>(2); 
 				dur.d_dirty.size = rx_pkt.at<uint16_t>(4);
-				dum.queue_request(dur);
+				if (!dum.queue_request(dur)) {
+					ESP_LOGW(TAG, "dum busy?");
+				}
 			}
 			
 			return;
@@ -266,7 +270,11 @@ void serial::SerialInterface::sync() {
 		dur.type = DataUpdateRequest::TypeSync;
 		dur.d_sync.with = xTaskGetCurrentTaskHandle();
 		dur.d_sync.by = portMAX_DELAY; // todo
-		dum.queue_request(dur);
+		if (!dum.queue_request(dur)) {
+			ESP_LOGW(TAG, "Failed to queue sync request");
+			vTaskDelay(1000);
+			return;
+		}
 	}
 	xTaskNotifyWait(0, 0xffff'ffff, nullptr, portMAX_DELAY);
 }
