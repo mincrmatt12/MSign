@@ -108,7 +108,7 @@ export default function GTFSPane() {
 							</Form.Group>
 							<Form.Group className="my-2">
 								<Form.Label>distance on foot (minutes)</Form.Label>
-								<Form.Control type="number" step={1} defaultValue={5} onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'distance'], e.target.value)} value={x.minutes}/>
+								<Form.Control type="number" step={1} defaultValue={5} onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'distance'], Number.parseInt(e.target.value))} value={x.minutes}/>
 							</Form.Group>
 							{has_alt &&
 								<Form.Check type="checkbox" label="use secondary feed" value={_.get(['gtfs', 'entries', idx, 'use_alt_feed'], false)} 
