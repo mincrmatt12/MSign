@@ -21,7 +21,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 			// it also "reads" a byte off of the serial port but eh.
 			LL_USART_ClearFlag_ORE(ESP_USART);
 
-			start_recv(state);
+			start_recv();
 			return;
 		}
 
@@ -41,7 +41,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 				NVIC_SystemReset();
 			}
 		}
-		else if (state == ProtocolState::DMA_WAIT_SIZE && dma_buffer[1] != 0x00) {
+		else if (state == ProtocolState::DMA_WAIT_SIZE) {
 			if (dma_buffer[0] != 0xa6) {
 				int offset = 0;
 				while (dma_buffer[1] == 0xa6 || dma_buffer[2] == 0xa6) {
@@ -56,11 +56,14 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 				start_recv(ProtocolState::DMA_WAIT_SIZE, offset);
 				return;
 			}
+
+			if (dma_buffer[1] == 0) goto do_process;
 			
 			recv_full();
 			last_comm = timekeeper.current_time;
 		}
 		else {
+do_process:
 			process_command();
 			start_recv();
 			last_comm = timekeeper.current_time;
