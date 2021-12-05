@@ -26,6 +26,7 @@ const static char * TAG = "app_main";
 #endif
 
 int msign_putchar(int c) {
+	sd::log_putc(c);
 	if (serial::interface.is_sleeping()) return c;
 #ifdef SIM
 	return fputc(c, stderr);
@@ -67,8 +68,8 @@ extern "C" void app_main() {
 			break;
 	}
 
-	// Install logger (disabled for now)
-	// sd::install_log();
+	// Install logger
+	sd::init_logger();
 
 	serial::interface.init();
 	esp_log_set_putchar(msign_putchar);

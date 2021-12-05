@@ -110,9 +110,6 @@ namespace grabber {
 					goto exit;
 				}
 			}
-
-			// Right before re-grabbing, flush logs; this should happen at a fairly unbusy time usually.
-			sd::flush_logs();
 		}
 
 exit:
@@ -125,7 +122,16 @@ exit:
 	}
 
 	void check_and_restart_grabber_timer(TimerHandle_t handle) {
+		static int grab_task_dead_for = 0;
+
 		if (grabber_task != nullptr) return;
+		++grab_task_dead_for;
+		if (grab_task_dead_for > 100) {
+			ESP_LOGE("grab", "grab task dead too long; killing system");
+			serial::interface.reset();
+			vTaskDelay(1000);
+			esp_restart();
+		}
 		if (xEventGroupGetBits(wifi::events) & wifi::GrabTaskStop) return;
 		// try and restart task
 		if (xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, &grabber_task) != pdPASS) {
@@ -134,6 +140,7 @@ exit:
 		}
 		else {
 			ESP_LOGI("grab", "started grabber task");
+			grab_task_dead_for = 0;
 		}
 	}
 

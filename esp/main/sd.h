@@ -2,6 +2,8 @@
 #define MSN_SD_H
 
 #include <ff.h>
+#include <FreeRTOS.h>
+#include <stream_buffer.h>
 
 namespace sd {
 	enum struct InitStatus {
@@ -14,12 +16,9 @@ namespace sd {
 
 	// Sets up FatFS with this.
 	InitStatus init();
+	void init_logger();
 
-	// Try to install log
-	void install_log();
-
-	// Flush logs (call periodically)
-	void flush_logs();
+	void log_putc(char c);
 
 	extern FATFS fs;
 }

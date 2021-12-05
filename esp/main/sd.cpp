@@ -15,6 +15,9 @@
 #include <ff.h>
 #include <diskio.h>
 
+#include <stream_buffer.h>
+#include <timers.h>
+
 #define nop asm volatile ("nop\n\t")
 
 static const char* TAG = "diskio_sd";
@@ -692,87 +695,6 @@ namespace sd {
 		}
 	}
 
-	FIL logtarget{};
-	char logbuf[300];
-	int logptr = 0;
-	putchar_like_t oldlogputchar;
-	bool is_masking_code = false;
-
-	int log_putc(int c) {
-		oldlogputchar(c);
-		if (c == 0x1b) {
-			is_masking_code = true;
-		}
-		if (is_masking_code) {
-			if (c == 'm') is_masking_code = false;
-			return 1;
-		}
-		logbuf[logptr++] = c;
-		if (logptr == sizeof(logbuf) || (c == '\n' && logptr > 50)) {
-			flush_logs();
-		}
-		return 1;
-	}
-
-	void flush_logs() {
-		if (logptr) {
-			UINT bw = 0;
-			FRESULT res = f_write(&logtarget, logbuf, logptr, &bw);
-			f_sync(&logtarget);
-
-			if (res == FR_OK) {
-				// all is ok
-				logptr = 0;
-			}
-			else {
-				memmove(logbuf, logbuf + bw, logptr - bw);
-				logptr -= bw;
-			}
-
-			if (logptr >= sizeof(logbuf)) {
-				// dump logs
-				logptr = 0;
-			}
-		}
-	}
-
-	void install_log() {
-		f_mkdir("/log");
-		{
-			// Try and rotate log files, storing up to 2 previous entries
-			DIR logdir; FILINFO fno;
-			int maxn = 0;
-			f_opendir(&logdir, "/log");
-			while (f_readdir(&logdir, &fno) == FR_OK && fno.fname[0] != 0) {
-				int num;
-				if (sscanf(fno.fname, "log.%d", &num) != 1) continue;
-				if (num > maxn) maxn = num;
-			}
-			f_closedir(&logdir);
-			// rename files
-			for (int i = maxn; i >= 0; --i) {
-				char oldname[32], newname[32];
-				snprintf(oldname, 32, "/log/log.%d", i);
-				snprintf(newname, 32, "/log/log.%d", i+1);
-				if (i > 3) {
-					ESP_LOGW("sdlog", "deleting old log %s", oldname);
-					f_unlink(oldname);
-				}
-				else {
-					ESP_LOGI("sdlog", "moving old log %s -> %s", oldname, newname);
-					f_rename(oldname, newname);
-				}
-			}
-		}
-		// Open `log.0` for writing + truncation
-		if (f_open(&logtarget, "/log/log.0", FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
-			oldlogputchar = esp_log_set_putchar(log_putc);
-			ESP_LOGI("sdlog", "started sd logging");
-		}
-		else {
-			ESP_LOGW("sdlog", "unable to open log file");
-		}
-	}
 
 	InitStatus init() {
 		ESP_LOGI(TAG, "Starting SDFAT layer");
