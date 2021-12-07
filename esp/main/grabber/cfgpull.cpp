@@ -2,6 +2,7 @@
 #include "cfgpull.h"
 
 #include "../dwhttp.h"
+#include "esp_system.h"
 #include <esp_log.h>
 
 #ifndef SIM
@@ -75,7 +76,22 @@ bool cfgpull::loop() {
 
 	bool new_config = false, new_system = false;
 	{
-		auto resp = dwhttp::download_with_callback(pull_host, "/a/versions");
+		char metrics_string[256];
+		{
+			int free_mem = esp_get_free_heap_size();
+			int free_dram = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+
+			snprintf(metrics_string, sizeof metrics_string, "mem_free %d; mem_free_dram %d", free_mem, free_dram);
+		}
+
+		const char *headers[][2] = {
+#ifndef SIM
+				{"X-MSign-Metrics", metrics_string},
+#endif
+				{nullptr, nullptr}
+		};
+
+		auto resp = dwhttp::download_with_callback(pull_host, "/a/versions", headers);
 		if (!resp.ok()) return false;
 
 		json::JSONParser jp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& jv){
