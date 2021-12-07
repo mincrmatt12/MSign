@@ -8,6 +8,7 @@ from flask_login import current_user
 import tempfile
 import json
 import click
+import time
 
 lowfi_login_page = r"""
 <!DOCTYPE html>
@@ -39,11 +40,36 @@ lowfi_login_page = r"""
 </html>
 """
 
+metric_doc = {
+    "mem_free": ("Total memory free on ESP", "guage"),
+    "mem_free_dram": ("Total DRAM free on ESP", "guage"),
+    "bheap_space": ("Empty space in bheap", "guage")
+}
+
+metric_table = {}
+metric_last_sent = 0
+
 app = Flask(__name__)
 
 @app.errorhandler(FileNotFoundError)
 def handle_bad_file(e):
     abort(404)
+
+@app.route("/a/metrics")
+@auth.priv_required(auth.Priv.READ)
+def serve_metrics():
+    curtime = time.monotonic()
+
+    if curtime - metric_last_sent > 15*60:
+        return "host stopped sending reports", 404
+
+    data = """# msign metric data\n"""
+    for nm, ndat in metric_table.items():
+        real_name = "msign_" + nm
+        if nm in metric_doc:
+            data += f"# HELP {real_name} {metric_doc[nm][0]}\n#TYPE {real_name} {metric_doc[nm][1]}\n"
+        data += "msign_{} {}\n".format(nm, ndat)
+    return data
 
 @app.route("/login", methods=["GET", "POST"])
 def show_or_login():
@@ -99,6 +125,17 @@ def get_esp():
 
 @app.route("/a/versions")
 def get_vers():
+    global metric_table, metric_last_sent
+
+    if "X-MSign-Metrics" in request.headers:
+        datums = request.headers["X-MSign-Metrics"].split(";")
+        metric_last_sent = time.monotonic()
+        metric_table_new = {} 
+        for v in datums:
+            k, v = v.strip().split(" ")
+            metric_table_new[k] = v
+        metric_table = metric_table_new
+
     return db.get_served_versions()
 
 @app.route("/a/newui", methods=["POST"])

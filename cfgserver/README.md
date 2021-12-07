@@ -4,6 +4,9 @@ Implements a Vaguely Secure™ protocol for sending configuration over the netwo
 
 It exposes a set of HTTPS endpoints which implement a simple authentication scheme and update delivery mechanism.
 
+It also now supports telemetry logging; the ESP can optionally include a header with prometheus-style key/value pairs, which
+are exposed at `/a/metrics`.
+
 ## Authentication
 
 To authenticate, the ESP must form a valid bearer token. The first step to generating a token is to obtain a _challenge_ from the server, by

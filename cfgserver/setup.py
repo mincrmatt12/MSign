@@ -6,7 +6,7 @@ with open(os.path.join(os.path.dirname(__file__), "requirements.txt"), "r") as f
 
 setup(
     name="cfgserver",
-    version="0.1.1",
+    version="0.1.2",
     description="",
     packages=["cfgserver"],
     install_requires=install_requires,
