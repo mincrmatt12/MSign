@@ -41,6 +41,10 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 			ESP_LOGD(TAG, "matched on %s-%s, %d (feed %d)", state->c.route_id, state->c.stop_id, (int)(state->c.at_time), hstate.parsing_alt_feed);
 
 			auto& times = matched_a ? hstate.times_a[which_slot] : hstate.times_b[which_slot];
+			if (state->c.at_time == 0) {
+				ESP_LOGD(TAG, "time zero; ignoring");
+				return;
+			}
 			auto curtime = wifi::millis_to_local(state->c.at_time * 1000);
 
 			if (curtime < wifi::get_localtime()) {
