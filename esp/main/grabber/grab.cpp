@@ -25,6 +25,9 @@ namespace grabber {
 		&weather::weather_grabber,
 		&sccfg::sccfg_grabber,
 		&modelserve::modelserve_grabber,
+
+
+		// leave cfgpull at the end
 		&cfgpull::cfgpull_grabber
 	};
 
@@ -61,7 +64,7 @@ namespace grabber {
 			(refresh_for == slots::protocol::GrabberID::ALL) ||
 			(ticks > wants_to_run_at[i])
 		) { 
-			wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time) * (serial::interface.is_sleeping() ? 5 : 1);
+			wants_to_run_at[i] = xTaskGetTickCount() + (grabber->grab_func() ? grabber->loop_time : grabber->fail_time) * (serial::interface.is_sleeping() && i != grabber_count-1 ? 5 : 1);
 		}
 	}
 

@@ -81,7 +81,7 @@ bool cfgpull::loop() {
 			int free_mem = esp_get_free_heap_size();
 			int free_dram = heap_caps_get_free_size(MALLOC_CAP_8BIT);
 
-			snprintf(metrics_string, sizeof metrics_string, "mem_free %d; mem_free_dram %d", free_mem, free_dram);
+			snprintf(metrics_string, sizeof metrics_string, "mem_free %d; mem_free_dram %d; esp_tickcount %d", free_mem, free_dram, xTaskGetTickCount());
 		}
 
 		const char *headers[][2] = {
