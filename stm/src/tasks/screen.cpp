@@ -208,6 +208,9 @@ namespace tasks {
 
 		while (1) {
 			ui::buttons.update();
+			// If we went into sleep mode at some point, enter that handler
+			if (servicer.is_sleeping()) do_sleep_mode();
+
 			// Draw active screen
 			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();
 			swapper.draw();
@@ -302,7 +305,7 @@ namespace tasks {
 	}
 
 	void DispMan::do_sleep_mode() {
-		servicer.set_sleep_mode(true);
+		if (!servicer.is_sleeping()) servicer.set_sleep_mode(true);
 
 		// Wait 10 frames for fade
 		for (int i = 0; i < 10; ++i) {
@@ -324,7 +327,7 @@ namespace tasks {
 		matrix.force_off = true;
 
 		// Spin
-		while (true) {
+		while (servicer.is_sleeping()) {
 			matrix.get_inactive_buffer().clear();
 			matrix.swap_buffers();
 			// check for power button
@@ -336,7 +339,7 @@ namespace tasks {
 			else ig = false;
 		}
 		matrix.force_off = false;
-		servicer.set_sleep_mode(false);
+		if (servicer.is_sleeping()) servicer.set_sleep_mode(false);
 	}
 	
 	int DispMan::next_screen_idx(bool prev) {

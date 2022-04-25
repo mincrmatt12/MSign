@@ -417,6 +417,16 @@ reachedend:
 			}
 			else goto notfound;
 		}
+		else if (strcasecmp(tgt, "sleep") == 0) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
+			send_static_response(200, "OK", serial::interface.is_sleeping() ? "true" : "false");
+		}
+		else if (strcasecmp(tgt, "sleepOn") == 0 || strcasecmp(tgt, "sleepOff")) {
+			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
+
+			bool desired_mode = !strcasecmp(tgt, "sleepOn");
+			serial::interface.set_sleep_mode(desired_mode);
+		}
 		else if (strcasecmp(tgt, "fheap") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
 
