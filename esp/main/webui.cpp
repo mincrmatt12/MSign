@@ -421,7 +421,7 @@ reachedend:
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
 			send_static_response(200, "OK", serial::interface.is_sleeping() ? "true" : "false");
 		}
-		else if (strcasecmp(tgt, "sleepOn") == 0 || strcasecmp(tgt, "sleepOff")) {
+		else if (strcasecmp(tgt, "sleepOn") == 0 || strcasecmp(tgt, "sleepOff") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
 			bool desired_mode = !strcasecmp(tgt, "sleepOn");
