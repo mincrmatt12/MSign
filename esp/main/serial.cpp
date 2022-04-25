@@ -234,6 +234,19 @@ void serial::SerialInterface::reset() {
 	esp_restart();
 }
 
+void serial::SerialInterface::set_sleep_mode(bool mode) {
+	uint8_t pkt[4] = {
+		0xa6,
+		0x01,
+		slots::protocol::SLEEP_ENABLE,
+		static_cast<uint8_t>(mode ? 0x1 : 0x0)
+	};
+
+	send_pkt(pkt);
+	if (in_sleep_mode && !mode) grabber::refresh(slots::protocol::GrabberID::ALL);
+	in_sleep_mode = mode;
+}
+
 void serial::SerialInterface::update_slot_raw(uint16_t slotid, const void *ptr, size_t length, bool should_sync) {
 	// TODO: syncing options
 	allocate_slot_size(slotid, length);

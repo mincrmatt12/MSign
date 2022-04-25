@@ -88,6 +88,7 @@ namespace serial {
 		// SLEEP MODE
 
 		bool is_sleeping() const {return in_sleep_mode;}
+		void set_sleep_mode(bool mode);
 
 	private:
 		// Data update manager: handles requests for data separately
