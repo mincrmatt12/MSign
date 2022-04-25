@@ -98,6 +98,9 @@ namespace srv {
 		// Immediately request that the servicer respond to all pending requests, instead of every 400ms
 		void immediately_process();
 
+		// Are we currently sleeping?
+		bool is_sleeping() { return is_in_sleep_mode; }
+
 	private:
 
 		const bheap::Block& _slot(uint16_t slotid);
@@ -227,6 +230,9 @@ namespace srv {
 		TaskHandle_t this_task;
 
 		volatile bool can_interrupt_with_notification = false;
+
+		// Are we currently in sleep mode?
+		volatile bool is_in_sleep_mode = false;
 	};
 	
 	struct ServicerLockGuard {

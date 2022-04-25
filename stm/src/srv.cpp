@@ -497,6 +497,15 @@ poll_another_pr:
 					end_active_request();
 				}
 				break;
+			case SLEEP_ENABLE:
+				{
+					// Retrieve status byte
+					uint8_t code;
+					xStreamBufferReceive(dma_rx_queue, &code, 1, portMAX_DELAY);
+
+					is_in_sleep_mode = (code != 0);
+				}
+				break;
 			case ACK_DATA_TEMP:
 				{
 					// Handle a data temperature message
@@ -1189,6 +1198,7 @@ bool srv::Servicer::start_pend_request(PendRequest &req) {
 				dma_out_buffer[3] = (uint8_t)req.sleeping;
 				send();
 				bootcmd_set_silent(req.sleeping);
+				this->is_in_sleep_mode = req.sleeping;
 
 				return true;
 			}
