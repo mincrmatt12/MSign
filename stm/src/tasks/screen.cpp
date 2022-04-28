@@ -218,6 +218,10 @@ namespace tasks {
 			// Check for screen swaps 
 			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING] && !interacting()) {
 				srv::ServicerLockGuard g(servicer);
+				if (servicer.slot_dirty(slots::SCCFG_TIMING)) {
+					if (screen_list_idx >= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime))) screen_list_idx = 0; // handle changing array
+				}
+
 				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
 					last_swapped_at = rtc_time;
 
@@ -269,6 +273,7 @@ namespace tasks {
 
 			switch (interact_mode) {
 				case InteractNone:
+				case InteractOverrideScreen:
 					// allow opening modes
 					if (ui::buttons[ui::Buttons::SEL]) {
 						interact_mode = InteractByScreen;
@@ -433,12 +438,27 @@ namespace tasks {
 			++max;
 		}
 
+		int y = 1;
+
+		// Allow scrolling
+		if (padding + contentheight + border > 64) {
+			int dheight = (y + padding / 2 + 7 + border / 2 + 9 * ms.selected);
+			// Move to middle
+			if (dheight > 37) {
+				y -= (dheight - 37);
+			}
+			// Move to bottom
+			if ((y + padding + contentheight + border) < 58) {
+				y += (58 - (y + padding + contentheight + border));
+			}
+		}
+
 		// Draw a rectangle onscreen
-		draw::rect(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0);
-		draw::outline(matrix.get_inactive_buffer(), 1, 1, 1 + padding + contentwidth + border, 1 + padding + contentheight + border, 0xff_c);
+		draw::rect(matrix.get_inactive_buffer(), 1, y, 1 + padding + contentwidth + border, y + padding + contentheight + border, 0);
+		draw::outline(matrix.get_inactive_buffer(), 1, y, 1 + padding + contentwidth + border, y + padding + contentheight + border, 0xff_c);
 
 		// Draw entries
-		int y = 1 + padding / 2 + 7 + border / 2;
+		y += padding / 2 + 7 + border / 2;
 		for (int i = 0; i < max; ++i) {
 			auto tc = (i == max - 1 && last_is_close) ? 0xcc_c : 0xff_c;
 			if (ms.selected == i) {
@@ -532,10 +552,13 @@ namespace tasks {
 				draw_menu_list(screen_names);
 
 				if (ui::buttons[ui::Buttons::SEL]) {
-					if (ms.selected == 3) goto back;
+					if (ms.selected == (sizeof(screen_names)/sizeof(char*) - 2)) goto back;
 
 					swapper.transition(ms.selected);
-					goto close;
+					interact_mode = InteractOverrideScreen;
+					interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+					last_swapped_at = rtc_time;
+					return;
 				}
 				break;
 			case MS::SubmenuDebug:
