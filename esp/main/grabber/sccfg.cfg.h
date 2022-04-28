@@ -14,6 +14,10 @@ namespace sccfg {
 			int32_t end = -1;
 
 			bool always_on() const {return end == -1;}
+			bool on_for(unsigned int curtime) {
+				if (start < end) return (curtime >= start) && (curtime <= end);
+				else             return (curtime >= end) || (curtime <= start);
+			}
 		};
 
 		//!cfg: holds .screen, default slots::ScCfgTime::ScreenId::TTC
@@ -27,5 +31,5 @@ namespace sccfg {
 	};
 
 	//!cfg: holds .sccfg.screens
-	extern config::lazy_t<ScreenEntry> screen_entries[3];
+	extern config::lazy_t<ScreenEntry> screen_entries[8];
 }
