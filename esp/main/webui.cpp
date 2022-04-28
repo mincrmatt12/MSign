@@ -426,6 +426,7 @@ reachedend:
 
 			bool desired_mode = !strcasecmp(tgt, "sleepOn");
 			serial::interface.set_sleep_mode(desired_mode);
+			send_static_response(204, "No Content", "");
 		}
 		else if (strcasecmp(tgt, "fheap") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
