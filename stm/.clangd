@@ -1,2 +1,2 @@
 CompileFlags:
-	Add: [-Wno-deprecated-volatile]
+	Add: [-Wno-deprecated-volatile, -xc++]
