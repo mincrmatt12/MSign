@@ -17,8 +17,10 @@ namespace serial {
 			TypeMarkDirty,
 				   // sent by grabbers
 			TypeChangeSize,
+			TypeGetSize,
 			TypePatch,
 			TypeSync
+				
 		} type;
 		union {
 			struct {
@@ -44,6 +46,10 @@ namespace serial {
 				uint16_t offset;
 				uint16_t size;
 			} d_dirty;
+			struct {
+				uint16_t slotid;
+				size_t *cursize_out;
+			} d_getsz;
 		};
 	};
 

@@ -261,6 +261,19 @@ void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
 	dum.queue_request(dur);
 }
 
+size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
+	size_t result = ~0u;
+
+	DataUpdateRequest dur;
+	dur.type = DataUpdateRequest::TypeGetSize;
+	dur.d_getsz.slotid = slotid;
+	dur.d_getsz.cursize_out = &result;
+
+	dum.queue_request(dur);
+	sync();
+	return result;
+}
+
 void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync) {
 	{
 		DataUpdateRequest dur;

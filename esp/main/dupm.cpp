@@ -40,7 +40,7 @@ namespace serial {
 	}
 
 	bool DataUpdateManager::queue_request(const DataUpdateRequest& req) {
-		return xQueueSend(pending, &req, pdMS_TO_TICKS(2000)) == pdPASS;
+		return xQueueSend(pending, &req, pdMS_TO_TICKS(4000)) == pdPASS;
 	}
 
 	bool DataUpdateManager::is_packet_in_pending(const uint8_t *check_packet) {
@@ -171,6 +171,9 @@ block_ok:
 				case DataUpdateRequest::TypeMarkDirty:
 					// Mark region dirty (or just send out blocks, depending on temp)
 					mark_dirty_handler(dur);
+					break;
+				case DataUpdateRequest::TypeGetSize:
+					*dur.d_getsz.cursize_out = arena.contents_size(dur.d_getsz.slotid);
 					break;
 				default:
 					break;
