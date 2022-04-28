@@ -29,10 +29,10 @@ namespace draw {
 	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on=true); 
 
 	// Draw a filled rectangle using exclusive coordinates (occupies x0 to x1 but not including x1)
-	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb); 
+	void rect(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb); 
 
 	// Draw a hatched rectangle using exclusive coordinates. Hatching will create a checkerboard pattern between the two colors provided.
-	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1);
+	void hatched_rect(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb0, led::color_t rgb1);
 
 	// Like, hatched_rect, but with the coordinate grid unaligned so you can animate it.
 	void hatched_rect_unaligned(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb0, led::color_t rgb1);
@@ -41,10 +41,10 @@ namespace draw {
 	void gradient_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1, bool vertical=false);
 
 	// Draw an outline rectangle
-	void outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb);
+	void outline(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb);
 
 	// Draw dashed outline
-	void dashed_outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb);
+	void dashed_outline(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb);
 
 	// Fill the entire screen.
 	void fill(matrix_type::framebuffer_type &fb, led::color_t rgb); 

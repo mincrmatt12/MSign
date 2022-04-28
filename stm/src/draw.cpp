@@ -46,17 +46,17 @@ namespace draw {
 		return pen;
 	}
 
-	void rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
-		for (uint16_t x = x0; x < x1; ++x) {
-			for (uint16_t y = y0; y < y1; ++y) {
+	void rect(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
+		for (int16_t x = x0; x < x1; ++x) {
+			for (int16_t y = y0; y < y1; ++y) {
 				fb.at(x, y) = rgb;
 			}
 		}
 	}
 
-	void hatched_rect(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb0, led::color_t rgb1) {
-		for (uint16_t x = x0; x < x1; ++x) {
-			for (uint16_t y = y0; y < y1; ++y) {
+	void hatched_rect(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb0, led::color_t rgb1) {
+		for (int16_t x = x0; x < x1; ++x) {
+			for (int16_t y = y0; y < y1; ++y) {
 				bool color = static_cast<uint16_t>((x % 4) - (y % 4)) % 4 < 2;
 				if (color) {
 					fb.at(x, y) = rgb0;
@@ -101,7 +101,7 @@ namespace draw {
 		}
 	}
 
-	void outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
+	void outline(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 		for (int y = y0; y < y1; ++y) {
 			fb.at(x0, y) = rgb;
 			fb.at(x1, y) = rgb;
@@ -113,7 +113,7 @@ namespace draw {
 		}
 	}
 
-	void dashed_outline(matrix_type::framebuffer_type &fb, uint16_t x0, uint16_t y0, uint16_t x1, uint16_t y1, led::color_t rgb) {
+	void dashed_outline(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 		for (int y = y0; y < y1; y += 4) {
 			fb.at(x0, y) = rgb;
 			fb.at(x1, y) = rgb;
