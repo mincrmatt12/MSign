@@ -60,7 +60,7 @@ namespace bheap {
 		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
 
 		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
-		MSN_BHEAP_INLINE_V uint32_t FlagSupressed = 2;
+		MSN_BHEAP_INLINE_V uint32_t FlagAux = 2;
 
 		// DATA ACCESS
 
@@ -621,7 +621,7 @@ finish_setting:
 					// 	- the location is equal
 					// 	- the flush flag is equal (if the dirty flag is unequal, or it)
 
-					while (x->location == x->next()->location && (x->flags & Block::FlagSupressed) == (x->next()->flags & Block::FlagSupressed)) {
+					while (x->location == x->next()->location && (x->flags & Block::FlagAux) == (x->next()->flags & Block::FlagAux)) {
 						// If this is a remote block, just increase the size
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
@@ -809,7 +809,7 @@ finish_setting:
 			}
 			if (mode & FreeSpaceHomogenizeable) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagSupressed) == (blk->next()->flags & Block::FlagSupressed)) total += 4;
+					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagAux) == (blk->next()->flags & Block::FlagAux)) total += 4;
 				}
 			}
 			return total;
