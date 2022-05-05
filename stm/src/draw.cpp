@@ -1,5 +1,7 @@
 #include "draw.h"
 
+extern uint64_t rtc_time;
+
 namespace draw {
 	uint16_t text_size(const char * text, const void * const font[], bool kern_on) {
 		return text_size(reinterpret_cast<const uint8_t *>(text), font, kern_on);
@@ -289,6 +291,43 @@ namespace draw {
         else
             return result;
     }
+
+	int16_t PageScrollHelper::animation_offset() {
+		return draw::distorted_ease_wave(rtc_time - last_scrolled_at, params.transition_time, params.hold_time, scroll_target - scroll_offset);
+	}
+
+	void PageScrollHelper::update_with(int16_t onscreen_height, int16_t total_height) {
+		int16_t region_height = params.screen_region_end - params.threshold_screen_start;
+		// Is there content to scroll?
+		if (total_height > region_height) {
+			// Has a scroll cycle finished completely?
+			if (rtc_time - last_scrolled_at > (params.transition_time + params.hold_time - 16 /* one frame */)) {
+				scroll_offset = scroll_target;
+				last_scrolled_at = rtc_time;
+			}
+
+			// Does the current scrolled region end on screen?
+			if (params.threshold_screen_start - scroll_offset + total_height < region_height) {
+				scroll_target = 0; // Scroll back to top
+			}
+			else {
+				scroll_target = scroll_offset + onscreen_height; // Otherwise, scroll all the currently "onscreen" content.
+			}
+		}
+		else {
+			// If not, just keep at 0
+			scroll_offset = 0;
+			scroll_target = 0;
+		}
+	}
+
+	PageScrollHelper::ScrollTracker PageScrollHelper::begin(int16_t start_y) {
+		return ScrollTracker(*this, start_y);
+	}
+
+	PageScrollHelper::PageScrollHelper(const Params& params) : params(params) {
+		last_scrolled_at = rtc_time;
+	}
 }
 
 uint8_t draw::frame_parity = 0;

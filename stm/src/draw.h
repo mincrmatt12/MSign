@@ -171,6 +171,75 @@ namespace draw {
 	// tS: time Stable: how long before the easing starts
 	// U:  Upper value: where to ease to.
 	int16_t distorted_ease_wave(int64_t timebase, int64_t tT, int64_t tS, int16_t U);
+
+	// Helper to auto-scroll through vertical "segments" on a timer.
+	//
+	// Construct in class, then use as
+	//
+	// {
+	// 		auto y = scroll_helper.begin(10);
+	// 		int16_t height = draw_something(y, ...);
+	// 		y += height;
+	//
+	// 		... etc ...
+	// }
+	struct PageScrollHelper {
+		// get the current y offset of the scroll
+		int16_t current() {
+			return -scroll_offset - animation_offset();
+		}
+
+		// get the extra scroll amount performed during a transition
+		int16_t animation_offset();
+
+		struct ScrollTracker {
+			friend struct PageScrollHelper;
+
+			operator int16_t() const {return y;}
+			ScrollTracker& operator+=(int16_t entry_height) {
+				int16_t onscreen_coord_without_animation = y + animation_offset;
+				y += entry_height;
+				if (onscreen_coord_without_animation + entry_height < outer.params.threshold_screen_end && 
+						onscreen_coord_without_animation > outer.params.threshold_screen_start)
+					height_onscreen += entry_height;
+				total_height += entry_height;
+
+				return *this;
+			}
+			
+			ScrollTracker(const ScrollTracker& other) = delete;
+			~ScrollTracker() {
+				outer.update_with(height_onscreen, total_height);
+			}
+
+		private:
+			ScrollTracker(PageScrollHelper& outer, int16_t initial_height) : outer(outer), y(initial_height) {
+				animation_offset = outer.animation_offset();
+			}
+			int16_t y, height_onscreen = 0, total_height = 0, animation_offset;
+			PageScrollHelper& outer;
+		};
+
+		ScrollTracker begin(int16_t start_y=0);
+
+		friend struct ScrollBuilder;
+
+		struct Params {
+			int16_t threshold_screen_end = 56; // content that spans y-space after this coordinate is considered "off-screen"
+			int16_t threshold_screen_start = 10; // content that spans y-space before this is considered "off-screen"
+			int16_t screen_region_end = 63; // actual highest coordinate of visible region (if total content fits in this, do not scroll)
+			int transition_time = 280; // see tT and tS in draw::distorted_ease_wave
+			int hold_time = 1900;
+		};
+
+		PageScrollHelper(const Params& params);
+	private:
+		void update_with(int16_t onscreen_height, int16_t total_height);
+
+		const Params& params;
+		int16_t scroll_offset = 0, scroll_target = 0;
+		uint64_t last_scrolled_at = 0;
+	};
 }
 
 inline constexpr uint16_t operator ""_cu(unsigned long long in) {

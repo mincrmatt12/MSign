@@ -3,6 +3,7 @@
 
 #include "base.h"
 #include <stdint.h>
+#include "../draw.h"
 
 #include "../common/bheap.h"
 
@@ -28,8 +29,8 @@ namespace screen {
 		uint8_t bus_type = 1;
 		uint8_t bus_state = 0;
 
-		int16_t total_current_height = -1, scroll_offset = 0, scroll_target = 0;
-		uint64_t last_scrolled_at;
+		constexpr static draw::PageScrollHelper::Params scroll_params = {};
+		draw::PageScrollHelper scroll_helper{scroll_params};
 	};
 }
 

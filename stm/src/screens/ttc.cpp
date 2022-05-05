@@ -46,9 +46,6 @@ void screen::TTCScreen::draw() {
 	// Ensure there's data
 	bool ready = servicer.slot(slots::TTC_INFO); // just don't display anything
 
-	const static int holdScroll = 280;
-	const static int scrollTime = 1900;
-
 	if (ready) {
 		// Alright, now we have to work out what to show
 		auto& info = servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
@@ -58,41 +55,19 @@ void screen::TTCScreen::draw() {
 			servicer.take_lock();
 		}
 
-		int y_suboff = draw::distorted_ease_wave(rtc_time - last_scrolled_at, holdScroll, scrollTime, scroll_target - scroll_offset), y_start = 10 - scroll_offset - y_suboff, y = y_start, height_onscreen = 0;
-		// Check first slot
-		for (uint8_t slot = 0; slot < 5; ++slot) {
-			if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
-				int unscrolled = y + y_suboff;
-				int h = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
-					false, false, // todo
-					info->altdircodes_a[slot],
-					info->altdircodes_b[slot],
-					info->stopdistance[slot]
-				);
-				y += h;
-				if (unscrolled + h < 56 && unscrolled >= 10) height_onscreen += h;
+		{
+			auto y = scroll_helper.begin(10);
+			// Check first slot
+			for (uint8_t slot = 0; slot < 5; ++slot) {
+				if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
+					y += draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
+						false, false, // todo
+						info->altdircodes_a[slot],
+						info->altdircodes_b[slot],
+						info->stopdistance[slot]
+					);
+				}
 			}
-		}
-
-		total_current_height = y - y_start;
-
-		// Can we scroll?
-		if (total_current_height > 53) {
-			if (rtc_time - last_scrolled_at > (holdScroll + scrollTime - 16)) {
-				scroll_offset = scroll_target;
-				last_scrolled_at = rtc_time;
-			}
-			// What is the scroll target?
-			if (10 - scroll_offset + total_current_height < 53) {
-				scroll_target = 0;
-			}
-			else {
-				scroll_target = scroll_offset + height_onscreen;
-			}
-		}
-		else {
-			scroll_offset = 0;
-			scroll_target = 0;
 		}
 	}
 
@@ -282,7 +257,6 @@ screen::TTCScreen::TTCScreen() {
 	if (bus_state) {
 		bus_state = (rng::get() % 2) + 1;
 	}
-	last_scrolled_at = rtc_time;
 }
 
 void screen::TTCScreen::request_slots(uint32_t temp) {
