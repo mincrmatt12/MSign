@@ -47,7 +47,11 @@ namespace grabber {
 		return g;
 	}
 
+	// Refresh a grabber by ID
 	void refresh(slots::protocol::GrabberID gid);
+
+	// Re-init all grabbers (call after reloading cfg, for example)
+	void reload_all();
 }
 
 #endif

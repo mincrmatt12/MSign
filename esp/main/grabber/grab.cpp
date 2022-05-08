@@ -68,6 +68,11 @@ namespace grabber {
 		}
 	}
 
+	void reload_all() {
+		// Init all grabbers
+		for (size_t i = 0; i < grabber_count; ++i) grabbers[i]->init_func();
+	}
+
 	void run(void*) {
 #define stoppable(x) if (xEventGroupWaitBits(wifi::events, (x) | wifi::GrabTaskStop, false, false, portMAX_DELAY) & wifi::GrabTaskStop) { \
 	goto exit; \
@@ -76,7 +81,7 @@ namespace grabber {
 		stoppable(wifi::WifiConnected);
 
 		// Init all grabbers
-		for (size_t i = 0; i < grabber_count; ++i) grabbers[i]->init_func();
+		reload_all();
 
 		while (true) {
 			stoppable(wifi::WifiConnected);

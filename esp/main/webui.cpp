@@ -1,6 +1,7 @@
 #include "webui.h"
 #include "config.h"
 #include "esp_log.h"
+#include "grabber/grab.h"
 #include "serial.h"
 #include "common/util.h"
 #include "ff.h"
@@ -386,9 +387,11 @@ reachedend:
 					config::parse_config_from_sd();
 					send_static_response(400, "Bad Request", "Invalid new config");
 				}
-				else
+				else {
+					grabber::reload_all();
 					// Send a handy dandy 204
 					send_static_response(204, "No Content", "");
+				}
 			}
 			else goto invmethod;
 		}
