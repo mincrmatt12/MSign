@@ -57,6 +57,9 @@ namespace draw {
 	// Draw a line including both endpoints
 	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb); 
 
+	// Draw a filled in circle inside a given bounding box (with _inclusive_ coordinates)
+	void circle(matrix_type::framebuffer_type& fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb);
+
 	// Gamma correction table
 	extern const uint32_t gamma_cvt[256];
 
@@ -223,8 +226,6 @@ namespace draw {
 		};
 
 		ScrollTracker begin(int16_t start_y=0);
-
-		friend struct ScrollBuilder;
 
 		struct Params {
 			int16_t threshold_screen_end = 56; // content that spans y-space after this coordinate is considered "off-screen"

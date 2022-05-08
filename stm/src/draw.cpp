@@ -259,6 +259,25 @@ namespace draw {
 		}
 	}
 
+	void circle(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
+		if (x1 - x0 != y1 - y0) return; // ensure square
+		// we use coordinates as 2*screen to deal with odd-sized boxes
+		const int rsq = (x1 - x0 - 1) * (x1 - x0 - 1);
+		int dy = rsq;
+		int i, j;
+		int16_t x, y;
+
+		// various +/- 1 corrections to deal with rounding
+		for (y = y0, i = -(x1 - x0) + 1; y <= y1; dy += 4*i + 4, ++y, i += 2) {
+			int dx = rsq;
+			for (x = x0, j = -(y1 - y0) + 1; x <= x1; dx += 4*j + 4, ++x, j += 2) {
+				if (dx + dy <= rsq + 1) {
+					fb.at(x, y) = rgb;
+				}
+			}
+		}
+	}
+
 	int32_t fastsin(int32_t in, int32_t fac, int32_t fac_out) {
 		if (fac_out == 0) return 0;
 		if (in < 0) return -fastsin(-in, fac, fac_out);
