@@ -350,6 +350,67 @@ namespace draw {
 	PageScrollHelper::PageScrollHelper(const Params& params) : params(params) {
 		last_scrolled_at = rtc_time;
 	}
+
+	void format_generic_relative_thing(char * buf, size_t buflen, bool ago, const char * singular, const char * plural, int amount) {
+		if (ago) {
+			if (amount == 1) snprintf(buf, buflen, "%s ago", singular);
+			else             snprintf(buf, buflen, "%d %s ago", amount, plural);
+		}
+		else {
+			if (amount == 1) snprintf(buf, buflen, "in %s", singular);
+			else             snprintf(buf, buflen, "in %d %s", amount, plural);
+		}
+	}
+
+	void format_relative_date(char * buf, size_t buflen, uint64_t date) {
+		bool ago = date < rtc_time;
+		int64_t howfar = date;
+		howfar -= rtc_time;
+		howfar = std::abs(howfar);
+		howfar /= 1000;  // only precise to seconds
+		
+		if (howfar == 0) {
+			strncpy(buf, "now", buflen);
+			return;
+		}
+
+		// seconds 
+		if (howfar <= 90) {
+			format_generic_relative_thing(buf, buflen, ago, "a second", "seconds", howfar);
+			return;
+		}
+
+		// minutes
+		howfar /= 60;
+		if (howfar <= 90) {
+			format_generic_relative_thing(buf, buflen, ago, "a minute", "minutes", howfar);
+			return;
+		}
+
+		// hours
+		howfar /= 60;
+		if (howfar <= 36) {
+			format_generic_relative_thing(buf, buflen, ago, "an hour", "hours", howfar);
+			return;
+		}
+
+		// days
+		howfar /= 24;
+		if (ago && howfar == 1) {
+			strncpy(buf, "yesterday", buflen);
+			return;
+		}
+		else if (howfar <= 3) {
+			format_generic_relative_thing(buf, buflen, ago, "a day", "days", howfar);
+			return;
+		}
+		
+		// otherwise, just show day
+		struct tm timedat;
+		time_t then = date / 1000;
+		gmtime_r(&then, &timedat);
+		strftime(buf, buflen, "%b %d", &timedat);
+	}
 }
 
 uint8_t draw::frame_parity = 0;

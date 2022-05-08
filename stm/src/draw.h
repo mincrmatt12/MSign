@@ -243,6 +243,22 @@ namespace draw {
 		int16_t scroll_offset = 0, scroll_target = 0;
 		uint64_t last_scrolled_at = 0;
 	};
+
+	// Format a timestamp as a string with relative measurements.
+	// Only designed for fairly nearby dates
+	//
+	// For example,
+	//    "4 seconds ago",
+	//    "in 5 minutes",
+	//    "2 hours ago",
+	//    "in 28 hours",
+	//    "in a day",
+	//    "yesterday",
+	//    "2 days ago",
+	//    "May 13"
+	//
+	// Fills buf up to buflen.
+	void format_relative_date(char * buf, size_t buflen, uint64_t date);
 }
 
 inline constexpr uint16_t operator ""_cu(unsigned long long in) {
