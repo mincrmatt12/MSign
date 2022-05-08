@@ -12,13 +12,15 @@
 namespace serial {
 	struct DataUpdateRequest {
 		enum : uint16_t {
-				   // sent from servicer as packets
+				   // sent from servicer as packets 
 			TypeSetTemp,
 			TypeMarkDirty,
 				   // sent by grabbers
 			TypeChangeSize,
 			TypeGetSize,
 			TypePatch,
+			TypePatchWithoutMarkDirty,
+			TypeTriggerUpdate,
 			TypeSync
 				
 		} type;
@@ -30,8 +32,8 @@ namespace serial {
 			struct {
 				uint16_t slotid;
 				uint16_t offset;
-				const void * data;
 				uint16_t length;
+				const void * data;
 			} d_patch;
 			struct {
 				uint16_t slotid;
@@ -44,8 +46,11 @@ namespace serial {
 			struct {
 				uint16_t slotid;
 				uint16_t offset;
-				uint16_t size;
+				uint16_t size;  
 			} d_dirty;
+			struct {
+				uint16_t slotid;
+			} d_trigger;
 			struct {
 				uint16_t slotid;
 				size_t *cursize_out;
@@ -123,8 +128,9 @@ namespace serial {
 		// Handlers
 		void change_size_handler(DataUpdateRequest &dur);
 		void set_temp_handler(DataUpdateRequest &dur, bool send_pkt=true);
-		void patch_handler(DataUpdateRequest &dur);
+		void patch_handler(DataUpdateRequest &dur, bool mark_dirty=true);
 		void mark_dirty_handler(DataUpdateRequest &dur);
+		void trigger_update_handler(DataUpdateRequest &dur);
 
 		// Sends all dirty blocks out
 		void send_pending_dirty_blocks();

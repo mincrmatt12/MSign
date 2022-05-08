@@ -168,6 +168,10 @@ block_ok:
 					// Update data
 					patch_handler(dur);
 					break;
+				case DataUpdateRequest::TypePatchWithoutMarkDirty:
+					// Update data
+					patch_handler(dur, false);
+					break;
 				case DataUpdateRequest::TypeMarkDirty:
 					// Mark region dirty (or just send out blocks, depending on temp)
 					mark_dirty_handler(dur);
@@ -181,7 +185,15 @@ block_ok:
 		}
 	}
 
-	void DataUpdateManager::patch_handler(DataUpdateRequest &dur) {
+	void DataUpdateManager::trigger_update_handler(DataUpdateRequest& dur) {
+		for (auto b = arena.begin(dur.d_trigger.slotid); b != arena.end(dur.d_trigger.slotid); ++b) {
+			if (b->location != bheap::Block::LocationRemote) b->flags |= bheap::Block::FlagDirty;
+		}
+
+		sync_pending = true;
+	}
+
+	void DataUpdateManager::patch_handler(DataUpdateRequest &dur, bool mark_dirty) {
 		if (
 		// Ensure slot exists
 			!arena.contains(dur.d_patch.slotid) ||
@@ -211,12 +223,12 @@ block_ok:
 			}
 			ESP_LOGW(TAG, "timed out sending remote block, dropping.");
 			return true;
-		})) {
+		}, mark_dirty)) {
 			ESP_LOGE(TAG, "unexpected failure to update blocks.");
 			return;
 		}
 
-		sync_pending = true;
+		sync_pending = sync_pending || mark_dirty;
 	}
 
 	void DataUpdateManager::mark_dirty_handler(DataUpdateRequest &dur) {
@@ -694,12 +706,6 @@ ok:
 	void DataUpdateManager::try_reclaim_supressed_warm() {
 		// Find how much space we have to work with
 		auto budget = calculate_memory_budget();
-
-		// Compute how much we could potentially reclaim.
-		size_t supressed_blocks = 0;
-		for (auto &b : arena) {
-			if (b && b.location == bheap::Block::LocationCanonical && b.temperature == bheap::Block::TemperatureColdWantsWarm) supressed_blocks += 4 + b.datasize;
-		}
 
 		// Try to use unused space first
 redo_loop:
