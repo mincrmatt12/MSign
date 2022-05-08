@@ -33,12 +33,17 @@ class DeclaredMemberStruct:
         return text
 
 class DeclaredMember:
-    def __init__(self, name, typetoken, bitfield=None):
+    def __init__(self, name, typetoken, bitfield=None, enumer=None):
         self.name = name
         self.typetoken = typetoken
         if bitfield and len(self.typetoken) > 1:
             raise NotImplementedError("bitfield defined in array not supported")
+        if bitfield and enumer:
+            raise NotImplementedError("cannot have bitfield with enumeration")
+        if enumer and len(self.typetoken) > 1:
+            enumer = None
         self.bitfield = bitfield
+        self.enumer = {y: x for x, y in enumer.items()} if enumer else None
 
         self.data = None
         self.rawdata = None
@@ -49,11 +54,14 @@ class DeclaredMember:
     def is_bitfield(self):
         return self.bitfield is not None
 
+    def is_enumeration(self):
+        return self.enumer is not None
+
     def is_floating_point(self):
         return self.typetoken[0] in ["f", "d"]
 
     def parse(self, segment_of_dat):
-        if not self.is_array() and not self.is_bitfield():
+        if not self.is_array() and not self.is_bitfield() and not self.is_enumeration():
             self.data = struct.unpack("<" + self.typetoken, segment_of_dat)[0]
         elif self.is_bitfield():
             self.data = {}
@@ -64,11 +72,14 @@ class DeclaredMember:
                 else:
                     self.data[i] = False
             self.rawdata = integral_value
+        elif self.is_enumeration():
+            self.rawdata = struct.unpack("<" + self.typetoken, segment_of_dat)[0]
+            self.data = self.enumer.get(self.rawdata, "<UNK: {val:0{hexwidth}x} ({val})>".format(val=self.rawdata, hexwidth=struct.calcsize(self.typetoken)*2))
         else:
             self.data = struct.unpack("<" + self.typetoken, segment_of_dat)
 
     def raw_value(self):
-        if self.is_bitfield():
+        if self.is_bitfield() or self.is_enumeration():
             return self.rawdata
         else:
             return self.data
@@ -78,7 +89,7 @@ class DeclaredMember:
         Returns the object in a formatted form, including name
         """
 
-        if not self.is_array() and not self.is_bitfield():
+        if not self.is_array() and not self.is_bitfield() and not self.is_enumeration():
             if self.typetoken == '?':
                 return "{name}: {bval} ({val})".format(name=self.name, val=int(self.data), bval=self.data)
             elif not self.is_floating_point():
@@ -89,6 +100,8 @@ class DeclaredMember:
                 return "{name}: {val}{typetoken}".format(name=self.name, val=self.data, typetoken=self.typetoken[0])
         elif self.is_bitfield():
             return "{name}: {val:b} > {params}".format(name=self.name, val=self.rawdata, params=",".join(x for x in self.data if self.data[x]))
+        elif self.is_enumeration():
+            return "{name}: {val}".format(name=self.name, val=self.data)
         else:
             if self.typetoken[0] in ["B", "c"] and ("len" not in self.name.lower() and "size" not in self.name.lower()):
                 if self.typetoken[0] == "B":
@@ -106,7 +119,6 @@ class DeclaredMember:
                     return "{}: {}".format(self.name, ", ".join("{val:0{width}x} ({val})".format(width=width, val=x) for x in self.data))
                 else:
                     return "{}: {}".format(self.name, ", ".join(str(x) for x in self.data))
-
 
 class SlotType:
     def __init__(self, members):
@@ -181,7 +193,8 @@ class SlotTypeString:
         else:
             return len(dat)
 
-
+def snake_to_camel(text):
+    return "".join(x.title() for x in text.split("_"))
 
 with open(os.path.join(os.path.dirname(__file__), "../stm/src/common/slots.h"), "r") as f:
     full_text = f.read()
@@ -196,26 +209,36 @@ xml_generator_config = parser.xml_generator_configuration_t(
 
 declarations_in_file = parser.parse_string(full_text, xml_generator_config)
 
+import code
 def _create_member_list(struct_info):
     new_type_members = []
     for i in struct_info.variables():
         if i.type_qualifiers.has_static:
             continue
         bitfield = None
+        enumer = None
         if declarations.is_integral(i.decl_type):
             try:
-                enumerator = struct_info.enumerations()[0]
-                if enumerator.byte_size != i.decl_type.byte_size:
-                    bitfield = None
-                else:
-                    bitfield = enumerator.get_name2value_dict()
+                for enumerator in struct_info.enumerations():
+                    if enumerator.byte_size != declarations.remove_alias(i.decl_type).byte_size:
+                        continue
+                    elif enumerator.name != snake_to_camel(i.name):
+                        continue
+                    else:
+                        bitfield = enumerator.get_name2value_dict()
+                        break;
             except RuntimeError:
                 bitfield = None
+        elif declarations.is_enum(i.decl_type):
+            try:
+                enumer = global_namespace.enumeration(i.decl_type.decl_string).get_name2value_dict()
+            except RuntimeError:
+                enumer = {}
 
         if declarations.is_class(i.decl_type):
             new_type_members.append(DeclaredMemberStruct(i.name, _create_member_list(i.decl_type.declaration)))
         else:
-            new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield))
+            new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield=bitfield, enumer=enumer))
     return new_type_members
 
 def _convert_opaque_to_token(x):
@@ -292,6 +315,15 @@ def _handle_struct(entryname, struct_name):
 
     slot_types[entryname][1] = SlotType(new_type_members)
 
+def _handle_enum(entryname, enum_name):
+    enum_info = slots_namespace.enumeration(enum_name)
+
+    enumer = enum_info.get_name2value_dict()
+
+    slot_types[entryname][1] = SlotType(
+        [DeclaredMember("", _convert_opaque_to_token(enum_info), enumer=enumer)]
+    )
+
 def _handle_match(entryname, match_data):
     global slot_types
     global previous_match
@@ -315,7 +347,7 @@ def _handle_match(entryname, match_data):
                 )
     elif len(match_data) == 2:
         if match_data[0] == "ENUM":
-            raise NotImplementedError("don't do enums")
+            _handle_enum(entryname, match_data[1])
         elif match_data[0] != "STRUCT":
             return _handle_match(entryname, [match_data[0]])
         else:
