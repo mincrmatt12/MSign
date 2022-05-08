@@ -403,26 +403,19 @@ namespace bheap {
 		}
 
 		// Update the contents of the data at that offset + length with data.
-		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data) {
-			return update_contents(slotid, offset, length, data, true);
-		}
-
-		// Update the contents of the data at that offset + length with data.
 		//
-		// This function will convert remote chunks to either canonical + flush or ephemeral depending on the set_flush
-		// parameter. For more control, use the overload that takes a functor.
-		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool fulfill_with_ephemeral) {
-			return update_contents(slotid, offset, length, data, [this, slotid, fulfill_with_ephemeral](uint32_t off, uint32_t len, const void *dat){
-				if (!fulfill_with_ephemeral) return false;
+		// Converts remote blocks into ephemeral blocks.
+		bool update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, bool mark_dirty=true) {
+			return update_contents(slotid, offset, length, data, [this, slotid](uint32_t off, uint32_t len, const void *dat){
 				if (!set_location(slotid, off, len, Block::LocationEphemeral)) return false;
 				return update_contents(slotid, off, len, dat);
-			});
+			}, mark_dirty);
 		}
 
 		template<typename RemoteHandler>
 		std::enable_if_t<
 			std::is_invocable_r_v<bool, RemoteHandler, uint32_t /* offset */, uint32_t /* length */, const void * /* data */>,
-		bool> update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, RemoteHandler&& rh) {
+		bool> update_contents(uint32_t slotid, uint32_t offset, uint32_t length, const void *data, RemoteHandler&& rh, bool mark_dirty=true) {
 			if (offset + length > contents_size(slotid) || !contains(slotid)) return false;
 			// Check if the region crosses the boundary between two segments, if so, split the function into two calls.
 			Block& containing_block = get(slotid, offset);
@@ -444,7 +437,7 @@ namespace bheap {
 			
 			// Otherwise, just patch the block content
 			memcpy((uint8_t *)(containing_block.data()) + (offset - begin_pos), data, length);
-			containing_block.flags |= Block::FlagDirty;
+			if (mark_dirty) containing_block.flags |= Block::FlagDirty;
 			return true;
 		}
 
