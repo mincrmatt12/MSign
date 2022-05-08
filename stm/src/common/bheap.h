@@ -256,6 +256,37 @@ namespace bheap {
 		operator bool() const {
 			return Block::operator bool() && this->datasize && this->location != bheap::Block::LocationRemote;
 		}
+
+		// If this is an array type, allow iterating over it with begin/end
+		auto begin() {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data();
+		}
+
+		auto begin() const {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data();
+		}
+
+		auto cbegin() const {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data();
+		}
+
+		auto end() {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		}
+
+		auto end() const {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		}
+
+		auto cend() const {
+			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		}
 	};
 
 	// An arena of blocks (fight!)

@@ -6,6 +6,7 @@
 #include "transit/gtfs.h"
 #include "weather.h"
 #include "modelserve.h"
+#include "parcels.h"
 #include "cfgpull.h"
 // end grabbers
 
@@ -25,7 +26,7 @@ namespace grabber {
 		&weather::weather_grabber,
 		&sccfg::sccfg_grabber,
 		&modelserve::modelserve_grabber,
-
+		&parcels::parcels_grabber,
 
 		// leave cfgpull at the end
 		&cfgpull::cfgpull_grabber

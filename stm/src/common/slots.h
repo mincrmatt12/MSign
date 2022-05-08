@@ -54,6 +54,12 @@ namespace slots {
 		MODEL_CAM_MINPOS  = 0x905,  // STRUCT; Vec3; minimum position of the camera 
 		MODEL_CAM_MAXPOS  = 0x906,  // ''; maximum position of the camera 
 		MODEL_CAM_FOCUS   = 0x907,  // STRUCT[]; Vec3; lookat points of camera
+		
+		PARCEL_NAMES = 0x50,        // STRING[]; name table for parcels
+		PARCEL_INFOS = 0x51,        // STRUCT[]; ParcelInfo; parcel status information (0-indexed)
+		PARCEL_STATUS_SHORT = 0x52, // STRING[]; status/location table for short view
+		PARCEL_STATUS_LONG = 0x53,  // ''; status/location table for full view
+		PARCEL_EXTRA_INFOS = 0x54,  // STRUCT[]; ExtraParcelInfoEntry; full package tracking logs (with some cutoff)
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
@@ -67,6 +73,8 @@ namespace slots {
 			RECEIVING_SYSUPDATE = 1,
 			RECEIVING_WEBUI_PACK = 2,
 			RECEIVING_CERT_PACK = 4,
+
+			INSTALLING_WEBUI_PACK = 32,
 
 			LAST_RX_FAILED = 16,
 		};
@@ -177,6 +185,51 @@ namespace slots {
 		Vec3 p1, p2, p3;
 		uint8_t r, g, b;
 		uint8_t pad; // perhaps something relating to optimizations or some bs at some point, but this needs to align properly
+	};
+
+	struct ParcelStatusLine {
+		uint16_t status_offset;  // offset into PARCEL_STATUS_SHORT
+		uint16_t location_offset; // offset into PARCEL_STATUS_SHORT
+
+		enum Flags : uint8_t {
+			HAS_STATUS = 1,
+			HAS_LOCATION = 2,
+			HAS_EST_DEILIVERY = 4, // cannot be set on ExtraParcelInfoEntry
+			HAS_UPDATED_TIME = 8,   
+			EXTRA_INFO_TRUNCATED = 16 // cannot  be set on ExtraParcelInfoEntry
+		};
+
+		uint8_t flags;
+	};
+
+	struct ParcelInfo {
+		uint16_t name_offset;    // offset into PARCEL_NAMES
+		ParcelStatusLine status; // refd to PARCEL_STATUS_SHORT
+	
+		enum StatusIcon : uint8_t {
+			UNK = 0,
+
+			PRE_TRANSIT = 0x10,
+			IN_TRANSIT  = 0x11,
+			OUT_FOR_DELIVERY = 0x12,
+
+			DELIVERED = 0x20,
+			FAILED_TO_DELIVER = 0x21,
+			READY_FOR_PICKUP = 0x22,
+
+			RETURN_TO_SENDER = 0x30,
+			GENERAL_ERROR = 0x31,
+			CANCELLED = 0x32
+		} status_icon;
+
+		uint64_t updated_time;   // when was the last status received
+		uint64_t estimated_delivery; // when do we expect to get the package
+	};
+
+	struct ExtraParcelInfoEntry {
+		ParcelStatusLine status; // refd into PARCEL_STATUS_LONG
+		uint8_t for_parcel; // which parcel is this an entry for
+		uint64_t updated_time;
 	};
 
 #pragma pack (pop)
@@ -290,6 +343,7 @@ namespace slots {
 			WEATHER = 1,
 			MODELSERVE = 2,
 			CFGPULL = 3,
+			PARCELS = 4,
 			
 			ALL = 0xfa,
 			NONE = 0xfb
