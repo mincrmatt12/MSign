@@ -1346,6 +1346,18 @@ const char * srv::Servicer::update_status() {
 
 	return update_status_buffer;
 }
+
+srv::Servicer::DebugInfo srv::Servicer::get_debug_information() {
+	return {
+		.pending_requests_count = uxQueueMessagesWaiting(pending_requests),
+		.ticks_since_last_communication = timekeeper.current_time - last_comm,
+		.ping_is_in_flight = sent_ping,
+
+		.free_space_arena = arena.free_space(),
+		.free_space_cleanup_arena = arena.free_space(arena.FreeSpaceDefrag),
+		.used_hot_space_arena = STM_HEAP_SIZE - arena.free_space(arena.FreeSpaceCleanup | arena.FreeSpaceDefrag)
+	};
+}
 // override _write
 
 extern "C" int __attribute__((used)) _write(int file, char* ptr, int len) {

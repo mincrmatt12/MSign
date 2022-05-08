@@ -101,8 +101,21 @@ namespace srv {
 		// Are we currently sleeping?
 		bool is_sleeping() { return is_in_sleep_mode; }
 
-	private:
+		// Debug information; returned by debug_information().
+		// Contains various properties about the servicer's state
+		struct DebugInfo {
+			// QUEUE/COMM STATS
+			UBaseType_t pending_requests_count = 0; // number of requests pending in internal queue
+			uint64_t ticks_since_last_communication = 0; // time since last comms with esp
+			bool ping_is_in_flight; // is there a ping in flight due to no communication
+			// ARENA STATS
+			size_t free_space_arena = 0;
+			size_t free_space_cleanup_arena = 0;
+			size_t used_hot_space_arena = 0;
+		};
 
+		DebugInfo get_debug_information();
+	private:
 		const bheap::Block& _slot(uint16_t slotid);
 		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
 
