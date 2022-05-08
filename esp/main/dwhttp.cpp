@@ -11,6 +11,7 @@
 #include <vector>
 extern "C" {
 #include <http_client.h>
+#include <http_chunked_recv.h>
 };
 
 #include "sd.h"
@@ -484,23 +485,82 @@ namespace dwhttp {
 			}
 
 			inline bool is_unknown_length() const {
-				return state.c.connection == HTTP_CLIENT_CONNECTION_CLOSE;
+				return (state.c.connection == HTTP_CLIENT_CONNECTION_CLOSE) || state.c.chunked_encoding;
+			}
+
+			inline bool is_chunked() const {
+				return state.c.chunked_encoding;
 			}
 		protected:
 			http_client_state_t state;
+			http_chunked_recv_state_t chunk_state;
+			int chunk_counter = 0;
 		};
 
 		template<typename Adapter>
 		struct Downloader : DownloaderBase {
 			size_t read_from(uint8_t *buf, size_t max) override {
 				if (!socket.is_connected()) return 0;
-				int r = socket.read_some(buf, max);
+				if (is_chunked() && chunk_counter && max > chunk_counter) max = chunk_counter;
+				int r = socket.read_some(buf, max); // read into the buffer first
 				if (r <= 0) {
 					ESP_LOGW(TAG, "Read failed.");
 					socket.close();
 					return 0;
 				}
-				return r;
+				if (!is_chunked()) {
+					return r;
+				}
+				else {
+					ESP_LOGD(TAG, "chunk counter is now %d", chunk_counter);
+					if (chunk_counter == 0) {
+						// Try to process the results
+						int total_amount = 0;
+retry:
+						const uint8_t * read_to = buf;
+						switch (http_chunked_recv_feed(&read_to, buf + r, &chunk_state)) {
+							case HTTP_CHUNKED_RECV_OK: 
+								// Still waiting for end of chunk, grab more data
+								return read_from(buf, max);
+							case HTTP_CHUNKED_RECV_DONE:
+got_done:
+								// End of file, return 0
+								*buf = 0; // we do kind of corrupt the buffer, so we'll do this to fix most outputs
+								return 0;
+							case HTTP_CHUNKED_RECV_FAIL:
+								// Invalid format
+								ESP_LOGW(TAG, "chunked parser threw error");
+								return 0;
+							case HTTP_CHUNKED_RECV_YIELD_GOT_CHUNK:
+								{
+									if (chunk_state.c.chunk_size == 0) goto got_done;
+									// read_to is now at correct position
+									chunk_counter = chunk_state.c.chunk_size;
+									ESP_LOGD(TAG, "got chunk %d", chunk_counter);
+									int remain = (buf + r) - read_to;
+									memmove(buf, read_to, remain);
+									if (remain <= chunk_counter) {
+										chunk_counter -= remain;
+										return remain + total_amount;
+									}
+									else {
+										// Advance buf and re-read
+										r -= chunk_counter + (read_to - buf);
+										buf += chunk_counter;
+										total_amount += chunk_counter;
+										chunk_counter = 0;
+										goto retry;
+									}
+								}
+						}
+						ESP_LOGE(TAG, "huh");
+						return -1;
+					}
+					else {
+						chunk_counter -= r;
+						return r;
+					}
+				}
 			}
 
 			// Close sockets
@@ -605,6 +665,9 @@ namespace dwhttp {
 				}
 finish_req:
 				ESP_LOGD(TAG, "Ready with code = %d; length = %d; unklen = %d", result_code(), content_length(), is_unknown_length());
+				if (is_chunked()) {
+					http_chunked_recv_start(&chunk_state);
+				}
 				return true;
 			}
 		private:

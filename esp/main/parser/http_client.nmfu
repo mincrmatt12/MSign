@@ -3,6 +3,7 @@
 out int result_code = 0;
 out int content_length;
 out enum{CLOSE,OTHER} connection;
+out bool chunked_encoding = false;
 
 macro ows() {
     optional { " "; }
@@ -51,6 +52,12 @@ parser {
                     connection = OTHER;
                 }
 
+                wait "\r\n";
+            }
+            "Transfer-Encoding:"i -> {
+                ows();
+                "chunked";
+                chunked_encoding = true;
                 wait "\r\n";
             }
             else -> {wait "\r\n";}
