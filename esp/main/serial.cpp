@@ -247,10 +247,9 @@ void serial::SerialInterface::set_sleep_mode(bool mode) {
 	in_sleep_mode = mode;
 }
 
-void serial::SerialInterface::update_slot_raw(uint16_t slotid, const void *ptr, size_t length, bool should_sync) {
-	// TODO: syncing options
+void serial::SerialInterface::update_slot_raw(uint16_t slotid, const void *ptr, size_t length, bool should_sync, bool should_mark_dirty) {
 	allocate_slot_size(slotid, length);
-	update_slot_partial(slotid, 0, ptr, length, should_sync);
+	update_slot_partial(slotid, 0, ptr, length, should_sync, should_mark_dirty);
 }
 
 void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
@@ -274,10 +273,17 @@ size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
 	return result;
 }
 
-void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync) {
+void serial::SerialInterface::trigger_slot_update(uint16_t slotid) {
+	DataUpdateRequest dur;
+	dur.type = DataUpdateRequest::TypeTriggerUpdate;
+	dur.d_dirty.slotid = slotid;
+	dum.queue_request(dur);
+}
+
+void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync, bool should_mark_dirty) {
 	{
 		DataUpdateRequest dur;
-		dur.type = DataUpdateRequest::TypePatch;
+		dur.type = should_mark_dirty ? DataUpdateRequest::TypePatch : DataUpdateRequest::TypePatchWithoutMarkDirty;
 		dur.d_patch.data = ptr;
 		dur.d_patch.length = length;
 		dur.d_patch.offset = offset;

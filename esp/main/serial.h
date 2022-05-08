@@ -30,20 +30,20 @@ namespace serial {
 		// SLOT UPDATE
 		
 		// Replace a slot with the data pointed to by ptr and of length length
-		void update_slot_raw(uint16_t slotid, const void * ptr, size_t length, bool should_sync=true);
+		void update_slot_raw(uint16_t slotid, const void * ptr, size_t length, bool should_sync=true, bool should_mark_dirty=true);
 
 		// Replace a slot with the contents of the object referenced by obj
 		template<typename T>
-		inline void update_slot(uint16_t slotid, const T& obj, bool should_sync=true) {
+		inline void update_slot(uint16_t slotid, const T& obj, bool should_sync=true, bool should_mark_dirty=true) {
 			// Specially defer for array types
 			static_assert(!std::is_pointer_v<T> || (
 				std::is_array_v<T> && std::extent_v<T, 0> != 0
 			), "This will not work with pointers, use update_slot_raw instead, or derefence the pointer. For bounded arrays, pass them directly or use update_slot_range");
-			update_slot_raw(slotid, &obj, sizeof(T), should_sync);
+			update_slot_raw(slotid, &obj, sizeof(T), should_sync, should_mark_dirty);
 		}
 		// Replace a slot with a null-terminated string
-		inline void update_slot(uint16_t slotid, const char *str, bool should_sync=true) {
-			update_slot_raw(slotid, str, strlen(str) + 1, should_sync); // include null terminator
+		inline void update_slot(uint16_t slotid, const char *str, bool should_sync=true, bool should_mark_dirty=true) {
+			update_slot_raw(slotid, str, strlen(str) + 1, should_sync, should_mark_dirty); // include null terminator
 		}
 		// Replace a slot with an initializer-list of objects. No nosync version is provided since the init list
 		// is almost certainly going to need syncing.
@@ -57,16 +57,21 @@ namespace serial {
 			update_slot(std::forward<Args>(args)..., false);
 		}
 
+		template<typename ...Args>
+		inline void update_slot_nodirty(Args&&... args) {
+			update_slot(std::forward<Args>(args)..., true, false);
+		}
+
 		// Update slotid as if it were an array of T[], setting T[index] = obj
 		template<typename T>
-		inline void update_slot_at(uint16_t slotid, const T& obj, size_t index, bool should_sync=true) {
-			update_slot_partial(slotid, index * sizeof(T), &obj, sizeof(T), should_sync);
+		inline void update_slot_at(uint16_t slotid, const T& obj, size_t index, bool should_sync=true, bool should_mark_dirty=true) {
+			update_slot_partial(slotid, index * sizeof(T), &obj, sizeof(T), should_sync, should_mark_dirty);
 		}
 
 		// Update many entries in slotid, setting T[index..index+quantity] = obj[0..quantity].
 		template<typename T>
-		inline void update_slot_range(uint16_t slotid, const T* obj, size_t index, size_t quantity, bool should_sync=true) {
-			update_slot_partial(slotid, index * sizeof(T), obj, quantity * sizeof(T), should_sync);
+		inline void update_slot_range(uint16_t slotid, const T* obj, size_t index, size_t quantity, bool should_sync=true, bool should_mark_dirty=true) {
+			update_slot_partial(slotid, index * sizeof(T), obj, quantity * sizeof(T), should_sync, should_mark_dirty);
 		}
 
 		// Clear out a slot
@@ -85,10 +90,13 @@ namespace serial {
 		void allocate_slot_size(uint16_t slotid, size_t size);
 
 		// Update part of a slot
-		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync=true);
+		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync=true, bool should_mark_dirty=true);
 
 		// Operation sync barrier (not per slot as requests are processed strictly in-order)
 		void sync();
+
+		// Trigger slot update (force mark dirty)
+		void trigger_slot_update(uint16_t slotid);
 
 		// SLEEP MODE
 
