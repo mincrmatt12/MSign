@@ -1,4 +1,5 @@
 #include "draw.h"
+#include <ctime>
 
 extern uint64_t rtc_time;
 
@@ -21,6 +22,7 @@ namespace draw {
 	}
 
 	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+		if (!text) return x;
 		uint16_t pen = x;
 		uint8_t c, c_prev = 0;
 
@@ -160,6 +162,7 @@ namespace draw {
 	}
 
 	uint16_t text_size(const uint8_t *text, const void * const font[], bool kern_on) {
+		if (!text) return 0;
 		uint16_t len = 0;
 		uint8_t c, c_prev = 0;
 
