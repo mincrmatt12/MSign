@@ -42,6 +42,9 @@ namespace tasks {
 		TickType_t last_had_wifi_at = 0;
 
 		bool early_transition_informed = false;
+		int next_screen_idx(bool prev=false);
+
+		// menu/interaction stuff -- in overlay.cpp
 
 		struct MS {
 			uint8_t selected = 0;
@@ -49,17 +52,19 @@ namespace tasks {
 				SubmenuMain = 0,
 				SubmenuConnInfo = 1,
 				SubmenuSelectScreen = 2,
-				SubmenuDebug = 3
+				SubmenuDebug = 3,
+				SubmenuDebugSrv = 4,
 			} submenu = SubmenuMain;
 
 			void reset() {
 				new (this) MS{};
 			}
+
+			bool override_not_interacting() {
+				return submenu == SubmenuDebugSrv;
+			}
 		} ms;
 
-		int next_screen_idx(bool prev=false);
-
-		void draw_conn_panel();
 		void draw_menu_list(const char * const * entries, bool last_is_close=true);
 
 		void do_menu_overlay();
