@@ -74,7 +74,7 @@ bool weather::loop() {
 		}
 		else if (stack_ptr == 3 && strcmp(stack[1]->name, "minutely") == 0) {
 			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR) {
-				serial::interface.update_slot(slots::WEATHER_STATUS, v.str_val);
+				serial::interface.update_slot_nodirty(slots::WEATHER_STATUS, v.str_val);
 				ESP_LOGD(TAG, "summary (minute) = %s", v.str_val);
 			}
 			else if (strcmp(stack[2]->name, "icon") == 0 && v.type == json::Value::STR) {
@@ -87,7 +87,7 @@ bool weather::loop() {
 		}
 		else if (stack_ptr == 3 && strcmp(stack[1]->name, "hourly") == 0) {
 			if (strcmp(stack[2]->name, "summary") == 0 && v.type == json::Value::STR && !use_next_hour_summary) {
-				serial::interface.update_slot(slots::WEATHER_STATUS, v.str_val);
+				serial::interface.update_slot_nodirty(slots::WEATHER_STATUS, v.str_val);
 				ESP_LOGD(TAG, "summary (hour) = %s", v.str_val);
 			}
 		}
@@ -237,6 +237,7 @@ bool weather::loop() {
 
 	serial::interface.update_slot_nosync(slots::WEATHER_RTEMP_GRAPH, rtemp_over_day);
 	serial::interface.update_slot_nosync(slots::WEATHER_WIND_GRAPH, wind_over_day);
+	serial::interface.trigger_slot_update(slots::WEATHER_STATUS);
 
 	if (minutely_precip) {
 		if (std::none_of(minutely_precip.get(), minutely_precip.get() + 30, [](const auto& x){return x.amount > 0 && x.probability != 0;})) minutely_precip.reset();
