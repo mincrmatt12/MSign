@@ -23,7 +23,9 @@ namespace {
 		return era * 146097 + doe - 719468;
 	}
 
-	time_t timegm(tm const* t)   
+}
+
+	time_t wifi::timegm(tm const* t)   
 	{
 		int year = t->tm_year + 1900;
 		int month = t->tm_mon;  
@@ -42,7 +44,6 @@ namespace {
 
 		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 	}
-}
 
 void wifi::receive_config(const char* k, const char *v) {
 	ESP_LOGI(TAG, "got %s == %s", k, v);

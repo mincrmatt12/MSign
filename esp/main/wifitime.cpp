@@ -145,7 +145,14 @@ namespace {
 		return era * 146097 + doe - 719468;
 	}
 
-	time_t timegm(tm const* t)   
+
+	struct wifi_blob {
+		wifi_config_t wifi_config_data{};
+		wifi_country_t country{};
+		bool enterprise_wifi_enable = false;
+	} *wifi_cfg_blob;
+}
+	time_t wifi::timegm(tm const* t)   
 	{
 		int year = t->tm_year + 1900;
 		int month = t->tm_mon;  
@@ -164,13 +171,6 @@ namespace {
 
 		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 	}
-
-	struct wifi_blob {
-		wifi_config_t wifi_config_data{};
-		wifi_country_t country{};
-		bool enterprise_wifi_enable = false;
-	} *wifi_cfg_blob;
-}
 
 uint64_t wifi::get_localtime() {
 	time_t now;
