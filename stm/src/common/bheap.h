@@ -782,8 +782,8 @@ finish_setting:
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
 
 		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty; // Free space for new allocations
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceZeroSizeCanonical | FreeSpaceEphemeral; // Free space after removing stuff
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceAllocatable | FreeSpaceHomogenizeable; // Free space after defrag()
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceEphemeral; // Free space after removing stuff
+		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceAllocatable | FreeSpaceHomogenizeable | FreeSpaceZeroSizeCanonical; // Free space after defrag()
 
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) const {
 			return free_space(first, mode);
@@ -804,7 +804,7 @@ finish_setting:
 			}
 			if (mode & FreeSpaceEphemeral) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (blk->slotid < Block::SlotEmpty && blk->location == Block::LocationEphemeral && blk->temperature < Block::TemperatureHot && !blk->flags) total += 4 + blk->datasize;
+					if (blk->slotid < Block::SlotEmpty && blk->location == Block::LocationEphemeral && blk->temperature < Block::TemperatureHot) total += 4 + blk->datasize;
 				}
 			}
 			if (mode & FreeSpaceHomogenizeable) {
