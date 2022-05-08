@@ -123,6 +123,19 @@ namespace tasks {
 				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "ui", 0x7f7f7f_cc);
 			}
 
+			// try to draw webui installing
+			if (status.flags & slots::WebuiStatus::INSTALLING_WEBUI_PACK) {
+				// compute size
+				int width = draw::text_size("\xfd ui", font::dejavusans_10::info) + 2;
+
+				// blank
+				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+				x -= width;
+
+				// draw
+				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfd ", 0x0a1ef3_cc, "ui", 0x7f7f7f_cc);
+			}
+
 			// try to draw failed
 			if (status.flags & slots::WebuiStatus::LAST_RX_FAILED) {
 				// compute size

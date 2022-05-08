@@ -42,6 +42,7 @@ namespace webui {
 	http_serve_state_t * reqstate = nullptr;
 
 	slots::WebuiStatus current_status;
+	bool update_pending = false;
 
 	template<typename ...Args>
 	inline void set_status_flag(Args&& ...args) {
@@ -586,7 +587,7 @@ reachedend:
 					break;
 			}
 
-			clear_status_flag(slots::WebuiStatus::RECEIVING_SYSUPDATE);
+			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 			f_close(&out_ui);
 
 			if (!ok) {
@@ -604,9 +605,8 @@ reachedend:
 
 			send_static_response(200, "OK", "Updating UI.");
 			lwip_close(client_sock);
-			// wait a bit for connection to close
-			vTaskDelay(pdMS_TO_TICKS(500));
-			serial::interface.reset(); // reset both systems
+			// trigger update
+			update_pending = true;
 		}
 		else if (strcasecmp(tgt, "updatefirm") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
@@ -894,11 +894,12 @@ notfound:
 	}
 
 	void run(void*) {
+restart:
 		if (upd::needed() == upd::WEB_UI) {
 			ESP_LOGI(TAG, "Running webui update");
-			set_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+			set_status_flag(slots::WebuiStatus::INSTALLING_WEBUI_PACK);
 			upd::update_website();
-			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+			clear_status_flag(slots::WebuiStatus::INSTALLING_WEBUI_PACK);
 		}
 
 		ESP_LOGI(TAG, "Starting webui");
@@ -947,6 +948,12 @@ notfound:
 		ESP_LOGI(TAG, "Started webui");
 
 		while (true) {
+			if (update_pending) {
+				if (client_sock >= 0) lwip_close(client_sock);
+				lwip_close(server_sock);
+				update_pending = false;
+				goto restart;
+			}
 			if (client_sock >= 0) {
 				// Deal with the client
 				while (client_sock >= 0) {
