@@ -39,7 +39,7 @@ namespace slots {
 		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRING; weather status string
-		WEATHER_ARRAY = 0x46,       // STRING; list of ENUMS for the state per-hour
+		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateArrayCode; list of ENUMS for the state per-hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		WEATHER_TEMP_GRAPH = 0x4a,  // INT16_T[]; feels like temp data per hour (/100)
