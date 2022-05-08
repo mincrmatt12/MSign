@@ -143,12 +143,14 @@ namespace draw {
 	
 	// Scrolls content. Output moves backwards, so for left-right scrolling it goes from the right.
 	inline int16_t scroll(int64_t timebase, int16_t content_size, int16_t scroll_size) {
-		timebase %= (content_size + matrix_type::framebuffer_type::width) + 1;
-		timebase =  ((content_size + matrix_type::framebuffer_type::width) + 1) - timebase;
+		if (content_size < scroll_size) return 0;
+		timebase %= (content_size + scroll_size) + 1;
+		timebase =  ((content_size + scroll_size) + 1) - timebase;
 		timebase -= content_size;
 		return timebase;
 	}
 
+	// Scrolls content. Output moves backwards, so for left-right scrolling it goes from the right.
 	inline int16_t scroll(int64_t timebase, int16_t content_size) {
 		return scroll(timebase, content_size, matrix_type::framebuffer_type::width);
 	}
