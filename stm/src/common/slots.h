@@ -131,7 +131,6 @@ namespace slots {
 
 	struct ScCfgInfo {
 		uint16_t enabled_mask;
-		bool display_on;
 
 		enum EnabledMask : uint16_t {
 			TTC = 1 << ScCfgTime::TTC,

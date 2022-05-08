@@ -21,7 +21,6 @@ namespace sccfg {
 	void send_mask() {
 		uint16_t enabled_mask = (parsed_enabled_mask | force_enabled_mask) & ~force_disabled_mask;
 		slots::ScCfgInfo obj;
-		obj.display_on = true;
 		obj.enabled_mask = enabled_mask;
 
 		ESP_LOGD(TAG, "enabled data: %d", enabled_mask);
