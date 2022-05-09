@@ -5,3 +5,4 @@ set(COMPONENTS mbedtls pthread esp8266 main freertos lwip esp_common bootloader 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(msign-esp)
 
+idf_build_set_property(COMPILE_OPTIONS "-Wno-error=format-truncation" APPEND)

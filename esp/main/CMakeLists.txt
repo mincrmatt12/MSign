@@ -16,8 +16,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
    add_compile_options (-fdiagnostics-color=always)
 endif ()
 
-add_compile_options(-Wno-error=format-truncation)
-
 cmake_policy(SET CMP0057 NEW)
 
 if (NOT "${CMAKE_CURRENT_LIST_DIR}/config.cpp" IN_LIST msign_esp_srcs)
