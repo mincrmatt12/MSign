@@ -33,7 +33,6 @@ namespace tasks {
 			InteractNone = 0,
 			InteractByScreen = 1,
 			InteractMenuOpen = 2,
-			InteractOverrideScreen = 3
 		} interact_mode = InteractNone;
 
 		// todo: put this in a union
@@ -41,6 +40,7 @@ namespace tasks {
 
 		uint64_t last_swapped_at = 0;
 		uint32_t interact_timeout = 0;
+		uint32_t override_timeout = 0;
 		TickType_t last_had_wifi_at = 0;
 
 		bool early_transition_informed = false;
@@ -62,7 +62,7 @@ namespace tasks {
 				new (this) MS{};
 			}
 
-			bool override_not_interacting() {
+			bool override_not_interacting() const {
 				return submenu == SubmenuDebugSrv;
 			}
 		} ms;

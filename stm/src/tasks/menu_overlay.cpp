@@ -241,9 +241,9 @@ void tasks::DispMan::do_menu_overlay() {
 				if (ms.selected == (sizeof(screen_names)/sizeof(char*) - 2)) goto back;
 
 				swapper.transition(ms.selected);
-				interact_mode = InteractOverrideScreen;
-				interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
+				override_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 				last_swapped_at = rtc_time;
+				interact_mode = InteractNone;
 				return;
 			}
 			break;

@@ -229,7 +229,7 @@ namespace tasks {
 			swapper.draw();
 
 			// Check for screen swaps 
-			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING] && (!interacting() || interact_mode == InteractMenuOpen && ms.override_not_interacting())) {
+			if (servicer[slots::SCCFG_INFO] && servicer[slots::SCCFG_TIMING] && (!interacting() || interact_mode == InteractMenuOpen && ms.override_not_interacting()) && override_timeout < xTaskGetTickCount()) {
 				srv::ServicerLockGuard g(servicer);
 				if (servicer.slot_dirty(slots::SCCFG_TIMING)) {
 					if (screen_list_idx >= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime))) screen_list_idx = 0; // handle changing array
@@ -286,7 +286,6 @@ namespace tasks {
 
 			switch (interact_mode) {
 				case InteractNone:
-				case InteractOverrideScreen:
 					// allow opening modes
 					if (ui::buttons[ui::Buttons::SEL]) {
 						interact_mode = InteractByScreen;
