@@ -4,6 +4,7 @@
 #include "../wifitime.h"
 #include <esp_log.h>
 #include "parcels.cfg.h"
+#include <memory>
 #include <time.h>
 
 static const char * TAG = "parcels";
@@ -57,18 +58,18 @@ namespace parcels {
 	}
 
 	struct LocationBuf {
-		const char * get() { return buf; }
+		const char * get() { return buf.get(); }
 
 		void push_country(const char * c) {
 			if (has_country) return;
 			has_country = true;
 			if (!has_city) {
-				strncpy(buf, c, 64);
+				strncpy(buf.get(), c, 64);
 			}
 			else {
 				// append
-				int end = strlen(buf);
-				snprintf(buf + end, 64 - end, ", %s", c);
+				int end = strlen(buf.get());
+				snprintf(buf.get() + end, 64 - end, ", %s", c);
 			}
 		}
 
@@ -76,18 +77,22 @@ namespace parcels {
 			if (has_city) return;
 			has_city = true;
 			if (!has_country) {
-				strncpy(buf, c, 64);
+				strncpy(buf.get(), c, 64);
 			}
 			else {
-				char buf2[64]; strncpy(buf2, buf, 64);
-				snprintf(buf, 64, "%s, %s", c, buf2);
+				char buf2[64]; strncpy(buf2, buf.get(), 64);
+				snprintf(buf.get(), 64, "%s, %s", c, buf2);
 			}
 		}
 
 		operator bool() {return has_city || has_country;}
 
+		LocationBuf() {
+			buf.reset(new char[64]{});
+		}
+
 	private:
-		char buf[64]{};
+		std::unique_ptr<char []> buf;
 		bool has_city = false, has_country = false;
 	};
 
@@ -111,23 +116,24 @@ namespace parcels {
 		int parcel_entry_lengths[6]{};
 		bool parcel_oks[6]{};
 		size_t parcel_entry_text_lens[6]{};
-		char auth[96];
+		std::unique_ptr<char[]> auth; auth.reset(new char[96]{});
 
-		snprintf(auth, 96, "Bearer %s", parcels_api_key);
+		snprintf(auth.get(), 96, "Bearer %s", parcels_api_key);
 		const char * headers[][2] = {
-			{"Authorization", auth},
+			{"Authorization", auth.get()},
 			{NULL, NULL}
 		};
 
-		char url[128];
+
+		std::unique_ptr<char[]> url; url.reset(new char[128]{});
 
 		for (const auto& cfg : tracker_configs) {
 			i += 1;
 			if (!cfg.enabled) continue;
 
 			// get url
-			snprintf(url, 128, "/v2/trackers/%s", cfg.tracker_id);
-			auto dw = dwhttp::download_with_callback("_api.easypost.com", url, headers);
+			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id);
+			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
 			dw.make_nonclose();
 
 			if (!dw.ok()) {
@@ -238,8 +244,8 @@ namespace parcels {
 			if (!parcel_oks[i]) continue;
 			++j;
 			// get url
-			snprintf(url, 128, "/v2/trackers/%s", cfg.tracker_id);
-			auto dw = dwhttp::download_with_callback("_api.easypost.com", url, headers);
+			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id);
+			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
 			dw.make_nonclose();
 			
 			// compute how many we're going to take

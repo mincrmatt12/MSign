@@ -143,7 +143,7 @@ exit:
 		}
 		if (xEventGroupGetBits(wifi::events) & wifi::GrabTaskStop) return;
 		// try and restart task
-		if (xTaskCreate(grabber::run, "grab", 6240, nullptr, 6, &grabber_task) != pdPASS) {
+		if (xTaskCreate(grabber::run, "grab", 7240, nullptr, 6, &grabber_task) != pdPASS) {
 			grabber_task = nullptr;
 			ESP_LOGW("grab", "unable to restart grabber task; waiting again");
 		}
