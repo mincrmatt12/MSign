@@ -124,7 +124,7 @@ namespace parcels {
 			{NULL, NULL}
 		};
 
-
+		bool encountered_error = false;
 		std::unique_ptr<char[]> url; url.reset(new char[128]{});
 
 		for (const auto& cfg : tracker_configs) {
@@ -142,6 +142,7 @@ namespace parcels {
 					ESP_LOGI(TAG, "Disabling tracker...");
 					cfg.enabled = false;
 				}
+				else encountered_error = true;
 				continue;
 			}
 
@@ -205,7 +206,8 @@ namespace parcels {
 
 			if (!p_parser.parse(dw)) {
 				ESP_LOGD(TAG, "json parse failed");
-				return false;
+				encountered_error = true;
+				continue;
 			}
 
 			// parse finished: fill in offsets
@@ -247,6 +249,10 @@ namespace parcels {
 			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id);
 			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
 			dw.make_nonclose();
+
+			if (!dw.ok()) {
+				encountered_error = true;
+			}
 			
 			// compute how many we're going to take
 			size_t entry_count = (parcel_entry_text_lens[i] > max_single_entry_textcount ? (
@@ -306,6 +312,7 @@ namespace parcels {
 
 			if (!p_parser.parse(dw)) {
 				delete[] extra_infos;
+				encountered_error = true;
 				continue;
 			}
 
@@ -326,6 +333,6 @@ namespace parcels {
 
 		dwhttp::close_connection(true);
 
-		return true;
+		return !encountered_error;
 	}
 }
