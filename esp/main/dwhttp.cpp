@@ -390,9 +390,10 @@ namespace dwhttp {
 
 						rlen = lwip_recv(this->sockno, buf, len, 0);
 						if (rlen <= 0) {
-							if (rlen < 0 && errno == EINTR) {
+							if (rlen < 0 && (errno == EINTR || errno == EAGAIN)) {
 								continue;
 							}
+							ESP_LOGE(TAG, "read failed with errno %d", errno);
 							return -1;
 						}
 						return (int)rlen;
@@ -405,7 +406,8 @@ namespace dwhttp {
 
 						wlen = lwip_send(this->sockno, buf, len, 0);
 						if (wlen <= 0) {
-							if (wlen < 0 && errno == EINTR) continue;
+							if (wlen < 0 && (errno == EINTR || errno == EAGAIN)) continue;
+							ESP_LOGE(TAG, "write failed with errno %d", errno);
 							return -1;
 						}
 						return (int)wlen;
