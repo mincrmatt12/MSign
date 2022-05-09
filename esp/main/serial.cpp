@@ -276,7 +276,7 @@ size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
 void serial::SerialInterface::trigger_slot_update(uint16_t slotid) {
 	DataUpdateRequest dur;
 	dur.type = DataUpdateRequest::TypeTriggerUpdate;
-	dur.d_dirty.slotid = slotid;
+	dur.d_trigger.slotid = slotid;
 	dum.queue_request(dur);
 }
 

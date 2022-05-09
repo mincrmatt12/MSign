@@ -179,6 +179,9 @@ block_ok:
 				case DataUpdateRequest::TypeGetSize:
 					*dur.d_getsz.cursize_out = arena.contents_size(dur.d_getsz.slotid);
 					break;
+				case DataUpdateRequest::TypeTriggerUpdate:
+					trigger_update_handler(dur);
+					break;
 				default:
 					break;
 			}
@@ -186,6 +189,7 @@ block_ok:
 	}
 
 	void DataUpdateManager::trigger_update_handler(DataUpdateRequest& dur) {
+		ESP_LOGD(TAG, "triggered update for slot %03x", dur.d_trigger.slotid);
 		for (auto b = arena.begin(dur.d_trigger.slotid); b != arena.end(dur.d_trigger.slotid); ++b) {
 			if (b->location != bheap::Block::LocationRemote) b->flags |= bheap::Block::FlagDirty;
 		}
