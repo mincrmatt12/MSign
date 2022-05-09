@@ -191,7 +191,7 @@ namespace draw {
 	struct PageScrollHelper {
 		// get the current y offset of the scroll
 		int16_t current() {
-			return -scroll_offset - animation_offset();
+			return params.start_y - scroll_offset - animation_offset();
 		}
 
 		// get the extra scroll amount performed during a transition
@@ -204,8 +204,8 @@ namespace draw {
 			ScrollTracker& operator+=(int16_t entry_height) {
 				int16_t onscreen_coord_without_animation = y + animation_offset;
 				y += entry_height;
-				if (onscreen_coord_without_animation + entry_height < outer.params.threshold_screen_end && 
-						onscreen_coord_without_animation > outer.params.threshold_screen_start)
+				if (onscreen_coord_without_animation + entry_height <= outer.params.threshold_screen_end && 
+						onscreen_coord_without_animation >= outer.params.threshold_screen_start)
 					height_onscreen += entry_height;
 				total_height += entry_height;
 
@@ -214,20 +214,34 @@ namespace draw {
 			
 			ScrollTracker(const ScrollTracker& other) = delete;
 			~ScrollTracker() {
-				outer.update_with(height_onscreen, total_height);
+				if (fixed_requested) {
+					outer.fix_at(total_height, fix_min_y, fix_max_y);
+				}
+				else {
+					outer.update_with(height_onscreen, total_height);
+				}
+			}
+
+			void fix(int16_t entry_height) {
+				fix_min_y = y - outer.current();
+				(*this) += entry_height;
+				fix_max_y = y - outer.current();
+				fixed_requested = true;
 			}
 
 		private:
-			ScrollTracker(PageScrollHelper& outer, int16_t initial_height) : outer(outer), y(initial_height) {
+			ScrollTracker(PageScrollHelper& outer) : outer(outer), y(outer.current()) {
 				animation_offset = outer.animation_offset();
 			}
-			int16_t y, height_onscreen = 0, total_height = 0, animation_offset;
+			int16_t y, height_onscreen = 0, total_height = 0, animation_offset, fix_min_y = 0, fix_max_y = 0;
+			bool fixed_requested = false;
 			PageScrollHelper& outer;
 		};
 
-		ScrollTracker begin(int16_t start_y=0);
+		ScrollTracker begin();
 
 		struct Params {
+			int16_t start_y = 10; // initial y coordinate
 			int16_t threshold_screen_end = 56; // content that spans y-space after this coordinate is considered "off-screen"
 			int16_t threshold_screen_start = 10; // content that spans y-space before this is considered "off-screen"
 			int16_t screen_region_end = 63; // actual highest coordinate of visible region (if total content fits in this, do not scroll)
@@ -238,6 +252,7 @@ namespace draw {
 		PageScrollHelper(const Params& params);
 	private:
 		void update_with(int16_t onscreen_height, int16_t total_height);
+		void fix_at(int16_t total_height, int16_t min_y, int16_t max_y);
 
 		const Params& params;
 		int16_t scroll_offset = 0, scroll_target = 0;

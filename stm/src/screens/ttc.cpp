@@ -56,7 +56,7 @@ void screen::TTCScreen::draw() {
 		}
 
 		{
-			auto y = scroll_helper.begin(10);
+			auto y = scroll_helper.begin();
 			// Check first slot
 			for (uint8_t slot = 0; slot < 5; ++slot) {
 				if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {

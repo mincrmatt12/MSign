@@ -319,7 +319,7 @@ namespace draw {
 	}
 
 	void PageScrollHelper::update_with(int16_t onscreen_height, int16_t total_height) {
-		int16_t region_height = params.screen_region_end - params.threshold_screen_start;
+		int16_t region_height = params.screen_region_end - params.start_y;
 		// Is there content to scroll?
 		if (total_height > region_height) {
 			// Has a scroll cycle finished completely?
@@ -329,7 +329,7 @@ namespace draw {
 			}
 
 			// Does the current scrolled region end on screen?
-			if (params.threshold_screen_start - scroll_offset + total_height < region_height) {
+			if (params.start_y - scroll_offset + total_height < region_height) {
 				scroll_target = 0; // Scroll back to top
 			}
 			else {
@@ -343,8 +343,18 @@ namespace draw {
 		}
 	}
 
-	PageScrollHelper::ScrollTracker PageScrollHelper::begin(int16_t start_y) {
-		return ScrollTracker(*this, start_y);
+	void PageScrollHelper::fix_at(int16_t total_height, int16_t min_y, int16_t max_y) {
+		if (max_y < params.screen_region_end) {
+			scroll_offset = 0;
+			scroll_target = 0;
+		}
+		else {
+			scroll_offset = scroll_target = min_y;
+		}
+	}
+
+	PageScrollHelper::ScrollTracker PageScrollHelper::begin() {
+		return ScrollTracker(*this);
 	}
 
 	PageScrollHelper::PageScrollHelper(const Params& params) : params(params) {
