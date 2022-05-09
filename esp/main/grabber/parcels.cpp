@@ -25,6 +25,7 @@ namespace parcels {
 		return [did, offset = (size_t)0] (const char * text) mutable {
 			if (text == nullptr) {
 				serial::interface.allocate_slot_size(did, offset);
+				serial::interface.trigger_slot_update(did);
 				return offset;
 			}
 			size_t newend = offset + strlen(text) + 1;
@@ -42,7 +43,18 @@ namespace parcels {
 		return wifi::millis_to_local(1000 * wifi::timegm(&parsed));
 	}
 
-	slots::ParcelInfo::StatusIcon get_icon_enum(const char * text) {return slots::ParcelInfo::UNK;}
+	slots::ParcelInfo::StatusIcon get_icon_enum(const char * text) {
+		if (!strcmp(text, "pre_transit")) return slots::ParcelInfo::PRE_TRANSIT;
+		else if (!strcmp(text, "in_transit")) return slots::ParcelInfo::IN_TRANSIT;
+		else if (!strcmp(text, "out_for_delivery")) return slots::ParcelInfo::OUT_FOR_DELIVERY;
+		else if (!strcmp(text, "delivered")) return slots::ParcelInfo::DELIVERED;
+		else if (!strcmp(text, "available_for_pickup")) return slots::ParcelInfo::READY_FOR_PICKUP;
+		else if (!strcmp(text, "failure")) return slots::ParcelInfo::FAILED_TO_DELIVER;
+		else if (!strcmp(text, "cancelled")) return slots::ParcelInfo::CANCELLED;
+		else if (!strcmp(text, "error")) return slots::ParcelInfo::GENERAL_ERROR;
+		else if (!strcmp(text, "return_to_sender")) return slots::ParcelInfo::RETURN_TO_SENDER;
+		return slots::ParcelInfo::UNK;
+	}
 
 	struct LocationBuf {
 		const char * get() { return buf; }
@@ -79,6 +91,8 @@ namespace parcels {
 		bool has_city = false, has_country = false;
 	};
 
+	constexpr inline size_t max_single_entry_textcount = 480;
+
 	void init() {}
 	bool loop() {
 		if (!parcels_api_key) return true;
@@ -88,12 +102,15 @@ namespace parcels {
 		serial::interface.delete_slot(slots::PARCEL_INFOS);
 		serial::interface.delete_slot(slots::PARCEL_EXTRA_INFOS);
 
-		auto append_shortheap = generate_strappender(slots::PARCEL_STATUS_SHORT);
+		auto append_shortheap = generate_strappender(slots::PARCEL_STATUS_SHORT), append_longheap = generate_strappender(slots::PARCEL_STATUS_LONG);
 		int i = -1;
 
-		int n_parcels = 0, n_infolines = 0;
+		int n_parcels = 0;
 
-		slots::ParcelInfo pis[6];
+		slots::ParcelInfo pis[6]{};
+		int parcel_entry_lengths[6]{};
+		bool parcel_oks[6]{};
+		size_t parcel_entry_text_lens[6]{};
 		char auth[96];
 
 		snprintf(auth, 96, "Bearer %s", parcels_api_key);
@@ -102,14 +119,11 @@ namespace parcels {
 			{NULL, NULL}
 		};
 
+		char url[128];
+
 		for (const auto& cfg : tracker_configs) {
 			i += 1;
 			if (!cfg.enabled) continue;
-
-			slots::ParcelInfo &pi = pis[n_parcels++];
-			char url[128];
-			LocationBuf last_seen_location;
-			char * last_seen_status_line = nullptr;
 
 			// get url
 			snprintf(url, 128, "/v2/trackers/%s", cfg.tracker_id);
@@ -118,8 +132,16 @@ namespace parcels {
 
 			if (!dw.ok()) {
 				ESP_LOGW(TAG, "Failed to request tracker %s", cfg.tracker_id);
+				if (dw.result_code() == 404) {
+					ESP_LOGI(TAG, "Disabling tracker...");
+					cfg.enabled = false;
+				}
 				continue;
 			}
+
+			slots::ParcelInfo &pi = pis[n_parcels++];
+			LocationBuf last_seen_location;
+			char * last_seen_status_line = nullptr;
 
 			pi.status.flags = 0;
 			pi.name_offset = parcel_name_offsets[i]; // load name from globals
@@ -143,6 +165,7 @@ namespace parcels {
 					}
 				}
 				else if (stack_ptr >= 3 && strcmp(stack[1]->name, "tracking_details") == 0 && stack[1]->is_array()) {
+					parcel_entry_lengths[i] = stack[1]->index;
 					if (last_index != stack[1]->index) {
 						last_index = stack[1]->index;
 						new (&last_seen_location) LocationBuf{};
@@ -152,6 +175,7 @@ namespace parcels {
 						if (last_seen_status_line) free(last_seen_status_line);
 						pi.status.flags |= pi.status.HAS_STATUS;
 						last_seen_status_line = strdup(v.str_val);
+						parcel_entry_text_lens[i] += strlen(v.str_val);
 					}
 					else if (strcmp(stack[2]->name, "status") == 0 && v.type == v.STR && strcmp(v.str_val, "unknown")) {
 						pi.status_icon = get_icon_enum(v.str_val);
@@ -188,15 +212,113 @@ namespace parcels {
 				free(last_seen_status_line);
 				pi.status.flags |= pi.status.HAS_STATUS;
 			}
+
+			parcel_oks[i] = true;
 		}
+
+		if (!n_parcels) {
+			serial::interface.delete_slot(slots::PARCEL_STATUS_SHORT);
+			serial::interface.delete_slot(slots::PARCEL_STATUS_LONG);
+
+			dwhttp::close_connection(true);
+			return true;
+		}
+
+		serial::interface.update_slot_raw(slots::PARCEL_INFOS, &pis, sizeof(slots::ParcelInfo) * n_parcels);
+		append_shortheap(nullptr); // truncate
+
+		// now, begin parsing the extended info by re-requesting all the packages
+		i = -1;
+		int j = -1;
+
+		int n_extras = 0;
+
+		for (const auto& cfg : tracker_configs) {
+			++i;
+			if (!parcel_oks[i]) continue;
+			++j;
+			// get url
+			snprintf(url, 128, "/v2/trackers/%s", cfg.tracker_id);
+			auto dw = dwhttp::download_with_callback("_api.easypost.com", url, headers);
+			dw.make_nonclose();
+			
+			// compute how many we're going to take
+			size_t entry_count = (parcel_entry_text_lens[i] > max_single_entry_textcount ? (
+				    /* assume roughly equal distribution */ (parcel_entry_lengths[i] * max_single_entry_textcount) / parcel_entry_text_lens[i]) :
+				    /* take all */                          parcel_entry_lengths[i] - 1);
+
+			if (entry_count <= 1) continue;
+
+			int entry_start_idx = parcel_entry_lengths[i] - entry_count - 1;
+
+			slots::ParcelInfo &pi = pis[j];
+			if (entry_count != parcel_entry_lengths[i]) pi.status.flags |= pi.status.EXTRA_INFO_TRUNCATED;
+			LocationBuf last_seen_location{};
+
+			// extrainfo buffer
+			slots::ExtraParcelInfoEntry * extra_infos = new slots::ExtraParcelInfoEntry[entry_count]{};
+
+			json::JSONParser p_parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
+				if (stack_ptr >= 2 && strcmp(stack[1]->name, "tracking_details") == 0 && stack[1]->is_array() && stack[1]->index >= entry_start_idx && stack[1]->index < parcel_entry_lengths[i]-1) {
+					slots::ExtraParcelInfoEntry &pie = extra_infos[stack[1]->index - entry_start_idx];
+					if (stack_ptr >= 3) {
+						// Grab the latest message
+						if (strcmp(stack[2]->name, "message") == 0 && v.type == v.STR) {
+							// Append
+							pie.status.status_offset = append_longheap(v.str_val);
+							pie.status.flags |= pie.status.HAS_STATUS;
+						}
+						else if (strcmp(stack[2]->name, "datetime") == 0 && v.type == v.STR) {
+							pie.updated_time = process_datetime(v.str_val);
+							pie.status.flags |= pie.status.HAS_UPDATED_TIME;
+						}
+
+						// process location: 
+						else if (stack_ptr == 4 && strcmp(stack[2]->name, "tracking_location") == 0) {
+							if (strcmp(stack[3]->name, "city") == 0 && v.type == v.STR) {
+								last_seen_location.push_city(v.str_val);
+							}
+							else if (strcmp(stack[3]->name, "country") == 0 && v.type == v.STR) {
+								last_seen_location.push_country(v.str_val);
+							}
+						}
+					}
+					else {
+						// fill in entry parcel_for & location
+						pie.for_parcel = j;
+
+						if (last_seen_location) {
+							pie.status.location_offset = append_longheap(last_seen_location.get());
+							pie.status.flags |= pie.status.HAS_LOCATION;
+						}
+
+						// reset locationbuf
+						new (&last_seen_location) LocationBuf{};
+					}
+				}
+			});
+
+			if (!p_parser.parse(dw)) {
+				delete[] extra_infos;
+				continue;
+			}
+
+			// reverse order
+			std::reverse(extra_infos, extra_infos + entry_count);
+
+			// Append to big array
+			serial::interface.allocate_slot_size(slots::PARCEL_EXTRA_INFOS, (n_extras + entry_count) * sizeof(slots::ExtraParcelInfoEntry));
+			serial::interface.update_slot_range(slots::PARCEL_EXTRA_INFOS, extra_infos, n_extras, entry_count, true, false);
+
+			n_extras += entry_count;
+
+			delete[] extra_infos;
+		}
+
+		serial::interface.trigger_slot_update(slots::PARCEL_EXTRA_INFOS);
+		append_longheap(nullptr); // truncate
 
 		dwhttp::close_connection(true);
-
-		if (n_parcels) {
-			append_shortheap(nullptr); // truncate
-			serial::interface.trigger_slot_update(slots::PARCEL_STATUS_SHORT);
-			serial::interface.update_slot_raw(slots::PARCEL_INFOS, &pis, sizeof(slots::ParcelInfo) * n_parcels);
-		}
 
 		return true;
 	}
