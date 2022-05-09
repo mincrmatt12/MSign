@@ -108,7 +108,7 @@ namespace sd {
 				char oldname[32], newname[32];
 				snprintf(oldname, 32, "/log/log.%d", i);
 				snprintf(newname, 32, "/log/log.%d", i+1);
-				if (i > 3) {
+				if (i > 10) {
 					ESP_LOGW("sdlog", "deleting old log %s", oldname);
 					f_unlink(oldname);
 				}
