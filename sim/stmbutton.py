@@ -3,6 +3,7 @@
 import os
 import mmap
 import ctypes
+import time
 import struct
 import stat
 import sys
@@ -72,6 +73,7 @@ try:
                 wrt = True
         if wrt:
             update_dat()
+        time.sleep(0.01)
 finally:
     rtld.shm_unlink(ctypes.create_string_buffer(b"/msign_buttons"))
     print("> cleaned up")

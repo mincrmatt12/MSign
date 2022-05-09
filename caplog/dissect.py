@@ -70,6 +70,7 @@ else:
         buf = bytearray()
         while len(buf) < x:
             buf += os.read(f.fileno(), x-len(buf))
+            if len(buf) < x: time.sleep(0.01)
         return buf
     
     def read():
