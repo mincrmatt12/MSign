@@ -415,10 +415,10 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			break;
 		case slots::ParcelInfo::RETURN_TO_SENDER:
 		case slots::ParcelInfo::FAILED_TO_DELIVER:
-			iconcolorbase = 0xff4444_c;
+			iconcolorbase = 0xff4444_cc;
 			break;
 		case slots::ParcelInfo::GENERAL_ERROR:
-			iconcolorbase = 0xff7777_c;
+			iconcolorbase = 0xff7777_cc;
 			break;
 
 		default:
