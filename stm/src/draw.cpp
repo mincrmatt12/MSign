@@ -274,7 +274,7 @@ namespace draw {
 		for (y = y0, i = -(x1 - x0) + 1; y <= y1; dy += 4*i + 4, ++y, i += 2) {
 			int dx = rsq;
 			for (x = x0, j = -(y1 - y0) + 1; x <= x1; dx += 4*j + 4, ++x, j += 2) {
-				if (dx + dy <= rsq + 1) {
+				if (dx + dy <= rsq + 6) { // 1.5 pixel (looks better at scale)
 					fb.at(x, y) = rgb;
 				}
 			}
