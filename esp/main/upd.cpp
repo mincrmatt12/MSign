@@ -372,7 +372,7 @@ failure: // clean up
 									memset(current_chunk_buffer, 0, 253);
 									f_read(&stm_firmware, current_chunk_buffer, 253, &br);
 									current_chunk_size = br;
-									ESP_LOGD(TAG, "sending chunk %d", chunk);
+									if (!(chunk % 20)) ESP_LOGD(TAG, "sending chunk %d", chunk);
 									break;
 								}
 							case slots::protocol::UpdateStatus::RESEND_LAST_CHUNK_CSUM:
