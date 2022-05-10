@@ -380,7 +380,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 		fb.at(1, y) = fb.at(3, y) = 0x40_c;
 	}
 	// Mask out header area
-	draw::rect(matrix.get_inactive_buffer(), 0, 0, 127, header_height, 0);
+	draw::rect(matrix.get_inactive_buffer(), 0, 0, 128, header_height, 0);
 
 	// Draw header text
 	draw_parcel_name(0, parcel);
