@@ -1,6 +1,7 @@
 #include "parcels.h"
 #include "../srv.h"
 #include "../fonts/tahoma_9.h"
+#include "../fonts/dejavu_12.h"
 #include "../fonts/lcdpixel_6.h"
 #include "../tasks/screen.h"
 
@@ -8,6 +9,128 @@ extern srv::Servicer servicer;
 extern matrix_type matrix;
 extern uint64_t rtc_time;
 extern tasks::DispMan dispman;
+
+namespace bitmap::parcels {
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t cancelled[] = {
+		0b00000000,0b00000000,
+		0b00000100,0b00000000,
+		0b00001000,0b10000000,
+		0b00010001,0b00000000,
+		0b00101110,0b00000000,
+		0b01001010,0b01000000,
+		0b00001110,0b10000000,
+		0b00010001,0b00000000,
+		0b00100010,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t delivered[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000001,0b00000000,
+		0b00001010,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t in_transit[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b10000000,
+		0b00111000,0b11000000,
+		0b00101011,0b11100000,
+		0b00111000,0b11000000,
+		0b00000000,0b10000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t out_for_delivery[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00111111,0b00000000,
+		0b00111110,0b10000000,
+		0b00111111,0b10000000,
+		0b00010001,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t error[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00001010,0b00000000,
+		0b00000100,0b00000000,
+		0b00001010,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t pre_transit[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00111111,0b10000000,
+		0b00000000,0b00000000,
+		0b00111111,0b10000000,
+		0b00000000,0b00000000,
+		0b00111111,0b10000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t ready_for_pickup[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b10000000,
+		0b00111111,0b10000000,
+		0b00000000,0b10000000,
+		0b00000000,0b10000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t return_to_sender[] = {
+		0b00000000,0b00000000,
+		0b00001000,0b00000000,
+		0b00011000,0b00000000,
+		0b00111111,0b00000000,
+		0b00011000,0b10000000,
+		0b00001001,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000
+	};
+}
 
 screen::ParcelScreen::ParcelScreen() {
 	servicer.set_temperature_all<
@@ -133,8 +256,8 @@ bool screen::ParcelScreen::interact() {
 			}
 
 			if (parcel_entries_scroll < 0) parcel_entries_scroll = 0;
-			if (parcel_entries_scroll && (16 + parcel_entries_size - parcel_entries_scroll/128 < 64)) {
-				parcel_entries_scroll = (16 + parcel_entries_size - 64)*128;
+			if (parcel_entries_scroll && (18 + parcel_entries_size - parcel_entries_scroll/128 < 64)) {
+				parcel_entries_scroll = (18 + parcel_entries_size - 64)*128;
 			}
 			
 			break;
@@ -192,7 +315,7 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	
 	// Mask out the scrolling bubbling line
 	draw::rect(matrix.get_inactive_buffer(), 0, y, 5, y2, 0);
-	draw::line(matrix.get_inactive_buffer(), 2, y, 2, y2, 0x22_c);
+	draw::line(matrix.get_inactive_buffer(), 2, y, 2, y2, 0x40_c);
 
 	// draw the bulb
 	int16_t bulbpos = y + (y3 - y) / 2;
@@ -212,7 +335,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	
 	// Draw scrollable content first
 	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -6;
-	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 16 : 10;
+	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 18 : 12;
 
 	{
 		int16_t y = header_height - parcel_entries_scroll/128;
@@ -232,6 +355,16 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 			y += sz;
 			parcel_entries_size += sz;
 		}
+
+		y -= 1;
+		auto& fb = matrix.get_inactive_buffer();
+
+		// then, draw end stop/arrow
+		if (parcel.status.flags & parcel.status.EXTRA_INFO_TRUNCATED) {
+			y -= 1;
+		}
+
+		fb.at(1, y) = fb.at(3, y) = 0x40_c;
 	}
 	// Mask out header area
 	draw::rect(matrix.get_inactive_buffer(), 0, 0, 127, header_height, 0);
@@ -242,18 +375,18 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	if (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) {
 		char buf[48] = "est. delivery "; draw::format_relative_date(buf+strlen(buf), 48-strlen(buf), parcel.estimated_delivery);
 		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, 15, 0xaa_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, 17, 0xaa_c);
 	}
 }
 
 led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::ParcelInfo& parcel) {
 	auto names = *servicer[slots::PARCEL_NAMES] ;
 	if (parcel.name_offset > servicer[slots::PARCEL_NAMES].datasize) return 0;
-	led::color_t iconcolorbase = 0xaa_cc;
+	led::color_t iconcolorbase = 0x55_cc, iconcolorcontent = 0xff_c;
 									
 	switch (parcel.status_icon) {
 		case slots::ParcelInfo::PRE_TRANSIT:
-			iconcolorbase = 0xcc_c;
+			iconcolorbase = 0x99_c;
 			break;
 		case slots::ParcelInfo::IN_TRANSIT:
 			iconcolorbase = 0x4579f5_cc;
@@ -262,7 +395,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			iconcolorbase = 0xd8f51d_cc;
 			break;
 		case slots::ParcelInfo::DELIVERED:
-			iconcolorbase = 0x108523_cc;
+			iconcolorbase = 0x109513_cc;
 			break;
 		case slots::ParcelInfo::READY_FOR_PICKUP:
 			iconcolorbase = 0x0b9665_cc;
@@ -280,13 +413,46 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 	}
 
         // draw name
-	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::tahoma_9::info, 12 + draw::scroll(rtc_time / 8, draw::text_size(names + parcel.name_offset, font::tahoma_9::info), 118), y + 8, 0xff_c);
+	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::dejavusans_12::info, 12 + draw::scroll(rtc_time / 8, draw::text_size(names + parcel.name_offset, font::dejavusans_12::info), 118), y + 10, 0xff_c);
 
 	// draw icon
 	{
-		// todo: icons
-		draw::rect(  matrix.get_inactive_buffer(), 0, y, 5, y + 9, 0);              // fill half-circle so scrolling doesn't look weird
-		draw::circle(matrix.get_inactive_buffer(), 1, y, 11, y + 10, iconcolorbase);  // circle background
+		draw::rect(  matrix.get_inactive_buffer(), 0, y, 6, y + 11, 0);              // fill half-circle so scrolling doesn't look weird
+		draw::circle(matrix.get_inactive_buffer(), 1, y, 12, y + 11, iconcolorbase);  // circle background
+		const uint8_t * icon = nullptr;
+		switch (parcel.status_icon) {
+			using namespace bitmap::parcels;
+
+			case slots::ParcelInfo::PRE_TRANSIT:
+				icon = pre_transit;
+				break;
+			case slots::ParcelInfo::IN_TRANSIT:
+				icon = in_transit;
+				break;
+			case slots::ParcelInfo::OUT_FOR_DELIVERY:
+				icon = out_for_delivery;
+				iconcolorcontent = 0x3344ef_c;
+				break;
+			case slots::ParcelInfo::DELIVERED:
+				icon = delivered;
+				break;
+			case slots::ParcelInfo::READY_FOR_PICKUP:
+				icon = ready_for_pickup;
+				break;
+			case slots::ParcelInfo::RETURN_TO_SENDER:
+				icon = return_to_sender;
+				break;
+			case slots::ParcelInfo::GENERAL_ERROR:
+			case slots::ParcelInfo::FAILED_TO_DELIVER:
+				icon = error;
+				break;
+			case slots::ParcelInfo::CANCELLED:
+				icon = cancelled;
+				break;
+			default:
+				return iconcolorbase;
+		}
+		draw::bitmap(matrix.get_inactive_buffer(), icon, 11, 11, 2, 1, y, iconcolorcontent); // draw icon
 	}
 
 	return iconcolorbase;
@@ -301,7 +467,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 
 	auto iconcolorbase = draw_parcel_name(y, parcel);
 
-	y += 10; height += 10;
+	y += 11; height += 11;
 
 	// draw progress bar
 	{
@@ -345,7 +511,6 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 
 		// draw connecting linkage
 		matrix.get_inactive_buffer().at(6, y) = iconcolorbase; 
-		matrix.get_inactive_buffer().at(7, y) = iconcolorbase;
 		// draw line to bulb left
 		draw::line(matrix.get_inactive_buffer(), 7, y + 1, bulbpos - 1, y + 1, iconcolorbase);
 		// draw top/buttom of bulb
@@ -382,7 +547,6 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		char buf[32];
 		draw::format_relative_date(buf, 32, parcel.updated_time);
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - draw::text_size(buf, font::lcdpixel_6::info), y + 5, 0xaa_c);
-		// todo: make nice "time formatter"
 		y += 6; height += 6;
 	}
 
