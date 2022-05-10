@@ -30,7 +30,7 @@ namespace screen {
 		// Scroll tracker for parcels
 		constexpr static draw::PageScrollHelper::Params scroll_params = {
 			.start_y = 0,
-			.threshold_screen_end = 64,
+			.threshold_screen_end = 56,
 			.threshold_screen_start = 0,
 			.screen_region_end = 64,
 			.hold_time = 2500,
