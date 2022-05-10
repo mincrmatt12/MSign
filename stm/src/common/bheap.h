@@ -851,7 +851,7 @@ finish_setting:
 			// Can we use the cache?
 			if (bcache.contains(slotid)) {
 				const Block& result = get_from_cache(bcache.lookup(slotid));
-				if (result.slotid != slotid && result) { // be resistant against cache corruption
+				if (result.slotid == slotid && result) { // be resistant against cache corruption
 					return result;
 				}
 			}
