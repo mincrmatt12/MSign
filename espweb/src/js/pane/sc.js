@@ -43,7 +43,8 @@ function displayTime(tm) {
 const screens = [
 	"ttc",
 	"weather",
-	"model"
+	"model",
+	"parcels"
 ];
 
 function ScEntry({data, updateData}) {

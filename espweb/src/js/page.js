@@ -24,6 +24,7 @@ import UpdatePane from "./pane/upd"
 import ModelPane from "./pane/model"
 import CfgPullPane from "./pane/cfgpull"
 import RawPane from "./pane/raw"
+import ParcelsPane from "./pane/parcels"
 
 import ConfigContext from "./ctx"
 import BackendVersionContext from "./ver.js"
@@ -115,6 +116,9 @@ function App() {
 								<LinkContainer to="/model">
 									<Nav.Link>model</Nav.Link>
 								</LinkContainer>
+								<LinkContainer to="/parcels">
+									<Nav.Link>parcels</Nav.Link>
+								</LinkContainer>
 								<LinkContainer to="/cfgpull">
 									<Nav.Link>cfgpull</Nav.Link>
 								</LinkContainer>
@@ -157,6 +161,9 @@ function App() {
 								</Route>
 								<Route path="/model">
 									<ModelPane   />
+								</Route>
+								<Route path="/parcels">
+									<ParcelsPane />
 								</Route>
 								<Route path="/cfgpull">
 									<CfgPullPane />
