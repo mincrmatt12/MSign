@@ -300,8 +300,12 @@
 					);
 				}
 
+				let titlemsg = "";
+				if (records !== undefined && "msg" in records) titlemsg = records.msg;
+
 				return <div className="blockbox">
 					<h1 className="blockheader">{props.title}</h1>
+					<h2 className="blockheader">{titlemsg}</h2>
 					{records && <h2 className="blockheader">{records.time - props.basetime}</h2>}
 					{elements}
 				</div>;

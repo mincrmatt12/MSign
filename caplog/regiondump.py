@@ -37,6 +37,14 @@ class RawBHeapDump(gdb.Command):
         args = gdb.string_to_argv(arg)
         region_blob = gdb.parse_and_eval(args[0])
         fname = args[1]
+        if len(args) > 2:
+            print(args)
+            try:
+                msg = gdb.execute(args[2], to_string=True)
+            except:
+                msg = "<eval fail>"
+        else:
+            msg = ""
 
         #print("got blob ", region_blob, region_blob.address, region_blob.type.sizeof)
         
@@ -124,7 +132,8 @@ class RawBHeapDump(gdb.Command):
 
         data["records"].append({
             "blocks": record,
-            "time": time.time()
+            "time": time.time(),
+            "msg": msg
         })
         with open(fname, "w") as f:
             f.write(json.dumps(data))
