@@ -26,6 +26,7 @@
 #undef recv
 #undef close
 #undef bind
+#undef flush
 
 // config defaults
 #define DEFAULT_USERNAME "admin"
@@ -735,6 +736,7 @@ reachedend:
 			f_close(&out_file);
 
 			send_static_response(200, "OK", gotcount == 2 ? "Updating stm+esp" : "Updating stm only");
+			lwip_shutdown(client_sock, SHUT_RDWR);
 			lwip_close(client_sock);
 			vTaskDelay(pdMS_TO_TICKS(500));
 			serial::interface.reset();
