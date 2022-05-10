@@ -100,7 +100,7 @@ extern "C" void app_main() {
 	xEventGroupWaitBits(wifi::events, wifi::WifiConnected, false, true, portMAX_DELAY);
 
 	if (webui::mode != webui::WebuiMode::DISABLED) {
-		if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  5, NULL) != pdPASS) {
+		if (xTaskCreate(webui::run, "webUI", 3072 * STACK_MULT, nullptr,  6, NULL) != pdPASS) {
 			ESP_LOGE(TAG, "Failed to create webui; running without it");
 		}
 	}
