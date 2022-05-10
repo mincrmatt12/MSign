@@ -52,6 +52,9 @@ namespace grabber {
 
 	// Re-init all grabbers (call after reloading cfg, for example)
 	void reload_all();
+
+	// Is the grabber task currently stopped?  Used by the webui to make requests occasionally
+	bool is_stopped();
 }
 
 #endif

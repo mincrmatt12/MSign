@@ -130,6 +130,8 @@ exit:
 		while (1) {vTaskDelay(portMAX_DELAY);}
 	}
 
+	bool is_stopped() { return grabber_task == nullptr; }
+
 	void check_and_restart_grabber_timer(TimerHandle_t handle) {
 		static int grab_task_dead_for = 0;
 
