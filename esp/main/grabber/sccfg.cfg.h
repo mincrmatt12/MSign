@@ -3,7 +3,7 @@
 #include <stdint.h>
 
 namespace sccfg {
-	const inline uint8_t number_of_screens = 3;
+	const inline uint8_t number_of_screens = 4;
 
 	struct ScreenEntry {
 		struct OnOffTime {
