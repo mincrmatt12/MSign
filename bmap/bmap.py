@@ -30,7 +30,7 @@ for y in range(h):
             color = img.getpixel((x, y))[:3]
 
 print(f"// w={w}, h={h}, stride={stride}, color={color[0]}, {color[1]}, {color[2]}")
-bitmapname = os.path.splitext(os.path.basename(sys.argv[1]))[0]
+bitmapname = os.path.splitext(os.path.basename(sys.argv[1]))[0].replace("-", "_")
 print(f"const uint8_t {bitmapname}[] = {{")
 
 for pos in range(0, len(data), stride):
