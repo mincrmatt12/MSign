@@ -21,6 +21,7 @@ namespace screen {
 	private:
 		int16_t draw_short_parcel_entry(int16_t y, const slots::ParcelInfo& info);
 		void draw_long_view(const slots::ParcelInfo& info);
+		void draw_loading();
 
 		led::color_t draw_parcel_name(int16_t y, const slots::ParcelInfo& psl);
 
@@ -29,8 +30,10 @@ namespace screen {
 		// Scroll tracker for parcels
 		constexpr static draw::PageScrollHelper::Params scroll_params = {
 			.start_y = 0,
+			.threshold_screen_end = 64,
 			.threshold_screen_start = 0,
-			.hold_time = 2500
+			.screen_region_end = 64,
+			.hold_time = 2500,
 		};
 
 		draw::PageScrollHelper scroll_tracker{scroll_params};

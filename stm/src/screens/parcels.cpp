@@ -168,6 +168,10 @@ void screen::ParcelScreen::draw() {
 	srv::ServicerLockGuard g(servicer);
 
 	const auto& parcels = servicer.slot<slots::ParcelInfo *>(slots::PARCEL_INFOS);
+	if (!parcels) {
+		draw_loading();
+		return;
+	}
 
 	if (!dispman.interacting()) {
 		auto y = scroll_tracker.begin();
@@ -327,8 +331,17 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	return y2 - y + 1;
 }
 
+void screen::ParcelScreen::draw_loading() {
+	const char * txt = "loading";
+	int pos = 64 - draw::text_size(txt, font::tahoma_9::info) / 2;
+	draw::text(matrix.get_inactive_buffer(), txt, font::tahoma_9::info, pos, 34, 0xff_c);
+}
+
 void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
-	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || !servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS)) return;
+	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || !servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS)) {
+		draw_loading();
+		return;
+	}
 	// expects lock to be held
 	auto statuses = *servicer[slots::PARCEL_STATUS_SHORT], statuses_long = *servicer[slots::PARCEL_STATUS_LONG];
 	const auto& extra_infos = servicer.slot<slots::ExtraParcelInfoEntry *>(slots::PARCEL_EXTRA_INFOS);
@@ -417,7 +430,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 
 	// draw icon
 	{
-		draw::rect(  matrix.get_inactive_buffer(), 0, y, 6, y + 11, 0);              // fill half-circle so scrolling doesn't look weird
+		draw::rect(  matrix.get_inactive_buffer(), 0, y, 6, y + 13, 0);              // fill half-circle so scrolling doesn't look weird
 		draw::circle(matrix.get_inactive_buffer(), 1, y, 12, y + 11, iconcolorbase);  // circle background
 		const uint8_t * icon = nullptr;
 		switch (parcel.status_icon) {
@@ -466,7 +479,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 
 	auto iconcolorbase = draw_parcel_name(y, parcel);
 
-	y += 11; height += 11;
+	y += 12; height += 12;
 
 	// draw progress bar
 	{
@@ -509,6 +522,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		}
 
 		// draw connecting linkage
+		matrix.get_inactive_buffer().at(6, y-1) = iconcolorbase; 
 		matrix.get_inactive_buffer().at(6, y) = iconcolorbase; 
 		// draw line to bulb left
 		draw::line(matrix.get_inactive_buffer(), 7, y + 1, bulbpos - 1, y + 1, iconcolorbase);
