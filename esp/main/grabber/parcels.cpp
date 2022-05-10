@@ -39,9 +39,12 @@ namespace parcels {
 	}
 
 	uint64_t process_datetime(const char * timestring) {
-		struct tm parsed;
-		if (strptime(timestring, "%Y-%m-%dT%H:%M:%SZ", &parsed) == NULL) return 0;
-		return wifi::millis_to_local(1000 * wifi::timegm(&parsed));
+		struct tm parsed{};
+		auto comp = sscanf(timestring, "%d-%d-%dT%d:%d:%dZ", &parsed.tm_year, &parsed.tm_mon, &parsed.tm_mday, &parsed.tm_hour, &parsed.tm_min, &parsed.tm_sec);
+		ESP_LOGD(TAG, "parse %s with %d", timestring, comp);
+		parsed.tm_mon -= 1;
+		parsed.tm_year -= 1900;
+		return wifi::millis_to_local(1000 * (uint64_t)wifi::timegm(&parsed));
 	}
 
 	slots::ParcelInfo::StatusIcon get_icon_enum(const char * text) {
