@@ -175,6 +175,7 @@ namespace parcels {
 					parcel_entry_lengths[i] = stack[1]->index;
 					if (last_index != stack[1]->index) {
 						last_index = stack[1]->index;
+						last_seen_location.~LocationBuf();
 						new (&last_seen_location) LocationBuf{};
 					}
 					// Grab the latest message
@@ -305,6 +306,7 @@ namespace parcels {
 						}
 
 						// reset locationbuf
+						last_seen_location.~LocationBuf();
 						new (&last_seen_location) LocationBuf{};
 					}
 				}
