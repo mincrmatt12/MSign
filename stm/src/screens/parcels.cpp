@@ -382,7 +382,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::ParcelInfo& parcel) {
 	auto names = *servicer[slots::PARCEL_NAMES] ;
 	if (parcel.name_offset > servicer[slots::PARCEL_NAMES].datasize) return 0;
-	led::color_t iconcolorbase = 0x55_cc, iconcolorcontent = 0xff_c;
+	led::color_t iconcolorbase = 0x55_cc, iconcolorcontent = 8;
 									
 	switch (parcel.status_icon) {
 		case slots::ParcelInfo::PRE_TRANSIT:
@@ -413,7 +413,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 	}
 
         // draw name
-	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::dejavusans_12::info, 12 + draw::scroll(rtc_time / 8, draw::text_size(names + parcel.name_offset, font::dejavusans_12::info), 118), y + 10, 0xff_c);
+	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::dejavusans_12::info, 12 + draw::scroll(rtc_time / 11, draw::text_size(names + parcel.name_offset, font::dejavusans_12::info), 118), y + 10, 0xff_c);
 
 	// draw icon
 	{
@@ -431,7 +431,6 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 				break;
 			case slots::ParcelInfo::OUT_FOR_DELIVERY:
 				icon = out_for_delivery;
-				iconcolorcontent = 0x3344ef_c;
 				break;
 			case slots::ParcelInfo::DELIVERED:
 				icon = delivered;
@@ -538,7 +537,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		int textlen = (has_both ? draw::text_size(" - ", status_font) : 0)
 			+ draw::text_size(status_text, status_font) + draw::text_size(location_text, status_font);
 		// draw scrolling status ticker
-		draw::multi_text(matrix.get_inactive_buffer(), status_font, 1 + draw::scroll(rtc_time / 8, textlen), y + 7, status_text, 0xff_c, has_both ? " - " : nullptr, 0xcc_c, location_text, 0x4444ff_cc);
+		draw::multi_text(matrix.get_inactive_buffer(), status_font, 1 + draw::scroll(rtc_time / 10, textlen), y + 7, status_text, 0xff_c, has_both ? " - " : nullptr, 0xcc_c, location_text, 0x4444ff_cc);
 		y += 9; height += 9;
 	}
 
