@@ -934,7 +934,8 @@ notfound:
 
 	void run(void*) {
 restart:
-		if (upd::needed() == upd::WEB_UI) {
+		if (upd::needed() == upd::WEB_UI || update_pending) {
+			update_pending = true;
 			ESP_LOGI(TAG, "Running webui update");
 			set_status_flag(slots::WebuiStatus::INSTALLING_WEBUI_PACK);
 			upd::update_website();
@@ -990,7 +991,6 @@ restart:
 			if (update_pending) {
 				if (client_sock >= 0) lwip_close(client_sock);
 				lwip_close(server_sock);
-				update_pending = false;
 				goto restart;
 			}
 			if (client_sock >= 0) {

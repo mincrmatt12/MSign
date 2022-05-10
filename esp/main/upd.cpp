@@ -161,8 +161,8 @@ namespace upd {
 					UINT bw;
 					f_write(&target, buf, br, &bw);
 					bytes_since_last_yield += bw;
-					if (bytes_since_last_yield > 8192) {
-						vTaskDelay(2);
+					if (bytes_since_last_yield > 4096) {
+						vTaskDelay(10);
 						bytes_since_last_yield = 0;
 					}
 				}
