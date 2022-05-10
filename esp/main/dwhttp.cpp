@@ -388,6 +388,8 @@ namespace dwhttp {
 					while (true) {
 						ssize_t rlen;
 
+						if (!len) return 0;
+
 						rlen = lwip_recv(this->sockno, buf, len, 0);
 						if (rlen <= 0) {
 							if (rlen < 0 && (errno == EINTR || errno == EAGAIN)) {
@@ -403,6 +405,8 @@ namespace dwhttp {
 				int _write(const unsigned char *buf, size_t len) {
 					while (true) {
 						ssize_t wlen;
+
+						if (!len) return 0;
 
 						wlen = lwip_send(this->sockno, buf, len, 0);
 						if (wlen <= 0) {
