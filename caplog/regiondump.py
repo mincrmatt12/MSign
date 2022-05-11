@@ -38,7 +38,6 @@ class RawBHeapDump(gdb.Command):
         region_blob = gdb.parse_and_eval(args[0])
         fname = args[1]
         if len(args) > 2:
-            print(args)
             try:
                 msg = gdb.execute(args[2], to_string=True)
             except:
