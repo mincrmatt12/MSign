@@ -41,6 +41,7 @@ namespace crash {
 		{
 			if((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) != 0)
 			{
+				if (state == 1) state = 2;
 				--delay;
 			}
 
@@ -51,6 +52,9 @@ namespace crash {
 					if (ispressed) state = 1;
 					break;
 				case 1:
+					if (!ispressed) state = 0;
+					break;
+				case 2:
 					if (!ispressed) return;
 					break;
 			}
@@ -280,7 +284,7 @@ reboot:
 			draw::rect(matrix, 0, 12, 128, 64, 0);
 			draw::text(matrix, "rebooting:", 0, 18, 0xff);
 			draw::rect(matrix, 0, 20, tim*16, 26, mkcolor(1, 2, 3));
-			delay_ms(1000);
+			delay_ms(1000, false);
 		}
 
 		NVIC_SystemReset();
