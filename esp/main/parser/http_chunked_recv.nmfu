@@ -21,11 +21,12 @@ parser {
             }
         }
         if (chunk_size == 0) {
-            /[^0-9a-fA-F\r\n]*\r\n[^\r\n]*\r\n/;
+            wait "\r\n";
+            wait "\r\n";
             finish;
         }
-        /[^0-9a-fA-F\r\n]*\r\n/;
+        wait "\r\n";
         yield GOT_CHUNK;
-        /[^\r\n]*\r\n/;
+        wait "\r\n";
     }
 }
