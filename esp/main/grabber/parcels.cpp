@@ -194,8 +194,6 @@ namespace parcels {
 			return true;
 		}
 
-		// TEST DATA TEST DATA THATS RIGHT ITS THE TEST DATA
-
 		serial::interface.delete_slot(slots::PARCEL_INFOS);
 		serial::interface.delete_slot(slots::PARCEL_EXTRA_INFOS);
 

@@ -7,6 +7,7 @@
 #include "../tskmem.h"
 #include "stm32f2xx_ll_cortex.h"
 #include "stm32f2xx_ll_system.h"
+#include "../ui.h"
 #include "stm32f2xx_ll_utils.h"
 #include <alloca.h>
 #include <cstdio>
@@ -31,14 +32,27 @@ namespace crash {
 		return r | (g << 2) | (b << 4);
 	}
 
-	void delay_ms(uint32_t delay) {
+	void delay_ms(uint32_t delay, bool cancellable=true) {
 		volatile uint32_t dummyread = SysTick->CTRL;  // get rid of countflag
+
+		int state = 0;
 
 		while (delay)
 		{
 			if((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) != 0)
 			{
 				--delay;
+			}
+
+			bool ispressed = (UI_BUTTON_PORT->IDR & (1 << ui::Buttons::POWER)) && cancellable;
+
+			switch (state) {
+				case 0: // waiting for pressed
+					if (ispressed) state = 1;
+					break;
+				case 1:
+					if (!ispressed) return;
+					break;
 			}
 		}
 	}
@@ -97,7 +111,13 @@ namespace crash {
 		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
 		// Change VTOR to our VTOR
 		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
-		// Try to exit an exception handler, if possible.
+		// Try to exit an exception handler, if possible. (todo)
+		
+		// Check if sleep mode is enabled -- if so, just reset immediately.
+		if (RTC->BKP4R) {
+			NVIC_SystemReset();
+			while (1) {;}
+		}
 
 		LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
 		LL_TIM_DisableCounter(TIM1);
@@ -113,6 +133,19 @@ namespace crash {
 		bzero(&_svram, &_ecbss - &_svram);
 		// Load our constant data
 		memcpy(&_scdata, &_scidata, &_ecdata - &_scdata);
+
+		// Setup GPIO for power button
+		
+		LL_AHB1_GRP1_EnableClock(UI_BUTTON_PERIPH);
+
+		LL_GPIO_InitTypeDef it{};
+
+		it.Mode = LL_GPIO_MODE_INPUT;
+		it.Pull = LL_GPIO_PULL_DOWN;
+		it.Speed = LL_GPIO_SPEED_FREQ_LOW;
+		it.Pin = (1 << ui::Buttons::POWER);
+
+		LL_GPIO_Init(UI_BUTTON_PORT, &it); // setup to check for power button presses to advance through screens
 
 		__DSB();
 		__ISB();
