@@ -189,7 +189,12 @@ class SlotTypeString:
 
     def get_length(self, dat):
         if b'\x00' in dat:
-            return dat.index(b'\x00') + 1
+            if dat[0] == 0:  # coalesce consecutive cavities
+                leng = 0
+                while dat[leng] == 0: leng += 1
+                return leng
+            else:
+                return dat.index(b'\x00') + 1
         else:
             return len(dat)
 
