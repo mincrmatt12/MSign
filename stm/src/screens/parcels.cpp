@@ -487,7 +487,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 
 		if (parcel.status.flags & slots::ParcelStatusLine::HAS_EST_DEILIVERY && parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery > rtc_time) {
 			// If more than 5 days out, place close to start
-			int hours = (rtc_time - parcel.estimated_delivery) / 60*60*1000;
+			int hours = (parcel.estimated_delivery - rtc_time) / 60*60*1000;
 			if (hours >= 5*24) {
 				bulbpos = 12;
 			}

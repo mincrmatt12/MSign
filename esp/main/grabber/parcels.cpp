@@ -255,7 +255,7 @@ namespace parcels {
 					}
 				}
 				else if (stack_ptr >= 3 && strcmp(stack[1]->name, "tracking_details") == 0 && stack[1]->is_array()) {
-					parcel_entry_lengths[i] = stack[1]->index;
+					parcel_entry_lengths[i] = stack[1]->index + 1;
 					if (last_index != stack[1]->index) {
 						last_index = stack[1]->index;
 						last_seen_location.~LocationBuf();
@@ -349,8 +349,10 @@ namespace parcels {
 
 			int entry_start_idx = parcel_entry_lengths[i] - entry_count - 1;
 
+			ESP_LOGD(TAG, "parcel: ec %d, esi %d, tl %d, el %d", entry_count, entry_start_idx, parcel_entry_text_lens[i], parcel_entry_lengths[i]);
+
 			slots::ParcelInfo &pi = pis[j];
-			if (entry_count != parcel_entry_lengths[i]) pi.status.flags |= pi.status.EXTRA_INFO_TRUNCATED;
+			if (entry_count != parcel_entry_lengths[i]-1) pi.status.flags |= pi.status.EXTRA_INFO_TRUNCATED;
 			LocationBuf last_seen_location{};
 
 			// extrainfo buffer
@@ -415,6 +417,7 @@ namespace parcels {
 			delete[] extra_infos;
 		}
 
+		serial::interface.update_slot_raw(slots::PARCEL_INFOS, &pis, sizeof(slots::ParcelInfo) * n_parcels);
 		serial::interface.trigger_slot_update(slots::PARCEL_EXTRA_INFOS);
 		append_longheap(nullptr); // truncate
 
