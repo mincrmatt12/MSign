@@ -385,6 +385,8 @@ namespace dwhttp {
 				}
 			private:
 				int _read(unsigned char *buf, size_t len) {
+					auto tme = xTaskGetTickCount();
+
 					while (true) {
 						ssize_t rlen;
 
@@ -393,6 +395,10 @@ namespace dwhttp {
 						rlen = lwip_recv(this->sockno, buf, len, 0);
 						if (rlen <= 0) {
 							if (rlen < 0 && (errno == EINTR || errno == EAGAIN)) {
+								if (xTaskGetTickCount() - tme > pdMS_TO_TICKS(2500)) {
+									ESP_LOGD(TAG, "read timeout");
+									return -1;
+								}
 								continue;
 							}
 							ESP_LOGE(TAG, "read failed with errno %d", errno);
