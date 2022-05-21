@@ -27,7 +27,7 @@ extern "C" {
 #undef bind
 
 // shitty HTTP client....
-const char *msign_ua = "MSign/4.0.0 (ESP8266, entirely unlike Mozilla) screwanalytics/1.0";
+const char *msign_ua = "MSign/4.2.0 (ESP8266, entirely unlike Mozilla) screwanalytics/1.0";
 static const char *TAG = "dwhttp";
 
 namespace dwhttp {

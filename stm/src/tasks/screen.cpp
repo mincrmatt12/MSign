@@ -42,7 +42,7 @@ namespace tasks {
 		template <typename FB>
 		void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
 			fb.clear();
-			draw::text(fb, "MSIGN V4.1" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
+			draw::text(fb, "MSIGN V4.2" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
 			draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
 			char buf[5] = {0};
 			strncpy(buf, bootcmd_get_bl_revision(), 4);
