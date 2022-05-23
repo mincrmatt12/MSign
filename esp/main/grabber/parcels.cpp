@@ -194,9 +194,6 @@ namespace parcels {
 			return true;
 		}
 
-		serial::interface.delete_slot(slots::PARCEL_INFOS);
-		serial::interface.delete_slot(slots::PARCEL_EXTRA_INFOS);
-
 		auto append_shortheap = generate_strappender(slots::PARCEL_STATUS_SHORT), append_longheap = generate_strappender(slots::PARCEL_STATUS_LONG);
 		int i = -1;
 
@@ -311,6 +308,8 @@ namespace parcels {
 		sccfg::set_force_disable_screen(slots::ScCfgInfo::PARCELS, n_parcels == 0);
 
 		if (!n_parcels) {
+			serial::interface.delete_slot(slots::PARCEL_INFOS);
+			serial::interface.delete_slot(slots::PARCEL_EXTRA_INFOS);
 			serial::interface.delete_slot(slots::PARCEL_STATUS_SHORT);
 			serial::interface.delete_slot(slots::PARCEL_STATUS_LONG);
 
