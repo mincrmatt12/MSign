@@ -63,11 +63,6 @@ void cfgpull::init() {
 }
 
 bool cfgpull::loop() {
-#ifdef CONFIG_DISABLE_CFGPULL
-	return true;
-#endif
-	if (!enabled) return true;
-
 	// Check if endpoint url is configured
 	if (!pull_host) {
 		ESP_LOGE(TAG, "cfgpull is enabled but url is missing.");
@@ -126,6 +121,13 @@ bool cfgpull::loop() {
 			return true;
 		}
 	}
+
+	// Force return if disabled -- do now to still send metrics updates.
+#ifdef CONFIG_DISABLE_CFGPULL
+	return true;
+#endif
+	if (!enabled) return true;
+
 
 	// New updates found, authenticate with server.
 	std::unique_ptr<uint8_t []> authbuf;
