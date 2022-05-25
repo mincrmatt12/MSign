@@ -492,7 +492,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 				bulbpos = 12;
 			}
 			else {
-				if (hours <= 24) bulbpos = 118;
+				if (hours <= 0) bulbpos = 118;
 				else {
 					bulbpos = 12 + ((5*24 - hours) * (118-12))/(5*24);
 				}
