@@ -246,10 +246,10 @@ void screen::WeatherScreen::draw_currentstats() {
 	else if (ctemp < 1000 && ctemp > -1000) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100_c);
 	}
-	else if (ctemp >= 1000 && ctemp < 3000) {
+	else if (ctemp >= 1000 && ctemp < 2750) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {50_c, 240_c, 50_c});
 	}
-	else if (ctemp >= 3000) {
+	else if (ctemp >= 2750) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {250_c, 30_c, 30_c});
 	}
 	else {
@@ -648,10 +648,10 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 			else if (cval > -1000 && cval < 1000) {
 				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {100_c, 100_c, 240_c});
 			}
-			else if (cval >= 1600 && cval < 3000) {
+			else if (cval >= 1600 && cval < 2750) {
 				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {50_c, 240_c, 50_c});
 			}
-			else if (cval >= 3000) {
+			else if (cval >= 2750) {
 				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {250_c, 30_c, 30_c});
 			}
 			else {
