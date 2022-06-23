@@ -219,8 +219,6 @@ namespace tasks {
 			do_sleep_mode();
 		}
 
-		do_tetris_mode();
-
 		while (1) {
 			ui::buttons.update();
 			// If we went into sleep mode at some point, enter that handler
