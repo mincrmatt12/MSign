@@ -407,6 +407,8 @@ namespace tasks {
 					break;
 			}
 
+			show_overlays(last_had_wifi_at);
+
 			matrix.swap_buffers();
 		}
 
