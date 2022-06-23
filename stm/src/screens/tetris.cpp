@@ -564,7 +564,7 @@ namespace screen::game {
 
 	void Tetris::draw_gameover() {
 		int pos = 64 - draw::text_size("GAME OVER", font::lato_bold_15::info) / 2;
-		draw::text(matrix.get_inactive_buffer(), "GAME OVER", font::lato_bold_15::info, pos, 15, 0xff9999_cc);
+		draw::text(matrix.get_inactive_buffer(), "GAME OVER", font::lato_bold_15::info, pos, 15, 0xff6666_cc);
 		
 		// score
 
