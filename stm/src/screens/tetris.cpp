@@ -369,24 +369,24 @@ namespace screen::game {
 
 	uint8_t Tetris::current_level_delay() {
 		if (current_lines >= 100) {
-			return 6;
-		}
-		else if (current_lines >= 60) {
-			return 8;
-		}
-		else if (current_lines >= 45) {
 			return 9;
 		}
+		else if (current_lines >= 60) {
+			return 12;
+		}
+		else if (current_lines >= 45) {
+			return 14;
+		}
 		else if (current_lines >= 30) {
-			return 11;
+			return 17;
 		}
 		else if (current_lines >= 20) {
-			return 13;
+			return 19;
 		}
 		else if (current_lines >= 10) {
-			return 16;
+			return 22;
 		}
-		return 20;
+		return 26;
 	}
 
 	void Tetris::start_piece() {
