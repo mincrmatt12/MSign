@@ -189,6 +189,15 @@ void tasks::DispMan::do_menu_overlay() {
 		"crash (wdog)",
 		"enable div0 trp",
 		"servicer debug",
+		"T E T R I S",
+		nullptr
+	};
+
+	const static char * const tetris_entries[] = {
+		"back to game",
+		"restart game",
+
+		"exit to sign",
 		nullptr
 	};
 
@@ -248,7 +257,7 @@ void tasks::DispMan::do_menu_overlay() {
 			}
 			break;
 		case MS::SubmenuDebug:
-			draw_menu_list(debug_entries);
+			draw_menu_list(debug_entries, false);
 
 			if (ui::buttons[ui::Buttons::SEL]) {
 				if (ms.selected == 0) {
@@ -278,12 +287,35 @@ void tasks::DispMan::do_menu_overlay() {
 					ms.submenu = MS::SubmenuDebugSrv;
 					return;
 				}
+				else if (ms.selected == 7) {
+					ms.selected = 0;
+					ms.submenu = MS::SubmenuTetris;
+					interact_mode = InteractTetris;
+					return;
+				}
+			}
+			break;
+		case MS::SubmenuTetris:
+			draw_menu_list(tetris_entries);
+
+			if (ui::buttons[ui::Buttons::SEL]) {
+				if (ms.selected == 0) goto closetetris;
+				else if (ms.selected == 1) {
+					swapper.get<screen::game::Tetris>().restart();
+					goto closetetris;
+				}
+				else if (ms.selected == 2) goto close;
 			}
 			break;
 	}
 
 	if (ui::buttons[ui::Buttons::POWER]) {
 		switch (ms.submenu) {
+			case MS::SubmenuTetris:
+closetetris:
+				interact_mode = InteractTetris;
+				swapper.get<screen::game::Tetris>().unpause();
+				break;
 			case MS::SubmenuMain:
 			case MS::SubmenuDebug:
 close:

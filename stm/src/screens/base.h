@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include "../ui.h"
+#include "../crash/main.h"
 
 namespace screen {
 
@@ -109,6 +110,11 @@ namespace screen {
 			return ((idx == Idx ? reinterpret_cast<Screens *>(&storage)->interact() : false) || ...);
 		}
 
+		template<typename T, size_t ...Idx>
+		inline bool _is_selected(std::index_sequence<Idx...>) {
+			return ((std::is_same_v<T, Screens> && selected == Idx) || ...);
+		}
+
 	public:
 		void shutoff() { // disable screenswapper and have draw return nothing
 			if (selected != npos) {
@@ -133,12 +139,14 @@ namespace screen {
 				_refresh(selected, std::index_sequence_for<Screens...>{});
 		}
 
-		void transition(size_t which) {
+		size_t transition(size_t which) {
 			if (selected != npos) {
 				_destruct(selected, std::index_sequence_for<Screens...>{});
 			}
+			auto result = selected;
 			selected = which;
-			_construct(which,  std::index_sequence_for<Screens...>{});
+			_construct(which, std::index_sequence_for<Screens...>{});
+			return result;
 		}
 
 		void notify_before_transition(size_t id, bool which_run) {
@@ -147,6 +155,12 @@ namespace screen {
 
 		bool require_clearing() {
 			return _require_clearing(selected, std::index_sequence_for<Screens...>{});
+		}
+
+		template<typename T>
+		T& get() {
+			msign_assert(_is_selected<T>(std::index_sequence_for<Screens...>{}), "invalid selected for ::get()");
+			return *reinterpret_cast<T *>(&storage);
 		}
 	};
 }

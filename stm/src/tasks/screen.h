@@ -9,6 +9,8 @@
 #include "../screens/threed.h"
 #include "../screens/parcels.h"
 
+#include "../screens/tetris.h"
+
 namespace tasks {
 	struct DispMan {
 		void run();
@@ -24,7 +26,11 @@ namespace tasks {
 				threed::Renderer,
 				screen::ClockScreen
 			>,
-			screen::ParcelScreen
+			screen::ParcelScreen,
+
+			// hidden screens
+
+			screen::game::Tetris
 		> swapper;
 
 		uint8_t screen_list_idx = 0;
@@ -33,6 +39,8 @@ namespace tasks {
 			InteractNone = 0,
 			InteractByScreen = 1,
 			InteractMenuOpen = 2,
+			InteractTetris = 3,
+			InteractTetrisMenu = 4
 		} interact_mode = InteractNone;
 
 		// todo: put this in a union
@@ -56,6 +64,7 @@ namespace tasks {
 				SubmenuSelectScreen = 2,
 				SubmenuDebug = 3,
 				SubmenuDebugSrv = 4,
+				SubmenuTetris = 5,
 			} submenu = SubmenuMain;
 
 			void reset() {
@@ -71,6 +80,7 @@ namespace tasks {
 
 		void do_menu_overlay();
 		void do_sleep_mode();
+		void do_tetris_mode();
 	};
 }
 

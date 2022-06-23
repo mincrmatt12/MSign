@@ -219,10 +219,14 @@ namespace tasks {
 			do_sleep_mode();
 		}
 
+		do_tetris_mode();
+
 		while (1) {
 			ui::buttons.update();
 			// If we went into sleep mode at some point, enter that handler
 			if (servicer.is_sleeping()) do_sleep_mode();
+			// If tetris mode is scheduled, go to its handler
+			if (interact_mode == InteractTetris) do_tetris_mode();
 
 			// Draw active screen
 			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();
@@ -379,6 +383,40 @@ namespace tasks {
 		return retval;
 	}
 
+	void DispMan::do_tetris_mode() {
+		// start tetris screen
+		auto prev = swapper.transition(4);
+		interact_mode = InteractTetris;
+
+		while (interact_mode != InteractNone) {
+			matrix.get_inactive_buffer().clear();
+			swapper.draw();
+			ui::buttons.update();
+
+			switch (interact_mode) {
+				case InteractTetris:
+					if (ui::buttons.held(ui::Buttons::MENU, pdMS_TO_TICKS(1000))) {
+						ms.selected = 0;
+						ms.submenu = MS::SubmenuTetris;
+						interact_mode = InteractTetrisMenu;
+						swapper.get<screen::game::Tetris>().pause();
+					}
+					break;
+				case InteractTetrisMenu:
+					do_menu_overlay();
+					break;
+				default:
+					break;
+			}
+
+			matrix.swap_buffers();
+		}
+
+		swapper.transition(prev);
+		last_swapped_at = rtc_time;
+
+		interact_mode = InteractNone;
+	}
 }
 
 
