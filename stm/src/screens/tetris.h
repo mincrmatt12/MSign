@@ -12,6 +12,12 @@ namespace screen::game {
 			bool at(int x, int y) const {
 				return data[y] & (0x8 >> x);
 			}
+
+			int min_height() const {
+				int pos = 0;
+				while (!data[-pos]) --pos;
+				return pos;
+			}
 		};
 
 		enum Color : uint8_t {

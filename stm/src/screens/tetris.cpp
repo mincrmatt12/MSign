@@ -368,7 +368,7 @@ namespace screen::game {
 	}
 
 	void Tetris::place_piece() {
-		if (current.y < 0) {
+		if (current.y < current.map().min_height()) {
 			state = StateGameEnd;
 			return;
 		}
