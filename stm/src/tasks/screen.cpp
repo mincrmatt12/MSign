@@ -412,6 +412,11 @@ namespace tasks {
 			matrix.swap_buffers();
 		}
 
+		while (ui::buttons.held(ui::Buttons::SEL)) {
+			ui::buttons.update(); // wait for button to be unpressed
+			matrix.swap_buffers();
+		}
+
 		swapper.transition(prev);
 		last_swapped_at = rtc_time;
 

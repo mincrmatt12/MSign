@@ -10,10 +10,11 @@
 #include <algorithm>
 #include <numeric>
 #include "../rng.h"
+#include "../tasks/timekeeper.h"
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
-extern uint64_t rtc_time;
+extern tasks::Timekeeper timekeeper;
 
 namespace bitmap::tetris {
 	// w=3,h=3,stride=1
@@ -260,28 +261,31 @@ namespace screen::game {
 	}
 
 	void Tetris::handle_buttons() {
+		// Handle harddrop first
+
+		if (ui::buttons[ui::Buttons::SEL] && timekeeper.current_time - drop_timeout > 80) {
+			while (!board.collide(current)) ++current.y;
+			--current.y;
+			place_piece();
+			drop_timeout = timekeeper.current_time;
+			return;
+		}
+
 		// Move left/right
 		ActiveTetrisPiece next_pos = current;
 		
 		if (ui::buttons[ui::Buttons::PRV]) {
 			next_pos.x -= 1;
-			das_timer = pdMS_TO_TICKS(300);
+			das_timer = pdMS_TO_TICKS(250);
 		}
 		if (ui::buttons[ui::Buttons::NXT]) {
 			next_pos.x += 1;
-			das_timer = pdMS_TO_TICKS(300);
+			das_timer = pdMS_TO_TICKS(250);
 		}
 
 		if (!board.collide(next_pos)) current = next_pos;
 
-		if (ui::buttons[ui::Buttons::SEL]) {
-			while (!board.collide(current)) ++current.y;
-			--current.y;
-			place_piece();
-			return;
-		}
-
-		if (ui::buttons[ui::Buttons::MENU] && hold_ready) {
+		if (ui::buttons[ui::Buttons::POWER] && hold_ready) {
 			if (hold_present) {
 				std::swap(hold, current);
 			}
@@ -294,7 +298,7 @@ namespace screen::game {
 			start_piece();
 		}
 
-		if (ui::buttons[ui::Buttons::POWER]) {
+		if (ui::buttons[ui::Buttons::MENU]) {
 			ActiveTetrisPiece rot_pos = current;
 			// rotate
 			rot_pos.rotation++;
@@ -316,9 +320,9 @@ namespace screen::game {
 		}
 	}
 
-	void Tetris::clear_lines() {
+	void Tetris::clear_lines(bool from_hard_drop) {
 		const static int line_points[] = {
-			0, 40, 100, 300, 1200
+			0, 40, 100, 300, 1200, 1500
 		};
 
 		// write line and source line
@@ -343,7 +347,23 @@ namespace screen::game {
 			--sptr;
 		}
 
-		current_score += line_points[lines];
+		if (lines) {
+			combo += 1;
+			if (lines == combo_n || combo_n == 0) {
+				combo_similar += 1;
+			}
+			else {
+				combo_similar = 0;
+			}
+			combo_n = lines;
+		}
+		else {
+			combo = 0;
+			combo_n = 0;
+			combo_similar = 0;
+		}
+
+		current_score += line_points[from_hard_drop && lines ? lines + 1 : lines] * current_level().score_mult;
 		current_lines += lines;
 	}
 
@@ -367,31 +387,35 @@ namespace screen::game {
 		next = bag.next();
 	}
 
-	uint8_t Tetris::current_level_delay() {
-		if (current_lines >= 100) {
-			return 9;
+	const Tetris::LevelInfo& Tetris::current_level() {
+		const static LevelInfo level_table[] = {
+			// lines, speed
+			{200, 5, 15},
+			{150, 6, 13},
+			{120, 7, 12},
+			{100, 8, 11},
+			{90, 10, 10},
+			{80, 13, 9},
+			{70, 16, 8},
+			{60, 25, 7},
+			{50, 28, 6},
+			{40, 30, 5},
+			{30, 33, 4},
+			{20, 38, 3},
+			{10, 43, 2},
+			{0,  48, 1}
+		};
+
+		for (const auto& x : level_table) {
+			if (current_lines >= x.min_lines) return x;
 		}
-		else if (current_lines >= 60) {
-			return 12;
-		}
-		else if (current_lines >= 45) {
-			return 14;
-		}
-		else if (current_lines >= 30) {
-			return 17;
-		}
-		else if (current_lines >= 20) {
-			return 19;
-		}
-		else if (current_lines >= 10) {
-			return 22;
-		}
-		return 26;
+		
+		return level_table[0];
 	}
 
 	void Tetris::start_piece() {
 		current.spawn();
-		ticks_till_drop = current_level_delay() + 1;
+		ticks_till_drop = current_level().gravity + 1;
 
 		// todo: gameover
 		if (board.collide(current)) {
@@ -411,7 +435,7 @@ namespace screen::game {
 			}
 			else {
 				current = next_pos;
-				ticks_till_drop = current_level_delay();
+				ticks_till_drop = current_level().gravity;
 			}
 		}
 
@@ -535,6 +559,9 @@ namespace screen::game {
 		state = StatePlaying;
 		hold_present = false;
 		hold_ready = true;
+		drop_timeout = timekeeper.current_time;
+
+		combo = combo_similar = combo_n = 0;
 	}
 
 	void Tetris::pause() {
@@ -542,7 +569,10 @@ namespace screen::game {
 	}
 
 	void Tetris::unpause() {
-		if (state == StatePaused) state = StatePlaying;
+		if (state == StatePaused) {
+			drop_timeout = timekeeper.current_time;
+			state = StatePlaying;
+		}
 	}
 
 	void Tetris::draw_score() {

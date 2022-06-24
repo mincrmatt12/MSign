@@ -92,7 +92,7 @@ namespace screen::game {
 		void place_piece();
 		void pull_next_piece();
 		void start_piece();
-		void clear_lines();
+		void clear_lines(bool from_hard_drop=false);
 
 		void draw_board();
 		void draw_block(int16_t x, int16_t y, TetrisPiece::Color color, bool phantom=false);
@@ -111,13 +111,25 @@ namespace screen::game {
 			StateGameEnd
 		} state = StatePlaying;
 
+		struct LevelInfo {
+			uint32_t min_lines;
+			uint8_t gravity;
+			int8_t  score_mult;
+		};
+
+		const LevelInfo& current_level();
+
 		uint32_t current_score = 0, current_lines = 0;
 
 		int ticks_till_drop = 0;
 
 		int das_timer = 0;
 
-		uint8_t current_level_delay();
+		uint32_t drop_timeout = 0;
+
+		int combo = 0, combo_similar = 0;
+
+		uint8_t combo_n = 0;
 
 		TetrisBoard board;
 		TetrisBag   bag;
