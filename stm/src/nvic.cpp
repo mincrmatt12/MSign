@@ -102,6 +102,12 @@ extern "C" void SysTick_Handler() {
 	xPortSysTickHandler();
 }
 
+extern "C" void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char * pcTaskName) {
+	char msg[32];
+	snprintf(msg, 32, "stack over %s", pcTaskName);
+	crash::panic(msg);
+}
+
 extern "C" void MemManage_Handler() __attribute__((naked));
 extern "C" void MemManage_Handler() {
 	asm volatile (
