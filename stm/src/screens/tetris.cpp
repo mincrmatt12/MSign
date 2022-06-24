@@ -320,6 +320,15 @@ namespace screen::game {
 		}
 	}
 
+	bool TetrisBoard::empty() {
+		for (int y = 0; y < 20; ++y) {
+			for (int x = 0; x < 10; ++x) {
+				if (occupied(x, y)) return false;
+			}
+		}
+		return true;
+	}
+
 	void Tetris::clear_lines(bool from_hard_drop) {
 		const static int line_points[] = {
 			0, 40, 100, 300, 1200, 1500
@@ -349,7 +358,7 @@ namespace screen::game {
 
 		if (lines) {
 			combo += 1;
-			if (lines == combo_n || combo_n == 0) {
+			if (lines > combo_n || (combo_n >= 4 && lines == combo_n)) {
 				combo_similar += 1;
 			}
 			else {
@@ -363,7 +372,16 @@ namespace screen::game {
 			combo_similar = 0;
 		}
 
-		current_score += line_points[from_hard_drop && lines ? lines + 1 : lines] * current_level().score_mult;
+		auto pts_scored = line_points[lines] 
+			* current_level().score_mult 
+			* (combo > 1 ? combo : 1)
+			* (combo_similar > 1 ? combo_similar + 1 : 1);
+		if (board.empty()) {
+			// clear bonus
+			pts_scored += 1000 * current_level().score_mult;
+		}
+		if (pts_scored) start_notif(pts_scored, current.blueprint().color);
+		current_score += pts_scored;
 		current_lines += lines;
 	}
 
@@ -389,21 +407,21 @@ namespace screen::game {
 
 	const Tetris::LevelInfo& Tetris::current_level() {
 		const static LevelInfo level_table[] = {
-			// lines, speed
-			{200, 5, 15},
-			{150, 6, 13},
-			{120, 7, 12},
-			{100, 8, 11},
-			{90, 10, 10},
-			{80, 13, 9},
-			{70, 16, 8},
-			{60, 25, 7},
-			{50, 28, 6},
-			{40, 30, 5},
-			{30, 33, 4},
-			{20, 38, 3},
-			{10, 43, 2},
-			{0,  48, 1}
+			// lines , speed , scoremult
+			{200     , 9     , 15},
+			{150     , 10    , 13},
+			{120     , 11    , 12},
+			{100     , 13    , 11},
+			{90      , 16    , 10},
+			{80      , 18    , 9},
+			{70      , 21    , 8},
+			{60      , 25    , 7},
+			{50      , 28    , 6},
+			{40      , 30    , 5},
+			{30      , 33    , 4},
+			{20      , 38    , 3},
+			{10      , 43    , 2},
+			{0       , 48    , 1}
 		};
 
 		for (const auto& x : level_table) {
@@ -416,6 +434,7 @@ namespace screen::game {
 	void Tetris::start_piece() {
 		current.spawn();
 		ticks_till_drop = current_level().gravity + 1;
+		if (ticks_till_drop < 14) ticks_till_drop = 14; // min initial drop delay
 
 		// todo: gameover
 		if (board.collide(current)) {
@@ -460,6 +479,20 @@ namespace screen::game {
 				if (!board.collide(next_pos)) current = next_pos;
 			}
 		}
+
+		// Score counter
+		int score_disparity = current_score - disp_score;
+		if (score_disparity < 2400) {
+			if (score_disparity > 120) {
+				score_disparity = 120;
+			}
+		}
+		else {
+			if (score_disparity > 360) {
+				score_disparity = 360;
+			}
+		}
+		disp_score += score_disparity;
 	}
 
 	inline int board_start_x = 49, board_start_y = 3;
@@ -469,6 +502,89 @@ namespace screen::game {
 		result.x = board_start_x + atp.x*3;
 		result.y = board_start_y + atp.y*3;
 		return result;
+	}
+
+	led::color_t tetris_color_to_physical(TetrisPiece::Color col) {
+		switch (col) {
+			case TetrisPiece::I:
+				return 0xaaaaff_cc;
+			case TetrisPiece::J:
+				return 0x4444dd_cc;
+			case TetrisPiece::L:
+				return 0xff7700_cc;
+			case TetrisPiece::O:
+				return 0xffee00_cc;
+			case TetrisPiece::S:
+				return 0x00ff00_cc;
+			case TetrisPiece::Z:
+				return 0xff4444_cc;
+			case TetrisPiece::T:
+				return 0xaaaaaa_cc;
+			default:
+				return 0;
+		}
+	}
+
+	TetrisNotification::TetrisNotification(int16_t score_diff, TetrisPiece::Color color) :
+		score_amt(score_diff), color(color), alive(true), birthtime(timekeeper.current_time) {}
+
+	uint32_t TetrisNotification::lifetime() {
+		return timekeeper.current_time - birthtime;
+	}
+
+	void TetrisNotification::draw(int16_t y) {
+		if (!alive) return;
+
+		char buf[16];
+		snprintf(buf, 16, "+%d", score_amt);
+
+		int16_t x_shift = draw::text_size(buf, font::lcdpixel_6::info) + 3;
+		int16_t x = board_start_x - x_shift;
+
+		// Which phase are we in?
+		//
+		// 100ms slideout,
+		// 1800ms on-time,
+		// 100ms fade
+
+		auto phys_color = tetris_color_to_physical(color);
+
+		if (lifetime() < 100) {
+			x = board_start_x - draw::distorted_ease_wave(lifetime(), 100, 0, x_shift);
+		}
+		else if (lifetime() < 1900) {}
+		else if (lifetime() < 2000) {
+			phys_color = phys_color.mix(0, ((lifetime() - 1900) * 255) / 100);
+		}
+		else {
+			alive = false;
+			return;
+		}
+
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, phys_color);
+	}
+
+	int Tetris::get_unused_notif() {
+		int option = 0;
+		while (option < 4 && notifs[option]) ++option;
+		if (option < 4) return option;
+
+		// if all used, pick oldest one
+		return std::distance(std::begin(notifs), std::min_element(std::begin(notifs), std::end(notifs), [](const auto& a, const auto& b){return a.birthtime < b.birthtime;}));
+	}
+
+	void Tetris::draw_notifs() {
+		// Done before drawing board
+
+		int16_t y = 41;
+
+		for (auto& notif : notifs) {
+			notif.draw(y);
+			y += 6;
+		}
+
+		// mask out region inside board
+		draw::rect(matrix.get_inactive_buffer(), board_start_x, board_start_y, board_start_x + 30, board_start_y + 60, 0);
 	}
 
 	void Tetris::draw_board() {
@@ -494,33 +610,7 @@ namespace screen::game {
 	}
 
 	void Tetris::draw_block(int16_t x, int16_t y, TetrisPiece::Color col, bool phantom) {
-		led::color_t physical_color = 0_c;
-
-		switch (col) {
-			case TetrisPiece::I:
-				physical_color = 0xaaaaff_cc;
-				break;
-			case TetrisPiece::J:
-				physical_color = 0x4444dd_cc;
-				break;
-			case TetrisPiece::L:
-				physical_color = 0xff7700_cc;
-				break;
-			case TetrisPiece::O:
-				physical_color = 0xffee00_cc;
-				break;
-			case TetrisPiece::S:
-				physical_color = 0x00ff00_cc;
-				break;
-			case TetrisPiece::Z:
-				physical_color = 0xff4444_cc;
-				break;
-			case TetrisPiece::T:
-				physical_color = 0xaaaaaa_cc;
-				break;
-			default:
-				break;
-		}
+		led::color_t physical_color = tetris_color_to_physical(col);
 
 		if (phantom) physical_color = physical_color.mix(0x22_c, 180);
 
@@ -548,6 +638,7 @@ namespace screen::game {
 
 		memset(board.board, 0, sizeof board.board);
 		current_score = 0;
+		disp_score = 0;
 		current_lines = 0;
 		ticks_till_drop = 0;
 		das_timer = 0;
@@ -562,6 +653,8 @@ namespace screen::game {
 		drop_timeout = timekeeper.current_time;
 
 		combo = combo_similar = combo_n = 0;
+
+		for (int i = 0; i < 4; ++i) new (&notifs[i]) TetrisNotification{};
 	}
 
 	void Tetris::pause() {
@@ -577,12 +670,12 @@ namespace screen::game {
 
 	void Tetris::draw_score() {
 		auto pos = board_start_x - 3 - draw::text_size("score", font::tahoma_9::info);
-		draw::text(matrix.get_inactive_buffer(), "score", font::tahoma_9::info, pos, 10, 0xaa_c);
+		draw::text(matrix.get_inactive_buffer(), "score", font::tahoma_9::info, pos, 9, 0xaa_c);
 		char buf[16]{};
 
-		snprintf(buf, 16, "%d", current_score);
+		snprintf(buf, 16, "%d", disp_score);
 		pos = board_start_x - 3 - draw::text_size(buf, font::lcdpixel_6::info);
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, pos, 17, 0xff_c);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, pos, 16, 0xff_c);
 
 		pos = board_start_x - 3 - draw::text_size("lines", font::tahoma_9::info);
 		draw::text(matrix.get_inactive_buffer(), "lines", font::tahoma_9::info, pos, 25, 0xaa_c);
@@ -631,6 +724,7 @@ namespace screen::game {
 		case StatePaused:
 
 			// Draw everything
+			draw_notifs(); // must be drawn before board due to masking
 			draw_board();
 			next.x = board_start_x + 30 + 12;
 			next.y = 14;

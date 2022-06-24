@@ -72,6 +72,24 @@ namespace screen::game {
 
 		bool collide(const ActiveTetrisPiece& piece);
 		void put(const ActiveTetrisPiece& piece);
+
+		bool empty();
+	};
+
+	struct TetrisNotification {
+		int16_t score_amt;
+		TetrisPiece::Color color;
+		bool alive = false;
+		uint32_t birthtime;
+
+		TetrisNotification() {};
+		TetrisNotification(int16_t score_diff, TetrisPiece::Color color);
+
+		void draw(int16_t y);
+
+		operator bool() const {return alive;}
+	private:
+		uint32_t lifetime();
 	};
 
 	struct TetrisBag {
@@ -104,10 +122,16 @@ namespace screen::game {
 		void draw_block(int16_t x, int16_t y, TetrisPiece::Color color, bool phantom=false);
 		void draw_piece(const ActiveTetrisPiece& atp, bool as_phantom=false); // considers x/y as screen coordinates
 		void draw_score();
-
+		void draw_notifs();
 		void draw_boxed_piece(const ActiveTetrisPiece& atp, const char* text);
 
 		void draw_gameover();
+
+		int get_unused_notif();
+		template<typename ...Args>
+		void start_notif(Args&& ...args) {
+			new (&notifs[get_unused_notif()]) TetrisNotification(std::forward<Args>(args)...);
+		}
 
 		int tick_accum = 0;
 
@@ -126,6 +150,7 @@ namespace screen::game {
 		const LevelInfo& current_level();
 
 		uint32_t current_score = 0, current_lines = 0;
+		uint32_t disp_score    = 0;
 
 		int ticks_till_drop = 0;
 
@@ -140,6 +165,8 @@ namespace screen::game {
 		TetrisBoard board;
 		TetrisBag   bag;
 		ActiveTetrisPiece current, hold, next;
+		TetrisNotification notifs[4];
+
 		bool hold_present = false, hold_ready = true;
 	};
 }
