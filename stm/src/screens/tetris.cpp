@@ -263,7 +263,7 @@ namespace screen::game {
 	void Tetris::handle_buttons() {
 		// Handle harddrop first
 
-		if (ui::buttons[ui::Buttons::SEL] && timekeeper.current_time - drop_timeout > 80) {
+		if (ui::buttons[ui::Buttons::SEL] && timekeeper.current_time - drop_timeout > 120) {
 			while (!board.collide(current)) ++current.y;
 			--current.y;
 			place_piece();
