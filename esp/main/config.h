@@ -1,8 +1,14 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <string.h>
+#include <stdlib.h>
 #include <stdint.h>
+#include <type_traits>
+#ifndef __castxml__
 #include "json.h"
+#include <esp8266/eagle_soc.h>
+#endif
 
 namespace config {
 	// Slightly less posessive unique_ptr, "lazy" as in "lazily allocated"
@@ -137,7 +143,12 @@ namespace config {
 		bool is_flash = false;
 #endif
 	};
+
+#ifndef __castxml__
+	json::TextCallback sd_cfg_load_source();
+	bool parse_config(json::TextCallback&& tcb);
 	bool parse_config_from_sd();
+#endif
 }
 
 #endif
