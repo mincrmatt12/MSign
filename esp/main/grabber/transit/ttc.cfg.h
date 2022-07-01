@@ -5,21 +5,21 @@
 
 namespace transit::ttc {
 	//!cfg: holds .ttc.alert_search
-	extern const char * alert_search;
+	extern config::string_t alert_search;
 
 	//!cfg: holds .ttc.agency_code, default "ttc"
-	extern const char * agency_code;
+	extern config::string_t agency_code;
 
 	//!cfg: receives .ttc.entries[$n].name
 	void update_ttc_entry_name(size_t n, const char * value);
 	
 	struct TTCEntry {
-		//!cfg: holds .dirtag, default nullptr
-		const char * dirtag[4];
+		//!cfg: holds .dirtag
+		config::string_t dirtag[4]{};
 		//!cfg: holds .stopid
 		int stopid = -1;
-		//!cfg: holds .dirtag_alt, default nullptr
-		const char * alt_dirtag[4];
+		//!cfg: holds .dirtag_alt
+		config::string_t alt_dirtag[4]{};
 		//!cfg: holds .stopid_alt
 		int alt_stopid = -1;
 		//!cfg: holds .distance
@@ -37,5 +37,5 @@ namespace transit::ttc {
 	};
 
 	//!cfg: holds .ttc.entries
-	extern config::lazy_t<TTCEntry> entries[5];
+	extern config::lazy_t<TTCEntry[5]> entries;
 }

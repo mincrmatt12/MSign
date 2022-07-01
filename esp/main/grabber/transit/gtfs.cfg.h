@@ -3,32 +3,32 @@
 
 namespace transit::gtfs {
 	//!cfg: holds .gtfs.feed.host, default "_webapps.regionofwaterloo.ca"
-	extern const char * feed_host;
+	extern config::string_t feed_host;
 
 	//!cfg: holds .gtfs.feed.url, default "/api/grt-routes/api/tripupdates"
-	extern const char * feed_url;
+	extern config::string_t feed_url;
 
 	//!cfg: holds .gtfs.alt_feed.host, default nullptr
-	extern const char * alt_feed_host;
+	extern config::string_t alt_feed_host;
 
 	//!cfg: holds .gtfs.alt_feed.url, default nullptr
-	extern const char * alt_feed_url;
+	extern config::string_t alt_feed_url;
 
 	//!cfg: receives .gtfs.entries[$n].name
 	void update_ttc_entry_name(size_t n, const char * value);
 
 	struct GtfsEntry {
 		//!cfg: holds .route
-		const char * route_id;
+		config::string_t route_id;
 
 		//!cfg: holds .stop
-		const char * stop_id;
+		config::string_t stop_id;
 
 		//!cfg: holds .route_alt
-		const char * route_id_alt{};
+		config::string_t route_id_alt{};
 
 		//!cfg: holds .stop_alt
-		const char * stop_id_alt{};
+		config::string_t stop_id_alt{};
 
 		//!cfg: holds .use_alt_feed
 		bool use_alt_feed = false;

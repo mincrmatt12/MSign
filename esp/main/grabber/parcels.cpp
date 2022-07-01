@@ -178,7 +178,7 @@ namespace parcels {
 
 		std::unique_ptr<char[]> auth; auth.reset(new char[96]{});
 
-		snprintf(auth.get(), 96, "Bearer %s", parcels_api_key);
+		snprintf(auth.get(), 96, "Bearer %s", parcels_api_key.get());
 		const char * headers[][2] = {
 			{"Authorization", auth.get()},
 			{NULL, NULL},
@@ -212,12 +212,12 @@ namespace parcels {
 			if (!cfg.enabled) continue;
 
 			// get url
-			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id);
+			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id.get());
 			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
 			dw.make_nonclose();
 
 			if (!dw.ok()) {
-				ESP_LOGW(TAG, "Failed to request tracker %s", cfg.tracker_id);
+				ESP_LOGW(TAG, "Failed to request tracker %s", cfg.tracker_id.get());
 				if (dw.result_code() == 404) {
 					ESP_LOGI(TAG, "Disabling tracker...");
 					cfg.enabled = false;
@@ -331,7 +331,7 @@ namespace parcels {
 			if (!parcel_oks[i]) continue;
 			++j;
 			// get url
-			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id);
+			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id.get());
 			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
 			dw.make_nonclose();
 

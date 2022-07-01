@@ -23,7 +23,7 @@ namespace transit::ttc {
 	// Populate the info and times with the information for this slot.
 	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6], uint64_t times_b[6]) {
 		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code, entry.stopid);
+		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.stopid);
 
 		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
 		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
@@ -74,14 +74,14 @@ namespace transit::ttc {
 				if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 				{
 					for (int i = 0; i < 4 && entry.dirtag[i]; ++i) {
-						if (strcmp(entry.dirtag[i], v.str_val) == 0) {
-							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i]);
+						if (entry.dirtag[i] == v.str_val) {
+							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i].get());
 							state.tag = 1; break;
 						}
 					}
 					for (int i = 0; i < 4 && entry.alt_dirtag[i]; ++i) {
-						if (strcmp(entry.alt_dirtag[i], v.str_val) == 0) {
-							ESP_LOGD(TAG, "matched on %s (alt)", entry.alt_dirtag[i]);
+						if (entry.alt_dirtag[i] == v.str_val) {
+							ESP_LOGD(TAG, "matched on %s (alt)", entry.alt_dirtag[i].get());
 							state.tag = 2; break;
 						}
 					}

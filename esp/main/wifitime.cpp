@@ -94,11 +94,11 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 
 			sntp_setoperatingmode(SNTP_OPMODE_POLL);
 			// This is ugly, but I'm _fairly_ sure lwip doesn't screw with this [citation needed]; plus the examples pass in a constant here so /shrug
-			sntp_setservername(0, const_cast<char *>(wifi::time_server));
+			sntp_setservername(0, const_cast<char *>(wifi::time_server.get()));
 			sntp_init();
 			
 			// Set the timezone
-			ESP_LOGI(T_TAG, "Timezone is %s", wifi::time_zone_str);
+			ESP_LOGI(T_TAG, "Timezone is %s", wifi::time_zone_str.get());
 			setenv("TZ", wifi::time_zone_str, 1);
 			tzset();
 

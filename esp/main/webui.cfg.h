@@ -1,3 +1,5 @@
+#include "config.h"
+
 namespace webui {
 	enum struct WebuiMode {
 		DISABLED,
@@ -9,8 +11,8 @@ namespace webui {
 	extern WebuiMode mode;
 
 	//!cfg: holds .webui.login.user, default "admin"
-	extern const char * login_user;
+	extern config::string_t login_user;
 
 	//!cfg: holds .webui.login.password, default "admin"
-	extern const char * login_password;
+	extern config::string_t login_password;
 }

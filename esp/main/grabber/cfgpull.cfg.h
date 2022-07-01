@@ -9,10 +9,10 @@ namespace cfgpull {
 	extern bool only_firm;
 
 	//!cfg: holds .cfgpull.host
-	extern const char * pull_host;
+	extern config::string_t pull_host;
 
 	//!cfg: holds .cfgpull.secret
-	extern const char * pull_secret;
+	extern config::string_t pull_secret;
 
 	//!cfg: holds .cfgpull.version, default 0
 	extern int32_t version_id;

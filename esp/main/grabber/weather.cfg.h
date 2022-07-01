@@ -1,6 +1,8 @@
+#include "../config.h"
+
 namespace weather {
 	//!cfg: holds .weather.key
-	extern const char * api_key;
+	extern config::string_t api_key;
 
 	//!cfg: holds .weather.coord[0]
 	extern float lat;

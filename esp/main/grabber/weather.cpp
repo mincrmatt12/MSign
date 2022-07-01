@@ -23,11 +23,11 @@ namespace weather {
 bool weather::loop() {
 	// Do a weather update.
 	
-	if (api_key == nullptr) return true;
+	if (!api_key) return true;
 
 	char url[128];
 	snprintf(url, 128, "/forecast/%s/%f,%f?exclude=alerts&units=ca", 
-			api_key,
+			api_key.get(),
 			lat,
 			lon);
 

@@ -57,8 +57,86 @@ namespace config {
 		T* ptr{nullptr};
 	};
 
-	bool parse_config(json::TextCallback&& tcb);
+	struct string_t {
+		// must be passed to constructor to get it to autofree
+		struct heap_tag {};
 
+		const char * get() const {return str;}
+		operator const char *() const {return str;}
+		operator bool() const {return str != nullptr;}
+
+		bool operator==(const char *other) const {
+			if (str && other && !strcmp(str, other)) return true;
+			else return str == other;
+		}
+
+		~string_t() {dispose();}
+		string_t() {}
+		// takes ownership
+		string_t(heap_tag tag, char * c) : str(c) {
+			set_is_flash(false);
+		}
+		string_t(const char * c) : str(c) {
+			set_is_flash(true);
+		}
+		string_t(const string_t& other) {
+			(*this) = other;
+		}
+		string_t(string_t&& other) {
+			(*this) = other;
+		}
+
+		string_t& operator=(const string_t& other) {
+			dispose();
+			if (other.not_heap()) {
+				str = other.str;
+				set_is_flash(true);
+			}
+			else {
+				str = strdup(other.str);
+				set_is_flash(false);
+			}
+			return *this;
+		}
+
+		string_t& operator=(string_t&& other) {
+			std::swap(str, other.str);
+#ifdef SIM
+			std::swap(is_flash, other.is_flash);
+#endif
+			return *this;
+		}
+
+		bool not_heap() const {
+			if (!str) return true;
+#if defined(SIM)
+			return is_flash;
+#elif defined(__castxml__)
+			return false;
+#else
+			return IS_DRAM(str) || IS_IRAM(str);
+#endif
+		}
+
+	private:
+		void set_is_flash(bool flag) {
+#ifdef SIM
+			is_flash = flag;
+#endif
+		}
+
+		void dispose() {
+			if (!not_heap() && str)
+				free(const_cast<char *>(str));
+			str = nullptr;
+			set_is_flash(true);
+		}
+
+		const char * str{nullptr};
+#ifdef SIM
+		bool is_flash = false;
+#endif
+	};
 	bool parse_config_from_sd();
 }
 
