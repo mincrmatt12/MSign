@@ -25,11 +25,22 @@ namespace config {
 		const T* operator->() const {return ptr;}
 		const T& operator*() const {return *ptr;}
 
+		lazy_t(){};
+		lazy_t(const lazy_t& other) = delete;
+		lazy_t(lazy_t&& other) {
+			std::swap(ptr, other.ptr);
+		}
 		~lazy_t() {
 			if (ptr) {
 				delete ptr;
 				ptr = nullptr;
 			}
+		}
+
+		lazy_t& operator=(const lazy_t& other) = delete;
+		lazy_t& operator=(lazy_t&& other) {
+			std::swap(ptr, other.ptr);
+			return (*this);
 		}
 
 		template<typename I>
