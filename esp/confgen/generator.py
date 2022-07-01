@@ -336,7 +336,7 @@ LAZY_BEFORE_ARRAY = 2
 LAZY_AFTER_ARRAY  = 1
 
 def parse_gcc_array_string(declstring):
-    ma = re.match(r"([a-zA-Z0-9<>,: \t]+?)\s*((?:\[\d+\])+\s*)", declstring)
+    ma = re.match(r"([a-zA-Z0-9<>_,: \t]+?)\s*((?:\[\d+\])+\s*)", declstring)
     if not ma:
         return declstring, []
     else:
