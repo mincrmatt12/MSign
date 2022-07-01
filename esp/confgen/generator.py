@@ -37,6 +37,9 @@ with open(os.path.join(os.path.dirname(__file__), "grammar.lark")) as f:
 
 collected_bare_paths = []
 collected_bare_typedefs = {}
+collected_loader_nodes = {}
+# map of functiondecl --> (resultvarname,locator)
+collected_loader_properties = {}
 
 # Entry actions:
 # Called on the first thing matched by a node
@@ -77,17 +80,27 @@ class EnsureLazyInit:
 
 # A single "path node".
 class BaseJsonPathNode:
-    NOT_ARRAY = -2
-    ANY_ARRAY = -1
-    SIZE_ARRAY = -3
+    class DynName:
+        def __init__(self, var: str):
+            self.var = var
+
+        def __repr__(self):
+            return f"DynName[{self.var}]"
+
+    NOT_ARRAY = -3
+    ANY_ARRAY = -2
+    SIZE_ARRAY = -4
+    DYNAMIC_ARRAY = -1
 
     # Can match any name -- used for variable subst.
-    ANY_NAME = ""
+    # If array_dynamic_target is set, it uses that for which to match
+    ANY_NAME = type('_ANYNAME', (), {'__repr__': lambda x: "<ANY_NAME>"})()
 
-    def __init__(self, name, array_index):
+    def __init__(self, name, array_index, array_dynamic_target=None):
         self.name = name # name or None for unnamed (like root)
         self.array_index = array_index # constant array index or constant above
         self.array_maximum = None # maximum value for array_index, or None for no maximum
+        self.array_dynamic_target = array_dynamic_target # argument name for dynamic target (for loaders)
         self.parent_node: BaseJsonPathNode = None # reference to parent node
 
         self.entry_actions = [] # actions to run on entry into this node for the first time with unique array_index
@@ -101,6 +114,10 @@ class BaseJsonPathNode:
         return self.array_index >= self.ANY_ARRAY
 
     @property
+    def is_nonconst_name(self):
+        return self.name == self.ANY_NAME or isinstance(self.name, BaseJsonPathNode.DynName) 
+
+    @property
     def node_depth(self):
         if self.parent_node is None:
             return 0
@@ -112,6 +129,7 @@ class BaseJsonPathNode:
         into.name = self.name
         into.array_index = self.array_index
         into.array_maximum = self.array_maximum
+        into.array_dynamic_target = self.array_dynamic_target
         into.parent_node = self.parent_node if include_parent else None
         into.entry_actions = [x.clone() for x in self.entry_actions]
 
@@ -166,6 +184,10 @@ class ObjectLocator:
         else:
             return 1 + self.next_in_chain.length
 
+    @property
+    def target_type(self):
+        return self.target_declaration.decl_type
+
     def __iter__(self):
         yield self
         if self.next_in_chain:
@@ -216,6 +238,27 @@ class ObjectLocatorDelegated(ObjectLocator):
     def __eq__(self, other):
         if type(other) != type(self): return False
         return other.target_declaration == self.target_declaration and self.bound_arg_indices == other.bound_arg_indices
+
+class ObjectLocatorGeneratorReturn(ObjectLocator):
+    @property
+    def target_type(self):
+        return self.target_declaration.return_type
+
+    def clone(self):
+        return ObjectLocatorGeneratorReturn(self.target_declaration, self.array_indices[:], self.next_in_chain.clone() if self.next_in_chain is not None else None)
+
+    def __str__(self):
+        buf = f"({self.target_declaration}@[{','.join(f'${i}' for i in self.array_indices)}]).returnobj"
+        if self.next_in_chain is not None:
+            buf += f" -> {self.next_in_chain}"
+        return buf
+
+    def __hash__(self):
+        return hash((self.target_declaration, tuple(self.array_indices), self.next_in_chain))
+
+    def __eq__(self, other):
+        if type(other) != type(self): return False
+        return other.target_declaration == self.target_declaration and self.next_in_chain == other.next_in_chain and self.array_indices == other.array_indices
         
 class DelegateJsonPathNode(BaseJsonPathNode):
     def __init__(self, *args, **kwargs):
@@ -224,7 +267,7 @@ class DelegateJsonPathNode(BaseJsonPathNode):
         self.leaves = []
 
     def clone(self):
-        new_node = DelegateJsonPathNode(self.name, self.array_index)
+        new_node = DelegateJsonPathNode(self.name, self.array_index, self.array_dynamic_target)
         self.clone_onto(new_node)
         for i in self.leaves:
             new_i = i.clone()
@@ -246,7 +289,7 @@ class DelegateJsonPathNode(BaseJsonPathNode):
     def add_leaf(self, leaf: BaseJsonPathNode):
         # Resolve conflicts
         for j, my_leaf in enumerate(self.leaves):
-            if (my_leaf.name == leaf.name or my_leaf.name == BaseJsonPathNode.ANY_NAME or leaf.name == BaseJsonPathNode.ANY_NAME) and self._array_overlap(my_leaf.array_index, leaf.array_index):
+            if (my_leaf.name == leaf.name or my_leaf.is_nonconst_name or leaf.is_nonconst_name) and self._array_overlap(my_leaf.array_index, leaf.array_index):
                 if my_leaf.array_index != leaf.array_index:
                     raise ValueError("conflict between {} and {}'s arrays".format(my_leaf, leaf))
                 if my_leaf.array_maximum != leaf.array_maximum and leaf.array_maximum is not None:
@@ -287,8 +330,8 @@ class DelegateJsonPathNode(BaseJsonPathNode):
         return "Delegate" + super().__str__() + "{" + ",".join(str(x) for x in self.leaves) + "}"
 
 class StoreValuePathNode(BaseJsonPathNode):
-    def __init__(self, name, array_index, target: ObjectLocator):
-        super().__init__(name, array_index)
+    def __init__(self, name, array_index, array_dyn, target: ObjectLocator):
+        super().__init__(name, array_index, array_dyn)
 
         self.target = target
 
@@ -296,13 +339,13 @@ class StoreValuePathNode(BaseJsonPathNode):
         return "Store" + super().__str__() + "{" + str(self.target) + "}"
 
     def clone(self):
-        new_node = StoreValuePathNode(self.name, self.array_index, self.target.clone())
+        new_node = StoreValuePathNode(self.name, self.array_index, self.array_dynamic_target, self.target.clone())
         self.clone_onto(new_node)
         return new_node
 
 class ForwardDeclarationPathNode(BaseJsonPathNode):
-    def __init__(self, name, array_index, target: ObjectLocator, referencing_type: pygccxml.declarations.type_t):
-        super().__init__(name, array_index)
+    def __init__(self, name, array_index, array_dyn, target: ObjectLocator, referencing_type: pygccxml.declarations.type_t):
+        super().__init__(name, array_index, array_dyn)
 
         self.target = target
         self.referencing_type = referencing_type
@@ -313,7 +356,7 @@ class ForwardDeclarationPathNode(BaseJsonPathNode):
         return "ForwardStore" + super().__str__() + "{" + str(self.target) + "} to " + str(self.referencing_type)
 
     def clone(self):
-        new_node = ForwardDeclarationPathNode(self.name, self.array_index, self.target.clone(), self.referencing_type)
+        new_node = ForwardDeclarationPathNode(self.name, self.array_index, self.array_dynamic_target, self.target.clone(), self.referencing_type)
         self.clone_onto(new_node)
         return new_node
 
@@ -479,10 +522,10 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     intent = comment_data.children[0].value
     if intent == "holds" and not isinstance(decl, pygccxml.declarations.variable_t):
         raise ValueError("invalid type: holds should be annotating a variable.")
-    elif intent == "receives" and not isinstance(decl, pygccxml.declarations.calldef_t):
-        raise ValueError("invalid type: receives should be annotating a function.")
+    elif intent in ["receives", "loads"] and not isinstance(decl, pygccxml.declarations.calldef_t):
+        raise ValueError("invalid type: receives/loads should be annotating a function.")
 
-    if intent not in ["holds", "receives"]:
+    if intent not in ["holds", "receives", "loads"]:
         raise NotImplementedError(intent)
 
     # Check if this is a free function / nonmember
@@ -493,20 +536,40 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     elif isinstance(decl, pygccxml.declarations.member_function_t) and not decl.has_static:
         free = False
 
+    if not free and intent == "loads":
+        raise ValueError("invalid type: a loader routine cannot be a class member")
+
     if not free:
         parent_t = decl.parent
         if parent_t not in collected_bare_typedefs:
             collected_bare_typedefs[parent_t] = []
         target_list = collected_bare_typedefs[parent_t]
+    elif intent == "loads":
+        collected_loader_nodes[decl] = []
+        collected_loader_properties[decl] = [None,None]
+        target_list = collected_loader_nodes[decl]
+        for i in find_all_tags(comment_data, "result_tag"):
+            collected_loader_properties[decl][0] = i.children[0].children[0].value
     else:
         target_list = collected_bare_paths
 
     # Begin building names
 
-    names = [(None, BaseJsonPathNode.NOT_ARRAY)]
+    names = [(None, BaseJsonPathNode.NOT_ARRAY, None)]
     variable_map = {}
 
+    forbidden_vars = set("value")
+    if intent == "loads":
+        forbidden_vars.add("curnode")
+        forbidden_vars.add("returnobj")
+        forbidden_vars.add("v")
+        forbidden_vars.add("stack")
+        forbidden_vars.add("stack_ptr")
+        if collected_loader_properties[decl][0]:
+            forbidden_vars.add(collected_loader_properties[decl][0])
+
     for j, leaf in enumerate(comment_data.children[1].children):
+        dyntarget = None
         if leaf.data == "path_element":
             name = leaf.children[0].value
             array = BaseJsonPathNode.NOT_ARRAY
@@ -516,8 +579,12 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
             if not isinstance(idx, lark.Token) and idx.data == "variable":
                 array = BaseJsonPathNode.ANY_ARRAY
                 variable_map[idx.children[0].value] = j + 1
-                if idx.children[0].value == "value":
-                    raise ValueError("illegal variable, can't be 'value'")
+                if idx.children[0].value in forbidden_vars:
+                    raise ValueError("illegal variable name")
+                if intent == "loads" and any(x.name == idx.children[0].value for x in decl.arguments):
+                    array = BaseJsonPathNode.DYNAMIC_ARRAY
+                    dyntarget = idx.children[0].value
+                    del variable_map[idx.children[0].value]
             else:
                 array = int(idx.value)
         elif leaf.data == "wildcard_element":
@@ -525,15 +592,21 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
                 raise ValueError("invalid variable: only valid for functions")
             name = BaseJsonPathNode.ANY_NAME
             array = BaseJsonPathNode.NOT_ARRAY
-            if leaf.children[0].children[0].value == "value":
-                raise ValueError("illegal variable, can't be 'value'")
-            variable_map[leaf.children[0].children[0].value] = j + 1
+            varname = leaf.children[0].children[0].value 
+            if varname in forbidden_vars:
+                raise ValueError("illegal variable name")
+            if intent == "loads" and any(x.name == varname for x in decl.arguments):
+                name = BaseJsonPathNode.DynName(varname)
+            elif intent == "loads":
+                raise ValueError("dynamic name not present in function args")
+            else:
+                variable_map[varname] = j + 1
         elif leaf.data == "special_size_element":
             name = leaf.children[0].value
             array = BaseJsonPathNode.SIZE_ARRAY
         else:
             raise NotImplementedError(leaf.data)
-        names.append([name, array])
+        names.append([name, array, dyntarget])
 
     array_maximum_map = {}
     is_custom_type = False
@@ -542,10 +615,14 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     is_lazy = False
 
     # Populate array information (and custom type)
-    if intent == "holds":
-        the_type = decl.decl_type
+    if intent == "holds" or intent == "loads":
+        the_type = decl.decl_type if intent == "holds" else decl.return_type
         dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(the_type)
-        is_custom_type = isinstance(underlying, pygccxml.declarations.declarated_t) and isinstance(underlying.declaration, pygccxml.declarations.class_t)
+        is_custom_type = isinstance(underlying, pygccxml.declarations.declarated_t) and isinstance(underlying.declaration, pygccxml.declarations.class_t) and not \
+            pygccxml.declarations.is_same(string_t, underlying)
+
+        if intent == "loads" and dimensions and not is_lazy:
+            raise ValueError("cannot have loader returning array; return an object proxy instead")
 
         # Propagate the array information (max size on each array matcher, hook up i/j/k/etc. to array_indices
 
@@ -558,11 +635,11 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
                     names[-1][1] = BaseJsonPathNode.ANY_ARRAY
                     variable_map[letter] = len(names) - 1
                 elif names[-1][1] == BaseJsonPathNode.SIZE_ARRAY:
-                    raise ValueError("unknown how to handle auto-array for size_array")
+                    raise NotImplementedError("unknown how to handle auto-array for size_array")
                 else:
                     # Add new anonymous entry
                     variable_map[letter] = len(names)
-                    names.append([None, BaseJsonPathNode.ANY_ARRAY])
+                    names.append([BaseJsonPathNode.ANY_NAME, BaseJsonPathNode.ANY_ARRAY, None])
 
     for custom_maximum in find_all_tags(comment_data, "explicit_array_max"):
         requested = int(custom_maximum.children[1].value)
@@ -574,8 +651,8 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
         array_maximum_map[for_var] = requested
 
     def common_make_node(j, kind, *args):
-        name, array_index = names[j]
-        new_node = kind(name, array_index, *args)
+        name, array_index, array_dyntarget = names[j]
+        new_node = kind(name, array_index, array_dyntarget, *args)
         # Try and propagate array maximums
         for entry, location in variable_map.items():
             if entry in array_maximum_map and location == j:
@@ -597,8 +674,10 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     if intent == "holds":
         # Create locator
         locator = ObjectLocator(decl, [variable_map["ijkl"[j]] for j in range(len(dimensions))])
-    else:
+    elif intent == "receives":
         locator = ObjectLocatorDelegated(decl, variable_map)
+    else:
+        locator = ObjectLocatorGeneratorReturn(decl, [variable_map["ijkl"[j]] for j in range(len(dimensions))])
 
     if is_custom_type:
         final_node = common_make_node(len(names)-1, ForwardDeclarationPathNode, locator, underlying.declaration)
@@ -642,15 +721,19 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     if is_lazy:
         final_node.entry_actions.insert(0, EnsureLazyInit(locator))
 
+    if intent == "loads":
+        collected_loader_properties[decl][1] = locator
+
     end.add_leaf(final_node)
     target_list.append(root)
 
 all_declarations = []
 global_namespace = None
+string_t = None
 
 def parse_file(fnames):
-    global all_declarations, global_namespace
-    all_declarations = pygccxml.parser.parse(fnames, config=xml_generator_config)
+    global all_declarations, global_namespace, string_t
+    all_declarations = pygccxml.parser.parse(fnames, config=xml_generator_config, compilation_mode=pygccxml.parser.COMPILATION_MODE.ALL_AT_ONCE)
     comments_in_file = {}
     fnames_to_find = fnames[:] 
     fnames_found = set()
@@ -674,7 +757,7 @@ def parse_file(fnames):
         fnames_found.add(fname)
     
     # Find all declarations that are either calldefs or variables
-    broad_matcher = pygccxml.declarations.calldef_matcher(return_type="void") | pygccxml.declarations.variable_matcher()
+    broad_matcher = pygccxml.declarations.calldef_matcher() | pygccxml.declarations.variable_matcher()
     all_things = pygccxml.declarations.matcher.find(broad_matcher, all_declarations)
     global_namespace = pygccxml.declarations.get_global_namespace(all_declarations)
     string_t = global_namespace.namespace("config").class_("string_t")
@@ -724,7 +807,7 @@ def find_all_referenced_typedefs():
     return referenced
 
 def merge_path_list(pathlist):
-    new_root = DelegateJsonPathNode(None, -2)
+    new_root = DelegateJsonPathNode(None, BaseJsonPathNode.NOT_ARRAY)
 
     for subpath in pathlist:
         assert(isinstance(subpath, DelegateJsonPathNode) and subpath.is_root)
@@ -736,6 +819,9 @@ def merge_path_list(pathlist):
 def forward_typedef_into_others(decltype):
     # Prepare a full tree
     replacement_tree = merge_path_list(collected_bare_typedefs.pop(decltype))
+
+    dprint("merged tree for", decltype)
+    dump_node_tree(replacement_tree)
 
     def visit(node: ForwardDeclarationPathNode):
         if node.referencing_type != decltype:
@@ -771,7 +857,7 @@ def forward_typedef_into_others(decltype):
             private_tree.add_leaf(i)
         node.parent_node.leaves.append(private_tree)
 
-    for i in itertools.chain(collected_bare_paths, *collected_bare_typedefs.values()):
+    for i in itertools.chain(collected_bare_paths, *collected_bare_typedefs.values(), *collected_loader_nodes.values()):
         visit_all_forward_decls_with(i, visit)
 
 def dump_node_tree(node: BaseJsonPathNode, indentdepth=0):
@@ -781,7 +867,14 @@ def dump_node_tree(node: BaseJsonPathNode, indentdepth=0):
     if node.is_root:
         lprint("- (root)")
     elif node.is_array:
-        lprint(f"- {node.name}[{node.array_index if node.array_index != BaseJsonPathNode.ANY_ARRAY else '0..' + (str(node.array_maximum) if node.array_maximum is not None else '')}]")
+        array_idx = str(node.array_index)
+        if node.array_index == BaseJsonPathNode.ANY_ARRAY:
+            array_idx = '0..' + (str(node.array_maximum) if node.array_maximum is not None else '')
+        elif node.array_index == BaseJsonPathNode.DYNAMIC_ARRAY:
+            array_idx = f"${node.array_dynamic_target}"
+            if node.array_maximum is not None:
+                array_idx += f"<0..{node.array_maximum}>"
+        lprint(f"- {node.name}[{array_idx}]")
     else:
         lprint(f"- {node.name}")
     
@@ -811,6 +904,10 @@ for j, i in collected_bare_typedefs.items():
     dprint("for", j)
     for k in i:
         dump_node_tree(k)
+for j, i in collected_loader_nodes.items():
+    dprint("for", j)
+    for k in i:
+        dump_node_tree(k)
 dprint("global")
 for i in collected_bare_paths:
     dump_node_tree(i)
@@ -833,13 +930,16 @@ while True:
     for i in process_this_cycle:
         forward_typedef_into_others(i)
 
-
-
 # finally, merge to get final tree
 options_tree = merge_path_list(collected_bare_paths)
+for i in collected_loader_nodes.keys():
+    collected_loader_nodes[i] = merge_path_list(collected_loader_nodes[i])
 
 dprint("Collected configuration tree")
 dump_node_tree(options_tree)
+for j, i in collected_loader_nodes.items():
+    dprint("for", j)
+    dump_node_tree(i)
 
 # Collect all defaults into one place
 declared_variables: Dict[ObjectLocator, List[DefaultArg]] = {}
@@ -862,6 +962,8 @@ def extract_variables(of):
         declared_variables[i.target] = []
 
 visit_all_subnodes_with(options_tree, extract_variables)
+for i in collected_loader_nodes.values():
+    visit_all_subnodes_with(i, extract_variables)
 
 class Outputter:
     SHIFT_WIDTH = 4
@@ -915,9 +1017,9 @@ def generate_variable_declarations(output):
     output.add("// VARIABLE DECLARATIONS (from other files)")
     output.add()
     for variable, generator in declared_variables.items():
-        if variable.next_in_chain:
+        if variable.next_in_chain or isinstance(variable, ObjectLocatorGeneratorReturn):
             continue
-        dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_declaration.decl_type)
+        dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_type)
         barename = variable.target_declaration.decl_string
         if barename.startswith("::"):
             barename = barename[2:]
@@ -931,8 +1033,6 @@ def generate_variable_declarations(output):
                 LAZY_AFTER_ARRAY: f"config::lazy_t<{underlying}> {barename}{dimstr}",
         }[is_lazy]
         if not is_lazy:
-            vartype = value_type_for(variable.target_declaration.decl_type)
-
             line += dimstr
 
             # Generate defaults
@@ -966,6 +1066,24 @@ def generate_variable_declarations(output):
 
         output.add(line + ";")
 
+def generate_resultobj_init(output, locator):
+    dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(locator.target_declaration.return_type)
+    if dimensions and not is_lazy or (is_lazy == LAZY_AFTER_ARRAY):
+        raise ValueError("return of function should not have dimensions")
+    dimstr = ""
+    # Generate array dimensions
+    if dimensions:
+        dimstr = ''.join(f"[{x}]" for x in dimensions)
+    line = {
+            0: f"{underlying} returnobj",
+            LAZY_BEFORE_ARRAY: f"config::lazy_t<{underlying} {dimstr}> returnobj",
+            LAZY_AFTER_ARRAY: f"config::lazy_t<{underlying}> returnobj",
+    }[is_lazy]
+    if not is_lazy:
+        line += convert_default_args(declared_variables.get(locator, []), [])
+
+    output.add(line + ";")
+
 def generate_str_to_enum_funcs(output):
     output.add("// STRING TO ENUM LOOKUPS")
     output.add("template<typename T>")
@@ -989,11 +1107,23 @@ def generate_str_to_enum_funcs(output):
             lookupbody.add(f"else {{ ESP_LOGW(TAG, \"Unknown enum value %s for {enum.name}\", v); return default_value; }}")
         output.add("}")
 
-node_to_symbol_map = {}
+subparser_used_counter = {}
 
-def generate_nodeenum_declaration(output):
-    output.add("// STATE ENUM")
-    output.add("enum struct cfgstate : uint16_t {")
+def generate_subparser_state_name(locator: ObjectLocatorGeneratorReturn):
+    global subparser_used_names
+    
+    if locator in subparser_used_counter:
+        return subparser_used_counter[locator]
+
+    name = f"subcstate_{len(subparser_used_counter)}"
+    subparser_used_counter[locator] = name
+    return name
+
+def generate_nodeenum_declaration(output, tree, structname="cfgstate", docs="STATE ENUM"):
+    node_to_symbol_map = {}
+
+    output.add("// {docs}")
+    output.add(f"enum struct {structname} : uint16_t {{")
     with output as inner:
         def add_to_symbol_map(node: BaseJsonPathNode):
             if not isinstance(node, DelegateJsonPathNode):
@@ -1005,12 +1135,16 @@ def generate_nodeenum_declaration(output):
                 name = node_to_symbol_map[node.parent_node] + "__"
                 if node.name == BaseJsonPathNode.ANY_NAME:
                     name += "ANY"
+                elif isinstance(node.name, BaseJsonPathNode.DynName):
+                    name += "D_" + node.name.var.upper()
                 elif node.name is None:
                     name += "ANON"
                 else:
                     name += node.name.upper()
                 if node.array_index == BaseJsonPathNode.ANY_ARRAY:
                     name += "_ALL"
+                elif node.array_index == BaseJsonPathNode.DYNAMIC_ARRAY:
+                    name += "_D_" + node.array_dynamic_target.upper()
                 elif node.array_index != BaseJsonPathNode.NOT_ARRAY:
                     name += f"_{node.array_index}"
                 while name in node_to_symbol_map.values():
@@ -1019,8 +1153,9 @@ def generate_nodeenum_declaration(output):
             node_to_symbol_map[node] = name
             inner.add(name + ",")
 
-        visit_all_subnodes_with(options_tree, add_to_symbol_map, False)
+        visit_all_subnodes_with(tree, add_to_symbol_map, False)
     output.add("};")
+    return node_to_symbol_map
 
 def generate_redefault_function(output):
     output.add("// EXPLICIT DEFAULT")
@@ -1031,19 +1166,21 @@ def generate_redefault_function(output):
         varbs.sort(key=lambda x: x.length)
 
         for variable_chain in varbs:
+            if isinstance(variable_chain, ObjectLocatorGeneratorReturn):
+                continue
             # prepare the output line
             lineoutputter = inner
             linechain = ""
 
             if any(
-                helper_array_dimensions_and_underlying_lazy(v.target_declaration.decl_type)[2] and k != variable_chain.length - 1
+                helper_array_dimensions_and_underlying_lazy(v.target_type)[2] and k != variable_chain.length - 1
                 for k, v in enumerate(variable_chain)
             ):
                 continue
 
             # Create for loops and line access
             for k, variable in enumerate(variable_chain):
-                dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_declaration.decl_type)
+                dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_type)
 
                 if is_lazy == LAZY_BEFORE_ARRAY:
                     dimensions = []
@@ -1067,8 +1204,8 @@ def generate_redefault_function(output):
                     break
 
             variable = variable_chain.tip
-            dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_declaration.decl_type)
-            vartype = value_type_for(variable.target_declaration.decl_type)
+            dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(variable.target_type)
+            vartype = value_type_for(variable.target_type)
 
             # Ignore array definition
             if isinstance(vartype, ValueTypeArray):
@@ -1098,16 +1235,27 @@ def generate_redefault_function(output):
 
     output.add("}")
 
+def assignment_separator_for(locator):
+    if isinstance(locator, ObjectLocatorGeneratorReturn):
+        return "."
+    else:
+        return "->" if pygccxml.declarations.is_pointer(locator.target_type) else "."
+
 def generate_assignment_path_for(locator: ObjectLocator, point_to_lazy_only=False):
     path = ""
     segments = list(locator)
-    for j, i in enumerate(locator):
+    for j, i in enumerate(segments):
         if path:
-            path += "->" if pygccxml.declarations.is_pointer(segments[j-1].target_declaration.decl_type) else "."
-        path += i.target_declaration.decl_string if not isinstance(i, ObjectLocatorDelegated) else pygccxml.declarations.full_name(i.target_declaration)
+            path += assignment_separator_for(segments[j-1])
+        if isinstance(i, ObjectLocatorDelegated):
+            path += pygccxml.declarations.full_name(i.target_declaration)
+        elif isinstance(i, ObjectLocatorGeneratorReturn):
+            path += "returnobj"
+        else:
+            path += i.target_declaration.decl_string
         # Add array refs
         if not isinstance(i, ObjectLocatorDelegated):
-            _, __, is_lazy = helper_array_dimensions_and_underlying_lazy(i.target_declaration.decl_type)
+            _, __, is_lazy = helper_array_dimensions_and_underlying_lazy(i.target_type)
             if is_lazy == LAZY_BEFORE_ARRAY and not point_to_lazy_only:
                 path = f"(*{path})"
             if not (is_lazy == LAZY_BEFORE_ARRAY and point_to_lazy_only):
@@ -1122,9 +1270,9 @@ def generate_entry_action(output, action, node):
         output.add(generate_assignment_path_for(action.target), "=", f"stack[{node.node_depth}]->index+1;")
     elif isinstance(action, EnsureLazyInit):
         # Check lazy type
-        _, underlying, lazy_kind = helper_array_dimensions_and_underlying_lazy(action.target.tip.target_declaration.decl_type)
+        _, underlying, lazy_kind = helper_array_dimensions_and_underlying_lazy(action.target.tip.target_type)
         if lazy_kind == LAZY_BEFORE_ARRAY:
-            output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {action.target.tip.target_declaration.decl_type.decl_string}::inner {{}};")
+            output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {action.target.tip.target_type.decl_string}::inner {{}};")
         else:
             output.add(f"if (!{generate_assignment_path_for(action.target, point_to_lazy_only=True)}) {generate_assignment_path_for(action.target, point_to_lazy_only=True)} = new {underlying.decl_string} {{}};")
     else:
@@ -1189,7 +1337,7 @@ def generate_store_code(output, node: StoreValuePathNode):
                 raise ValueError("unknown what to do with argument", argument)
         line += ");"
     else:
-        vtype, content = get_stored_value_and_type_for(tip.target_declaration.decl_type, access_string=line)
+        vtype, content = get_stored_value_and_type_for(tip.target_type, access_string=line)
         line += " = " + content + ";"
     output.add({
         ValueTypePrimitive.RAW_STRING: "if (v.type != json::Value::STR) ",
@@ -1199,7 +1347,7 @@ def generate_store_code(output, node: StoreValuePathNode):
     }[vtype] + "goto unk_type;")
     output.add(line)
 
-def generate_json_callback(output):
+def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quiet=False):
     """
     structure is one large switch statement, like this:
 
@@ -1214,25 +1362,29 @@ def generate_json_callback(output):
     for node, symbol in node_to_symbol_map.items():
         # Generate start actions
         output.add(f"jpto_{symbol}:")
-        output.add(f"case cfgstate::{symbol}:")
+        output.add(f"case {enumname}::{symbol}:")
         with output as body:
             for action in node.entry_actions:
                 generate_entry_action(body, action, node)
             # Add node set line
-            body.add(f"curnode = cfgstate::{symbol};")
+            body.add(f"curnode = {enumname}::{symbol};")
             body.add()
             has_if = False
             # Generate all subnode entries (for jumps)
             for leaf in node.leaves:
                 conditions = [f"stack_ptr {'>=' if isinstance(leaf, DelegateJsonPathNode) else '=='} {node.node_depth + 2}"]
-                if leaf.name != BaseJsonPathNode.ANY_NAME:
+                if not leaf.is_nonconst_name:
                     conditions.append(f"!strcmp(stack[{leaf.node_depth}]->name, {as_c_string(leaf.name)})")
-                if leaf.array_index >= BaseJsonPathNode.ANY_ARRAY:
+                if isinstance(leaf, BaseJsonPathNode.DynName):
+                    conditions.append(f"!strcmp(stack[{leaf.node_depth}]->name, {leaf.name.var}")
+                if leaf.is_array:
                     conditions.append(f"stack[{leaf.node_depth}]->is_array()")
                 if leaf.array_index >= 0:
                     conditions.append(f"stack[{leaf.node_depth}]->index == {leaf.array_index}")
-                elif leaf.array_maximum is not None:
+                if leaf.array_maximum is not None:
                     conditions.append(f"stack[{leaf.node_depth}]->index < {leaf.array_maximum}")
+                if leaf.array_index == BaseJsonPathNode.DYNAMIC_ARRAY:
+                    conditions.append(f"stack[{leaf.node_depth}]->index == {leaf.array_dynamic_target}")
                 body.add("//", leaf)
                 body.add(f"{'if' if not has_if else 'else if'} ({' && '.join(conditions)}) {{")
                 has_if = True
@@ -1252,7 +1404,7 @@ def generate_json_callback(output):
             body.add(f"{'if' if not has_if else 'else if'} (stack_ptr == {node.node_depth+1}) {{")
             with body as endbody:
                 if node.parent_node in node_to_symbol_map:
-                    endbody.add(f"curnode = cfgstate::{node_to_symbol_map[node.parent_node]};")
+                    endbody.add(f"curnode = {enumname}::{node_to_symbol_map[node.parent_node]};")
                 endbody.add("return;")
             body.add("}")
             # If we get out of this if, we warn in logs
@@ -1263,13 +1415,13 @@ def generate_json_callback(output):
     output.add("}")
     output.add("return;")
     output.add("unk_tag:");
-    output.add('ESP_LOGW(TAG, "unknown tag in config %s", stack[stack_ptr-1]->name);')
+    if not quiet: output.add('ESP_LOGD(TAG, "unknown tag in config %s", stack[stack_ptr-1]->name);')
     output.add("return;")
     output.add("unk_type:");
     output.add('if (v.type != json::Value::NONE) ESP_LOGW(TAG, "wrong type for %s", stack[stack_ptr-1]->name);')
     output.add("return;")
 
-def generate_parser(output):
+def generate_parser(output, nodemap):
     output.add("// ACTUAL PARSER")
     output.add("bool parse_config(json::TextCallback&& tcb) {")
     with output as inner:
@@ -1279,7 +1431,7 @@ def generate_parser(output):
         inner.add("clear_config();")
         inner.add("json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){");
         with inner as fparser:
-            generate_json_callback(fparser)
+            generate_json_callback(fparser, nodemap)
         inner.add("});")
         inner.add()
         inner.add("if (!parser.parse(std::move(tcb))) {")
@@ -1290,6 +1442,43 @@ def generate_parser(output):
         inner.add("return true;")
     output.add("}")
 
+def generate_result_sender(output, decl, tgt):
+    if collected_loader_properties[decl][0] is not None:
+        output.add(collected_loader_properties[decl][0], " = ", tgt + ";")
+
+def generate_subparser(output, decl, nodemap, structname):
+    output.add(f"// SUBPARSER FOR {decl}")
+    # in theory this should work? afaict it generates a perfectly valid string
+    nm = pygccxml.declarations.declaration_utils.full_name(decl)
+    if nm.startswith("::"):
+        nm = nm[2:]
+    output.add(
+        decl.return_type,
+        nm,
+        "(" + ", ".join(str(x) for x in decl.arguments) + ")", "{"
+    )
+    with output as inner:
+        inner.add(f"{structname} curnode = {structname}::R;")
+        generate_resultobj_init(inner, collected_loader_properties[decl][1])
+        inner.add()
+        inner.add("json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){");
+        with inner as fparser:
+            generate_json_callback(fparser, nodemap, structname, True)
+        inner.add("});")
+        inner.add();
+        inner.add("if (!parser.parse(config::sd_cfg_load_source())) {")
+        with inner as bad:
+            bad.add('ESP_LOGE(TAG, "Failed to parse JSON for config");')
+            generate_result_sender(bad, decl, "false")
+        inner.add("}")
+        inner.add("else {")
+        with inner as good:
+            generate_result_sender(good, decl, "true")
+        inner.add("}")
+        inner.add()
+        inner.add("return returnobj;")
+    output.add("}")
+
 def generate_code(output):
     generate_header(output)
     output.add()
@@ -1297,16 +1486,26 @@ def generate_code(output):
     output.add()
     output.add("namespace config {")
     parseroutput = Outputter()
+    nodenodemapmap = {}
+    nodenodenamemap = {}
     with output as nsoutput:
-        generate_nodeenum_declaration(nsoutput)
+        root_nodemap = generate_nodeenum_declaration(nsoutput, options_tree)
         nsoutput.add()
+        for decl in collected_loader_nodes:
+            nodenodenamemap[decl] = generate_subparser_state_name(collected_loader_properties[decl][1])
+            nodenodemapmap[decl] = generate_nodeenum_declaration(nsoutput, collected_loader_nodes[decl], nodenodenamemap[decl], "SUBPARSER STATE ENUM")
+            nsoutput.add()
         generate_redefault_function(nsoutput)
         nsoutput.add()
-        generate_parser(parseroutput)
+        generate_parser(parseroutput, root_nodemap)
         generate_str_to_enum_funcs(nsoutput)
         nsoutput.add()
         nsoutput += parseroutput.value()
     output.add("}")
+    output.add()
+    for decl in collected_loader_nodes:
+        generate_subparser(output, decl, nodenodemapmap[decl], "config::" + nodenodenamemap[decl])
+        output.add()
 
 with open(sys.argv[-1], 'w') as f:
     generate_code(Outputter(target=f))

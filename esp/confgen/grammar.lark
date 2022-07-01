@@ -32,7 +32,8 @@ value: CNUMBER -> float_or_int
 
 tag: "default" value+ -> default_tag
    | "max" variable "=" INT -> explicit_array_max
+   | "result" variable -> result_tag
 
-INTENT: "holds" | "receives" | "provides"
+INTENT: "holds" | "receives" | "loads"
 
 %ignore WS
