@@ -525,7 +525,7 @@ namespace screen::game {
 		}
 	}
 
-	TetrisNotification::TetrisNotification(int16_t score_diff, TetrisPiece::Color color) :
+	TetrisNotification::TetrisNotification(int32_t score_diff, TetrisPiece::Color color) :
 		score_amt(score_diff), color(color), alive(true), birthtime(timekeeper.current_time) {}
 
 	uint32_t TetrisNotification::lifetime() {

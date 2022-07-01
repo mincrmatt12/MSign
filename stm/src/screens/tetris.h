@@ -77,13 +77,13 @@ namespace screen::game {
 	};
 
 	struct TetrisNotification {
-		int16_t score_amt;
+		int32_t score_amt;
 		TetrisPiece::Color color;
 		bool alive = false;
 		uint32_t birthtime;
 
 		TetrisNotification() {};
-		TetrisNotification(int16_t score_diff, TetrisPiece::Color color);
+		TetrisNotification(int32_t score_diff, TetrisPiece::Color color);
 
 		void draw(int16_t y);
 
