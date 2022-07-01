@@ -18,8 +18,8 @@ endif ()
 
 cmake_policy(SET CMP0057 NEW)
 
-if (NOT "${CMAKE_CURRENT_LIST_DIR}/config.cpp" IN_LIST msign_esp_srcs)
-	list(APPEND msign_esp_srcs "config.cpp")
+if (NOT "${CMAKE_CURRENT_LIST_DIR}/configldr.cpp" IN_LIST msign_esp_srcs)
+	list(APPEND msign_esp_srcs "configldr.cpp")
 endif ()
 
 idf_component_register(SRCS ${msign_esp_srcs})
@@ -54,8 +54,8 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(gtfs_tripupdate "-finclude-user-ptr")
 	add_nmfu_target(http_chunked_recv "-fyield-support" "-findirect-start-ptr")
 
-	add_custom_command(OUTPUT ${CMAKE_CURRENT_LIST_DIR}/config.cpp
-		COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/../confgen/generator.py ${msign_esp_cfg_hdrs} ${CMAKE_CURRENT_LIST_DIR}/config.cpp
+	add_custom_command(OUTPUT ${CMAKE_CURRENT_LIST_DIR}/configldr.cpp
+		COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/../confgen/generator.py ${msign_esp_cfg_hdrs} ${CMAKE_CURRENT_LIST_DIR}/configldr.cpp
 		DEPENDS ${msign_esp_cfg_hdrs} ${CMAKE_CURRENT_LIST_DIR}/../confgen/generator.py
 		COMMENT "Generating config parser..."
 	)
