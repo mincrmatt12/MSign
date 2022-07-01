@@ -402,6 +402,7 @@ def find_all_tags(comment_data: lark.Tree, tag_type: str):
 
 class ValueTypePrimitive(enum.Enum):
     STRING = 0
+    RAW_STRING = 4
     INTEGER = 1
     FLOATING_POINT = 2
     BOOLEAN = 3
@@ -429,6 +430,8 @@ def value_type_for(decl):
     global declared_enums
     dimension, subdecl, is_lazy = helper_array_dimensions_and_underlying_lazy(decl)
     if pygccxml.declarations.is_same(pygccxml.declarations.remove_cv(pygccxml.declarations.remove_pointer(subdecl)), pygccxml.declarations.char_t()):
+        inner = ValueTypePrimitive.RAW_STRING
+    elif pygccxml.declarations.is_same(pygccxml.declarations.remove_cv(subdecl), string_t):
         inner = ValueTypePrimitive.STRING
     elif pygccxml.declarations.is_bool(subdecl):
         inner = ValueTypePrimitive.BOOLEAN
@@ -456,9 +459,9 @@ def get_default_default(t):
     # get the default default (oh yes)
     if isinstance(t, ValueTypeArray):
         t = t.inner
-    if isinstance(t, ValueTypeCustom):
+    if isinstance(t, ValueTypeCustom) or t == ValueTypePrimitive.STRING:
         return [] # default construct
-    if t == ValueTypePrimitive.STRING:
+    if t == ValueTypePrimitive.RAW_STRING:
         return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "nullptr")]
     elif t == ValueTypePrimitive.INTEGER:
         return [DefaultArg(DefaultArgType.RAW_CPPVALUE, "0")]
@@ -671,6 +674,7 @@ def parse_file(fnames):
     broad_matcher = pygccxml.declarations.calldef_matcher(return_type="void") | pygccxml.declarations.variable_matcher()
     all_things = pygccxml.declarations.matcher.find(broad_matcher, all_declarations)
     global_namespace = pygccxml.declarations.get_global_namespace(all_declarations)
+    string_t = global_namespace.namespace("config").class_("string_t")
 
     # Go through each one, and try to find ones with matching comments
     for thing in all_things:
@@ -1074,7 +1078,7 @@ def generate_redefault_function(output):
                 lineoutputter.add(f"{{ std::destroy_at(&{linechain}); ")
                 linechain = f"new (&{linechain}) std::remove_reference_t<decltype({linechain})>"
                 needs_close = True
-            elif vartype != ValueTypePrimitive.STRING:
+            elif vartype != ValueTypePrimitive.RAW_STRING:
                 linechain += " ="
             else:
                 lineoutputter.add(f"{{ if (IS_DRAM({linechain}) || IS_IRAM({linechain})) free(const_cast<char *>({linechain}));")
@@ -1144,8 +1148,10 @@ def get_stored_value_and_type_for(decl, access_string="{}", duplicate=True):
         vtype = vtype.inner
     if isinstance(vtype, ValueTypeCustom):
         raise ValueError("cannot store directly to custom type")
-    if vtype == ValueTypePrimitive.STRING:
+    if vtype == ValueTypePrimitive.RAW_STRING:
         return vtype, "strdup(v.str_val)" if duplicate else "v.str_val"
+    elif vtype == ValueTypePrimitive.STRING:
+        return ValueTypePrimitive.RAW_STRING, "{config::string_t::heap_tag{}, strdup(v.str_val)}"
     elif vtype == ValueTypePrimitive.BOOLEAN:
         return vtype, "v.bool_val"
     elif vtype == ValueTypePrimitive.FLOATING_POINT:
@@ -1153,7 +1159,7 @@ def get_stored_value_and_type_for(decl, access_string="{}", duplicate=True):
     elif vtype == ValueTypePrimitive.INTEGER:
         return vtype, "v.int_val"
     elif isinstance(vtype, ValueTypeEnum):
-        return ValueTypePrimitive.STRING, f"lookup_enum<{vtype.referenced_type}>(v.str_val, {access_string})"
+        return ValueTypePrimitive.RAW_STRING, f"config::lookup_enum<{vtype.referenced_type}>(v.str_val, {access_string})"
     else:
         raise NotImplementedError(vtype)
 
@@ -1183,7 +1189,7 @@ def generate_store_code(output, node: StoreValuePathNode):
         vtype, content = get_stored_value_and_type_for(tip.target_declaration.decl_type, access_string=line)
         line += " = " + content + ";"
     output.add({
-        ValueTypePrimitive.STRING: "if (v.type != json::Value::STR) ",
+        ValueTypePrimitive.RAW_STRING: "if (v.type != json::Value::STR) ",
         ValueTypePrimitive.FLOATING_POINT: "if (!v.is_number()) ",
         ValueTypePrimitive.INTEGER: "if (v.type != json::Value::INT) ",
         ValueTypePrimitive.BOOLEAN: "if (v.type != json::Value::BOOL) ",
