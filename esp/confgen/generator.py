@@ -633,6 +633,9 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
             # Generate default default
             defaultargs = get_default_default(value_type_for(decl.decl_type))
 
+    if intent == "holds" and value_type_for(decl.decl_type) == ValueTypePrimitive.RAW_STRING:
+        warn(f"warn: using a raw char * for {decl} will cause the sim to leak memory; try using a config::string_t instead")
+
     if intent != "receives" and defaultargs is not None:
         final_node.entry_actions.append(DoDefaultConstruct(locator, defaultargs))
 
