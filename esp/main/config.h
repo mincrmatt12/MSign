@@ -120,7 +120,7 @@ namespace config {
 #elif defined(__castxml__)
 			return false;
 #else
-			return IS_DRAM(str) || IS_IRAM(str);
+			return !(IS_DRAM(str) || IS_IRAM(str));
 #endif
 		}
 
