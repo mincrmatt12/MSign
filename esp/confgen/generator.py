@@ -320,7 +320,7 @@ class ForwardDeclarationPathNode(BaseJsonPathNode):
 # parser config
 gp, gn = pygccxml.utils.find_xml_generator()
 xml_generator_config = pygccxml.parser.xml_generator_configuration_t(
-    cflags="--std=c++17",
+    cflags="--std=c++17 -Wno-pragma-once-outside-header",
     xml_generator_path=gp,
     xml_generator=gn)
 
