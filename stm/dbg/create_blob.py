@@ -23,6 +23,7 @@ import struct
 import cxxfilt
 import zlib
 import io
+import re
 
 # max length for symbols
 SYMBOL_CUTOFF = 100
@@ -40,14 +41,25 @@ type_names = [
     ("unsigned short", "u16"),
     ("unsigned char", "u8"),
     ("long long", "s64"),
-    ("long", "s32"),
-    ("int", "s32"),
-    ("short", "s16")
+    ("(anonymous namespace)", "(anon)")
+]
+
+type_names_re = [
+    ("screen::ScreenSwapper<(.*)>(?=::)", "swap_t"),
+    ("bheap::Arena<\\d+u, lru::Cache<\\d+u, \\d+u> >", "arena_t"),
+    (r"^std::enable_if<(?:.*), (.*)>::type", r"\1"),
+    (r"(?<=<| )(\d+)(u?), (?:\d+u?, )*(\d+)u?", r"\1...\3\2"),
+    ("\\blong\\b", "s32"),
+    ("\\bshort\\b", "s16"),
+    ("\\bint\\b", "s32"),
 ]
 
 def process_name(name):
-    for tn, rn in type_names:
-        name = name.replace(tn, rn)
+    for k in range(2):
+        for tn, rn in type_names:
+            name = name.replace(tn, rn)
+        for tn, rn in type_names_re:
+            name = re.sub(tn, rn, name)
     return name if len(name) < SYMBOL_CUTOFF else name[:SYMBOL_CUTOFF - 1 - 3] + "..." # todo: proper nameifier
 
 def is_good_symbol(symbol):
