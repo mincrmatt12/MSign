@@ -935,7 +935,7 @@ notfound:
 	void run(void*) {
 restart:
 		if (upd::needed() == upd::WEB_UI || update_pending) {
-			update_pending = true;
+			update_pending = false;
 			ESP_LOGI(TAG, "Running webui update");
 			set_status_flag(slots::WebuiStatus::INSTALLING_WEBUI_PACK);
 			upd::update_website();
