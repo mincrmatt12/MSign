@@ -14,12 +14,12 @@ pipeline {
 					steps {
 						// build for board
 						dir("stm/build_board") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board"
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 						// build for nucleo
 						dir("stm/build_nucleo") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo"
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 
@@ -46,12 +46,12 @@ pipeline {
 					steps {
 						// build for board
 						dir("stmboot/build_board") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board"
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 						// build for nucleo
 						dir("stmboot/build_nucleo") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo"
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 
