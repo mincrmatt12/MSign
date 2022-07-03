@@ -9,7 +9,7 @@ extern
 #ifdef __cplusplus
 "C"
 #endif
-void msign_assert(bool x, const char* y);
+void msign_panic(const char* y);
 
 #define configUSE_PREEMPTION              1
 #define configUSE_IDLE_HOOK               0
@@ -83,7 +83,7 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 
 /* Normal assert() semantics without relying on the provision of an assert.h
 header file. */
-#define configASSERT( x ) msign_assert((x), "freertos assert failed")
+#define configASSERT( x ) do { if (!(x)) msign_panic("assert failed"); } while(0)
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
    standard names. */

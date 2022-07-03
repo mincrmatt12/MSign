@@ -28,6 +28,6 @@ namespace crash {
 	}
 }
 
-extern "C" void msign_assert(bool c, const char * v) {
-	if (!c) crash::panic(v);
+extern "C" void msign_panic(const char *c) {
+	crash::panic(c);
 }

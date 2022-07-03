@@ -34,6 +34,11 @@ namespace crash {
 
 };
 
-extern "C" void msign_assert(bool condition, const char *msg="assertion failed");
+// C exported version of msign::panic
+extern "C" void msign_panic(const char *c);
+
+inline void msign_assert(bool c, const char * v) {
+	if (!c) msign_panic(v);
+}
 
 #endif

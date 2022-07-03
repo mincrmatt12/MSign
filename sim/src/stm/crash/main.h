@@ -6,6 +6,10 @@ namespace crash {
 	[[noreturn]] void panic_nonfatal(const char* errcode);
 };
 
-extern "C" void msign_assert(bool c, const char* v);
+extern "C" void msign_panic(const char *c);
+
+inline void msign_assert(bool c, const char * v) {
+	if (!c) msign_panic(v);
+}
 
 #endif
