@@ -91,7 +91,7 @@ SECTIONS
   .crash_bss (_svram) : 
   AT (0x34000000) /* ugly hack to get openocd to ignore this section */
   {
-	*crash/*(.bss .bss* COMMON) /* crash bss */
+	*libstm_crash.a:*(.bss .bss* COMMON) /* crash bss */
 	. = ALIGN(4);
 	_ecbss = .;
   }
@@ -102,7 +102,7 @@ SECTIONS
   {
 	. = ALIGN(4);
 	_scdata = .;
-	*crash/*(.data .data*) /* data sections for crash handler code */
+	*libstm_crash.a:*(.data .data*)
 	_ecdata = .;
   } AT> FLASH
 
@@ -114,7 +114,7 @@ SECTIONS
   {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
-    EXCLUDE_FILE(*crash/*) *(.data .data*)           /* .data sections */
+    *(.data .data*)           /* .data sections */
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
@@ -128,7 +128,7 @@ SECTIONS
     /* This is used by the startup in order to initialize the .bss secion */
     _sbss = .;         /* define a global symbol at bss start */
     __bss_start__ = _sbss;
-    EXCLUDE_FILE(*crash/*) *(.bss .bss* COMMON) /* ignore crash */
+    *(.bss .bss* COMMON) /* ignore crash */
 
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */

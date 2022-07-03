@@ -2,6 +2,10 @@
 cmake_minimum_required(VERSION 3.13)
 project(msign-stm C CXX ASM)
 
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+	set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+	message(STATUS "Release build, using LTO")
+endif()
 set(CMAKE_CXX_STANDARD 20)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -28,7 +32,7 @@ find_package(Python 3 COMPONENTS Interpreter)
 # hal
 file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
 
-add_library(cube_ll STATIC ${cube_ll_srcs})
+add_library(cube_ll OBJECT ${cube_ll_srcs})
 
 target_include_directories(cube_ll PUBLIC
 	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
@@ -39,6 +43,10 @@ target_include_directories(cube_ll PUBLIC
 
 target_compile_definitions(cube_ll PUBLIC
 	USE_FULL_LL_DRIVER
+)
+
+target_compile_options(cube_ll PUBLIC
+	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register -Wno-volatile>
 )
 
 if (MSIGN_BUILD_TYPE STREQUAL "board")
@@ -54,10 +62,10 @@ elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 endif()
 
 
-set(freertos_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Middlewares/Third_Party/FreeRTOS/Source)
+set(freertos_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 
 # rtos
-add_library(freertos STATIC
+add_library(freertos OBJECT
 	${freertos_dir}/event_groups.c
 	${freertos_dir}/list.c
 	${freertos_dir}/queue.c
@@ -81,11 +89,29 @@ file(GLOB_RECURSE stm_srcs FOLLOW_SYMLINKS
 	${CMAKE_CURRENT_SOURCE_DIR}/src/*.s
 )
 
+file(GLOB_RECURSE stm_crash_srcs 
+	${CMAKE_CURRENT_SOURCE_DIR}/src/crash/*.cpp
+	${CMAKE_CURRENT_SOURCE_DIR}/src/crash/*.c
+	${CMAKE_CURRENT_SOURCE_DIR}/src/crash/*.s
+)
+
+list(REMOVE_ITEM stm_srcs ${stm_crash_srcs})
+
+add_library(stm_crash STATIC ${stm_crash_srcs})
+
 add_executable(stm ${stm_srcs})
+
+target_link_libraries(stm_crash
+	cube_ll
+	freertos
+)
+
+set_property(TARGET stm_crash PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 
 target_link_libraries(stm
 	cube_ll
 	freertos
+	stm_crash
 
 	c m gcc
 )
@@ -94,10 +120,9 @@ target_compile_options(stm
 	PUBLIC
 	-O3
 	-ffast-math
-	$<$<COMPILE_LANGUAGE:CXX>: -fno-threadsafe-statics -Wno-register -Wno-volatile>
 )
 
-target_include_directories(stm
+target_include_directories(stm_crash
 	PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/../vendor/TinyDeflate
 )

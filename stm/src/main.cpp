@@ -27,11 +27,6 @@ tasks::Timekeeper   timekeeper{rtc_time};
 tasks::DispMan      dispman{};
 tasks::DebugConsole dbgtim{timekeeper};
 
-void out_of_memory() {
-	matrix.start_display();
-	crash::panic("no memory for tasks");
-}
-
 int main() {
 	rcc::init();
 	nvic::init();

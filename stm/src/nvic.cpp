@@ -102,7 +102,7 @@ extern "C" void SysTick_Handler() {
 	xPortSysTickHandler();
 }
 
-extern "C" void vApplicationStackOverflowHook(TaskHandle_t xTask, signed char * pcTaskName) {
+extern "C" void vApplicationStackOverflowHook(TaskHandle_t xTask, char * pcTaskName) {
 	char msg[32];
 	snprintf(msg, 32, "stack over %s", pcTaskName);
 	crash::panic(msg);
