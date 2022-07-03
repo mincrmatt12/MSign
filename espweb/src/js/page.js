@@ -37,6 +37,7 @@ function App() {
 	const [error, setError] = React.useState(false);
 	const [cfg, setCfg] = React.useState({});
 	const [fetchedVer, setFetchedVer] = React.useState("cfgserver");
+	const [sleep, setSleep] = React.useState(false);
 
 	React.useEffect(() => {
 		fetch("/a/conf.json") 
@@ -54,6 +55,13 @@ function App() {
 				setError(true);
 				setLoading(false);
 			});
+	}, []);
+
+	React.useEffect(() => {
+		fetch("/a/sleep")
+			.then((resp) => resp.text())
+			.then((dat) => setSleep(dat == "true"))
+			.catch(() => {});
 	}, []);
 
 	React.useEffect(() => {
@@ -81,6 +89,17 @@ function App() {
 		});
 	};
 
+	const nextSleepState = !sleep;
+
+	const toggleSleep = () => {
+		const url = nextSleepState ? "/a/sleepOn" : "/a/sleepOff";
+		fetch(url, {method: "POST"})
+			.then((resp) => {
+				if (!resp.ok) alert("failed to sleep");
+				else setSleep(nextSleepState);
+			});
+	};
+
 	return (
 		<Router basename="/">
 			<Navbar variant="dark" bg="dark">
@@ -88,7 +107,8 @@ function App() {
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">
 						<Nav.Link eventKey={1} href="#" disabled={!dirty} active={false} onSelect={() => {saveConfig();}}>save</Nav.Link>
-						<Nav.Link eventKey={2} href="#" active={false} onSelect={() => {fetch("/a/reboot");}}>reboot</Nav.Link>
+						<Nav.Link eventKey={2} href="#" disabled={loading} active={false} onSelect={toggleSleep}>{nextSleepState ? "sleep" : "unsleep"}</Nav.Link>
+						<Nav.Link eventKey={3} href="#" active={false} onSelect={() => {fetch("/a/reboot");}}>reboot</Nav.Link>
 					</Nav>
 				</Container>
 			</Navbar>
