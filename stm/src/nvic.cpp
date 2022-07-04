@@ -119,7 +119,8 @@ extern "C" void MemManage_Handler() {
 		"mrsne r1, psp\n\t" // otherwise, use the process stack
 
 		"ldr r3, =%1\n\t"   // load the address of the crash routine
-		"bx r3\n\t" :       // jump to it
+		"bx r3\n\t"         // jump to it
+		".ltorg\n\t" :
 		: "i" ("MemManage (xn fail)"), "i" (&crash::panic_from_isr)
 		: "memory"
 	);
@@ -134,7 +135,8 @@ extern "C" void UsageFault_Handler() {
 		"mrseq r1, msp\n\t"
 		"mrsne r1, psp\n\t"
 		"ldr r3, =%1\n\t" 
-		"bx r3\n\t" :
+		"bx r3\n\t"
+		".ltorg\n\t" :
 		: "i" ("UsageFault"), "i" (&crash::panic_from_isr)
 		: "memory"
 	);
@@ -149,7 +151,8 @@ extern "C" void BusFault_Handler() {
 		"mrseq r1, msp\n\t"
 		"mrsne r1, psp\n\t"
 		"ldr r3, =%1\n\t" 
-		"bx r3\n\t" :
+		"bx r3\n\t"
+		".ltorg\n\t" :
 		: "i" ("BusFault"), "i" (&crash::panic_from_isr)
 		: "memory"
 	);
