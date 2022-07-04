@@ -408,6 +408,9 @@ namespace screen::game {
 	const Tetris::LevelInfo& Tetris::current_level() {
 		const static LevelInfo level_table[] = {
 			// lines , speed , scoremult
+			{400     , 6     , 25},
+			{300     , 7     , 20},
+			{250     , 8     , 17},
 			{200     , 9     , 15},
 			{150     , 10    , 13},
 			{120     , 11    , 12},
