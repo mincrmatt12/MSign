@@ -518,7 +518,7 @@ namespace screen::game {
 			case TetrisPiece::O:
 				return 0xffee00_cc;
 			case TetrisPiece::S:
-				return 0x00ff00_cc;
+				return 0x00cc11_cc;
 			case TetrisPiece::Z:
 				return 0xff4444_cc;
 			case TetrisPiece::T:
