@@ -590,6 +590,7 @@ end_temp_request:
 				}
 				break;
 			case DATA_RETRIEVE:
+			case DATA_REQUEST:
 				{
 					if (!xStreamBufferReceive(dma_rx_queue, msgbuf, 6, portMAX_DELAY)) continue; // This shouldn't fail due to how the dma logic works [citation needed]
 
@@ -606,7 +607,7 @@ end_temp_request:
 
 					// Send an ack first of all
 					dma_out_pkt.direction = dma_out_pkt.FromStm;
-					dma_out_pkt.cmd_byte =  slots::protocol::ACK_DATA_RETRIEVE;
+					dma_out_pkt.cmd_byte =  msgbuf[2] == DATA_RETRIEVE ? slots::protocol::ACK_DATA_RETRIEVE : ACK_DATA_REQUEST;
 					dma_out_pkt.size = 6;
 					dma_out_pkt.put(slotid, 0);
 					dma_out_pkt.put(start, 2);
@@ -637,7 +638,7 @@ end_temp_request:
 							// Prepare packet
 							wait_for_not_sending();
 							dma_out_pkt.direction = dma_out_pkt.FromStm;
-							dma_out_pkt.cmd_byte =  slots::protocol::DATA_STORE;
+							dma_out_pkt.cmd_byte =  msgbuf[2] == DATA_RETRIEVE ? slots::protocol::DATA_STORE : DATA_FULFILL;
 							dma_out_pkt.size = total_size + 6;
 							dma_out_pkt.put<uint16_t>(slotid | (is_start << 15) | (is_end << 14), 0);
 							dma_out_pkt.put(sendoffset, 2);
