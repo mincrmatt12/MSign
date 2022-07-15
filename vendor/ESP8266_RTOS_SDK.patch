@@ -41,6 +41,21 @@ index b546cd7b..5443fb33 100644
  
  #undef _REENT_INIT_PTR
  #define _REENT_INIT_PTR(p) esp_reent_init(p)
+diff --git a/components/freertos/port/esp8266/xtensa_vectors.S b/components/freertos/port/esp8266/xtensa_vectors.S
+index 3485d74b..37e22520 100644
+--- a/components/freertos/port/esp8266/xtensa_vectors.S
++++ b/components/freertos/port/esp8266/xtensa_vectors.S
+@@ -856,7 +856,9 @@ nmi_reentried:
+     addi    a3,  a3,  1
+     s32i    a3,  a2,  0
+ 
+-    call0   wDev_ProcessFiq                         // call interrupt's C handler
++    .literal .LwDPF, wDev_ProcessFiq
++    l32r    a8, .LwDPF
++    callx0  a8                                      // call interrupt's C handler
+ 
+     //Restore NMI level
+     movi    a2,  _chip_nmi_cnt
 diff --git a/components/log/log.c b/components/log/log.c
 index d69e2533..7b295d11 100644
 --- a/components/log/log.c
@@ -54,11 +69,26 @@ index d69e2533..7b295d11 100644
      0,  //  ESP_LOG_DEBUG
      0,  //  ESP_LOG_VERBOSE
  };
+diff --git a/components/nvs_flash/CMakeLists.txt b/components/nvs_flash/CMakeLists.txt
+index 7ce2871c..65edecb8 100644
+--- a/components/nvs_flash/CMakeLists.txt
++++ b/components/nvs_flash/CMakeLists.txt
+@@ -35,8 +35,8 @@ if(${target} STREQUAL "linux")
+     target_compile_options(${COMPONENT_LIB} PUBLIC "-DLINUX_TARGET")
+ else()
+     # TODO: this is a workaround until IDF-2085 is fixed
+-    idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
+-    target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
++	#idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
++	#target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
+ endif()
+ 
+ if(CONFIG_NVS_ENCRYPTION)
 diff --git a/components/wpa_supplicant/CMakeLists.txt b/components/wpa_supplicant/CMakeLists.txt
-index 3300647e..549d4f73 100644
+index 3300647e..f6986f61 100644
 --- a/components/wpa_supplicant/CMakeLists.txt
 +++ b/components/wpa_supplicant/CMakeLists.txt
-@@ -3,9 +3,7 @@ set(srcs "port/os_xtensa.c"
+@@ -3,50 +3,9 @@ set(srcs "port/os_xtensa.c"
      "src/ap/ieee802_1x.c"
      "src/ap/wpa_auth.c"
      "src/ap/wpa_auth_ie.c"
@@ -66,32 +96,63 @@ index 3300647e..549d4f73 100644
      "src/common/wpa_common.c"
 -    "src/common/dpp.c"
      "src/utils/bitfield.c"
-     "src/crypto/aes-ctr.c"
-     "src/crypto/aes-siv.c"
-@@ -21,14 +19,10 @@ set(srcs "port/os_xtensa.c"
-     "src/crypto/aes-omac1.c"
-     "src/crypto/bignum.c"
-     "src/crypto/ccmp.c"
+-    "src/crypto/aes-ctr.c"
+-    "src/crypto/aes-siv.c"
+-    "src/crypto/sha256-kdf.c"
+-    "src/crypto/aes-cbc.c"
+-    "src/crypto/aes-ccm.c"
+-    "src/crypto/aes-internal-dec.c"
+-    "src/crypto/aes-internal-enc.c"
+-    "src/crypto/aes-internal.c"
+-    "src/crypto/aes-omac1.c"
+-    "src/crypto/aes-unwrap.c"
+-    "src/crypto/aes-wrap.c"
+-    "src/crypto/aes-omac1.c"
+-    "src/crypto/bignum.c"
+-    "src/crypto/ccmp.c"
 -    "src/crypto/crypto_mbedtls.c"
 -    "src/crypto/crypto_mbedtls-bignum.c"
 -    "src/crypto/crypto_mbedtls-ec.c"
      "src/crypto/crypto_ops.c"
-     "src/crypto/crypto_internal-cipher.c"
-     "src/crypto/crypto_internal-modexp.c"
-     "src/crypto/crypto_internal-rsa.c"
+-    "src/crypto/crypto_internal-cipher.c"
+-    "src/crypto/crypto_internal-modexp.c"
+-    "src/crypto/crypto_internal-rsa.c"
 -    "src/crypto/crypto_mbedtls-rsa.c"
-     "src/crypto/crypto_internal.c"
-     "src/crypto/des-internal.c"
-     "src/crypto/dh_group5.c"
-@@ -85,6 +79,7 @@ set(srcs "port/os_xtensa.c"
+-    "src/crypto/crypto_internal.c"
+-    "src/crypto/des-internal.c"
+-    "src/crypto/dh_group5.c"
+-    "src/crypto/dh_groups.c"
+-    "src/crypto/md4-internal.c"
+-    "src/crypto/md5-internal.c"
+-    "src/crypto/md5.c"
+-    "src/crypto/ms_funcs.c"
+-    "src/crypto/rc4.c"
+-    "src/crypto/sha1-internal.c"
+-    "src/crypto/sha1-pbkdf2.c"
+-    "src/crypto/sha1.c"
+-    "src/crypto/sha256-internal.c"
+-    "src/crypto/sha256.c"
+-    "src/crypto/sha1-tlsprf.c"
+-    "src/crypto/sha256-tlsprf.c"
+-    "src/crypto/sha384-tlsprf.c"
+-    "src/crypto/sha256-prf.c"
+     "src/eap_peer/chap.c"
+     "src/eap_peer/eap.c"
+     "src/eap_peer/eap_common.c"
+@@ -84,7 +43,12 @@ set(srcs "port/os_xtensa.c"
+     "src/wps/wps_validate.c")
  
  if(CONFIG_WPA_MBEDTLS_CRYPTO)
++		message(STATUS "HI2")
      set(tls_src "src/crypto/tls_mbedtls.c")
 +	set(tls_dep mbedtls)
++elseif(CONFIG_WPA_EXTERNAL_TLS)
++	set(tls_src "")
++	set(tls_dep ${CONFIG_WPA_EXTERNAL_TLS_COMPONENT})
  else()
      set(tls_src
      "src/tls/asn1.c"
-@@ -105,6 +100,7 @@ else()
+@@ -105,6 +69,7 @@ else()
      "src/tls/tlsv1_server_write.c"
      "src/tls/x509v3.c"
      )
@@ -99,16 +160,104 @@ index 3300647e..549d4f73 100644
  endif()
  
  if (CONFIG_WPA_11KV_SUPPORT)
-@@ -124,7 +120,7 @@ endif()
- idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
+@@ -121,10 +86,94 @@ else()
+     set(roaming_src "")
+ endif()
+ 
+-idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
++if (CONFIG_WPA_EXTERNAL_TLS_CRYPTO)
++	set (crypto_src "")
++elseif (CONFIG_WPA_EXTERNAL_TLS)
++	set (crypto_src 
++    "src/crypto/aes-ctr.c"
++    "src/crypto/aes-siv.c"
++    "src/crypto/sha256-kdf.c"
++    "src/crypto/aes-cbc.c"
++    "src/crypto/aes-ccm.c"
++    "src/crypto/aes-internal-dec.c"
++    "src/crypto/aes-internal-enc.c"
++    "src/crypto/aes-internal.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/aes-unwrap.c"
++    "src/crypto/aes-wrap.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/bignum.c"
++    "src/crypto/ccmp.c"
++    "src/crypto/crypto_internal-cipher.c"
++    "src/crypto/crypto_internal-modexp.c"
++    "src/crypto/crypto_internal.c"
++    "src/crypto/des-internal.c"
++    "src/crypto/dh_group5.c"
++    "src/crypto/dh_groups.c"
++    "src/crypto/md4-internal.c"
++    "src/crypto/md5-internal.c"
++    "src/crypto/md5.c"
++    "src/crypto/ms_funcs.c"
++    "src/crypto/rc4.c"
++    "src/crypto/sha1-internal.c"
++    "src/crypto/sha1-pbkdf2.c"
++    "src/crypto/sha1.c"
++    "src/crypto/sha256-internal.c"
++    "src/crypto/sha256.c"
++    "src/crypto/sha1-tlsprf.c"
++    "src/crypto/sha256-tlsprf.c"
++    "src/crypto/sha384-tlsprf.c"
++    "src/crypto/sha256-prf.c"
++	)
++else()
++	set (crypto_src 
++    "src/crypto/aes-ctr.c"
++    "src/crypto/aes-siv.c"
++    "src/crypto/sha256-kdf.c"
++    "src/crypto/aes-cbc.c"
++    "src/crypto/aes-ccm.c"
++    "src/crypto/aes-internal-dec.c"
++    "src/crypto/aes-internal-enc.c"
++    "src/crypto/aes-internal.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/aes-unwrap.c"
++    "src/crypto/aes-wrap.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/bignum.c"
++    "src/crypto/ccmp.c"
++    "src/crypto/crypto_internal-cipher.c"
++    "src/crypto/crypto_internal-modexp.c"
++    "src/crypto/crypto_internal-rsa.c"
++    "src/crypto/crypto_internal.c"
++    "src/crypto/des-internal.c"
++    "src/crypto/dh_group5.c"
++    "src/crypto/dh_groups.c"
++    "src/crypto/md4-internal.c"
++    "src/crypto/md5-internal.c"
++    "src/crypto/md5.c"
++    "src/crypto/ms_funcs.c"
++    "src/crypto/rc4.c"
++    "src/crypto/sha1-internal.c"
++    "src/crypto/sha1-pbkdf2.c"
++    "src/crypto/sha1.c"
++    "src/crypto/sha256-internal.c"
++    "src/crypto/sha256.c"
++    "src/crypto/sha1-tlsprf.c"
++    "src/crypto/sha256-tlsprf.c"
++    "src/crypto/sha384-tlsprf.c"
++    "src/crypto/sha256-prf.c"
++	)
++endif()
++
++idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}" "${crypto_src}"
                      INCLUDE_DIRS include port/include include/esp_supplicant
                      PRIV_INCLUDE_DIRS src
 -                    PRIV_REQUIRES mbedtls freertos heap newlib)
-+					PRIV_REQUIRES freertos heap newlib ${tls_dep})
++					PRIV_REQUIRES freertos heap newlib)
++
++if (CONFIG_WPA_EXTERNAL_TLS)
++	idf_component_get_property(tls_lib_name ${tls_dep} COMPONENT_LIB)
++	target_link_libraries(${COMPONENT_LIB} PRIVATE ${tls_lib_name})
++endif()
  
  set_source_files_properties(
      src/crypto/crypto_ops.c
-@@ -150,8 +146,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
+@@ -150,8 +199,8 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
      ESP8266_WORKAROUND
      CONFIG_ECC
      CONFIG_IEEE80211W
@@ -119,6 +268,154 @@ index 3300647e..549d4f73 100644
 +	#CONFIG_DPP
      CONFIG_WNM
      )
+diff --git a/components/wpa_supplicant/Kconfig b/components/wpa_supplicant/Kconfig
+index e21d696d..70f65f51 100644
+--- a/components/wpa_supplicant/Kconfig
++++ b/components/wpa_supplicant/Kconfig
+@@ -14,6 +14,21 @@ config LTM_FAST
+         help
+             Select this option to use MbedTLS crypto API's which utilize hardware acceleration.
+ 
++	config WPA_EXTERNAL_TLS
++		bool "Use external TLS/crypto API"
++		default n
++
++	if WPA_EXTERNAL_TLS
++		config WPA_EXTERNAL_TLS_COMPONENT
++			string "External crypto API component"
++			default ""
++
++		config WPA_EXTERNAL_TLS_CRYPTO
++			bool "Use external TLS lib for crypto"
++			default n
++
++	endif
++
+     config WPA_DEBUG_PRINT
+         bool "Print debug messages from WPA Supplicant"
+         default n
+diff --git a/components/wpa_supplicant/include/wpatls/common.h b/components/wpa_supplicant/include/wpatls/common.h
+new file mode 120000
+index 00000000..97386452
+--- /dev/null
++++ b/components/wpa_supplicant/include/wpatls/common.h
+@@ -0,0 +1 @@
++../../src/utils/common.h
+\ No newline at end of file
+diff --git a/components/wpa_supplicant/src/tls/tls.h b/components/wpa_supplicant/include/wpatls/tls.h
+similarity index 100%
+rename from components/wpa_supplicant/src/tls/tls.h
+rename to components/wpa_supplicant/include/wpatls/tls.h
+diff --git a/components/wpa_supplicant/src/crypto/tls_mbedtls.c b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+index 409281ff..6f90b44c 100644
+--- a/components/wpa_supplicant/src/crypto/tls_mbedtls.c
++++ b/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+@@ -618,6 +618,7 @@ struct wpabuf * tls_connection_server_handshake(void *tls_ctx,
+ 						struct wpabuf **appl_data)
+ {
+ 	wpa_printf(MSG_ERROR, "%s: not supported %d", __func__, __LINE__);
++
+ 	return NULL;
+ }
+ 
+diff --git a/components/wpa_supplicant/src/eap_peer/eap.c b/components/wpa_supplicant/src/eap_peer/eap.c
+index 114985c9..ed71a70e 100644
+--- a/components/wpa_supplicant/src/eap_peer/eap.c
++++ b/components/wpa_supplicant/src/eap_peer/eap.c
+@@ -29,7 +29,7 @@
+ #include "crypto/crypto.h"
+ 
+ #include "utils/ext_password.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_config.h"
+ #include "eap_peer/eap.h"
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c b/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
+index dff5aeec..819fd77d 100644
+--- a/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
+@@ -14,7 +14,7 @@
+ #include "utils/common.h"
+ #include "crypto/random.h"
+ #include "crypto/ms_funcs.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_defs.h"
+ #include "eap_peer/eap_tls_common.h"
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_peap.c b/components/wpa_supplicant/src/eap_peer/eap_peap.c
+index 54e0ac0c..7441b9ac 100644
+--- a/components/wpa_supplicant/src/eap_peer/eap_peap.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_peap.c
+@@ -10,7 +10,7 @@
+ #ifdef EAP_PEAP
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_tlv_common.h"
+ #include "eap_peer/eap_peap_common.h"
+ #include "eap_peer/eap_i.h"
+@@ -1349,4 +1349,4 @@ eap_peer_peap_register(void)
+ 	return ret;
+ }
+ 
+-#endif /* EAP_PEAP */
+\ No newline at end of file
++#endif /* EAP_PEAP */
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_tls.c b/components/wpa_supplicant/src/eap_peer/eap_tls.c
+index c6d0bd05..97744eb9 100755
+--- a/components/wpa_supplicant/src/eap_peer/eap_tls.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_tls.c
+@@ -9,7 +9,7 @@
+ 
+ #ifdef EAP_TLS
+ #include "utils/common.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_defs.h"
+ #include "eap_peer/eap_tls_common.h"
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_tls_common.c b/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
+index 9c93f6d0..720e32e6 100755
+--- a/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_tls_common.h"
+ #include "eap_peer/eap_config.h"
+diff --git a/components/wpa_supplicant/src/eap_peer/eap_ttls.c b/components/wpa_supplicant/src/eap_peer/eap_ttls.c
+index b014dbd3..5f802d68 100644
+--- a/components/wpa_supplicant/src/eap_peer/eap_ttls.c
++++ b/components/wpa_supplicant/src/eap_peer/eap_ttls.c
+@@ -11,7 +11,7 @@
+ #ifdef EAP_TTLS
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap.h"
+ #include "eap_peer/eap_ttls.h"
+ #include "eap_peer/mschapv2.h"
+diff --git a/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c b/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+index cfc9e139..83b6f5df 100755
+--- a/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
++++ b/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+@@ -33,7 +33,7 @@
+ #include "crypto/crypto.h"
+ 
+ #include "utils/ext_password.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_config.h"
+ #include "eap_peer/eap.h"
 diff --git a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c b/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
 index 7b37a6c0..46929125 100644
 --- a/components/wpa_supplicant/src/esp_supplicant/esp_wpa_main.c
@@ -133,3 +430,107 @@ index 7b37a6c0..46929125 100644
              wpa_sta_clear_curr_pmksa();
              break;
          default:
+diff --git a/components/wpa_supplicant/src/tls/tls_internal.c b/components/wpa_supplicant/src/tls/tls_internal.c
+index 73e9aa2f..11e3863c 100755
+--- a/components/wpa_supplicant/src/tls/tls_internal.c
++++ b/components/wpa_supplicant/src/tls/tls_internal.c
+@@ -14,7 +14,7 @@
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+ #include "crypto/md5.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_client.h"
+ #include "tls/tlsv1_server.h"
+ 
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_client.c b/components/wpa_supplicant/src/tls/tlsv1_client.c
+index d9f038b9..3403b393 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_client.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_client.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+ #include "tls/tlsv1_client.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_client_read.c b/components/wpa_supplicant/src/tls/tlsv1_client_read.c
+index a585f206..0240b265 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_client_read.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_client_read.c
+@@ -12,7 +12,7 @@
+ #include "crypto/md5.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_client_write.c b/components/wpa_supplicant/src/tls/tlsv1_client_write.c
+index 53a1b338..9733ec6c 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_client_write.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_client_write.c
+@@ -13,7 +13,7 @@
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+ #include "crypto/random.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_common.c b/components/wpa_supplicant/src/tls/tlsv1_common.c
+index f0ba62f2..39fcae85 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_common.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_common.c
+@@ -11,7 +11,7 @@
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "eap_peer/eap_i.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_server.c b/components/wpa_supplicant/src/tls/tlsv1_server.c
+index b835ce0f..65f4c904 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_server.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_server.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+ #include "tls/tlsv1_server.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_server_read.c b/components/wpa_supplicant/src/tls/tlsv1_server_read.c
+index cc426626..27aab7fe 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_server_read.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_server_read.c
+@@ -12,7 +12,7 @@
+ #include "crypto/md5.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+diff --git a/components/wpa_supplicant/src/tls/tlsv1_server_write.c b/components/wpa_supplicant/src/tls/tlsv1_server_write.c
+index 3d393bc9..d06f6596 100755
+--- a/components/wpa_supplicant/src/tls/tlsv1_server_write.c
++++ b/components/wpa_supplicant/src/tls/tlsv1_server_write.c
+@@ -13,7 +13,7 @@
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+ #include "crypto/random.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"

@@ -14,6 +14,8 @@ extern "C" {
 #include <http_chunked_recv.h>
 };
 
+#include <wpabr_bufman.h>
+
 #include "sd.h"
 #include <memory>
 
@@ -242,33 +244,32 @@ namespace dwhttp {
 				bool is_ok = false;
 			};
 
-			// These are kept as staticly allocated to avoid heap fragmentation.
-			// The rest of the context is freed as necessary (as it technically isn't required while the HTTP one is running)
-			//
-			// Placed in IRAM to avoid putting unnecessary pressure on DRAM heap to allow more tasks to be allocated
-
-			// Allocated once used, to allow wpa2 enterprise stuff to work
-			uint8_t * ssl_io_buffer_in = nullptr;
-			uint8_t ssl_io_buffer_out[1024 + 85]; // 1K out buffer + 85 bytes overhead
-
 			struct HttpsAdapter : HttpAdapter {
 				bool connect(const char* host) {
+					wpa_br_tls_bufs_t buffer_location;
+					if (!wpa_br_tls_reserve_buffers(&buffer_location, WPA_BR_TLS_SRC_DWHTTP)) {
+						ESP_LOGW(TAG, "unable to reserve ssl buffers from wpa code");
+						return false;
+					}
 					// Try and establish a connection with a socket.
 					if (!HttpAdapter::connect(host, "443")) return false;
 					// Create all the objects
 					ssl_cc = new (std::nothrow) br_ssl_client_context{};
 					if (!ssl_cc) {
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 						ESP_LOGE(TAG, "Out of memory allocating client_context");
 						return false;
 					}
 					ssl_xc = new (std::nothrow) br_x509_minimal_context{};
 					if (!ssl_xc) {
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 						ESP_LOGE(TAG, "Out of memory allocating minimal_context");
 						delete ssl_cc; ssl_cc = nullptr;
 						return false;
 					}
 					ssl_ic = new (std::nothrow) br_sslio_context{};
 					if (!ssl_ic) {
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 						ESP_LOGE(TAG, "Out of memory allocating io_context");
 						delete ssl_cc; ssl_cc = nullptr;
 						delete ssl_xc; ssl_xc = nullptr;
@@ -277,16 +278,9 @@ namespace dwhttp {
 
 					// Begin initializing bearssl
 					br_ssl_client_init_full(ssl_cc, ssl_xc, nullptr, 0);
-					
-					if (ssl_io_buffer_in == nullptr) {
-						ssl_io_buffer_in = (uint8_t *)malloc(BR_SSL_BUFSIZE_INPUT);
-						if (ssl_io_buffer_in == nullptr) {
-							ESP_LOGE(TAG, "failed to alloc ssl buf");
-						}
-					}
 
 					// Set the buffers
-					br_ssl_engine_set_buffers_bidi(&ssl_cc->eng, ssl_io_buffer_in, BR_SSL_BUFSIZE_INPUT, ssl_io_buffer_out, sizeof ssl_io_buffer_out);
+					br_ssl_engine_set_buffers_bidi(&ssl_cc->eng, buffer_location.rx_buf, buffer_location.rx_size, buffer_location.tx_buf, buffer_location.tx_size);
 					// Feed some entropy into bearssl
 					uint32_t block[8];
 					for (int i = 0; i < 8; ++i) block[i] = esp_random();
@@ -352,6 +346,7 @@ namespace dwhttp {
 
 				void close() {
 					if (is_connected()) {
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 						// Check error for logging
 						int err = br_ssl_engine_last_error(&ssl_cc->eng);
 						if (err) ESP_LOGW(TAG, "ssl closing with error %d", err);
@@ -371,8 +366,6 @@ namespace dwhttp {
 					ssl_ic = nullptr;
 					active_host = nullptr;
 					held_ta = nullptr;
-					free(ssl_io_buffer_in);
-					ssl_io_buffer_in = nullptr;
 				}
 
 				void flush() {
