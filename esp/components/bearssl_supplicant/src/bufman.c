@@ -1,6 +1,11 @@
+#ifndef SIM
 #include "esp_attr.h"
-#include <wpabr_bufman.h>
 #include <sdkconfig.h>
+#else
+#define IRAM_ATTR
+#define CONFIG_WPA_BR_TLS_OUT_SIZE 2048
+#endif
+#include <wpabr_bufman.h>
 #include <bearssl.h>
 #include <FreeRTOS.h>
 

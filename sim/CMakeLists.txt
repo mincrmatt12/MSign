@@ -135,7 +135,7 @@ target_link_libraries(stm_freertos Threads::Threads)
 add_executable(stmsim ${TOTAL_STM_SRCS})
 file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
 target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
-target_compile_options(stmsim PRIVATE -DSIM )
+target_compile_options(stmsim PRIVATE -DSIM)
 add_dependencies(stmsim copy_stm_src)
 
 target_link_libraries(stmsim stm_freertos rt)
@@ -292,9 +292,22 @@ target_include_directories(esp_b64 PUBLIC
 # e) add target for ESP build
 add_custom_target(esp_parsers DEPENDS ${ESP_NMFU_SRCS})
 
+# f) add wpabr
+
+add_library(esp_wpabufman STATIC
+	${CMAKE_CURRENT_LIST_DIR}/../esp/components/bearssl_supplicant/src/bufman.c
+)
+
+target_include_directories(esp_wpabufman PUBLIC
+	${CMAKE_CURRENT_LIST_DIR}/../esp/components/bearssl_supplicant/include
+)
+
+target_compile_options(esp_wpabufman PRIVATE -DSIM)
+target_link_libraries(esp_wpabufman esp_bearssl esp_freertos)
+
 add_executable(espsim ${TOTAL_ESP_SRCS})
 target_compile_options(espsim PRIVATE -DSIM)
 target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
 add_dependencies(espsim copy_esp_src esp_parsers)
 
-target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64)
+target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64 esp_wpabufman)
