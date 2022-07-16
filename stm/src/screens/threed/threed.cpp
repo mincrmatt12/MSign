@@ -26,7 +26,7 @@ namespace threed {
 	Vec3 Vec3::normalize() const {
 		auto len = length();
 		if (len == 0) return *this;
-		return *this / len;
+		return *this * len.reciprocal();
 	}
 
 	Vec3 Vec3::cross(const Vec3 & other) const {
