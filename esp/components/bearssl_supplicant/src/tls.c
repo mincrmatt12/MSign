@@ -531,6 +531,11 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx, struct tls_connection *con
 			br_ssl_engine_flush(&conn->client_ctx.eng, false);
 			continue;
 		}
+		else {
+			ESP_LOGE(TAG, "Unable to encrypt (bad state)");
+			wpabuf_free(output_records);
+			return NULL;
+		}
 		flushed = false;
 	}
 	br_ssl_engine_flush(&conn->client_ctx.eng, output_records == NULL);
