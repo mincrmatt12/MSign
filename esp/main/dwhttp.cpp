@@ -252,7 +252,10 @@ namespace dwhttp {
 						return false;
 					}
 					// Try and establish a connection with a socket.
-					if (!HttpAdapter::connect(host, "443")) return false;
+					if (!HttpAdapter::connect(host, "443")) {
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
+						return false;
+					}
 					// Create all the objects
 					ssl_cc = new (std::nothrow) br_ssl_client_context{};
 					if (!ssl_cc) {
@@ -346,7 +349,6 @@ namespace dwhttp {
 
 				void close() {
 					if (is_connected()) {
-						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 						// Check error for logging
 						int err = br_ssl_engine_last_error(&ssl_cc->eng);
 						if (err) ESP_LOGW(TAG, "ssl closing with error %d", err);
@@ -354,6 +356,8 @@ namespace dwhttp {
 						br_sslio_close(ssl_ic);
 						// Close the underlying socket
 						HttpAdapter::close();
+						// Only once resources are free actually delete the buffer.
+						wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_DWHTTP);
 					}
 					// Delete all the bearssl objects
 					delete ssl_cc;
