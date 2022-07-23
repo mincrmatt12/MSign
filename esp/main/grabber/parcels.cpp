@@ -344,11 +344,11 @@ namespace parcels {
 				    /* assume roughly equal distribution */ (parcel_entry_lengths[i] * max_single_entry_textcount) / parcel_entry_text_lens[i]) :
 				    /* take all */                          parcel_entry_lengths[i] - 1);
 
-			if (entry_count <= 1) continue;
-
 			int entry_start_idx = parcel_entry_lengths[i] - entry_count - 1;
 
 			ESP_LOGD(TAG, "parcel: ec %d, esi %d, tl %d, el %d", entry_count, entry_start_idx, parcel_entry_text_lens[i], parcel_entry_lengths[i]);
+
+			if (entry_count < 1) continue;
 
 			slots::ParcelInfo &pi = pis[j];
 			if (entry_count != parcel_entry_lengths[i]-1) pi.status.flags |= pi.status.EXTRA_INFO_TRUNCATED;
