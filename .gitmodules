@@ -14,3 +14,6 @@
 [submodule "vendor/lwip"]
 	path = vendor/lwip
 	url = https://git.savannah.nongnu.org/git/lwip.git
+[submodule "vendor/STM32CubeF4"]
+	path = vendor/STM32CubeF4
+	url = https://github.com/STMicroelectronics/STM32CubeF4
