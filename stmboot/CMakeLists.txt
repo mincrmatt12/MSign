@@ -10,6 +10,14 @@ set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'boa
 # find library
 set(cube_ll_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc)
 
+if (MSIGN_BUILD_TYPE STREQUAL "board2")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
+else()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m3")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m3")
+endif()
+
 # Check if we can find an openocd binary
 find_program(openocd_executable
 	openocd
@@ -30,6 +38,8 @@ if (MSIGN_BUILD_TYPE STREQUAL "board2")
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
 	)
+
+	
 else()
 	target_include_directories(stmboot PRIVATE
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
@@ -41,19 +51,16 @@ endif()
 if (MSIGN_BUILD_TYPE STREQUAL "board")
 	target_compile_definitions(stmboot PRIVATE
 		-DSTM32F205xx
-		-DF_CPU=120000000L
 		-DUSE_F2
 	)
 elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 	target_compile_definitions(stmboot PRIVATE
 		-DSTM32F207xx
-		-DF_CPU=120000000L
 		-DUSE_F2
 	)
 elseif (MSIGN_BUILD_TYPE STREQUAL "board2")
 	target_compile_definitions(stmboot PRIVATE
 		-DSTM32F405xx
-		-DF_CPU=120000000L
 		-DUSE_F4
 	)
 endif()

@@ -24,7 +24,7 @@ if (MSIGN_BUILD_TYPE STREQUAL "board2")
 	)
 else()
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m3")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m3")
 
 	add_definitions(
 		-DF_CPU=120000000L
