@@ -2,11 +2,18 @@
 #include "crash/main.h"
 #include "pins.h"
 
-#include "stm32f2xx.h"
+#ifdef USE_F2
+#include <stm32f2xx.h>
+#include <stm32f2xx_hal.h>
+#include <stm32f2xx_ll_usart.h>
+#endif
+#ifdef USE_F4
+#include <stm32f4xx.h>
+#include <stm32f4xx_hal.h>
+#include <stm32f4xx_ll_usart.h>
+#endif
 
 #include "srv.h"
-#include "stm32f2xx_hal.h"
-#include "stm32f2xx_ll_usart.h"
 #include "tasks/timekeeper.h"
 #include "matrix.h"
 #include "draw.h"

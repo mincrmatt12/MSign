@@ -1,10 +1,21 @@
 #include "protocol.h"
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_system.h"
-#include "stm32f2xx_ll_bus.h"
-#include "stm32f2xx_ll_usart.h"
-#include "stm32f2xx_ll_gpio.h"
-#include "stm32f2xx_ll_dma.h"
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_system.h>
+#include <stm32f2xx_ll_bus.h>
+#include <stm32f2xx_ll_usart.h>
+#include <stm32f2xx_ll_gpio.h>
+#include <stm32f2xx_ll_dma.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_system.h>
+#include <stm32f4xx_ll_bus.h>
+#include <stm32f4xx_ll_usart.h>
+#include <stm32f4xx_ll_gpio.h>
+#include <stm32f4xx_ll_dma.h>
+#endif
+
 #include "pins.h"
 #include "tasks/timekeeper.h"
 

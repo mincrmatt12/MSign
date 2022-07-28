@@ -14,8 +14,25 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
    add_compile_options (-fcolor-diagnostics)
 endif ()
 
+# setup cpu name & clock speed
+if (MSIGN_BUILD_TYPE STREQUAL "board2")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
+
+	add_definitions(
+		-DF_CPU=168000000L
+	)
+else()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m3")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
+
+	add_definitions(
+		-DF_CPU=120000000L
+	)
+endif()
+
 # specify target
-set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board'")
+set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'board2' (for f4)")
 
 # Check if we can find an openocd binary
 
@@ -30,14 +47,29 @@ find_package(Python 3 COMPONENTS Interpreter)
 # Add libraries for the vendored libs
 
 # hal
-file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
+if (MSIGN_BUILD_TYPE STREQUAL "board2")
+	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_*.c)
+else()
+	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
+endif()
 
 add_library(cube_ll OBJECT ${cube_ll_srcs})
 
+if (MSIGN_BUILD_TYPE STREQUAL "board2")
+	target_include_directories(cube_ll PUBLIC
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
+	)
+else()
+	target_include_directories(cube_ll PUBLIC
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
+	)
+endif()
+
 target_include_directories(cube_ll PUBLIC
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
 	${CMAKE_CURRENT_SOURCE_DIR}/cfg
 )
 
@@ -52,12 +84,14 @@ target_compile_options(cube_ll PUBLIC
 if (MSIGN_BUILD_TYPE STREQUAL "board")
 	target_compile_definitions(cube_ll PUBLIC
 		-DSTM32F205xx
-		-DF_CPU=120000000L
 	)
 elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 	target_compile_definitions(cube_ll PUBLIC
 		-DSTM32F207xx
-		-DF_CPU=120000000L
+	)
+elseif (MSIGN_BUILD_TYPE STREQUAL "board2")
+	target_compile_definitions(cube_ll PUBLIC
+		-DSTM32F405xx
 	)
 endif()
 
@@ -65,6 +99,7 @@ endif()
 set(freertos_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 
 # rtos
+# compiled against cm3 because we don't use the cm4 fpu
 add_library(freertos OBJECT
 	${freertos_dir}/event_groups.c
 	${freertos_dir}/list.c
@@ -105,6 +140,12 @@ target_link_libraries(stm_crash
 	cube_ll
 	freertos
 )
+
+if (MSIGN_BUILD_TYPE STREQUAL "board2")
+	target_compile_definitions(stm_crash PUBLIC USE_F4)
+else()
+	target_compile_definitions(stm_crash PUBLIC USE_F2)
+endif()
 
 set_property(TARGET stm_crash PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 
@@ -164,9 +205,15 @@ add_custom_command(TARGET stm
 if (EXISTS ${openocd_executable})
 	message(STATUS "Found OPENOCD " ${openocd_executable})
 
+	if (MSIGN_BUILD_TYPE STREQUAL "board2")
+		set(upload_cfg stm32f2x.cfg)
+	else()
+		set(upload_cfg stm32f4x.cfg)
+	endif()
+
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
+		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
 	)
 
 	add_dependencies(upload stm)

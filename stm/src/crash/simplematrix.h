@@ -4,12 +4,23 @@
 #include "../gpio.h"
 #include <stdint.h>
 #include <string.h>
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_tim.h"
-#include "stm32f2xx_ll_bus.h"
-#include "stm32f2xx_ll_gpio.h"
-#include "stm32f2xx_ll_dma.h"
 #include "../pins.h"
+
+#ifdef USE_F2
+#include <stm32f2xx.h>
+#include <stm32f2xx_ll_tim.h>
+#include <stm32f2xx_ll_bus.h>
+#include <stm32f2xx_ll_gpio.h>
+#include <stm32f2xx_ll_dma.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx.h>
+#include <stm32f4xx_ll_tim.h>
+#include <stm32f4xx_ll_bus.h>
+#include <stm32f4xx_ll_gpio.h>
+#include <stm32f4xx_ll_dma.h>
+#endif
 
 namespace crash {
 	// Lookup table for color->bitplane conversion

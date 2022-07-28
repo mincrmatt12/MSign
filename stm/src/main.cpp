@@ -1,6 +1,4 @@
 #include "crash/main.h"
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_rcc.h"
 #include "nvic.h"
 #include "rcc.h"
 #include "rng.h"

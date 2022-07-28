@@ -5,15 +5,24 @@
 #include "gpio.h"
 #include <stdint.h>
 #include <string.h>
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_tim.h"
-#include "stm32f2xx_ll_bus.h"
-#include "stm32f2xx_ll_gpio.h"
-#include "stm32f2xx_ll_dma.h"
 #include "pins.h"
 #include <FreeRTOS.h>
 #include <task.h>
 #include "color.h"
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_tim.h>
+#include <stm32f2xx_ll_bus.h>
+#include <stm32f2xx_ll_gpio.h>
+#include <stm32f2xx_ll_dma.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_tim.h>
+#include <stm32f4xx_ll_bus.h>
+#include <stm32f4xx_ll_gpio.h>
+#include <stm32f4xx_ll_dma.h>
+#endif
 
 namespace led {
 	template<uint16_t Width>
@@ -236,13 +245,22 @@ namespace led {
 
 			// Setup the timer.
 			LL_TIM_InitTypeDef tim_init = {0};
-
-			tim_init.Prescaler  = 3; // Set the timer to run at around 6Mhz, since it's stupid to do it any faster
+			
+			// roughly 20 MHz (21 in new build)
+#if defined(USE_F2)
+			tim_init.Prescaler  = 3;
+#elif defined(USE_F4)
+			tim_init.Prescaler  = 5;
+#endif
 			tim_init.Autoreload = 1;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM1, &tim_init);
 
+#if defined(USE_F2)
 			tim_init.Prescaler  = 2;
+#elif defined(USE_F4)
+			tim_init.Prescaler  = 3;
+#endif
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM4, &tim_init);
 
@@ -398,10 +416,8 @@ namespace led {
 		}
 
 		void do_next() {
-			const static uint16_t draw_ticks_table[] = {2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768};
-
 			show = false;
-			uint16_t drawn_pos = draw_ticks_table[pos];
+			uint16_t drawn_pos = 2 << pos; 
 			// set address pins
 			if (pos == 12) {
 				// We have finished clocking out a row, process buffer swaps

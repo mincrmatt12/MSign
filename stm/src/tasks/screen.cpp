@@ -8,8 +8,12 @@
 #include "../ui.h"
 #include "../crash/main.h"
 
-#ifndef SIM
+#ifdef USE_F2
 #include <stm32f2xx.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx.h>
 #endif
 
 extern srv::Servicer servicer;

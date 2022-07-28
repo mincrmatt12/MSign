@@ -14,7 +14,7 @@
 #define MSN_BHEAP_INLINE_V constexpr static
 #endif
 
-#if defined(STM32F205xx) || defined(STM32F207xx)
+#if defined(STM32F205xx) || defined(STM32F207xx) || defined(STM32F405xx)
 #include "../crash/main.h"
 #define ms_assert msign_assert
 #else

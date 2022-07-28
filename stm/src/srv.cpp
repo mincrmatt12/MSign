@@ -4,8 +4,6 @@
 #include "crash/main.h"
 #include "tasks/timekeeper.h"
 #include <string.h>
-#include "stm32f2xx_ll_usart.h"
-#include "stm32f2xx_ll_system.h"
 #include "common/bootcmd.h"
 #include "common/util.h"
 #include "pins.h"
@@ -15,6 +13,15 @@
 #include <stdio.h>
 
 #include <semphr.h>
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_usart.h>
+#include <stm32f2xx_ll_system.h>
+#endif
+#ifdef USE_F4
+#include <stm32f4xx_ll_usart.h>
+#include <stm32f4xx_ll_system.h>
+#endif
 
 #define FLASH_KEY1 0x45670123U
 #define FLASH_KEY2 0xCDEF89ABU

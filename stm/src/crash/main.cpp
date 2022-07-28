@@ -5,12 +5,21 @@
 #include "rtos.h"
 #include "simplematrix.h"
 #include "../tskmem.h"
-#include "stm32f2xx_ll_cortex.h"
-#include "stm32f2xx_ll_system.h"
 #include "../ui.h"
-#include "stm32f2xx_ll_utils.h"
 #include <alloca.h>
 #include <cstdio>
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_cortex.h>
+#include <stm32f2xx_ll_system.h>
+#include <stm32f2xx_ll_utils.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_cortex.h>
+#include <stm32f4xx_ll_system.h>
+#include <stm32f4xx_ll_utils.h>
+#endif
 
 extern "C" {
 	extern uint32_t _ecstack;

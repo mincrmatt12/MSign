@@ -1,8 +1,16 @@
 #ifndef GPIO_H
 #define GPIO_H
 
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_gpio.h"
+#ifdef USE_F2
+#include <stm32f2xx.h>
+#include <stm32f2xx_ll_gpio.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx.h>
+#include <stm32f4xx_ll_gpio.h>
+#endif
+
 #include <stdint.h>
 
 namespace gpio {
