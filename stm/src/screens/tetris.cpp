@@ -498,7 +498,7 @@ namespace screen::game {
 		disp_score += score_disparity;
 	}
 
-	inline int board_start_x = 49, board_start_y = 3;
+	const inline int board_start_x = 49, board_start_y = 3;
 
 	ActiveTetrisPiece onscreen_piece(const ActiveTetrisPiece& atp) {
 		auto result = atp;
