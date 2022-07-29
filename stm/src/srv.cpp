@@ -14,11 +14,10 @@
 
 #include <semphr.h>
 
-#ifdef USE_F2
+#if defined(USE_F2) || defined(SIM)
 #include <stm32f2xx_ll_usart.h>
 #include <stm32f2xx_ll_system.h>
-#endif
-#ifdef USE_F4
+#elif defined(USE_F4)
 #include <stm32f4xx_ll_usart.h>
 #include <stm32f4xx_ll_system.h>
 #endif
@@ -48,6 +47,7 @@ uint32_t update_package_data_counter = 0;
 uint8_t update_package_sector_counter = 5;
 
 void begin_update(uint8_t &state) {
+#ifndef SIM
 	// Set data_ptr to the beginning of the update memory area.
 	
 	update_package_data_ptr = 0x0808'0000;
@@ -67,7 +67,7 @@ void begin_update(uint8_t &state) {
 	// Actually erase
 	
 	FLASH->CR |= FLASH_CR_STRT;
-
+#endif
 	state = USTATE_ERASING_BEFORE_IMAGE;
 }
 
@@ -82,13 +82,14 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 		++update_package_sector_counter;
 
 		// Erase the sector
-
+#ifndef SIM
 		CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
 		FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SNB_Pos);
 
 		// Actually erase
 		
 		FLASH->CR |= FLASH_CR_STRT;
+#endif
 
 		state = USTATE_ERASING_BEFORE_PACKET;
 
@@ -103,6 +104,7 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 		update_package_data_counter += amt;
 	}
 
+#ifndef SIM
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
 
 	while (amt--) {
@@ -123,6 +125,7 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 	// Clear pg byte
 	
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
+#endif
 
 	state = USTATE_PACKET_WRITTEN;
 }
@@ -906,8 +909,12 @@ void srv::Servicer::do_update_logic() {
 	switch (this->update_state) {
 		case USTATE_ERASING_BEFORE_IMAGE:
 			{
+#ifndef SIM
 				if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
 					CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+#else
+				{
+#endif
 					// Report readiness for bytes
 					this->update_state = USTATE_WAITING_FOR_PACKET;
 					send_update_status(slots::protocol::UpdateStatus::READY_FOR_IMAGE);
@@ -916,8 +923,12 @@ void srv::Servicer::do_update_logic() {
 			}
 		case USTATE_ERASING_BEFORE_PACKET:
 			{
+#ifndef SIM
 				if (!READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
 					CLEAR_BIT(FLASH->CR, FLASH_CR_SER);
+#else
+				{
+#endif
 					this->update_state = USTATE_WAITING_FOR_PACKET;
 
 					append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
@@ -947,12 +958,13 @@ void srv::Servicer::do_update_logic() {
 					bootcmd_request_update(this->update_total_size);
 
 					// Clear pg byte
-					
+#ifndef SIM	
 					CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
 
 					// Relock FLASH
 					
 					FLASH->CR |= FLASH_CR_LOCK;
+#endif
 
 					// Send out final message
 					
