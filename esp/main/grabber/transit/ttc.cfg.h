@@ -37,5 +37,5 @@ namespace transit::ttc {
 	};
 
 	//!cfg: holds .ttc.entries
-	extern config::lazy_t<TTCEntry[5]> entries;
+	extern config::lazy_t<TTCEntry> entries[5];
 }
