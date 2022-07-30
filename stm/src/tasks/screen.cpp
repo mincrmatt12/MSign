@@ -302,6 +302,10 @@ namespace tasks {
 						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 						ms.reset();
 					}
+					else if (ui::buttons[ui::Buttons::POWER] && override_timeout > xTaskGetTickCount()) {
+						override_timeout = xTaskGetTickCount();
+						last_swapped_at = rtc_time;
+					}
 					else if (ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(2000))) do_sleep_mode();
 					break;
 				case InteractByScreen:
