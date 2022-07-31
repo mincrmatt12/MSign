@@ -185,7 +185,7 @@ endif()
 
 target_link_options(stm
 	PUBLIC
-	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/app.ld
+	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/$<IF:$<STREQUAL:${MSIGN_BUILD_TYPE},board2>,f4.ld,f2.ld>
 	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic

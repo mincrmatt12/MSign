@@ -1383,3 +1383,8 @@ srv::Servicer::DebugInfo srv::Servicer::get_debug_information() {
 extern "C" int __attribute__((used)) _write(int file, char* ptr, int len) {
 	return 0; // todo
 }
+
+#ifdef USE_F4
+__attribute__((section(".ccmram")))
+#endif
+bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> srv::Servicer::arena;

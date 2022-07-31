@@ -117,7 +117,7 @@ namespace srv {
 		DebugInfo get_debug_information();
 	private:
 		const bheap::Block& _slot(uint16_t slotid);
-		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
+		static bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> arena;
 
 		// Called from ISR and populates queue.
 		void process_command() override;
