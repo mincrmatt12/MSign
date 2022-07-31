@@ -196,7 +196,8 @@ namespace slots {
 			HAS_LOCATION = 2,
 			HAS_EST_DEILIVERY = 4, // cannot be set on ExtraParcelInfoEntry
 			HAS_UPDATED_TIME = 8,   
-			EXTRA_INFO_TRUNCATED = 16 // cannot  be set on ExtraParcelInfoEntry
+			EXTRA_INFO_TRUNCATED = 16, // cannot  be set on ExtraParcelInfoEntry
+			EXTRA_INFO_MISSING   = 32 // cannot  be set on ExtraParcelInfoEntry
 		};
 
 		uint8_t flags;

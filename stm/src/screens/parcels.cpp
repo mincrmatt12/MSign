@@ -338,7 +338,7 @@ void screen::ParcelScreen::draw_loading() {
 }
 
 void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
-	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || !servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS)) {
+	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || (!(parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) && (!servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS)))) {
 		draw_loading();
 		return;
 	}
@@ -360,6 +360,8 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 			parcel_entries_size += sz;
 		}
 
+		if (parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) goto skip_ei;
+
 		for (const auto& ei : extra_infos) {
 			if (ei.for_parcel != selected_parcel) continue;
 			
@@ -369,6 +371,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 			parcel_entries_size += sz;
 		}
 
+skip_ei:
 		y -= 1;
 		auto& fb = matrix.get_inactive_buffer();
 

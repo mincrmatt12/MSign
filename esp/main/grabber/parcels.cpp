@@ -330,6 +330,12 @@ namespace parcels {
 			++i;
 			if (!parcel_oks[i]) continue;
 			++j;
+			// check if no extra info present
+			if (parcel_entry_lengths[i] <= 1) {
+				pis[j].status.flags |= slots::ParcelStatusLine::EXTRA_INFO_MISSING;
+				continue;
+			}
+
 			// get url
 			snprintf(url.get(), 128, "/v2/trackers/%s", cfg.tracker_id.get());
 			auto dw = dwhttp::download_with_callback("_api.easypost.com", url.get(), headers);
