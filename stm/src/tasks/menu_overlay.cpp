@@ -161,6 +161,19 @@ void tasks::DispMan::draw_menu_list(const char * const * entries, bool last_is_c
 	}
 }
 
+void tasks::DispMan::do_overlay_panels() {
+	switch (op) {
+		case OverlayPanelDebugSrv:
+			draw_debug_srv_panel();
+			break;
+		case OverlayPanelConnInfo:
+			draw_conn_panel();
+			break;
+		default:
+			break;
+	}
+}
+
 void tasks::DispMan::do_menu_overlay() {
 	const static char* const menu_entries[] = {
 		"refresh",
@@ -217,8 +230,8 @@ void tasks::DispMan::do_menu_overlay() {
 				}
 				else if (ms.selected == 2) {
 					ms.selected = 0;
-					ms.submenu = MS::SubmenuConnInfo;
-					return;
+					open_panel(OverlayPanelConnInfo);
+					goto close;
 				}
 				else if (ms.selected == 3) {
 					servicer.refresh_grabber(slots::protocol::GrabberID::CFGPULL);
@@ -236,12 +249,6 @@ void tasks::DispMan::do_menu_overlay() {
 				goto close;
 			}
 
-			break;
-		case MS::SubmenuConnInfo:
-			draw_conn_panel();
-			break;
-		case MS::SubmenuDebugSrv:
-			draw_debug_srv_panel();
 			break;
 		case MS::SubmenuSelectScreen:
 			draw_menu_list(screen_names);
@@ -284,8 +291,8 @@ void tasks::DispMan::do_menu_overlay() {
 				}
 				else if (ms.selected == 6) {
 					ms.selected = 0;
-					ms.submenu = MS::SubmenuDebugSrv;
-					return;
+					open_panel(OverlayPanelDebugSrv);
+					goto close;
 				}
 				else if (ms.selected == 7) {
 					ms.selected = 0;

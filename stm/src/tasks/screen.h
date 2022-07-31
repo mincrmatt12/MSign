@@ -60,24 +60,32 @@ namespace tasks {
 			uint8_t selected = 0;
 			enum Submenu : uint8_t {
 				SubmenuMain = 0,
-				SubmenuConnInfo = 1,
+				//SubmenuConnInfo = 1,
 				SubmenuSelectScreen = 2,
 				SubmenuDebug = 3,
-				SubmenuDebugSrv = 4,
+				// SubmenuDebugSrv = 4,
 				SubmenuTetris = 5,
 			} submenu = SubmenuMain;
 
 			void reset() {
 				new (this) MS{};
 			}
-
-			bool override_not_interacting() const {
-				return submenu == SubmenuDebugSrv;
-			}
 		} ms;
+
+		enum OverlayPanel : uint8_t {
+			OverlayPanelClosed = 0,
+			OverlayPanelDebugSrv = 1,
+			OverlayPanelConnInfo = 2
+		} op;
+
+		void open_panel(OverlayPanel pan) {
+			if (pan == op) op = OverlayPanelClosed; // toggle semantics
+			else op = pan;
+		}
 
 		void draw_menu_list(const char * const * entries, bool last_is_close=true);
 
+		void do_overlay_panels();
 		void do_menu_overlay();
 		void do_sleep_mode();
 		void do_tetris_mode();

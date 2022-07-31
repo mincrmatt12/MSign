@@ -290,6 +290,7 @@ namespace tasks {
 				if (ui::buttons.changed()) interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 			}
 
+			// Everything but menu open
 			switch (interact_mode) {
 				case InteractNone:
 					// allow opening modes
@@ -306,6 +307,9 @@ namespace tasks {
 						override_timeout = xTaskGetTickCount();
 						last_swapped_at = rtc_time;
 					}
+					else if (ui::buttons[ui::Buttons::POWER] && op) {
+						op = OverlayPanelClosed;
+					}
 					else if (ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(2000))) do_sleep_mode();
 					break;
 				case InteractByScreen:
@@ -316,14 +320,16 @@ namespace tasks {
 						interact_mode = InteractNone;
 					}
 					break;
-				case InteractMenuOpen:
-					do_menu_overlay();
-					break;
 				default:
 					break;
 			}
 
-			// show overlays
+			// Show panel overlays
+			do_overlay_panels();
+
+			if (interact_mode == InteractMenuOpen) do_menu_overlay(); // draw on top of overlay panels...
+
+			// ... but behind icons
 			show_overlays(last_had_wifi_at);
 
 			// Sync on swap buffer
