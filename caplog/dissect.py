@@ -17,6 +17,10 @@ if ignored_datastr:
     ignored_dataids = [int(x, 16) for x in ignored_datastr.split()]
     print(f"NOTE: ignoring data ids {', '.join(hex(x) for x in ignored_dataids)}")
 
+csum_trailer = 0
+if os.getenv("CAPLOG_NO_CSUM"):
+    csum_trailer = 0
+
 if len(sys.argv) < 3:
     print("usage: {} [logicexport,simlog,realtime] <in>")
     exit(1)
@@ -30,7 +34,8 @@ if sys.argv[1] in prefixes("logicexport"):
             i = i.rstrip('\n')
             row = i.split(',')
 
-            v = int(row[-1][2:], base=16)
+            if row[2] or row[3]: continue
+            v = int(row[1][2:], base=16)
             if not flag and v not in (0xa6, 0xa5):
                 continue
             flag = True
@@ -58,10 +63,7 @@ if not realtime:
         while header[0] not in (0xa5, 0xa6):
             header[0:1] = header[1:2]
             header[2] = read_buf(1)[0]
-        if header[1]:
-            yield bytes(header) + read_buf(header[1])
-        else:
-            yield bytes(header)
+        yield bytes(header) + read_buf(header[1]+csum_trailer)
 else:
     files = [open(x, 'rb') for x in sys.argv[2:]]
     import select
@@ -81,7 +83,7 @@ else:
                 print("??? : {:02x}".format(header[0]))
                 header[0:1] = header[1:2]
                 header[2] = read_exact(f, 1)[0]
-            yield bytes(header + read_exact(f, header[1]))
+            yield bytes(header + read_exact(f, header[1]+csum_trailer))
 
 pnames = {
     0x10: "HANDSHAKE_INIT",
