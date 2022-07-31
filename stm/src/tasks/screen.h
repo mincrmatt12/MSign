@@ -15,8 +15,8 @@ namespace tasks {
 	struct DispMan {
 		void run();
 
-		bool interacting() const {
-			return interact_timeout && interact_mode;
+		bool interacting(bool screen_only=true) const {
+			return interact_timeout && interact_mode && (!screen_only || interact_mode == InteractByScreen);
 		}
 	private:
 		screen::ScreenSwapper<
