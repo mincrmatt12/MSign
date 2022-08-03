@@ -329,7 +329,7 @@ namespace draw {
 			}
 
 			// Does the current scrolled region end on screen?
-			if (params.start_y - scroll_offset + total_height < region_height) {
+			if (total_height - scroll_offset < region_height) {
 				scroll_target = 0; // Scroll back to top
 			}
 			else {
