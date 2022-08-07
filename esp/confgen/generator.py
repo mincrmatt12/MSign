@@ -38,7 +38,7 @@ with open(os.path.join(os.path.dirname(__file__), "grammar.lark")) as f:
 collected_bare_paths = []
 collected_bare_typedefs = {}
 collected_loader_nodes = {}
-# map of functiondecl --> (resultvarname,locator)
+# map of functiondecl --> (resultindex,locator)
 collected_loader_properties = {}
 
 # Entry actions:
@@ -51,6 +51,13 @@ class UpdateSizeRef:
 
     def clone(self):
         return UpdateSizeRef(self.target.clone())
+
+class UpdatePresenceRef:
+    def __init__(self, target: "ObjectLocator"):
+        self.target = target
+
+    def clone(self):
+        return UpdatePresenceRef(self.target.clone())
 
 # A default argument for something, either on its own (for a variable), or an ARRAY_REF which is set to the position in an array an object is.
 class DefaultArgType(enum.Enum):
@@ -90,6 +97,7 @@ class BaseJsonPathNode:
     NOT_ARRAY = -3
     ANY_ARRAY = -2
     SIZE_ARRAY = -4
+    PRESENCE_ARRAY = -5
     DYNAMIC_ARRAY = -1
 
     # Can match any name -- used for variable subst.
@@ -242,7 +250,7 @@ class ObjectLocatorDelegated(ObjectLocator):
 class ObjectLocatorGeneratorReturn(ObjectLocator):
     @property
     def target_type(self):
-        return self.target_declaration.return_type
+        return pygccxml.declarations.remove_reference(self.target_declaration.arguments[collected_loader_properties[self.target_declaration][0]].decl_type)
 
     def clone(self):
         return ObjectLocatorGeneratorReturn(self.target_declaration, self.array_indices[:], self.next_in_chain.clone() if self.next_in_chain is not None else None)
@@ -547,9 +555,12 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
     elif intent == "loads":
         collected_loader_nodes[decl] = []
         collected_loader_properties[decl] = [None,None]
+        for j, arg in enumerate(decl.arguments):
+            if arg.name == "value":
+                collected_loader_properties[decl][0] = j
+        if collected_loader_properties[decl][0] is None:
+            raise ValueError("loader routine must have a value argument which is a reference type")
         target_list = collected_loader_nodes[decl]
-        for i in find_all_tags(comment_data, "result_tag"):
-            collected_loader_properties[decl][0] = i.children[0].children[0].value
     else:
         target_list = collected_bare_paths
 
@@ -565,8 +576,6 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
         forbidden_vars.add("v")
         forbidden_vars.add("stack")
         forbidden_vars.add("stack_ptr")
-        if collected_loader_properties[decl][0]:
-            forbidden_vars.add(collected_loader_properties[decl][0])
 
     for j, leaf in enumerate(comment_data.children[1].children):
         dyntarget = None
@@ -601,9 +610,9 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
                 raise ValueError("dynamic name not present in function args")
             else:
                 variable_map[varname] = j + 1
-        elif leaf.data == "special_size_element":
-            name = leaf.children[0].value
-            array = BaseJsonPathNode.SIZE_ARRAY
+        elif leaf.data in ["special_size_element", "special_presence_element", "anon_size_element"]:
+            name = leaf.children[0].value if leaf.data != "anon_size_element" else None
+            array = BaseJsonPathNode.SIZE_ARRAY if leaf.data != "special_presence_element" else BaseJsonPathNode.PRESENCE_ARRAY
         else:
             raise NotImplementedError(leaf.data)
         names.append([name, array, dyntarget])
@@ -616,7 +625,7 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
 
     # Populate array information (and custom type)
     if intent == "holds" or intent == "loads":
-        the_type = decl.decl_type if intent == "holds" else decl.return_type
+        the_type = decl.decl_type if intent == "holds" else pygccxml.declarations.remove_reference(decl.arguments[collected_loader_properties[decl][0]].decl_type)
         dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(the_type)
         is_custom_type = isinstance(underlying, pygccxml.declarations.declarated_t) and isinstance(underlying.declaration, pygccxml.declarations.class_t) and not \
             pygccxml.declarations.is_same(string_t, underlying)
@@ -634,7 +643,7 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
                     # Map into end
                     names[-1][1] = BaseJsonPathNode.ANY_ARRAY
                     variable_map[letter] = len(names) - 1
-                elif names[-1][1] == BaseJsonPathNode.SIZE_ARRAY:
+                elif names[-1][1] in [BaseJsonPathNode.SIZE_ARRAY, BaseJsonPathNode.PRESENCE_ARRAY]:
                     raise NotImplementedError("unknown how to handle auto-array for size_array")
                 else:
                     # Add new anonymous entry
@@ -687,6 +696,10 @@ def generate_single_entry_for_declaration(decl: pygccxml.declarations.declaratio
             names[-1][1] = BaseJsonPathNode.ANY_ARRAY
             final_node = common_make_node(len(names)-1, DelegateJsonPathNode)
             final_node.entry_actions.append(UpdateSizeRef(locator))
+        elif names[-1][1] == BaseJsonPathNode.PRESENCE_ARRAY:
+            names[-1][1] = BaseJsonPathNode.NOT_ARRAY
+            final_node = common_make_node(len(names)-1, DelegateJsonPathNode)
+            final_node.entry_actions.append(UpdatePresenceRef(locator))
         else:
             final_node = common_make_node(len(names)-1, StoreValuePathNode, locator)
 
@@ -838,7 +851,7 @@ def forward_typedef_into_others(decltype):
         def fixup(subnode: BaseJsonPathNode):
             # Update all size refs
             for action in subnode.entry_actions:
-                if isinstance(action, (UpdateSizeRef, DoDefaultConstruct, EnsureLazyInit)):
+                if hasattr(action, "target"):
                     action.target = action.target.baseon(node.target, node.node_depth)
                 # update default constructs. these are extracted later
                 if isinstance(action, DoDefaultConstruct):
@@ -883,6 +896,8 @@ def dump_node_tree(node: BaseJsonPathNode, indentdepth=0):
     for action in node.entry_actions:
         if isinstance(action, UpdateSizeRef):
             lprint(f"on entry update sizeof", action.target)
+        elif isinstance(action, UpdatePresenceRef):
+            lprint(f"on entry mark presence", action.target)
         elif isinstance(action, DoDefaultConstruct):
             lprint(f"mark default construct of", action.target, "with [", *action.defaultargs, "]")
         elif isinstance(action, EnsureLazyInit):
@@ -1065,24 +1080,6 @@ def generate_variable_declarations(output):
                 line += convert_default_args(generator, [])
 
         output.add(line + ";")
-
-def generate_resultobj_init(output, locator):
-    dimensions, underlying, is_lazy = helper_array_dimensions_and_underlying_lazy(locator.target_declaration.return_type)
-    if dimensions and not is_lazy or (is_lazy == LAZY_AFTER_ARRAY):
-        raise ValueError("return of function should not have dimensions")
-    dimstr = ""
-    # Generate array dimensions
-    if dimensions:
-        dimstr = ''.join(f"[{x}]" for x in dimensions)
-    line = {
-            0: f"{underlying} returnobj",
-            LAZY_BEFORE_ARRAY: f"config::lazy_t<{underlying} {dimstr}> returnobj",
-            LAZY_AFTER_ARRAY: f"config::lazy_t<{underlying}> returnobj",
-    }[is_lazy]
-    if not is_lazy:
-        line += convert_default_args(declared_variables.get(locator, []), [])
-
-    output.add(line + ";")
 
 def generate_str_to_enum_funcs(output):
     output.add("// STRING TO ENUM LOOKUPS")
@@ -1267,7 +1264,9 @@ def generate_assignment_path_for(locator: ObjectLocator, point_to_lazy_only=Fals
 
 def generate_entry_action(output, action, node):
     if isinstance(action, UpdateSizeRef):
-        output.add(generate_assignment_path_for(action.target), "=", f"stack[{node.node_depth}]->index+1;")
+        output.add(generate_assignment_statement_for(action.target, f"stack[{node.node_depth}]->index+1"))
+    elif isinstance(action, UpdatePresenceRef):
+        output.add(generate_assignment_statement_for(action.target, "1"))
     elif isinstance(action, EnsureLazyInit):
         # Check lazy type
         _, underlying, lazy_kind = helper_array_dimensions_and_underlying_lazy(action.target.tip.target_type)
@@ -1314,19 +1313,15 @@ def get_stored_value_and_type_for(decl, access_string="{}", duplicate=True):
     else:
         raise NotImplementedError(vtype)
 
-def generate_store_code(output, node: StoreValuePathNode):
-    # TODO: generate type verification code
-
-    vtype = None
-    line = generate_assignment_path_for(node.target)
-    tip = node.target.tip
+def generate_assignment_statement_for(locator: ObjectLocator, value: str):
+    line = generate_assignment_path_for(locator)
+    tip = locator.tip
     if isinstance(tip, ObjectLocatorDelegated):
         line += "("
         for argument in tip.target_declaration.arguments:
             if line[-1] != "(": line += ", "
             if argument.name == "value":
-                vtype, content = get_stored_value_and_type_for(argument.decl_type, duplicate=False)
-                line += content
+                line += value
             elif argument.name in tip.bound_arg_indices:
                 # Is this an array index?
                 if pygccxml.declarations.is_integral(argument.decl_type):
@@ -1334,18 +1329,37 @@ def generate_store_code(output, node: StoreValuePathNode):
                 else:
                     line += f"stack[{tip.bound_arg_indices[argument.name]}]->name"
             else:
-                raise ValueError("unknown what to do with argument", argument)
+                raise ValueError(f"unknown what to do with argument {argument} in {tip.target_declaration} (have you named the target value argument 'value'?)")
         line += ");"
     else:
-        vtype, content = get_stored_value_and_type_for(tip.target_type, access_string=line)
-        line += " = " + content + ";"
+        line += " = " + value + ";"
+    return line
+
+def generate_store_code(output, node: StoreValuePathNode):
+    # TODO: generate type verification code
+    tip = node.target.tip
+    tip_decl = None
+    if isinstance(tip, ObjectLocatorDelegated):
+        for argument in tip.target_declaration.arguments:
+            if argument.name == "value":
+                tip_decl = argument.decl_type
+    else:
+        tip_decl = tip.target_declaration.decl_type
+
+    vtype, content = get_stored_value_and_type_for(tip_decl, access_string=generate_assignment_path_for(node.target) if not isinstance(tip, ObjectLocatorDelegated) else "{}", duplicate=not isinstance(tip, ObjectLocatorDelegated))
+
     output.add({
         ValueTypePrimitive.RAW_STRING: "if (v.type != json::Value::STR) ",
         ValueTypePrimitive.FLOATING_POINT: "if (!v.is_number()) ",
         ValueTypePrimitive.INTEGER: "if (v.type != json::Value::INT) ",
         ValueTypePrimitive.BOOLEAN: "if (v.type != json::Value::BOOL) ",
     }[vtype] + "goto unk_type;")
-    output.add(line)
+
+    # generate actions
+    for action in node.entry_actions:
+        generate_entry_action(output, action, node)
+
+    output.add(generate_assignment_statement_for(node.target, content))
 
 def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quiet=False):
     """
@@ -1393,9 +1407,6 @@ def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quie
                     if isinstance(leaf, DelegateJsonPathNode):
                         leafbody.add(f"goto jpto_{node_to_symbol_map[leaf]};")
                     else:
-                        # First, add entry actions for these
-                        for action in leaf.entry_actions:
-                            generate_entry_action(leafbody, action, leaf)
                         # Otherwise, we have to generate the code for the store.
                         generate_store_code(leafbody, leaf)
                 body.add("}")
@@ -1443,8 +1454,8 @@ def generate_parser(output, nodemap):
     output.add("}")
 
 def generate_result_sender(output, decl, tgt):
-    if collected_loader_properties[decl][0] is not None:
-        output.add(collected_loader_properties[decl][0], " = ", tgt + ";")
+    if pygccxml.declarations.is_bool(decl.return_type):
+        output.add("return ", tgt, ";")
 
 def generate_subparser(output, decl, nodemap, structname):
     output.add(f"// SUBPARSER FOR {decl}")
@@ -1455,11 +1466,10 @@ def generate_subparser(output, decl, nodemap, structname):
     output.add(
         decl.return_type,
         nm,
-        "(" + ", ".join(str(x) for x in decl.arguments) + ")", "{"
+        "(" + ", ".join(str(x if j != collected_loader_properties[decl][0] else x.clone(name="returnobj")) for j, x in enumerate(decl.arguments)) + ")", "{"
     )
     with output as inner:
         inner.add(f"{structname} curnode = {structname}::R;")
-        generate_resultobj_init(inner, collected_loader_properties[decl][1])
         inner.add()
         inner.add("json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){");
         with inner as fparser:
@@ -1475,8 +1485,6 @@ def generate_subparser(output, decl, nodemap, structname):
         with inner as good:
             generate_result_sender(good, decl, "true")
         inner.add("}")
-        inner.add()
-        inner.add("return returnobj;")
     output.add("}")
 
 def generate_code(output):

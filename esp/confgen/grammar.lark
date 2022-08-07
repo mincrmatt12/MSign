@@ -19,6 +19,8 @@ atom: CNAME -> path_element
 	| "[" array_index "]" -> anon_array_element
 	| variable -> wildcard_element
 	| CNAME "!size" -> special_size_element
+	| "!size" -> anon_size_element
+	| CNAME "!present" -> special_presence_element
 
 variable: "$" CNAME
 
@@ -32,7 +34,6 @@ value: CNUMBER -> float_or_int
 
 tag: "default" value+ -> default_tag
    | "max" variable "=" INT -> explicit_array_max
-   | "result" variable -> result_tag
 
 INTENT: "holds" | "receives" | "loads"
 
