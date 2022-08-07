@@ -45,10 +45,6 @@ namespace {
 		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 	}
 
-void wifi::receive_config(const char* k, const char *v) {
-	ESP_LOGI(TAG, "got %s == %s", k, v);
-}
-
 uint64_t wifi::get_localtime() {
 	time_t now;
 	struct tm current_time;
@@ -71,8 +67,6 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 
 bool wifi::init() {
 	// Init events
-	events = xEventGroupCreate();
-
 	ESP_LOGW(TAG, "Fake wifi init: ok");
 
 	slots::WifiStatus fakestatus;
