@@ -29,13 +29,8 @@
 const static char * TAG="updater";
 
 namespace upd {
-	uint8_t update_state = 0xff;
-
-
 	UpdateKind needed() {
-		if (update_state != USTATE_NOT_READ) {
-			goto compute;
-		}
+		uint8_t update_state;
 		// check the SD for presence of upd/state file
 		if (f_stat("/upd/state", NULL) == FR_OK) {
 			ESP_LOGI(TAG, "update file exists...");
@@ -54,7 +49,7 @@ namespace upd {
 		else {
 			update_state = USTATE_NONE;
 		}
-	compute:
+
 		switch (update_state) {
 			case USTATE_READY_FOR_WEB:
 				return upd::WEB_UI;
