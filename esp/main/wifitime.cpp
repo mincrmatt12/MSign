@@ -250,19 +250,18 @@ bool wifi::init() {
 		}
 	}
 	ESP_ERROR_CHECK(esp_wifi_start());
-	wifi_country_t country_settings{};
-	country_settings.policy = WIFI_COUNTRY_POLICY_AUTO;
 	
 	if (cfg_blob.country) {
+		wifi_country_t country_settings{};
 		country_settings.policy = WIFI_COUNTRY_POLICY_MANUAL;
 		strncpy(country_settings.cc, cfg_blob.country.code, 3);
 		country_settings.max_tx_power = cfg_blob.country.max_power_db * 4;
 		country_settings.schan = cfg_blob.country.schan;
 		country_settings.nchan = cfg_blob.country.nchan;
 		ESP_LOGI(TAG, "... with country %s (channel %d - %d, power %d dB)", country_settings.cc, country_settings.schan, country_settings.schan + country_settings.nchan - 1, cfg_blob.country.max_power_db);
-	}
 
-	ESP_ERROR_CHECK(esp_wifi_set_country(&country_settings));
+		ESP_ERROR_CHECK(esp_wifi_set_country(&country_settings));
+	}
 
 	tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, cfg_blob.hostname);
 
