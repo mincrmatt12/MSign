@@ -63,6 +63,7 @@ void cfgpull::init() {
 }
 
 bool cfgpull::loop() {
+	if (!pull_host && !enabled) return true;
 	// Check if endpoint url is configured
 	if (!pull_host) {
 		ESP_LOGE(TAG, "cfgpull is enabled but url is missing.");
