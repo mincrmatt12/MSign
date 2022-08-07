@@ -215,10 +215,7 @@ namespace led {
 		const static uint_fast16_t EffectiveWidth = 256;
 
 		inline static color_t & _at(color_t * data, uint_fast16_t x, uint_fast16_t y) {
-			x = 127 - x;
-			y = 63 - y;
-
-			return data[(x + (y / 32)*128) + (y & 31)*EffectiveWidth];
+			return const_cast<color_t &>(_at((const color_t *)data, x, y));
 		}
 
 		inline static const color_t & _at(const color_t * data, uint_fast16_t x, uint_fast16_t y) {
@@ -250,7 +247,7 @@ namespace led {
 #if defined(USE_F2)
 			tim_init.Prescaler  = 3;
 #elif defined(USE_F4)
-			tim_init.Prescaler  = 5;
+			tim_init.Prescaler  = 4;
 #endif
 			tim_init.Autoreload = 1;
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
@@ -259,7 +256,7 @@ namespace led {
 #if defined(USE_F2)
 			tim_init.Prescaler  = 2;
 #elif defined(USE_F4)
-			tim_init.Prescaler  = 3;
+			tim_init.Prescaler  = 4;
 #endif
 			tim_init.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
 			LL_TIM_Init(TIM4, &tim_init);
