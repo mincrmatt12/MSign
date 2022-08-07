@@ -2,6 +2,8 @@ import React from 'react'
 import FormControl from 'react-bootstrap/FormControl'
 import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
+import Tab from 'react-bootstrap/Tab';
+import Tabs from 'react-bootstrap/Tabs';
 
 import _ from 'lodash';
 
@@ -15,13 +17,41 @@ function GlobalPane() {
 		<hr className="hr-gray" />
 
 		<Form.Group className="my-2" controlId="ssid_ctrl">
+			<Form.Label>hostname</Form.Label>
+			<FormControl placeholder="msign" type='text' value={_.get(cfg, "wifi.conn.hostname", "")} onChange={(e) => {updateCfg('wifi.conn.hostname', e.target.value);}} />
+		</Form.Group>
+
+		<Form.Group className="my-2" controlId="ssid_ctrl">
 			<Form.Label>ssid</Form.Label>
 			<FormControl type='text' value={_.get(cfg, "wifi.conn.ssid", "")} onChange={(e) => {updateCfg('wifi.conn.ssid', e.target.value);}} />
 		</Form.Group>
-		<Form.Group className="my-2" controlId="psk_ctrl">
-			<Form.Label>psk</Form.Label>
-			<FormControl type='password' value={_.get(cfg, "wifi.conn.psk", "")} onChange={(e) => {updateCfg('wifi.conn.psk', e.target.value);}} />
-		</Form.Group>
+		
+		<Tabs className="my-2" fill id="wifi-auth-tabs" defaultActiveKey={_.get(cfg, "wifi.conn.enterprise.username", "") == "" ? "psk" : "enterprise"}>
+			<Tab eventKey="psk" title="PSK">
+				<Form.Group className="my-2" controlId="psk_ctrl">
+					<Form.Label>psk</Form.Label>
+					<FormControl placeholder="<open network>" type='password' value={_.get(cfg, "wifi.conn.psk", "")} onChange={(e) => {updateCfg('wifi.conn.psk', e.target.value);}} />
+				</Form.Group>
+			</Tab>
+			<Tab eventKey="enterprise" title="Enterprise">
+				<Form.Group className="my-2" controlId="username_ctrl">
+					<Form.Label>username</Form.Label>
+					<FormControl type='text' value={_.get(cfg, "wifi.conn.enterprise.username", "")} onChange={(e) => {updateCfg('wifi.conn.enterprise.username', e.target.value);}} />
+				</Form.Group>
+				<Form.Group className="my-2" controlId="identity_ctrl">
+					<Form.Label>anon identity</Form.Label>
+					<FormControl placeholder={_.get(cfg, "wifi.conn.enterprise.username", "")} 
+						type='text' value={_.get(cfg, "wifi.conn.enterprise.identity", "")} onChange={(e) => {updateCfg('wifi.conn.enterprise.identity', e.target.value);}} />
+				</Form.Group>
+				<Form.Group className="my-2" controlId="password_ctrl">
+					<Form.Label>password</Form.Label>
+					<FormControl type='password' value={_.get(cfg, "wifi.conn.enterprise.password", "")} onChange={(e) => {updateCfg('wifi.conn.enterprise.password', e.target.value);}} />
+				</Form.Group>
+			</Tab>
+		</Tabs>
+
+		<hr className="hr-gray" />
+
 		<Form.Group className="my-2" controlId="ntp_ctrl">
 			<Form.Label>ntp server</Form.Label>
 			<InputGroup>

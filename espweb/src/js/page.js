@@ -25,6 +25,7 @@ import ModelPane from "./pane/model"
 import CfgPullPane from "./pane/cfgpull"
 import RawPane from "./pane/raw"
 import ParcelsPane from "./pane/parcels"
+import WifiPane from "./pane/wifiadv"
 
 import ConfigContext from "./ctx"
 import BackendVersionContext from "./ver.js"
@@ -121,6 +122,9 @@ function App() {
 								<LinkContainer to="/" exact>
 									<Nav.Link>global</Nav.Link>
 								</LinkContainer>
+								<LinkContainer to="/wifi">
+									<Nav.Link>wifi</Nav.Link>
+								</LinkContainer>
 								<LinkContainer to="/ttc">
 									<Nav.Link>transit</Nav.Link>
 								</LinkContainer>
@@ -184,6 +188,9 @@ function App() {
 								</Route>
 								<Route path="/parcels">
 									<ParcelsPane />
+								</Route>
+								<Route path="/wifi">
+									<WifiPane />
 								</Route>
 								<Route path="/cfgpull">
 									<CfgPullPane />
