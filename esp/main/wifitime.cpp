@@ -60,11 +60,9 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 
 	switch (event->event_id) {
 		case SYSTEM_EVENT_STA_START:
-			tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, "msign");
 			// Send disconnected message
 			newstatus.connected = false;
 			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
-			esp_wifi_connect();
 			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
 			ESP_LOGI(TAG, "Connected with IP %s", ip4addr_ntoa(&info.got_ip.ip_info.ip));
@@ -133,44 +131,36 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 
 
 
-namespace {
-	// stolen from stackoverflow
-	int days_from_civil(int y, int m, int d)
-	{
-		y -= m <= 2;
-		int era = y / 400;
-		int yoe = y - era * 400;                                   // [0, 399]
-		int doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;  // [0, 365]
-		int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;           // [0, 146096]
-		return era * 146097 + doe - 719468;
-	}
-
-
-	struct wifi_blob {
-		wifi_config_t wifi_config_data{};
-		wifi_country_t country{};
-		bool enterprise_wifi_enable = false;
-	} *wifi_cfg_blob;
+// stolen from stackoverflow
+static int days_from_civil(int y, int m, int d)
+{
+	y -= m <= 2;
+	int era = y / 400;
+	int yoe = y - era * 400;                                   // [0, 399]
+	int doy = (153 * (m + (m > 2 ? -3 : 9)) + 2) / 5 + d - 1;  // [0, 365]
+	int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;           // [0, 146096]
+	return era * 146097 + doe - 719468;
 }
-	time_t wifi::timegm(tm const* t)   
-	{
-		int year = t->tm_year + 1900;
-		int month = t->tm_mon;  
-		if (month > 11)
-		{
-			year += month / 12;
-			month %= 12;
-		}
-		else if (month < 0)
-		{
-			int years_diff = (11 - month) / 12;
-			year -= years_diff;
-			month += 12 * years_diff;
-		}
-		int days_since_1970 = days_from_civil(year, month + 1, t->tm_mday);
 
-		return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
+time_t wifi::timegm(tm const* t)   
+{
+	int year = t->tm_year + 1900;
+	int month = t->tm_mon;  
+	if (month > 11)
+	{
+		year += month / 12;
+		month %= 12;
 	}
+	else if (month < 0)
+	{
+		int years_diff = (11 - month) / 12;
+		year -= years_diff;
+		month += 12 * years_diff;
+	}
+	int days_since_1970 = days_from_civil(year, month + 1, t->tm_mday);
+
+	return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
+}
 
 uint64_t wifi::get_localtime() {
 	time_t now;
@@ -192,71 +182,17 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 	return ((uint64_t)now * 1000) + millis % 1000;
 }
 
-void wifi::receive_config(const char * field, const char * value) {
-	if (!wifi_cfg_blob) {
-		wifi_cfg_blob = new wifi_blob{};
-	}
-
-	auto wifi_config_data = &wifi_cfg_blob->wifi_config_data;
-
-	if (strcmp(field, "ssid") == 0) {
-		strncpy((char *)wifi_config_data->sta.ssid, value, 32);
-	}
-	else if (strcmp(field, "psk") == 0) {
-		strncpy((char *)wifi_config_data->sta.password, value, 64);
-		wifi_config_data->sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
-		esp_wifi_sta_wpa2_ent_disable();
-	}
-	else if (strcmp(field, "username") == 0) {
-		wifi_cfg_blob->enterprise_wifi_enable = true;
-		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
-		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
-	}
-	else if (strcmp(field, "username_only") == 0) {
-		wifi_cfg_blob->enterprise_wifi_enable = true;
-		esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)value, strlen(value));
-	}
-	else if (strcmp(field, "identity") == 0) {
-		wifi_cfg_blob->enterprise_wifi_enable = true;
-		esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)value, strlen(value));
-	}
-	else if (strcmp(field, "password") == 0) {
-		wifi_cfg_blob->enterprise_wifi_enable = true;
-		esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)value, strlen(value));
-	}
-	else if (strcmp(field, "channel") == 0) {
-		wifi_config_data->sta.channel = atoi(value);
-	}
-	else if (strcmp(field, "bssid") == 0) {
-		int a, b, c, d, e, f;
-		sscanf(value, "%x:%x:%x:%x:%x:%x", &a, &b, &c, &d, &e, &f);
-		wifi_config_data->sta.bssid_set = true;
-		wifi_config_data->sta.bssid[0] = a;
-		wifi_config_data->sta.bssid[1] = b;
-		wifi_config_data->sta.bssid[2] = c;
-		wifi_config_data->sta.bssid[3] = d;
-		wifi_config_data->sta.bssid[4] = e;
-		wifi_config_data->sta.bssid[5] = f;
-	}
-	else if (strcmp(field, "country_settings") == 0) {
-
-		int schan, fchan, maxtx;
-
-		sscanf(value, "%2s:%d:%d:%d", wifi_cfg_blob->country.cc, &schan, &fchan, &maxtx);
-		wifi_cfg_blob->country.schan = schan;
-		wifi_cfg_blob->country.nchan = fchan - schan + 1;
-		wifi_cfg_blob->country.max_tx_power = maxtx * 4;
-		wifi_cfg_blob->country.policy = WIFI_COUNTRY_POLICY_MANUAL;
-	}
-	else {
-		ESP_LOGW(TAG, "unknown wifi config param %s", field);
-	}
-}
-
 bool wifi::init() {
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
+	WifiSdConfig cfg_blob{};
+
+	if (!load_wifi_config(cfg_blob)) {
+		ESP_LOGE(TAG, "Failed to load wifi cfg, halting.");
+		return false;
+	}
+
 	// Verify we have ssid/psk
-	if (!wifi_cfg_blob) {
+	if (!cfg_blob.ssid) {
 		ESP_LOGE(TAG, "No wifi SSID is set, halting.");
 		return false;
 	}
@@ -265,17 +201,72 @@ bool wifi::init() {
 	tcpip_adapter_init();
 	ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
 
-	// Initialize wifi -- performed here so config can call wifi funcs
-	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	// Initialize wifi
+	{
+		wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+		ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	}
 
 	// Setup with config data
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_cfg_blob->wifi_config_data));
-	if (wifi_cfg_blob->enterprise_wifi_enable) esp_wifi_sta_wpa2_ent_enable();
+
+	{
+		wifi_config_t cfg{};
+
+		strncpy((char *)cfg.sta.ssid, cfg_blob.ssid, 32);
+		ESP_LOGI(TAG, "Connecting to SSID %s", cfg.sta.ssid);
+
+		if (cfg_blob.psk) {
+			strncpy((char *)cfg.sta.password, cfg_blob.psk, 64);
+			cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+			ESP_LOGI(TAG, "... using a PSK");
+		}
+		else if (cfg_blob.enterprise) {
+			cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
+			ESP_LOGI(TAG, "... using WPA2-enterprise");
+		}
+		else {
+			cfg.sta.threshold.authmode = WIFI_AUTH_OPEN;
+		}
+
+		if ((cfg.sta.bssid_set = cfg_blob.bssid_set)) {
+			ESP_LOGI(TAG, "... using a specific BSSID");
+		}
+		memcpy(cfg.sta.bssid, cfg_blob.bssid, 6);
+
+		if ((cfg.sta.channel = cfg_blob.channel)) {
+			ESP_LOGI(TAG, "... using a specific channel");
+		}
+	
+		ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &cfg));
+		if (cfg_blob.enterprise) {
+			// setup enterprise cfg
+			esp_wifi_sta_wpa2_ent_set_username((const uint8_t *)cfg_blob.enterprise.username(), strlen(cfg_blob.enterprise.username()));
+			ESP_LOGI(TAG, "... using username %s", cfg_blob.enterprise.username());
+			esp_wifi_sta_wpa2_ent_set_identity((const uint8_t *)cfg_blob.enterprise.identity(), strlen(cfg_blob.enterprise.identity()));
+			esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)cfg_blob.enterprise.password(), strlen(cfg_blob.enterprise.password()));
+
+			esp_wifi_sta_wpa2_ent_enable();
+		}
+	}
 	ESP_ERROR_CHECK(esp_wifi_start());
-	ESP_ERROR_CHECK(esp_wifi_set_country(&wifi_cfg_blob->country));
-	delete wifi_cfg_blob; wifi_cfg_blob = nullptr;
+	wifi_country_t country_settings{};
+	country_settings.policy = WIFI_COUNTRY_POLICY_AUTO;
+	
+	if (cfg_blob.country) {
+		country_settings.policy = WIFI_COUNTRY_POLICY_MANUAL;
+		strncpy(country_settings.cc, cfg_blob.country.code, 3);
+		country_settings.max_tx_power = cfg_blob.country.max_power_db * 4;
+		country_settings.schan = cfg_blob.country.schan;
+		country_settings.nchan = cfg_blob.country.nchan;
+		ESP_LOGI(TAG, "... with country %s (channel %d - %d, power %d dB)", country_settings.cc, country_settings.schan, country_settings.schan + country_settings.nchan - 1, cfg_blob.country.max_power_db);
+	}
+
+	ESP_ERROR_CHECK(esp_wifi_set_country(&country_settings));
+
+	tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, cfg_blob.hostname);
+
+	ESP_ERROR_CHECK(esp_wifi_connect());
 
 	return true;
 }
