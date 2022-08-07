@@ -15,9 +15,15 @@ namespace led {
 
 		union {
 			struct {
+#ifdef USE_F4
+				uint16_t r; // minisign panels have order rbg
+				uint16_t b;
+				uint16_t g;
+#else
 				uint16_t r;
 				uint16_t g;
 				uint16_t b;
+#endif
 			};
 			uint16_t components[3];
 		};
