@@ -22,9 +22,9 @@ pipeline {
 							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
-						// build for board2
-						dir("stm/build_board2") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board2 -DCMAKE_BUILD_TYPE=Release"
+						// build for minisign
+						dir("stm/build_minisign") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=minisign -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 
@@ -59,9 +59,9 @@ pipeline {
 							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=nucleo -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
-						// build for board2
-						dir("stmboot/build_board2") {
-							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=board2 -DCMAKE_BUILD_TYPE=Release"
+						// build for minisign
+						dir("stmboot/build_minisign") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DMSIGN_BUILD_TYPE=minisign -DCMAKE_BUILD_TYPE=Release"
 							sh "ninja"
 						}
 
@@ -77,7 +77,7 @@ pipeline {
 from elftools.elf.elffile import ELFFile
 
 cfg = {
-    "stm/build_board2/stm": (
+    "stm/build_minisign/stm": (
         "stm.csv",
         [".rodata", ".isr_vector", ".text", ".data", ".crash_data", ".init_array", ".fw_dbg"],
         [".bss", ".data", ".vram"]

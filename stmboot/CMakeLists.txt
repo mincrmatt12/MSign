@@ -5,12 +5,12 @@ project(msign-stmboot C ASM)
 set(CMAKE_CXX_STANDARD 17)
 
 # specify target
-set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'board2'")
+set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign'")
 
 # find library
 set(cube_ll_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc)
 
-if (MSIGN_BUILD_TYPE STREQUAL "board2")
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
 else()
@@ -32,14 +32,12 @@ add_executable(stmboot
 	src/common/bootcmd.c
 )
 
-if (MSIGN_BUILD_TYPE STREQUAL "board2")
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	target_include_directories(stmboot PRIVATE
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
 	)
-
-	
 else()
 	target_include_directories(stmboot PRIVATE
 		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
@@ -58,7 +56,7 @@ elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 		-DSTM32F207xx
 		-DUSE_F2
 	)
-elseif (MSIGN_BUILD_TYPE STREQUAL "board2")
+elseif (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	target_compile_definitions(stmboot PRIVATE
 		-DSTM32F405xx
 		-DUSE_F4
@@ -84,10 +82,10 @@ target_link_libraries(stmboot
 if (EXISTS ${openocd_executable})
 	message(STATUS "Found OPENOCD " ${openocd_executable})
 
-	if (MSIGN_BUILD_TYPE STREQUAL "board2")
-		set(upload_cfg stm32f2x.cfg)
-	else()
+	if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 		set(upload_cfg stm32f4x.cfg)
+	else()
+		set(upload_cfg stm32f2x.cfg)
 	endif()
 
 	# add upload target
