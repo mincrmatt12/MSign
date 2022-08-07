@@ -32,7 +32,7 @@ namespace screen {
 			.start_y = 0,
 			.threshold_screen_end = 56,
 			.threshold_screen_start = 0,
-			.screen_region_end = 64,
+			.screen_region_end = 65,
 			.hold_time = 2500,
 		};
 
