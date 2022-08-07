@@ -11,17 +11,17 @@ function ApiPane() {
 	return <div>
 		<hr className="hr-gray" />
 
-		<Form.Group controlId="dsky_ctrl" className="mb-3">
+		<Form.Group controlId="dsky_ctrl" className="my-2">
 			<Form.Label>darksky</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'weather.key', '')} onChange={(e) => {updateCfg('weather.key', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
-		<Form.Group controlId="cfgc_ctrl">
+		<Form.Group controlId="cfgc_ctrl" className="my-2">
 			<Form.Label>config server</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'cfgpull.secret', '')} onChange={(e) => {updateCfg('cfgpull.secret', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
-		<Form.Group controlId="epst_ctrl">
+		<Form.Group controlId="epst_ctrl" className="my-2">
 			<Form.Label>easypost</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'parcels.key', '')} onChange={(e) => {updateCfg('parcels.key', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
