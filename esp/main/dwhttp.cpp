@@ -583,7 +583,7 @@ got_done:
 					ESP_LOGW(TAG, "Socket wasn't closed, closing");
 					socket.close();
 				}
-				if (last_server != host) {
+				if (last_server != host || !socket.is_connected()) {
 					if (!socket.connect(host)) {
 						ESP_LOGE(TAG, "Failed to connect to host");
 						return false;
