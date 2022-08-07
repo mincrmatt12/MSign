@@ -290,45 +290,59 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
      *   *  L
 	 */
 
-	int16_t y2 = y;
-	int16_t y3 = 0;
+	bool onscreen = !(y >= 64 || y < -32);
+
+	int16_t end_y = y;
+	int16_t bulb_centering_y = 0;
 
 	// Draw scrolling text first (so we can mask it)
 	if (psl.flags & psl.HAS_STATUS && psl.status_offset < heap_size) {
-		if (y3 == 0) y3 = y2 + 10;
-		draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + draw::scroll(rtc_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), y2 + 8, 0xff_c);
-		y2 += 10;
+		if (bulb_centering_y == 0) bulb_centering_y = end_y + 10;
+		if (onscreen) draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + draw::scroll(rtc_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), end_y + 8, 0xff_c);
+		end_y += 10;
 	}
 
 	bool second_line = false;
+	bool dual_line = false;
+	int16_t location_end_x = 0;
 
 	// Draw nonscrolling text
 	if (psl.flags & psl.HAS_LOCATION && psl.location_offset < heap_size) {
-		if (y3 == 0) y3 = y2 + 6;
-		draw::text(matrix.get_inactive_buffer(), heap + psl.location_offset, font::lcdpixel_6::info, 5, y2 + 5, 0x5555ff_cc);
+		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
+		if (onscreen) {
+			location_end_x = draw::text(matrix.get_inactive_buffer(), heap + psl.location_offset, font::lcdpixel_6::info, 5, end_y + 5, 0x5555ff_cc);
+		}
 		second_line = true;
 	}
 	if (psl.flags & psl.HAS_UPDATED_TIME) {
-		if (y3 == 0) y3 = y2 + 6;
-		char buf[32]; draw::format_relative_date(buf, 32, updated_time);
-		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
-		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, y2 + 5, 0xaa_c);
+		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
+		if (onscreen) {
+			char buf[32]; draw::format_relative_date(buf, 32, updated_time);
+			auto sz = draw::text_size(buf, font::lcdpixel_6::info);
+			if (location_end_x > 127 - sz - 6) {
+				dual_line = true;
+			}
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, dual_line ? end_y + 11 : end_y + 5, 0xaa_c);
+		}
 		second_line = true;
 	}
-	if (second_line) y2 += 9;
+	if (second_line) end_y += 9;
+	if (dual_line)   end_y += 6;
 	
 	// Mask out the scrolling bubbling line
-	draw::rect(matrix.get_inactive_buffer(), 0, y, 5, y2, 0);
-	draw::line(matrix.get_inactive_buffer(), 2, y, 2, y2, 0x40_c);
+	if (onscreen) {
+		draw::rect(matrix.get_inactive_buffer(), 0, y, 5, end_y, 0);
+		draw::line(matrix.get_inactive_buffer(), 2, y, 2, end_y, 0x40_c);
 
-	// draw the bulb
-	int16_t bulbpos = y + (y3 - y) / 2;
-	auto& fb = matrix.get_inactive_buffer();
+		// draw the bulb
+		int16_t bulbpos = y + (bulb_centering_y - y) / 2;
+		auto& fb = matrix.get_inactive_buffer();
 
-	fb.at(1, bulbpos) = fb.at(3, bulbpos) = fb.at(2, bulbpos - 1) = fb.at(2, bulbpos + 1) = 0x55ff55_cc;
-	fb.at(2, bulbpos) = 0;
+		fb.at(1, bulbpos) = fb.at(3, bulbpos) = fb.at(2, bulbpos - 1) = fb.at(2, bulbpos + 1) = 0x55ff55_cc;
+		fb.at(2, bulbpos) = 0;
+	}
 
-	return y2 - y + 1;
+	return end_y - y + 1;
 }
 
 void screen::ParcelScreen::draw_loading() {
