@@ -967,6 +967,14 @@ restart:
 			ESP_LOGE(TAG, "unable to create socket");
 			while (1) {vTaskDelay(1000);}
 		}
+		
+		{
+			int on = 1;
+			if (lwip_setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+				ESP_LOGW(TAG, "failed to set reuseaddr");
+			}
+		}
+
 
 		{
 			sockaddr_in baddr{};
