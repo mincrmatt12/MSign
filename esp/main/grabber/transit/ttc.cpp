@@ -8,7 +8,6 @@
 
 #include <algorithm>
 #include <esp_log.h>
-#include <ttc_rdf.h>
 
 const static char * TAG = "ttc";
 
@@ -148,36 +147,6 @@ namespace transit::ttc {
 		int offset = 0;
 	};
 
-	void update_alertstr(slots::TTCInfo& info) {
-		ttc_rdf_state_t state;
-		AlertParserState aps_ptr{info};
-
-		auto dw = dwhttp::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss");
-
-		if (dw.result_code() < 200 || dw.result_code() > 299) {
-			return;
-		}
-
-		ttc_rdf_start(&state);
-		state.userptr = &aps_ptr;
-
-		// Run this through the parser
-		uint8_t buffer[64];
-		size_t amount = 0;
-		while ((amount = dw(buffer, 64)) != 0) {
-			// only works on little-endian
-			switch (ttc_rdf_feed(buffer, buffer + amount, &state)) {
-				case TTC_RDF_OK:
-					continue;
-				case TTC_RDF_FAIL:
-					ESP_LOGE(TAG, "RDF parser failed");
-					[[fallthrough]];
-				case TTC_RDF_DONE:
-					return;
-			}
-		}
-	}
-
 	bool loop() {
 		if (transit::impl != transit::TTC) return true;
 
@@ -203,71 +172,10 @@ namespace transit::ttc {
 			}
 		}
 		dwhttp::close_connection(true);
-		update_alertstr(x);
 		if (!(x.flags & slots::TTCInfo::SUBWAY_ALERT)) {
 			serial::interface.delete_slot(slots::TTC_ALERTSTR);
 		}
 		serial::interface.update_slot(slots::TTC_INFO, x);
 		return true;
 	}
-}
-
-extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
-	if (!transit::ttc::alert_search) return;
-	transit::ttc::AlertParserState& ps = *reinterpret_cast<transit::ttc::AlertParserState *>(state->userptr);
-
-	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
-
-	// Check all semicolon separated entries
-	{
-		char * search_query = strdup(transit::ttc::alert_search);
-		char * token = strtok(search_query, ";");
-		bool found = false;
-		while (token && strlen(token)) {
-			if (strcasestr(state->c.advisory, token)) {
-				ESP_LOGD(TAG, "matched on %s", token);
-				found = true;
-				break;
-			}
-			token = strtok(NULL, ";");
-		}
-		free(search_query);
-		if (!found) return;
-	}
-
-	// Ignore if we see the string elevator in there
-	if (strcasestr(state->c.advisory, "elevator")) return;
-
-	// Is the first alert?
-	if (!(ps.info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
-		// Clear the type flags
-		ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
-		// Mark this alert.
-		ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
-	}
-	
-	// If it isn't a regular service...
-	if (!strcasestr(state->c.advisory, "regular service has")) {
-		// Try and guess the type of error:
-		if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "major delays") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
-			ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
-		}
-		if (strcasestr(state->c.advisory, "no service")) {
-			ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
-		}
-	}
-
-	size_t newlength = strlen(state->c.advisory);
-	// Add to the slot data:
-	// If this is the first entry, we don't need to add a ' / ' marker, otherwise we do
-	if (ps.offset != 0) newlength += 3;
-	serial::interface.allocate_slot_size(slots::TTC_ALERTSTR, ps.offset + newlength + 1);
-	if (ps.offset == 0) {
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
-	}
-	else {
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1, false); // sync this on the separator
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
-	}
-	ps.offset += newlength;
 }
