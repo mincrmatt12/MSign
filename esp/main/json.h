@@ -8,17 +8,24 @@
 
 namespace json {
 	struct PathNode {
-		char * name = nullptr;
-		uint16_t index;
-		bool array;
+		const char * name = nullptr;
+		uint16_t index = 0;
+		bool array = false;
 
-		PathNode() {}
-		PathNode(char * name_in) : name(name_in), index(0), array(false) {}
-		PathNode(char * name_in, uint16_t index) : name(name_in), index(index), array(true) {}
+		// constructs root
+		PathNode() : name(ROOT_NAME) {}
+		explicit PathNode(bool array) : name(ANON_NAME), array(array) {}
+		explicit PathNode(const char * name_in) : name(name_in), index(0), array(false) {}
+		PathNode(const char * name_in, uint16_t index) : name(name_in), index(index), array(true) {}
 
 		inline bool is_array() const {return array && !is_root();}
-		inline bool is_root() const {return name == nullptr;}
+		inline bool is_root() const {return name == ROOT_NAME;}
+		inline bool is_anon() const {return name == ANON_NAME;}
 		inline bool is_obj() const {return !array && !is_root();}
+	
+	private:
+		static const char * const ROOT_NAME;
+		static const char * const ANON_NAME;
 	};
 
 	struct Value {

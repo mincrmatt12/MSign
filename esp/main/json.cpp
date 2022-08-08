@@ -8,6 +8,9 @@
 
 const static char * TAG = "json";
 
+const char * const json::PathNode::ROOT_NAME = "(root)";
+const char * const json::PathNode::ANON_NAME = "(anon)";
+
 json::TreeSlabAllocator::TreeSlabAllocator() {
 	tail = new Chunk();
 	_last = tail->data;
