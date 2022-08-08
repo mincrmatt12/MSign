@@ -1389,8 +1389,8 @@ def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quie
                 conditions = [f"stack_ptr {'>=' if isinstance(leaf, DelegateJsonPathNode) else '=='} {node.node_depth + 2}"]
                 if not leaf.is_nonconst_name:
                     conditions.append(f"!strcmp(stack[{leaf.node_depth}]->name, {as_c_string(leaf.name)})")
-                if isinstance(leaf, BaseJsonPathNode.DynName):
-                    conditions.append(f"!strcmp(stack[{leaf.node_depth}]->name, {leaf.name.var}")
+                if isinstance(leaf.name, BaseJsonPathNode.DynName):
+                    conditions.append(f"!strcmp(stack[{leaf.node_depth}]->name, {leaf.name.var})")
                 if leaf.is_array:
                     conditions.append(f"stack[{leaf.node_depth}]->is_array()")
                 if leaf.array_index >= 0:
