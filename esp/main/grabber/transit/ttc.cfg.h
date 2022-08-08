@@ -9,9 +9,6 @@ namespace transit::ttc {
 
 	//!cfg: holds .ttc.agency_code, default "ttc"
 	extern config::string_t agency_code;
-
-	//!cfg: receives .ttc.entries[$n].name
-	void update_ttc_entry_name(size_t n, const char * value);
 	
 	struct TTCEntry {
 		//!cfg: holds .dirtag

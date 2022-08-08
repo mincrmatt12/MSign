@@ -14,9 +14,6 @@ namespace transit::gtfs {
 	//!cfg: holds .gtfs.alt_feed.url, default nullptr
 	extern config::string_t alt_feed_url;
 
-	//!cfg: receives .gtfs.entries[$n].name
-	void update_ttc_entry_name(size_t n, const char * value);
-
 	struct GtfsEntry {
 		//!cfg: holds .route
 		config::string_t route_id;

@@ -12,11 +12,8 @@
 const static char * TAG = "ttc";
 
 namespace transit::ttc {
-	void update_ttc_entry_name(size_t n, const char * value) {
-		serial::interface.update_slot(slots::TTC_NAME_1 + n, value);
-	}
-
 	void init() {
+		if (impl == TTC) load_static_info("ttc");
 	}
 
 	// Populate the info and times with the information for this slot.

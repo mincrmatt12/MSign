@@ -83,11 +83,8 @@ extern "C" void gtfs_tripupdate_got_entry_hook(gtfs_tripupdate_state_t *state, u
 }
 
 namespace transit::gtfs {
-	void update_ttc_entry_name(size_t n, const char * v) {
-		ttc::update_ttc_entry_name(n, v);
-	}
-	
 	void init() {
+		if (impl == GTFS) load_static_info("gtfs");
 	}
 
 	bool parse_feed(const char * host, const char * url, TripParserState& tps) {
