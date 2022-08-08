@@ -1361,7 +1361,7 @@ def generate_store_code(output, node: StoreValuePathNode):
 
     output.add(generate_assignment_statement_for(node.target, content))
 
-def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quiet=False):
+def generate_json_callback(output, node_to_symbol_map, enumname="cfgstate", quiet=True):
     """
     structure is one large switch statement, like this:
 
