@@ -26,7 +26,7 @@
 
 #define USTATE_READY_FOR_CERT 0x20
 
-const static char * TAG="updater";
+const static char * const TAG="updater";
 
 namespace upd {
 	uint8_t update_state = USTATE_NOT_READ;

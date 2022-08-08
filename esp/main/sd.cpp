@@ -20,7 +20,7 @@
 
 #define nop asm volatile ("nop\n\t")
 
-static const char* TAG = "diskio_sd";
+static const char* const TAG = "diskio_sd";
 
 namespace sd {
 	FATFS fs;

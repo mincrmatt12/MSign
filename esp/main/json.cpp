@@ -6,8 +6,9 @@
 #include <esp_log.h>
 #endif
 
-const static char * TAG = "json";
+const static char * const TAG = "json";
 
+// Declared separately to provide a single address for these (they're compared by address not strcmp for obvious reasons)
 const char * const json::PathNode::ROOT_NAME = "(root)";
 const char * const json::PathNode::ANON_NAME = "(anon)";
 

@@ -19,7 +19,7 @@
 #include "../common/util.h"
 #include "../serial.h"
 
-static const char * TAG = "cfgpull";
+static const char * const TAG = "cfgpull";
 
 namespace cfgpull {
 	bool pull_single_file_for_update(dwhttp::Download &&resp, const char *target_file, uint16_t &crc_out) {

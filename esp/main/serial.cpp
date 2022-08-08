@@ -11,7 +11,7 @@
 
 serial::SerialInterface serial::interface;
 
-static const char * TAG = "servicer";
+static const char * const TAG = "servicer";
 
 void serial::SerialInterface::process_packet() {
 	switch (rx_buf[2]) {

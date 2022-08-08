@@ -15,8 +15,8 @@
 
 EventGroupHandle_t wifi::events;
 
-static const char * TAG = "wifiman";
-static const char * T_TAG = "sntp";
+static const char * const TAG = "wifiman";
+static const char * const T_TAG = "sntp";
 
 void sntp_timer_cb(TimerHandle_t xTimer) {
 	// Wait for time to be set

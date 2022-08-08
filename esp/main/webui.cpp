@@ -29,11 +29,7 @@
 #undef bind
 #undef flush
 
-// config defaults
-#define DEFAULT_USERNAME "admin"
-#define DEFAULT_PASSWORD "admin"
-
-const static char * TAG = "webui";
+const static char * const TAG = "webui";
 
 namespace webui {
 	int etag_num;

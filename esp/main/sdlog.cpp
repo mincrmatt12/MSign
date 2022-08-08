@@ -7,7 +7,7 @@
 #include <ff.h>
 #include <stdio.h>
 
-static const char * TAG = "sdlog";
+static const char * const TAG = "sdlog";
 
 namespace sd {
 	struct LogBuf {
