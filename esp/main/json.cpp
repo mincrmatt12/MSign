@@ -350,6 +350,9 @@ bool json::JSONParser::parse_object() {
 	while (peek() != 0) {
 		next();
 		if (!advance_whitespace()) return false;
+		if (peek() == '}') {
+			break;
+		}
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
 		push(n);
