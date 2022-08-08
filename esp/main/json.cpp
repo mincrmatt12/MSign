@@ -326,15 +326,16 @@ bool json::JSONParser::parse_array() {
 		top().index = 0;
 	}
 	else {
-		push();
+		push(true);
 		top().array = true;
 		top().index = 0;
 	}
 
 	while (peek() != 0) {
 		next();
-		parse_value();
 		if (!advance_whitespace()) return false;
+		if (peek() == ']') break;
+		if (!parse_value()) return false;
 		if (peek() == ',') ++top().index;
 		else if (peek() == ']') break;
 		else return false;
