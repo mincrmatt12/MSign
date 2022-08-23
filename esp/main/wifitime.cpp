@@ -222,7 +222,7 @@ bool wifi::init() {
 			ESP_LOGI(TAG, "... using a PSK");
 		}
 		else if (cfg_blob.enterprise) {
-			cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
+			//cfg.sta.threshold.authmode = WIFI_AUTH_WPA2_ENTERPRISE;
 			ESP_LOGI(TAG, "... using WPA2-enterprise");
 		}
 		else {
