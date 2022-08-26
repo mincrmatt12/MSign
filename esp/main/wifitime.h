@@ -16,11 +16,11 @@ namespace wifi {
 	time_t timegm(tm const* t);
 
 	enum Events : EventBits_t {
-		WifiConnected = 1,
-		TimeSynced = 2,
-		StmConnected = 4,
-		GrabRequested = 8,
-		GrabTaskStop = 16, // set when the task should stop
+		WifiConnected = 1, // set when wifi is connected (unset when disconnected)
+		TimeSynced = 2,    // set when sntp finishes
+		StmConnected = 4,  // set when stm is connected
+		GrabRequested = 8, // set to wakeup grabber for refreshing
+		GrabTaskStop = 16, // if set, grab task should not be running (when unset, grab task is unmasked)
 	};
 }
 

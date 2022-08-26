@@ -80,6 +80,7 @@ namespace grabber {
 }
 		// Wait for wifi
 		stoppable(wifi::WifiConnected);
+		stoppable(wifi::StmConnected);
 
 		// Init all grabbers
 		reload_all();

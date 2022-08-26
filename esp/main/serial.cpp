@@ -181,6 +181,7 @@ void serial::SerialInterface::run() {
 	}
 
 	ESP_LOGI(TAG, "Connected to STM32");
+	xEventGroupSetBits(wifi::events, wifi::StmConnected);
 
 #ifdef SIM
 #define STACK_MULT 8
