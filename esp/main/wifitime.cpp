@@ -62,7 +62,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 		case SYSTEM_EVENT_STA_START:
 			// Send disconnected message
 			newstatus.connected = false;
-			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
+			serial::interface.update_slot_nosync(slots::WIFI_STATUS, newstatus);
 			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
 			ESP_LOGI(TAG, "Connected with IP %s", ip4addr_ntoa(&info.got_ip.ip_info.ip));
@@ -71,7 +71,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				newstatus.ipaddr[i] = ip4_addr_get_byte_val(info.got_ip.ip_info.ip, i);
 				newstatus.gateway[i] = ip4_addr_get_byte_val(info.got_ip.ip_info.gw, i);
 			}
-			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
+			serial::interface.update_slot_nosync(slots::WIFI_STATUS, newstatus);
 			xEventGroupSetBits(wifi::events, wifi::WifiConnected);
 
 			if (grab_killer) {
@@ -107,10 +107,13 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				else ESP_LOGW(TAG, "out of timers!");
 			}
 			break;
+		case SYSTEM_EVENT_STA_CONNECTED:
+			ESP_LOGI(TAG, "Associated with AP");
+			break;
 		case SYSTEM_EVENT_STA_DISCONNECTED:
 			ESP_LOGW(TAG, "Disconnected from AP (%d)", info.disconnected.reason);
 			newstatus.connected = false;
-			serial::interface.update_slot(slots::WIFI_STATUS, newstatus);
+			serial::interface.update_slot_nosync(slots::WIFI_STATUS, newstatus);
 			xEventGroupClearBits(wifi::events, wifi::WifiConnected);
 			if (info.disconnected.reason == WIFI_REASON_BASIC_RATE_NOT_SUPPORT) {
 				esp_wifi_set_protocol(ESP_IF_WIFI_STA, WIFI_PROTOCOL_11B | WIFI_PROTOCOL_11G | WIFI_PROTOCOL_11N);
