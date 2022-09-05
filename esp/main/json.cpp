@@ -337,6 +337,7 @@ bool json::JSONParser::parse_array() {
 		if (!advance_whitespace()) return false;
 		if (peek() == ']') break;
 		if (!parse_value()) return false;
+		if (!advance_whitespace()) return false;
 		if (peek() == ',') ++top().index;
 		else if (peek() == ']') break;
 		else return false;
