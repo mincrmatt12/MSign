@@ -157,6 +157,7 @@ void * tls_init(void) {
 }
 
 void tls_deinit(void *tls_ctx) {
+	ESP_LOGV(TAG, "tls deinit");
 }
 
 int tls_get_errors(void *tls_ctx) {
@@ -165,6 +166,8 @@ int tls_get_errors(void *tls_ctx) {
 
 void tls_connection_deinit(void *tls_ctx, struct tls_connection * conn) {
 	if (conn == NULL) return;
+	
+	ESP_LOGV(TAG, "tls conn deinit");
 	
 	os_free(conn);
 	wpa_br_tls_unclaim_buffers(WPA_BR_TLS_SRC_WPA);
@@ -330,6 +333,7 @@ int tls_connection_established(void *tls_ctx, struct tls_connection *conn) {
 }
 
 int tls_connection_shutdown(void *tls_ctx, struct tls_connection *conn) {
+	ESP_LOGV(TAG, "tls shutdown");
 	// Feed some entropy into bearssl
 	uint32_t block[8];
 	for (int i = 0; i < 8; ++i) block[i] = esp_random();
@@ -421,15 +425,9 @@ static int wpabuf_append(struct wpabuf ** buf, void * data, size_t length) {
 		}
 	}
 	else {
-		offset = wpabuf_len(*buf);
-		if (wpabuf_resize(&*buf, length) < 0) {
-			ESP_LOGE(TAG, "Failed to allocate more space for buf");
-			// Free temp data
-			wpabuf_free(*buf);
-			return -1;
-		}
+		wpabuf_resize(buf, length);
 	}
-	memcpy(wpabuf_mhead_u8(*buf) + offset, data, length);
+	wpabuf_put_data(*buf, data, length);
 	return 0;
 }
 
@@ -438,32 +436,42 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx, struct tls_connection *c
 	struct wpabuf * output_records = NULL;
 	unsigned int state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	void * buftarget;
-	size_t length;
+	size_t length, soffset = 0;
+
+	ESP_LOGV(TAG, "tls_connection_handshake start w/ state=%d, dat = %p", state, in_data);
 
 	if (appl_data) *appl_data = NULL;
 
 	// Engine expects records and we have some, send them in
-	if (state & BR_SSL_RECVREC && in_data) {
+	while (state & BR_SSL_RECVREC && in_data && soffset < wpabuf_len(in_data)) {
 		buftarget = br_ssl_engine_recvrec_buf(&conn->client_ctx.eng, &length);
 
-		if (length < wpabuf_len(in_data)) {
-			ESP_LOGE(TAG, "Incoming data too large for SSL buffer, ignoring");
-			return NULL;
+		if (length < wpabuf_len(in_data) - soffset && length) {
+			ESP_LOGV(TAG, "Incoming data too large, truncating %d --> %d", (int)(wpabuf_len(in_data) - soffset), (int)length);
 		}
 
+		ESP_LOGV(TAG, "hs: injecting incoming records");
+
+		if (length > wpabuf_len(in_data) - soffset) length = wpabuf_len(in_data) - soffset;
+
 		// Inject records
-		memcpy(buftarget, wpabuf_head(in_data), wpabuf_len(in_data));
-		br_ssl_engine_recvrec_ack(&conn->client_ctx.eng, wpabuf_len(in_data));
+		memcpy(buftarget, wpabuf_head(in_data) + soffset, length);
+		br_ssl_engine_recvrec_ack(&conn->client_ctx.eng, length);
 		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
+		soffset += length;
 	}
-	else if (in_data) {
+
+	if (in_data && soffset < wpabuf_len(in_data)) {
 		ESP_LOGE(TAG, "incoming data present but engine not ready for it");
 
 		return NULL;
 	}
 
+	state = br_ssl_engine_current_state(&conn->client_ctx.eng);
+
 	// Now, are there any records to be sent out?
 	while (state & BR_SSL_SENDREC) {
+		ESP_LOGV(TAG, "hs: getting outgoing records");
 		// Get it and place it into a wpabuf
 		buftarget = br_ssl_engine_sendrec_buf(&conn->client_ctx.eng, &length);
 		ssize_t offset = wpabuf_append(&output_records, buftarget, length);
@@ -472,6 +480,7 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx, struct tls_connection *c
 			ESP_LOGE(TAG, "Failed to allocate more space for outgoing buf");
 			return NULL;
 		}
+		ESP_LOGV(TAG, "created outoing buf: %p; len %d", output_records, (int)length);
 		// Ack
 		br_ssl_engine_sendrec_ack(&conn->client_ctx.eng, length);
 		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
@@ -490,6 +499,11 @@ struct wpabuf * tls_connection_handshake(void *tls_ctx, struct tls_connection *c
 		}
 	}
 
+	// If no output data, make some empty buffer to avoid triggering errors
+	if (!output_records) {
+		output_records = wpabuf_alloc(0);
+	}
+
 	// Return received data
 	return output_records;
 }
@@ -502,14 +516,17 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx, struct tls_connection *con
 
 	size_t pos = 0, remain = wpabuf_len(in_data);
 	bool flushed = false;
+	ESP_LOGV(TAG, "tls_encrypt: %p; dat: %p, st: %d, l: %d", conn, in_data, state, (int)remain);
 	while (pos < wpabuf_len(in_data)) {
 		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
+		ESP_LOGV(TAG, "tls_encrypt loop: %d, state %d", (int)pos, state);
 		if (state == BR_SSL_CLOSED) {
 			ESP_LOGW(TAG, "encrypt conn close");
 			return output_records; // connection faield
 		}
 		if (state & BR_SSL_SENDAPP) {
 			buftarget = br_ssl_engine_sendapp_buf(&conn->client_ctx.eng, &length);
+			ESP_LOGV(TAG, "tls_encrypt: sendapp %d %d %d", (int)length, (int)remain, state);
 			if (length >= remain) length = remain;
 			memcpy(buftarget, wpabuf_head(in_data) + pos, length);
 			br_ssl_engine_sendapp_ack(&conn->client_ctx.eng, length);
@@ -538,6 +555,7 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx, struct tls_connection *con
 		}
 		flushed = false;
 	}
+	ESP_LOGV(TAG, "loop done");
 	br_ssl_engine_flush(&conn->client_ctx.eng, output_records == NULL);
 	state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	// Now flush out the content
@@ -549,6 +567,7 @@ struct wpabuf * tls_connection_encrypt(void *tls_ctx, struct tls_connection *con
 			return NULL;
 		}
 		br_ssl_engine_sendrec_ack(&conn->client_ctx.eng, length);
+		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	}
 	return output_records;
 }
@@ -557,7 +576,7 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx, struct tls_connection *con
 	struct wpabuf * output_records = NULL;
 	unsigned int state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	void * buftarget;
-	size_t length;
+	size_t length, soffset = 0;
 
 	state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	if (state == BR_SSL_CLOSED) {
@@ -571,13 +590,24 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx, struct tls_connection *con
 	}
 
 	// Send incoming data
-	buftarget = br_ssl_engine_recvrec_buf(&conn->client_ctx.eng, &length);
-	if (length < wpabuf_len(in_data)) {
-		ESP_LOGE(TAG, "not enough space for incoming decrypt");
-		return NULL;
+	while (soffset < wpabuf_len(in_data)) {
+		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
+		if (!(state & BR_SSL_RECVREC)) {
+			ESP_LOGE(TAG, "not ready for incoming records");
+			return NULL;
+		}
+
+		buftarget = br_ssl_engine_recvrec_buf(&conn->client_ctx.eng, &length);
+
+		if (length > wpabuf_len(in_data) - soffset) length = wpabuf_len(in_data) - soffset;
+
+		memcpy(buftarget, wpabuf_head(in_data) + soffset, length);
+		br_ssl_engine_recvrec_ack(&conn->client_ctx.eng, length);
+
+		soffset += length;
 	}
-	memcpy(buftarget, wpabuf_head(in_data), wpabuf_len(in_data));
-	br_ssl_engine_recvrec_ack(&conn->client_ctx.eng, wpabuf_len(in_data));
+
+	ESP_LOGV(TAG, "tls_decrypt: %p; dat: %p, st: %d", conn, in_data, state);
 
 	state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 
@@ -587,13 +617,16 @@ struct wpabuf * tls_connection_decrypt(void *tls_ctx, struct tls_connection *con
 		return NULL;
 	}
 
-	buftarget = br_ssl_engine_recvapp_buf(&conn->client_ctx.eng, &length);
-	output_records = wpabuf_alloc_copy(buftarget, length);
-	if (output_records == NULL) {
-		ESP_LOGE(TAG, "failed to allocate result buf");
-		return NULL;
+	while (state & BR_SSL_RECVAPP) {
+		buftarget = br_ssl_engine_recvapp_buf(&conn->client_ctx.eng, &length);
+		if (wpabuf_append(&output_records, buftarget, length)) {
+			wpabuf_free(output_records);
+			ESP_LOGE(TAG, "failed to allocate result buf");
+			return NULL;
+		}
+		br_ssl_engine_recvapp_ack(&conn->client_ctx.eng, length);
+		state = br_ssl_engine_current_state(&conn->client_ctx.eng);
 	}
-	br_ssl_engine_recvapp_ack(&conn->client_ctx.eng, length);
 
 	return output_records;
 }
