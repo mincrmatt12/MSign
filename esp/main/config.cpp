@@ -2,7 +2,7 @@
 #include <esp_log.h>
 #include "sd.h"
 
-const static char * TAG = "cfgload";
+const static char * const TAG = "cfgload";
 
 namespace config {
 	struct sd_load_source {

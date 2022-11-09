@@ -17,7 +17,7 @@
 #include <esp_wifi.h>
 #endif
 
-const static char * TAG = "app_main";
+const static char * const TAG = "app_main";
 
 #ifdef SIM
 #define STACK_MULT 8

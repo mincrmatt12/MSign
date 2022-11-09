@@ -6,8 +6,9 @@
 #include <esp_log.h>
 #endif
 
-const static char * TAG = "json";
+const static char * const TAG = "json";
 
+// Declared separately to provide a single address for these (they're compared by address not strcmp for obvious reasons)
 const char * const json::PathNode::ROOT_NAME = "(root)";
 const char * const json::PathNode::ANON_NAME = "(anon)";
 
@@ -336,6 +337,7 @@ bool json::JSONParser::parse_array() {
 		if (!advance_whitespace()) return false;
 		if (peek() == ']') break;
 		if (!parse_value()) return false;
+		if (!advance_whitespace()) return false;
 		if (peek() == ',') ++top().index;
 		else if (peek() == ']') break;
 		else return false;

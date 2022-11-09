@@ -9,7 +9,7 @@
 #include <esp_log.h>
 #include "weather.cfg.h"
 
-const static char* TAG = "weather";
+const static char* const TAG = "weather";
 
 void weather::init() {
 }

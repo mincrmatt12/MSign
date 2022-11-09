@@ -7,7 +7,7 @@
 #include <utility>
 #include <numeric>
 
-static const char * TAG = "dupm";
+static const char * const TAG = "dupm";
 
 namespace serial {
 

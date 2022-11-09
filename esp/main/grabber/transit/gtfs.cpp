@@ -11,7 +11,7 @@
 #include <gtfs_tripupdate.h>
 #include "esp_log.h"
 
-const static char * TAG = "gtfs";
+const static char * const TAG = "gtfs";
 
 namespace {
 	struct TripParserState {

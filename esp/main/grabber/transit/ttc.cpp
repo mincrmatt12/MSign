@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <esp_log.h>
 
-const static char * TAG = "ttc";
+const static char * const TAG = "ttc";
 
 namespace transit::ttc {
 	void init() {

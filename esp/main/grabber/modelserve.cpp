@@ -8,7 +8,7 @@
 #include "ff.h"
 #include "modelserve.cfg.h"
 
-const static char * TAG = "modelserve";
+const static char * const TAG = "modelserve";
 
 namespace modelserve {
 	uint8_t  modelidx = 0;

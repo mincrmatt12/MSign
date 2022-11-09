@@ -11,7 +11,9 @@ namespace utf8 {
 		{ 0x2018 /* LEFT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
 		{ 0x2019 /* RIGHT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
 		{ 0x201C /* LEFT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
-		{ 0x201D /* RIGHT DOUBLE QUOTATION MARK */, (uint32_t)'"' }
+		{ 0x201D /* RIGHT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
+		{ 0x3010 /* LEFT BLACK LENTICULAR BRACKET */, (uint32_t)'[' },
+		{ 0x3011 /* RIGHT BLACK LENTICULAR BRACKET */, (uint32_t)']' }
 	};
 
 	bool _lookup(uint8_t &out, uint32_t in) {

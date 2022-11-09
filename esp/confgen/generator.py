@@ -1026,7 +1026,7 @@ def generate_header(output):
     output.add()
     output.add('#pragma GCC diagnostic ignored "-Wbraced-scalar-init"')
     output.add('#pragma GCC diagnostic ignored "-Wunused-label"')
-    output.add("const static char * TAG = \"configparse\";")
+    output.add("const static char * const TAG = \"configparse\";")
 
 def generate_variable_declarations(output):
     output.add("// VARIABLE DECLARATIONS (from other files)")

@@ -29,15 +29,15 @@ extern "C" {
 #undef bind
 
 // shitty HTTP client....
-const char *msign_ua = "MSign/4.2.0 (ESP8266, entirely unlike Mozilla) screwanalytics/1.0";
-static const char *TAG = "dwhttp";
+const char *const msign_ua = "MSign/4.2.0 (ESP8266, entirely unlike Mozilla) screwanalytics/1.0";
+static const char * const TAG = "dwhttp";
 
 namespace dwhttp {
 	namespace detail {
-		const static char * TAG = "d_impl";
+		const static char * const TAG = "d_impl";
 
 		namespace adapter {
-			const static char * TAG = "d_adapter";
+			const static char * const TAG = "d_adapter";
 			struct HttpAdapter {
 				bool connect(const char *host, const char* port="80") {
 					if (is_connected()) return false;
