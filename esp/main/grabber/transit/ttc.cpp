@@ -1,5 +1,6 @@
 #include "ttc.h"
 #include "../../json.h"
+#include "../sccfg.h"
 #include "../../serial.h"
 #include "../../dwhttp.h"
 #include "../../wifitime.h"
@@ -147,6 +148,7 @@ namespace transit::ttc {
 	bool loop() {
 		if (transit::impl != transit::TTC) return true;
 
+		bool did_get_any = false;
 		slots::TTCInfo x{};
 		for (uint8_t slot = 0; slot < 5; ++slot) {
 			uint64_t local_times[6], local_times_b[6];
@@ -155,10 +157,14 @@ namespace transit::ttc {
 
 			if (entries[slot] && *entries[slot]) {
 				if (update_slot_times_and_info(*entries[slot], slot, x, local_times, local_times_b)) {
-					if (local_times[0])
+					if (local_times[0]) {
 						serial::interface.update_slot_raw(slots::TTC_TIME_1a + slot, local_times, sizeof(uint64_t) * std::count_if(std::begin(local_times), std::end(local_times), [](auto x){return x != 0;}));
-					if (local_times_b[0])
+						did_get_any = true;
+					}
+					if (local_times_b[0]) {
 						serial::interface.update_slot_raw(slots::TTC_TIME_1b + slot, local_times_b, sizeof(uint64_t) * std::count_if(std::begin(local_times_b), std::end(local_times_b), [](auto x){return x != 0;}));
+						did_get_any = true;
+					}
 
 					// set slot altcodes
 					x.altdircodes_a[slot] = (char)entries[slot]->dir_a;
@@ -173,6 +179,7 @@ namespace transit::ttc {
 			serial::interface.delete_slot(slots::TTC_ALERTSTR);
 		}
 		serial::interface.update_slot(slots::TTC_INFO, x);
+		sccfg::set_force_disable_screen(slots::ScCfgInfo::TTC, !did_get_any);
 		return true;
 	}
 }
