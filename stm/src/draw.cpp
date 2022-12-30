@@ -1,5 +1,6 @@
 #include "draw.h"
 #include <ctime>
+#include <stdio.h>
 
 extern uint64_t rtc_time;
 
