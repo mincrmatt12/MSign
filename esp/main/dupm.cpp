@@ -141,7 +141,6 @@ block_ok:
 		while (true) {
 			// Wait for a request
 			DataUpdateRequest dur;
-			DataUpdateRequest inline_ref_dur;
 			
 			if (xQueueReceive(pending, &dur, sync_pending ? pdMS_TO_TICKS(50) : pdMS_TO_TICKS(1500)) == pdFALSE) {
 				send_pending_dirty_blocks();
@@ -938,7 +937,7 @@ common_remote_use_end:
 		if (arena.free_space() > target_free_space_buffer) return;
 		arena.defrag();
 		if (arena.free_space() > target_free_space_buffer) return;
-		ESP_LOGW(TAG, "cleanout_esp_space");
+		ESP_LOGD(TAG, "cleanout_esp_space");
 		// - moving things to the stm
 		auto budget = calculate_memory_budget();
 		auto needed_space = target_free_space_buffer - arena.free_space();
@@ -1049,7 +1048,7 @@ common_remote_use_end:
 					cleanout_esp_space();
 				}
 				else {
-					ESP_LOGW(TAG, "not enough space allocating for %03x, moving", dur.d_temp.slotid);
+					ESP_LOGD(TAG, "not enough space allocating for %03x, moving", dur.d_temp.slotid);
 				}
 
 				// There was no space for this block, and we've already tried a cleanup at this point, so we have to try further clearing.
@@ -1082,7 +1081,7 @@ retry_chsize:
 		if (done_ok) return;
 
 		// Alright, now we can start allocating onto the STM
-		ESP_LOGW(TAG, "out of space chsize, allocating...");
+		ESP_LOGD(TAG, "out of space chsize, allocating...");
 
 		// Before we do so, though, we might be getting an obscenely long update request which we could partially fit on our heap. There's a threshold here so we don't do
 		// something dumb like split a 8 byte block into two 4 byte chunks.
@@ -1107,7 +1106,7 @@ retry_allocation:
 				ESP_LOGE(TAG, "Out of space allocating space in hot block, bailing.");
 				return;
 			}
-			ESP_LOGW(TAG, "Out of space moving block to STM, trying to remove duplicates and place locally.");
+			ESP_LOGD(TAG, "Out of space moving block to STM, trying to remove duplicates and place locally.");
 			if (ensure_budget_space(TryForLocalDedup, dur.d_chsize.slotid, new_blk_size + 4)) {
 				// We've created enough space locally, just do that instead.
 				if (arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationCanonical, new_blk_size)) {
@@ -1146,7 +1145,7 @@ retry_allocation:
 					// Totally invalid, give up.
 					break;
 				case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
-					ESP_LOGW(TAG, "not enough space, awaiting cleanup");
+					ESP_LOGD(TAG, "not enough space, awaiting cleanup");
 					[[fallthrough]];
 				case slots::protocol::DataStoreFulfillResult::Timeout:
 					vTaskDelay(pdMS_TO_TICKS(5));
