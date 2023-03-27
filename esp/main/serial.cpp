@@ -128,6 +128,10 @@ void serial::SerialInterface::process_packet() {
 				esp_restart();
 			}
 			break;
+		
+		case ACK_DATA_TEMP: // Ignore acks for the set_temp calls we make
+			break;
+
 		default:
 			ESP_LOGW(TAG, "Unknown packet type %02x", rx_buf[2]);
 			break;
