@@ -282,18 +282,29 @@ void serial::SerialInterface::trigger_slot_update(uint16_t slotid) {
 }
 
 void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync, bool should_mark_dirty) {
-	{
-		DataUpdateRequest dur;
-		dur.type = should_mark_dirty ? DataUpdateRequest::TypePatch : DataUpdateRequest::TypePatchWithoutMarkDirty;
-		dur.d_patch.data = ptr;
-		dur.d_patch.length = length;
-		dur.d_patch.offset = offset;
-		dur.d_patch.slotid = slotid;
-		dum.queue_request(dur);
-	}
+	if (length > 11) {
+		{
+			DataUpdateRequest dur;
+			dur.type = should_mark_dirty ? DataUpdateRequest::TypePatch : DataUpdateRequest::TypePatchWithoutMarkDirty;
+			dur.d_patch.data = ptr;
+			dur.d_patch.length = length;
+			dur.d_patch.offset = offset;
+			dur.d_patch.slotid = slotid;
+			dum.queue_request(dur);
+		}
 
-	if (should_sync) {
-		sync();
+		if (should_sync) {
+			sync();
+		}
+	}
+	else {
+		DataUpdateRequest dur;
+		dur.type = should_mark_dirty ? DataUpdateRequest::TypeInlinePatch : DataUpdateRequest::TypeInlinePatchWithoutMarkDirty;
+		memcpy(dur.d_inline_patch.data, ptr, length);
+		dur.d_inline_patch.slotid = slotid;
+		dur.d_inline_patch.length = length;
+		dur.d_inline_patch.offset = offset;
+		dum.queue_request(dur);
 	}
 }
 

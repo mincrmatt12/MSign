@@ -90,6 +90,9 @@ namespace serial {
 		void allocate_slot_size(uint16_t slotid, size_t size);
 
 		// Update part of a slot
+		//
+		// Note that if length is less than 11 bytes, should_sync is ignored as the request data will be inlined in the
+		// queue entry.
 		void update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync=true, bool should_mark_dirty=true);
 
 		// Operation sync barrier (not per slot as requests are processed strictly in-order)

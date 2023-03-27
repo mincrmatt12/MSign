@@ -141,6 +141,7 @@ block_ok:
 		while (true) {
 			// Wait for a request
 			DataUpdateRequest dur;
+			DataUpdateRequest inline_ref_dur;
 			
 			if (xQueueReceive(pending, &dur, sync_pending ? pdMS_TO_TICKS(50) : pdMS_TO_TICKS(1500)) == pdFALSE) {
 				send_pending_dirty_blocks();
@@ -166,11 +167,19 @@ block_ok:
 					break;
 				case DataUpdateRequest::TypePatch:
 					// Update data
-					patch_handler(dur);
+					patch_handler(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, true);
 					break;
 				case DataUpdateRequest::TypePatchWithoutMarkDirty:
 					// Update data
-					patch_handler(dur, false);
+					patch_handler(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, false);
+					break;
+				case DataUpdateRequest::TypeInlinePatch:
+					// Update data
+					patch_handler(dur.d_inline_patch.slotid, dur.d_inline_patch.offset, dur.d_inline_patch.length, dur.d_inline_patch.data, true);
+					break;
+				case DataUpdateRequest::TypeInlinePatchWithoutMarkDirty:
+					// Update data
+					patch_handler(dur.d_inline_patch.slotid, dur.d_inline_patch.offset, dur.d_inline_patch.length, dur.d_inline_patch.data, false);
 					break;
 				case DataUpdateRequest::TypeMarkDirty:
 					// Mark region dirty (or just send out blocks, depending on temp)
@@ -181,8 +190,6 @@ block_ok:
 					break;
 				case DataUpdateRequest::TypeTriggerUpdate:
 					trigger_update_handler(dur);
-					break;
-				default:
 					break;
 			}
 		}
@@ -197,21 +204,21 @@ block_ok:
 		sync_pending = true;
 	}
 
-	void DataUpdateManager::patch_handler(DataUpdateRequest &dur, bool mark_dirty) {
+	void DataUpdateManager::patch_handler(uint16_t slotid, uint16_t offset, uint16_t length, const void * data, bool mark_dirty) {
 		if (
 		// Ensure slot exists
-			!arena.contains(dur.d_patch.slotid) ||
+			!arena.contains(slotid) ||
 		// Ensure slot is correct size
-		    (dur.d_patch.offset + dur.d_patch.length > arena.contents_size(dur.d_patch.slotid))
+		    (offset + length > arena.contents_size(slotid))
 		) {
-			ESP_LOGE(TAG, "dropping update request for slot %03x which is wrong size/doesn't exist.", dur.d_patch.slotid);
+			ESP_LOGE(TAG, "dropping update request for slot %03x which is wrong size/doesn't exist.", slotid);
 			return;
 		}
 		
 		// Update contents, storing directly.
-		if (!arena.update_contents(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, [&](uint32_t offset, uint32_t length, const void *data){
+		if (!arena.update_contents(slotid, offset, length, data, [&](uint32_t offset, uint32_t length, const void *data){
 			for (int tries = 0; tries < 4; ++tries) {
-				switch (single_store_fulfill(dur.d_patch.slotid, offset, length, data, true)) {
+				switch (single_store_fulfill(slotid, offset, length, data, true)) {
 					case slots::protocol::DataStoreFulfillResult::Ok:
 						return true;
 					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
