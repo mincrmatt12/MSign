@@ -138,6 +138,7 @@ void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
 	pr.slotid = slotid;
 	pr.temperature = temp;
 	xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000));
+	immediately_process();
 }
 
 bool srv::Servicer::needs_temperature_update(uint16_t slotid, uint16_t temp) {
