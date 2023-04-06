@@ -412,7 +412,7 @@ skip_ei:
 led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::ParcelInfo& parcel) {
 	auto names = *servicer[slots::PARCEL_NAMES] ;
 	if (parcel.name_offset > servicer[slots::PARCEL_NAMES].datasize) return 0;
-	led::color_t iconcolorbase = 0x55_cc, iconcolorcontent = 8;
+	led::color_t iconcolorbase = 0x55_c, iconcolorcontent = 8;
 									
 	switch (parcel.status_icon) {
 		case slots::ParcelInfo::PRE_TRANSIT:
