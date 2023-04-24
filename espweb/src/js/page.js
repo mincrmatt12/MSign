@@ -107,9 +107,15 @@ function App() {
 				<Container fluid>
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">
-						<Nav.Link eventKey={1} href="#" disabled={!dirty} active={false} onSelect={() => {saveConfig();}}>save</Nav.Link>
-						<Nav.Link eventKey={2} href="#" disabled={loading} active={false} onSelect={toggleSleep}>{nextSleepState ? "sleep" : "unsleep"}</Nav.Link>
-						<Nav.Link eventKey={3} href="#" active={false} onSelect={() => {fetch("/a/reboot");}}>reboot</Nav.Link>
+						<Nav.Item>
+							<Nav.Link eventKey={1} href="#" disabled={!dirty} active={false} onClick={() => {saveConfig();}}>save</Nav.Link>
+						</Nav.Item>
+						<Nav.Item>
+							<Nav.Link eventKey={2} href="#" disabled={loading} active={false} onClick={toggleSleep}>{nextSleepState ? "sleep" : "unsleep"}</Nav.Link>
+						</Nav.Item>
+						<Nav.Item>
+							<Nav.Link eventKey={3} href="#" active={false} onClick={() => {fetch("/a/reboot");}}>reboot</Nav.Link>
+						</Nav.Item>
 					</Nav>
 				</Container>
 			</Navbar>
@@ -118,7 +124,7 @@ function App() {
 				<Row>
 					<Col xs="5" sm="4" md="3" lg="2">
 						<Card bg="dark">
-							<Nav variant="pills" className="flex-column">
+							<Nav variant="pills" className="flex-column msign-left-nav">
 								<LinkContainer to="/" exact>
 									<Nav.Link>global</Nav.Link>
 								</LinkContainer>
