@@ -3,11 +3,11 @@ FROM debian:buster as toolchains
 
 WORKDIR /opt/toolchains
 
-ADD https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2 arm.tar.bz2
+ADD https://developer.arm.com/-/media/Files/downloads/gnu/12.2.mpacbti-rel1/binrel/arm-gnu-toolchain-12.2.mpacbti-rel1-x86_64-arm-none-eabi.tar.xz arm.tar.xz
 ADD https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz esp.tar.gz
 
-RUN apt-get update && apt-get install -y tar bzip2
-RUN tar xf arm.tar.bz2 && tar xf esp.tar.gz
+RUN apt-get update && apt-get install -y tar xz-utils
+RUN tar xf arm.tar.xz && tar xf esp.tar.gz
 
 # actual image
 FROM python:3.8-buster
@@ -17,7 +17,7 @@ WORKDIR /opt/work
 
 # copy toolchains
 WORKDIR /opt/toolchaintemp
-COPY --from=toolchains /opt/toolchains/gcc-arm-none-eabi-10.3-2021.10 arm
+COPY --from=toolchains /opt/toolchains/arm-gnu-toolchain-12.2.mpacbti-rel1-x86_64-arm-none-eabi arm
 COPY --from=toolchains /opt/toolchains/xtensa-lx106-elf esp
 RUN cp -r arm/* /usr/local && cp -r esp/* /usr/local && rm -rf arm esp
 
