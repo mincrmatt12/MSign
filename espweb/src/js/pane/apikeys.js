@@ -12,7 +12,7 @@ function ApiPane() {
 		<hr className="hr-gray" />
 
 		<Form.Group controlId="dsky_ctrl" className="my-2">
-			<Form.Label>darksky</Form.Label>
+			<Form.Label>tomorrow.io</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'weather.key', '')} onChange={(e) => {updateCfg('weather.key', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
