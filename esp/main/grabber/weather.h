@@ -7,7 +7,7 @@ namespace weather {
 	void init();
 	bool loop();
 
-	// Rate limit is 1000/day, so we use a conservative 5 minutes
+	// Rate limit is 500/day, so we use a conservative 5 minutes
 	constexpr static auto weather_grabber = grabber::make_refreshable_grabber(
 		grabber::make_https_grabber(init, loop, pdMS_TO_TICKS(60*5*1000), pdMS_TO_TICKS(60*3*1000)),
 		slots::protocol::GrabberID::WEATHER

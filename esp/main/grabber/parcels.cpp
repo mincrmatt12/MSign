@@ -46,15 +46,6 @@ namespace parcels {
 		};
 	}
 
-	uint64_t process_datetime(const char * timestring) {
-		struct tm parsed{};
-		auto comp = sscanf(timestring, "%d-%d-%dT%d:%d:%dZ", &parsed.tm_year, &parsed.tm_mon, &parsed.tm_mday, &parsed.tm_hour, &parsed.tm_min, &parsed.tm_sec);
-		ESP_LOGD(TAG, "parse %s with %d", timestring, comp);
-		parsed.tm_mon -= 1;
-		parsed.tm_year -= 1900;
-		return wifi::millis_to_local(1000 * (uint64_t)wifi::timegm(&parsed));
-	}
-
 	slots::ParcelInfo::StatusIcon get_icon_enum(const char * text) {
 		if (!strcmp(text, "pre_transit")) return slots::ParcelInfo::PRE_TRANSIT;
 		else if (!strcmp(text, "in_transit")) return slots::ParcelInfo::IN_TRANSIT;
@@ -244,11 +235,11 @@ namespace parcels {
 					}
 					else if (strcmp(stack[1]->name, "updated_at") == 0 && v.type == v.STR && !(pi.status.flags & pi.status.HAS_UPDATED_TIME)) {
 						pi.status.flags |= pi.status.HAS_UPDATED_TIME;
-						pi.updated_time = process_datetime(v.str_val);
+						pi.updated_time = wifi::from_iso8601(v.str_val);
 					}
 					else if (strcmp(stack[1]->name, "est_delivery_date") == 0 && v.type == v.STR) {
 						pi.status.flags |= pi.status.HAS_EST_DEILIVERY;
-						pi.estimated_delivery = process_datetime(v.str_val);
+						pi.estimated_delivery = wifi::from_iso8601(v.str_val);
 					}
 				}
 				else if (stack_ptr >= 3 && strcmp(stack[1]->name, "tracking_details") == 0 && stack[1]->is_array()) {
@@ -270,7 +261,7 @@ namespace parcels {
 					}
 					else if (strcmp(stack[2]->name, "datetime") == 0 && v.type == v.STR) {
 						pi.status.flags |= pi.status.HAS_UPDATED_TIME;
-						pi.updated_time = process_datetime(v.str_val);
+						pi.updated_time = wifi::from_iso8601(v.str_val);
 					}
 
 					// process location: 
@@ -374,7 +365,7 @@ namespace parcels {
 							pie.status.flags |= pie.status.HAS_STATUS;
 						}
 						else if (strcmp(stack[2]->name, "datetime") == 0 && v.type == v.STR) {
-							pie.updated_time = process_datetime(v.str_val);
+							pie.updated_time = wifi::from_iso8601(v.str_val);
 							pie.status.flags |= pie.status.HAS_UPDATED_TIME;
 						}
 

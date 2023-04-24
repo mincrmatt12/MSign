@@ -22,7 +22,7 @@ namespace screen {
 		void draw_hourlybar(uint8_t hour);
 		void draw_status();
 
-		void fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, int16_t y1, slots::WeatherStateArrayCode wsac, const char *& desc_out, int64_t hourstart, bool vertical_sunrise=false);
+		void fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, int16_t y1, slots::WeatherStateCode wsac, const char *& desc_out, int64_t hourstart, bool vertical_sunrise=false);
 
 		void draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax, bool show_decimal=false);
 		void draw_graph_xaxis(int16_t y, int16_t x0, int16_t y1, int min, bool interpret_as_hours=true);

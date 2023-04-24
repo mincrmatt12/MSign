@@ -166,6 +166,14 @@ time_t wifi::timegm(tm const* t)
 	return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 }
 
+uint64_t wifi::from_iso8601(const char *ts) {
+	struct tm parsed{};
+	sscanf(ts, "%d-%d-%dT%d:%d:%dZ", &parsed.tm_year, &parsed.tm_mon, &parsed.tm_mday, &parsed.tm_hour, &parsed.tm_min, &parsed.tm_sec);
+	parsed.tm_mon -= 1;
+	parsed.tm_year -= 1900;
+	return wifi::millis_to_local(1000 * (uint64_t)wifi::timegm(&parsed));
+}
+
 uint64_t wifi::get_localtime() {
 	time_t now;
 	struct tm current_time;

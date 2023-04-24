@@ -14,6 +14,7 @@ namespace wifi {
 	uint64_t millis_to_local(uint64_t millis);
 
 	time_t timegm(tm const* t);
+	uint64_t from_iso8601(const char * ts);
 
 	enum Events : EventBits_t {
 		WifiConnected = 1, // set when wifi is connected (unset when disconnected)

@@ -65,6 +65,14 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 	return ((uint64_t)now * 1000) + millis % 1000;
 }
 
+uint64_t wifi::from_iso8601(const char *ts) {
+	struct tm parsed{};
+	sscanf(ts, "%d-%d-%dT%d:%d:%dZ", &parsed.tm_year, &parsed.tm_mon, &parsed.tm_mday, &parsed.tm_hour, &parsed.tm_min, &parsed.tm_sec);
+	parsed.tm_mon -= 1;
+	parsed.tm_year -= 1900;
+	return wifi::millis_to_local(1000 * (uint64_t)wifi::timegm(&parsed));
+}
+
 bool wifi::init() {
 	// Init events
 	ESP_LOGW(TAG, "Fake wifi init: ok");

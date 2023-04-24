@@ -36,10 +36,9 @@ namespace slots {
 		TTC_TIME_5b = 0x3e,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
 
-		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRING; weather status string
-		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateArrayCode; list of ENUMS for the state per-hour
+		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateCode; list of ENUMS for the state per-hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		WEATHER_TEMP_GRAPH = 0x4a,  // INT16_T[]; feels like temp data per hour (/100)
@@ -107,22 +106,50 @@ namespace slots {
 		const static inline uint32_t EXIST_MASK = 0b11111;
 	};
 
+	enum struct WeatherStateCode : uint8_t {
+		UNK = 0,
+
+		CLEAR = 0x10,
+		PARTLY_CLOUDY,
+		MOSTLY_CLOUDY,
+		OVERCAST,
+
+		DRIZZLE = 0x20,
+		LIGHT_RAIN,
+		RAIN,
+		HEAVY_RAIN,
+
+		SNOW = 0x30,
+		FLURRIES,
+		LIGHT_SNOW,
+		HEAVY_SNOW,
+
+		FREEZING_DRIZZLE = 0x20 | 0x80,
+		FREEZING_LIGHT_RAIN,
+		FREEZING_RAIN,
+		FREEZING_HEAVY_RAIN,
+
+		LIGHT_FOG = 0x40,
+		FOG = 0x41,
+		
+		LIGHT_ICE_PELLETS = 0x50,
+		ICE_PELLETS,
+		HEAVY_ICE_PELLETS,
+
+		THUNDERSTORM = 0x60
+	};
+
 	struct WeatherInfo {
 		// all temperatures are stored in centidegrees celsius
 		int16_t ctemp;
 		int16_t ltemp;
 		int16_t htemp;
 		int16_t crtemp;
+		WeatherStateCode icon;
 	};
 
 	struct WeatherTimes {
 		uint64_t sunrise, sunset;
-	};
-
-	struct VStr {
-		uint8_t index;
-		uint8_t size;
-		uint8_t data[14];
 	};
 
 	struct ScCfgTime {
@@ -156,9 +183,14 @@ namespace slots {
 	};
 
 	struct PrecipData {
-		uint8_t is_snow; // is this preciptation snowy
+		enum PrecipType : uint8_t {
+			NONE = 0,
+			RAIN,
+			SNOW,
+			SLEET,
+			FREEZING_RAIN
+		} kind;
 		uint8_t probability; // from 0-255 as 0.0-1.0
-		int16_t stddev; // precipitation error (0 if unknown) * 100
 		int16_t amount; // mm / hr * 100
 	};
 
@@ -234,25 +266,6 @@ namespace slots {
 	};
 
 #pragma pack (pop)
-
-	enum struct WeatherStateArrayCode : uint8_t {
-		UNK = 0,
-
-		CLEAR = 0x10,
-		PARTLY_CLOUDY,
-		MOSTLY_CLOUDY,
-		OVERCAST,
-
-		DRIZZLE = 0x20,
-		LIGHT_RAIN,
-		RAIN,
-		HEAVY_RAIN,
-
-		SNOW = 0x30,
-		HEAVY_SNOW,
-
-		FOG = 0x40
-	};
 
 	// PROTOCOL DEFINITIONS
 	
