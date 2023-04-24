@@ -1,7 +1,9 @@
 #include "draw.h"
+#include "tasks/timekeeper.h"
 #include <ctime>
 #include <stdio.h>
 
+extern tasks::Timekeeper timekeeper;
 extern uint64_t rtc_time;
 
 namespace draw {
@@ -316,7 +318,7 @@ namespace draw {
     }
 
 	int16_t PageScrollHelper::animation_offset() {
-		return draw::distorted_ease_wave(rtc_time - last_scrolled_at, params.transition_time, params.hold_time, scroll_target - scroll_offset);
+		return draw::distorted_ease_wave(timekeeper.current_time - last_scrolled_at, params.transition_time, params.hold_time, scroll_target - scroll_offset);
 	}
 
 	void PageScrollHelper::update_with(int16_t onscreen_height, int16_t total_height) {
@@ -324,9 +326,9 @@ namespace draw {
 		// Is there content to scroll?
 		if (total_height > region_height) {
 			// Has a scroll cycle finished completely?
-			if (rtc_time - last_scrolled_at > (params.transition_time + params.hold_time - 16 /* one frame */)) {
+			if (timekeeper.current_time - last_scrolled_at > (params.transition_time + params.hold_time - 16 /* one frame */)) {
 				scroll_offset = scroll_target;
-				last_scrolled_at = rtc_time;
+				last_scrolled_at = timekeeper.current_time;
 			}
 
 			// Does the current scrolled region end on screen?
@@ -359,7 +361,7 @@ namespace draw {
 	}
 
 	PageScrollHelper::PageScrollHelper(const Params& params) : params(params) {
-		last_scrolled_at = rtc_time;
+		last_scrolled_at = timekeeper.current_time;
 	}
 
 	void format_generic_relative_thing(char * buf, size_t buflen, bool ago, const char * singular, const char * plural, int amount) {

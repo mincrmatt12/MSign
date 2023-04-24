@@ -287,7 +287,7 @@ void screen::WeatherScreen::draw_currentstats() {
 			break;
 		case slots::WeatherStateCode::PARTLY_CLOUDY:
 		case slots::WeatherStateCode::MOSTLY_CLOUDY:
-		case slots::WeatherStateCode::OVERCAST:
+		case slots::WeatherStateCode::CLOUDY:
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, is_day ? 245_c : 79_c);
 			break;
 		case slots::WeatherStateCode::DRIZZLE:
@@ -398,11 +398,13 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 			col = led::color_t(100_c); break;
 		case MOSTLY_CLOUDY:
 			text_out = "Mostly cloudy";
-			col = led::color_t(50_c); break;
-		case OVERCAST:
-			text_out = "Overcast";
 			col = led::color_t(30_c); break;
+		case CLOUDY:
+			text_out = "Cloudy";
+			col = led::color_t(70_c); break;
 		case FOG:
+			do_hatch = true;
+			hatch = 235_c;
 		case LIGHT_FOG:
 			text_out = code == FOG ? "Fog" : "Light fog";
 			col = led::color_t(225_c);

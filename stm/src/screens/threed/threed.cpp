@@ -6,9 +6,10 @@
 #include "../../tasks/screen.h"
 #include "../../fonts/tahoma_9.h"
 #include "mesh.h"
+#include "../../tasks/timekeeper.h"
 
 extern matrix_type matrix;
-extern uint64_t rtc_time;
+extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
 extern tasks::DispMan dispman;
 
@@ -188,8 +189,8 @@ namespace threed {
 	}
 
 	void Renderer::update_matricies() {
-		interp_progress += (rtc_time - last_update) * 2;
-		last_update = rtc_time;
+		interp_progress += (timekeeper.current_time - last_update) * 2u;
+		last_update = timekeeper.current_time;
 
 		if (interp_progress > 4500) {
 			interp_progress = 0;

@@ -46,7 +46,7 @@ namespace tasks {
 		// todo: put this in a union
 		// uint8_t menu_id, menu_selection; -- put this to a separate class thingy
 
-		uint64_t last_swapped_at = 0;
+		uint32_t last_swapped_at = 0;
 		uint32_t interact_timeout = 0;
 		uint32_t override_timeout = 0;
 		TickType_t last_had_wifi_at = 0;

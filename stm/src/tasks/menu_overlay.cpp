@@ -4,10 +4,11 @@
 #include "../crash/main.h"
 
 #include "../fonts/tahoma_9.h"
+#include "timekeeper.h"
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
-extern uint64_t rtc_time;
+extern tasks::Timekeeper timekeeper;
 
 namespace {
 	struct OverlayPanel {
@@ -258,7 +259,7 @@ void tasks::DispMan::do_menu_overlay() {
 
 				swapper.transition(ms.selected);
 				override_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
-				last_swapped_at = rtc_time;
+				last_swapped_at = timekeeper.current_time;
 				interact_mode = InteractNone;
 				return;
 			}
@@ -326,7 +327,7 @@ closetetris:
 			case MS::SubmenuMain:
 			case MS::SubmenuDebug:
 close:
-				last_swapped_at = rtc_time;
+				last_swapped_at = timekeeper.current_time;
 				interact_mode = InteractNone;
 				break;
 			default:

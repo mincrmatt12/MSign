@@ -111,8 +111,8 @@ namespace slots {
 
 		CLEAR = 0x10,
 		PARTLY_CLOUDY,
+		CLOUDY,
 		MOSTLY_CLOUDY,
-		OVERCAST,
 
 		DRIZZLE = 0x20,
 		LIGHT_RAIN,

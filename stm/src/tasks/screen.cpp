@@ -7,6 +7,7 @@
 #include "../srv.h"
 #include "../ui.h"
 #include "../crash/main.h"
+#include "timekeeper.h"
 
 #ifdef USE_F2
 #include <stm32f2xx.h>
@@ -18,7 +19,7 @@
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
-extern uint64_t rtc_time;
+extern tasks::Timekeeper timekeeper;
 
 #ifndef MSIGN_GIT_REV
 #define MSIGN_GIT_REV "-unk"
@@ -254,11 +255,11 @@ namespace tasks {
 					if (screen_list_idx >= (servicer[slots::SCCFG_TIMING].datasize / sizeof(slots::ScCfgTime))) screen_list_idx = 0; // handle changing array
 				}
 
-				if (rtc_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || rtc_time < last_swapped_at) 
-					last_swapped_at = rtc_time;
+				if (timekeeper.current_time - last_swapped_at > 200'0000 /* if time jumps by more than 200 seconds */ || timekeeper.current_time < last_swapped_at) 
+					last_swapped_at = timekeeper.current_time;
 
 				// Check if the time elapsed is more than the current selection's millis_enabled
-				if ((rtc_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled ||
+				if ((timekeeper.current_time - last_swapped_at) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled ||
 						ui::buttons[ui::Buttons::NXT]) {
 					screen_list_idx = next_screen_idx();
 					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].screen_id;
@@ -268,7 +269,7 @@ namespace tasks {
 					swapper.transition(about_to_show);
 					swapper.notify_before_transition(next_to_show, false);
 					servicer.take_lock();
-					last_swapped_at = rtc_time;
+					last_swapped_at = timekeeper.current_time;
 					early_transition_informed = false;
 				}
 				else if (ui::buttons[ui::Buttons::PRV]) {
@@ -280,12 +281,12 @@ namespace tasks {
 					swapper.transition(about_to_show);
 					swapper.notify_before_transition(next_to_show, false);
 					servicer.take_lock();
-					last_swapped_at = rtc_time;
+					last_swapped_at = timekeeper.current_time;
 					early_transition_informed = false;
 				}
 
 				// Let screen perform more early initialization at least 1.5 seconds before it's shown.
-				if ((rtc_time - last_swapped_at + 1500) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled && !early_transition_informed) {
+				if ((timekeeper.current_time - last_swapped_at + 1500) > servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[screen_list_idx].millis_enabled && !early_transition_informed) {
 					early_transition_informed = true;
 					int about_to_show = servicer.slot<slots::ScCfgTime *>(slots::SCCFG_TIMING)[next_screen_idx()].screen_id;
 					servicer.give_lock();
@@ -298,7 +299,7 @@ namespace tasks {
 				if (xTaskGetTickCount() > interact_timeout || 
 					ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(1500))) {
 					interact_mode = InteractNone;
-					last_swapped_at = rtc_time;
+					last_swapped_at = timekeeper.current_time;
 				}
 				if (ui::buttons.changed()) interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 			}
@@ -318,7 +319,7 @@ namespace tasks {
 					}
 					else if (ui::buttons[ui::Buttons::POWER] && override_timeout > xTaskGetTickCount()) {
 						override_timeout = xTaskGetTickCount();
-						last_swapped_at = rtc_time;
+						last_swapped_at = timekeeper.current_time;
 					}
 					else if (ui::buttons[ui::Buttons::POWER] && op) {
 						op = OverlayPanelClosed;
@@ -329,7 +330,7 @@ namespace tasks {
 					draw::rect(matrix.get_inactive_buffer(), 126, 62, 128, 64, 0x00ff00_cc);
 					if (swapper.interact()) {
 						// reset swapper timer to avoid the screen instantly going away.
-						last_swapped_at = rtc_time;
+						last_swapped_at = timekeeper.current_time;
 						interact_mode = InteractNone;
 					}
 					break;
@@ -445,7 +446,7 @@ namespace tasks {
 		}
 
 		swapper.transition(prev);
-		last_swapped_at = rtc_time;
+		last_swapped_at = timekeeper.current_time;
 
 		interact_mode = InteractNone;
 	}

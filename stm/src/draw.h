@@ -256,7 +256,7 @@ namespace draw {
 
 		const Params& params;
 		int16_t scroll_offset = 0, scroll_target = 0;
-		uint64_t last_scrolled_at = 0;
+		uint32_t last_scrolled_at = 0;
 	};
 
 	// Format a timestamp as a string with relative measurements.

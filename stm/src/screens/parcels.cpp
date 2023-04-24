@@ -4,10 +4,12 @@
 #include "../fonts/dejavu_12.h"
 #include "../fonts/lcdpixel_6.h"
 #include "../tasks/screen.h"
+#include "../tasks/timekeeper.h"
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
 extern uint64_t rtc_time;
+extern tasks::Timekeeper timekeeper;
 extern tasks::DispMan dispman;
 
 namespace bitmap::parcels {
@@ -298,7 +300,7 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	// Draw scrolling text first (so we can mask it)
 	if (psl.flags & psl.HAS_STATUS && psl.status_offset < heap_size) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 10;
-		if (onscreen) draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + draw::scroll(rtc_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), end_y + 8, 0xff_c);
+		if (onscreen) draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + draw::scroll(timekeeper.current_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), end_y + 8, 0xff_c);
 		end_y += 10;
 	}
 
@@ -443,7 +445,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 	}
 
         // draw name
-	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::dejavusans_12::info, 12 + draw::scroll(rtc_time / 11, draw::text_size(names + parcel.name_offset, font::dejavusans_12::info), 118), y + 10, 0xff_c);
+	draw::text(matrix.get_inactive_buffer(), names + parcel.name_offset, font::dejavusans_12::info, 12 + draw::scroll(timekeeper.current_time / 11, draw::text_size(names + parcel.name_offset, font::dejavusans_12::info), 118), y + 10, 0xff_c);
 
 	// draw icon
 	{
@@ -570,7 +572,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		int textlen = (has_both ? draw::text_size(" - ", status_font) : 0)
 			+ draw::text_size(status_text, status_font) + draw::text_size(location_text, status_font);
 		// draw scrolling status ticker
-		draw::multi_text(matrix.get_inactive_buffer(), status_font, 1 + draw::scroll(rtc_time / 10, textlen), y + 7, status_text, 0xff_c, has_both ? " - " : nullptr, 0xcc_c, location_text, 0x4444ff_cc);
+		draw::multi_text(matrix.get_inactive_buffer(), status_font, 1 + draw::scroll(timekeeper.current_time / 10, textlen), y + 7, status_text, 0xff_c, has_both ? " - " : nullptr, 0xcc_c, location_text, 0x4444ff_cc);
 		y += 9; height += 9;
 	}
 
