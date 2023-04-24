@@ -521,7 +521,6 @@ namespace dwhttp {
 					return r;
 				}
 				else {
-					ESP_LOGD(TAG, "chunk counter is now %d", chunk_counter);
 					if (chunk_counter == 0) {
 						// Try to process the results
 						int total_amount = 0;
@@ -545,7 +544,7 @@ got_done:
 									if (chunk_state.c.chunk_size == 0) goto got_done;
 									// read_to is now at correct position
 									chunk_counter = chunk_state.c.chunk_size;
-									ESP_LOGD(TAG, "got chunk %d", chunk_counter);
+									ESP_LOGV(TAG, "got chunk %d", chunk_counter);
 									int remain = (buf + r) - read_to;
 									memmove(buf, read_to, remain);
 									if (remain <= chunk_counter) {
