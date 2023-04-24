@@ -24,7 +24,7 @@ namespace weather {
 
 		switch (code) {
 			case 1000: return WS::CLEAR;
-			case 1001: return WS::OVERCAST;
+			case 1001: return WS::CLOUDY;
 
 			case 1100: return WS::CLEAR;
 			case 1101: return WS::PARTLY_CLOUDY;
@@ -118,10 +118,10 @@ namespace weather {
 				if (strcmp(stack[4]->name, "weatherCode") == 0 && v.type == json::Value::INT) {
 					info.icon  = from_api(v.int_val);
 				}
-				else if (strcmp(stack[4]->name, "temperature") && v.is_number()) {
+				else if (strcmp(stack[4]->name, "temperature") == 0 && v.is_number()) {
 					info.crtemp = cvt_temp(v.as_number());
 				}
-				else if (strcmp(stack[4]->name, "temperatureApparent") && v.is_number()) {
+				else if (strcmp(stack[4]->name, "temperatureApparent") == 0 && v.is_number()) {
 					info.ctemp = cvt_temp(v.as_number());
 				}
 			}
