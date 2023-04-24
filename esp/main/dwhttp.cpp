@@ -398,7 +398,8 @@ namespace dwhttp {
 								}
 								continue;
 							}
-							ESP_LOGE(TAG, "read failed with errno %d", errno);
+							// don't pollute log for remote closing early
+							if (errno != ENOTCONN) ESP_LOGE(TAG, "read failed with errno %d", errno);
 							return -1;
 						}
 						return (int)rlen;
@@ -528,23 +529,24 @@ retry:
 						const uint8_t * read_to = buf;
 						switch (http_chunked_recv_feed(&read_to, buf + r, &chunk_state)) {
 							case HTTP_CHUNKED_RECV_OK: 
-								// Still waiting for end of chunk, grab more data
+								// If we've already read some data but ended in the middle of a chunk, return the total amount read so far.
+								if (total_amount) return total_amount;
+								// Otherwise, still waiting for end of chunk, grab more data recursively.
 								return read_from(buf, max);
 							case HTTP_CHUNKED_RECV_DONE:
 got_done:
-								// End of file, return 0
-								*buf = 0; // we do kind of corrupt the buffer, so we'll do this to fix most outputs
-								return 0;
+								// End of file, return total amount read so far
+								return total_amount;
 							case HTTP_CHUNKED_RECV_FAIL:
 								// Invalid format
 								ESP_LOGW(TAG, "chunked parser threw error");
-								return 0;
+								return -1;
 							case HTTP_CHUNKED_RECV_YIELD_GOT_CHUNK:
 								{
 									if (chunk_state.c.chunk_size == 0) goto got_done;
 									// read_to is now at correct position
 									chunk_counter = chunk_state.c.chunk_size;
-									ESP_LOGV(TAG, "got chunk %d", chunk_counter);
+									ESP_LOGD(TAG, "got chunk %d", chunk_counter);
 									int remain = (buf + r) - read_to;
 									memmove(buf, read_to, remain);
 									if (remain <= chunk_counter) {
@@ -729,7 +731,7 @@ dwhttp::Download dwhttp::download_with_callback(const char * host, const char * 
 
 dwhttp::Download::~Download() {
 	if (adapter) {
-		if (!nonclose || is_unknown_length()) { // unknown_length == connection: close == force stop connection
+		if (!nonclose || (is_unknown_length() && !(((dwhttp::detail::DownloaderBase *)adapter)->is_chunked()))) { // unknown_length == connection: close == force stop connection
 			((dwhttp::detail::DownloaderBase *)(adapter))->stop();
 		}
 		adapter = nullptr;
