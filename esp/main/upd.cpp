@@ -63,10 +63,36 @@ namespace upd {
 		}
 	}
 
+	bool copy_updated_file(const char* tfname, FIL* source, int length) {
+		FIL target; f_open(&target, tfname, FA_WRITE | FA_CREATE_ALWAYS);
+		int bytes_since_last_yield = 0;
+		uint8_t buf[256];
+		UINT br;
+		for (int i = 0; i < length; i += 256) {
+			int size_of_tx = (length - i >= 256) ? 256 : (length - i);
+			if (f_eof(source)) {
+				f_close(&target);
+				ESP_LOGE(TAG, "failed to copy");
+				return false;
+			}
+			f_read(source, buf, size_of_tx, &br);
+			UINT bw;
+			f_write(&target, buf, br, &bw);
+			bytes_since_last_yield += bw;
+			if (bytes_since_last_yield > 4096) {
+				vTaskDelay(10);
+				bytes_since_last_yield = 0;
+			}
+		}
+
+		f_close(&target);
+		return true;
+	}
+
 	void update_website() {
 		// check for the webui.ar file
 		if (f_stat("/upd/webui.ar", NULL) != FR_OK) {
-			ESP_LOGD(TAG, "tried to update web but no webui.ar file");
+			ESP_LOGE(TAG, "tried to update web but no webui.ar file");
 			return;
 		}
 
@@ -137,35 +163,10 @@ namespace upd {
 			else if (!iJc) tfname = "/web/page.js.gz";
 			else goto failure;
 
-			FIL target; f_open(&target, tfname, FA_WRITE | FA_CREATE_ALWAYS);
-
-			int bytes_since_last_yield = 0;
-
 			ESP_LOGI(TAG, "updating: %s", tfname);
-
-			{ 
-				uint8_t buf[256];
-				for (int i = 0; i < length; i += 256) {
-					int size_of_tx = (length - i >= 256) ? 256 : (length - i);
-					if (f_eof(&arF)) {
-						f_close(&target);
-						f_close(&arF);
-						ESP_LOGE(TAG, "failed to copy");
-						goto failure;
-					}
-					f_read(&arF, buf, size_of_tx, &br);
-					UINT bw;
-					f_write(&target, buf, br, &bw);
-					bytes_since_last_yield += bw;
-					if (bytes_since_last_yield > 4096) {
-						vTaskDelay(10);
-						bytes_since_last_yield = 0;
-					}
-				}
-			}
-
-			f_close(&target);
-			++files_read;
+			if (copy_updated_file(tfname, &arF, length))
+				++files_read;
+			else goto failure;
 		}
 		f_close(&arF);
 
@@ -176,8 +177,64 @@ failure: // clean up
 		f_rmdir("/upd");
 	}
 
+
 	void update_cacerts() {
-		// TODO: make me extract the AR file.
+		// Expects certs.bin to be in /upd folder
+		if (f_stat("/upd/certs.bin", NULL) != FR_OK) {
+			ESP_LOGE(TAG, "tried to update certs but no certs.bin");
+			return;
+		}
+
+		ESP_LOGI(TAG, "Updating CA cert archive");
+
+		FIL caF; f_open(&caF, "/upd/certs.bin", FA_READ);
+		uint8_t magic[4];
+		UINT br;
+
+		if (f_read(&caF, magic, sizeof(magic), &br) != FR_OK || br != 4 || memcmp(magic, "MSCA", 4)) {
+			f_close(&caF);
+			ESP_LOGE(TAG, "invalid certs.bin");
+			return;
+		}
+
+		uint32_t files_left;
+		f_read(&caF, &files_left, 4, &br);
+
+		char target_filename[64 + 4 + 1] { "/ca/" };
+
+		while (files_left--) {
+			// Read filename
+			f_read(&caF, target_filename + 4, 64, &br);
+			if (br != 64) {
+				f_close(&caF);
+				return;
+			}
+			uint32_t file_size;
+			f_read(&caF, &file_size, 4, &br);
+			if (br != 4) {
+				f_close(&caF);
+				return;
+			}
+
+			// If file exists, skip it
+			if (f_stat(target_filename, NULL) == FR_OK) {
+				ESP_LOGI(TAG, "File %s already exists, skipping", target_filename);
+				f_lseek(&caF, f_tell(&caF) + file_size);
+				continue;
+			}
+
+			ESP_LOGI(TAG, "Installing new cert %s", target_filename);
+			if (!copy_updated_file(target_filename, &caF, (int)file_size)) {
+				f_close(&caF);
+				return;
+			}
+		}
+
+		f_close(&caF);
+
+		f_unlink("/upd/state");
+		f_unlink("/upd/certs.bin");
+		f_rmdir("/upd");
 
 		return;
 	}

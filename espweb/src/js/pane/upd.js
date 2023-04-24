@@ -33,6 +33,27 @@ class UpdatePane extends React.Component {
 		alert("sending update... (this will take a while)");
 	}
 
+	submitCA(e) {
+		e.preventDefault();
+
+		let file_in = new FormData(e.target);
+
+		fetch('/a/newca', {
+			method: 'POST',
+			body: file_in
+		}).then((resp) => {
+			if (resp.ok) {
+				alert("update sent, ESP will now update, reopen in a bit.");
+				window.close();
+			}
+			else {
+				alert("update not sent.");
+			}
+		});
+
+		alert("sending update... (this will take a while)");
+	}
+
 	submitFirm(e) {
 		e.preventDefault();
 
@@ -93,6 +114,22 @@ class UpdatePane extends React.Component {
 
 					<Col sm="3" xs="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
 						<Button type="submit" variant="danger">upload new firmware</Button>
+					</Col>
+				</Row>
+			</Form>
+
+			<hr className="hr-gray" />
+
+			<Form onSubmit={(e) => this.submitCA(e)}>
+				<Row>
+					<Col md="9" sm="7">
+						<Form.Group className="my-2" controlId="update_certs">
+							<Form.Label>ca certs bundle</Form.Label>
+							<Form.Control name="file" required type="file" accept=".bin" />
+						</Form.Group>
+					</Col>
+					<Col sm="3" xs="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
+						<Button className="w-100" type="submit" variant="danger">upload new CAs</Button>
 					</Col>
 				</Row>
 			</Form>

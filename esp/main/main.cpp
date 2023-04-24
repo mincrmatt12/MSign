@@ -64,6 +64,10 @@ extern "C" void app_main() {
 			ESP_LOGW(TAG, "somehow returned from update_system? restarting anyways.");
 			esp_restart();
 			break;
+		case upd::CERTIFICATE_FILE:
+			upd::update_cacerts();
+			esp_restart();
+			break;
 		default:
 			break;
 	}

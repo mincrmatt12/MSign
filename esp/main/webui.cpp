@@ -519,7 +519,7 @@ reachedend:
 			if (!ok) send_static_response(400, "Bad Request", "No files were provided.");
 			else send_static_response(204, "No Content", "");
 		}
-		else if (strcasecmp(tgt, "newui") == 0) {
+		else if (strcasecmp(tgt, "newui") == 0 || strcasecmp(tgt, "newca") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
 			switch (f_mkdir("0:/upd")) {
@@ -530,8 +530,10 @@ reachedend:
 					goto notfound;
 			}
 
+			bool is_ca = strcasecmp(tgt, "newca") == 0;
+
 			FIL out_ui;
-			if (f_open(&out_ui, "/upd/webui.ar", FA_CREATE_ALWAYS | FA_WRITE)) {
+			if (f_open(&out_ui, is_ca ? "/upd/certs.bin" : "/upd/webui.ar", FA_CREATE_ALWAYS | FA_WRITE)) {
 				ESP_LOGE(TAG, "Failed to write");
 				goto notfound;
 			}
@@ -545,7 +547,7 @@ reachedend:
 				
 				if (len == -1) {
 					clear_status_flag(slots::WebuiStatus::LAST_RX_FAILED, slots::WebuiStatus::RECEIVING_SYSUPDATE);
-					set_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					set_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					return true;
 				}
 				else if (len == -2) {
@@ -566,7 +568,7 @@ reachedend:
 				case MultipartStatus::EOF_EARLY:
 				default:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					clear_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::INVALID_HEADER:
@@ -576,7 +578,7 @@ reachedend:
 					return;
 				case MultipartStatus::HOOK_ABORT:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					clear_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					send_static_response(400, "Bad Request", "You have sent invalid files.");
 					f_close(&out_ui);
 					return;
@@ -589,7 +591,7 @@ reachedend:
 					break;
 			}
 
-			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK, slots::WebuiStatus::RECEIVING_CERT_PACK);
 			f_close(&out_ui);
 
 			if (!ok) {
@@ -602,11 +604,14 @@ reachedend:
 				return;
 			}
 
-			f_putc(0x10, &out_ui);
+			f_putc(is_ca ? 0x20 : 0x10, &out_ui);
 			f_close(&out_ui);
 
-			send_static_response(200, "OK", "Updating UI.");
+			send_static_response(200, "OK", is_ca ? "Updating CAs." : "Updating UI.");
 			lwip_close(client_sock);
+			if (is_ca) {
+				serial::interface.reset();
+			}
 			// trigger update
 			update_pending = true;
 		}
