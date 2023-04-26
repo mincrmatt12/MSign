@@ -540,14 +540,15 @@ got_done:
 							case HTTP_CHUNKED_RECV_FAIL:
 								// Invalid format
 								ESP_LOGW(TAG, "chunked parser threw error");
-								return -1;
+								return 0;
 							case HTTP_CHUNKED_RECV_YIELD_GOT_CHUNK:
 								{
 									if (chunk_state.c.chunk_size == 0) goto got_done;
 									// read_to is now at correct position
 									chunk_counter = chunk_state.c.chunk_size;
-									ESP_LOGD(TAG, "got chunk %d", chunk_counter);
+									// (buf + r) is past-end of read data.
 									int remain = (buf + r) - read_to;
+									ESP_LOGI(TAG, "got chunk %d %d %d", chunk_counter, total_amount, remain);
 									memmove(buf, read_to, remain);
 									if (remain <= chunk_counter) {
 										chunk_counter -= remain;
@@ -564,7 +565,7 @@ got_done:
 								}
 						}
 						ESP_LOGE(TAG, "huh");
-						return -1;
+						return 0;
 					}
 					else {
 						chunk_counter -= r;
