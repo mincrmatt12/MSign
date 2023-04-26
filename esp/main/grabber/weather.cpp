@@ -181,6 +181,8 @@ namespace weather {
 		serial::interface.update_slot_nosync(slots::WEATHER_RTEMP_GRAPH, rtemp_over_day);
 		serial::interface.update_slot_nosync(slots::WEATHER_WIND_GRAPH, wind_over_day);
 
+		serial::interface.sync();
+
 		serial::interface.update_slot_nosync(slots::WEATHER_STATUS, "coming soon");
 
 		if (minutely_precip) {

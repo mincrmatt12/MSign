@@ -234,7 +234,8 @@
 /  Note that enabling exFAT discards ANSI C (C89) compatibility. */
 
 
-#define FF_FS_NORTC		1
+#define FF_FS_NORTC		0
+
 #define FF_NORTC_MON	9
 #define FF_NORTC_MDAY	22
 #define FF_NORTC_YEAR	2020
@@ -260,7 +261,7 @@
 */
 
 
-#define FF_FS_LOCK		4
+#define FF_FS_LOCK		5
 /* The option FF_FS_LOCK switches file lock function to control duplicated file open
 /  and illegal operation to open objects. This option must be 0 when FF_FS_READONLY
 /  is 1.
