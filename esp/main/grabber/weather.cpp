@@ -165,7 +165,7 @@ namespace weather {
 					suntimes.sunset = wifi::from_iso8601(v.str_val) % (86400*1000);
 				}
 			}
-		}, true); // use utf8 fixup
+		});
 
 		if (!w_parser.parse(dw)) {
 			ESP_LOGD(TAG, "Json parse failed");
@@ -180,9 +180,6 @@ namespace weather {
 
 		serial::interface.update_slot_nosync(slots::WEATHER_RTEMP_GRAPH, rtemp_over_day);
 		serial::interface.update_slot_nosync(slots::WEATHER_WIND_GRAPH, wind_over_day);
-
-		serial::interface.sync();
-
 		serial::interface.update_slot_nosync(slots::WEATHER_STATUS, "coming soon");
 
 		if (minutely_precip) {

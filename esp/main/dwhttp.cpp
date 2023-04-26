@@ -352,6 +352,7 @@ namespace dwhttp {
 						// Check error for logging
 						int err = br_ssl_engine_last_error(&ssl_cc->eng);
 						if (err) ESP_LOGW(TAG, "ssl closing with error %d", err);
+						if (err == BR_ERR_IO) ESP_LOGW(TAG, "possible errno %d", errno);
 						// Send a close, but ignore it
 						br_sslio_close(ssl_ic);
 						// Close the underlying socket
@@ -514,7 +515,7 @@ namespace dwhttp {
 				if (is_chunked() && chunk_counter && max > chunk_counter) max = chunk_counter;
 				int r = socket.read_some(buf, max); // read into the buffer first
 				if (r <= 0) {
-					ESP_LOGW(TAG, "Read failed.");
+					ESP_LOGW(TAG, "Read failed from %s", last_server);
 					socket.close();
 					return 0;
 				}
@@ -552,7 +553,13 @@ got_done:
 									memmove(buf, read_to, remain);
 									if (remain <= chunk_counter) {
 										chunk_counter -= remain;
-										return remain + total_amount;
+										// If we've exactly terminated at a chunk barrier, recurse
+										if (total_amount == 0 && remain == 0) {
+											return read_from(buf, max);
+										}
+										else {
+											return remain + total_amount;
+										}
 									}
 									else {
 										// Advance buf and re-read
@@ -678,6 +685,7 @@ finish_req:
 				ESP_LOGD(TAG, "Ready with code = %d; length = %d; unklen = %d", result_code(), content_length(), is_unknown_length());
 				if (is_chunked()) {
 					http_chunked_recv_start(&chunk_state);
+					chunk_counter = 0;
 				}
 				return true;
 			}
