@@ -8,7 +8,7 @@ import Card from 'react-bootstrap/Card'
 import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from '../../ctx.js';
+import ConfigContext from '../../ctx';
 import _ from 'lodash';
 
 import {getURLPrefix, HostnameEdit} from '../common/hostname';

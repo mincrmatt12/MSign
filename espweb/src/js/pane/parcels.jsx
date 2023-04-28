@@ -9,7 +9,7 @@ import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 
-import ConfigContext from "../ctx.js"
+import ConfigContext from "../ctx"
 import _ from "lodash"
 
 function ParcelAddPanel({disabled, onNewId}) {

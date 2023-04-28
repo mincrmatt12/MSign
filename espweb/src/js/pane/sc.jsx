@@ -8,7 +8,7 @@ import Card from 'react-bootstrap/Card'
 import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from "../ctx.js"
+import ConfigContext from "../ctx"
 import _ from "lodash"
 
 function parseTime(tm) {
@@ -48,7 +48,7 @@ const screens = [
 ];
 
 function ScEntry({data, updateData}) {
-	const alwaysOn = !"times" in data || data["times"] === undefined;
+	const alwaysOn = !("times" in data) || data["times"] === undefined;
 	const [startText, setStartText] = React.useState(alwaysOn ? "00:00" : displayTime(data.times.start));
 	const [endText, setEndText] = React.useState(alwaysOn ? "23:59" : displayTime(data.times.end));
 

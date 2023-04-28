@@ -1,12 +1,12 @@
 // Add overrides to bootstrap themes:
 
-@import "~bootswatch/dist/darkly/variables";
+@import "bootswatch/dist/darkly/variables";
 $font-family-sans-serif:      "Roboto Mono", "Courier New", monospace !important;
 $font-size-base: 0.95rem;
 
 $pagination-active-bg: $dark;
 @import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,700&display=swap');
-@import "~bootstrap/scss/bootstrap";
+@import "bootstrap/scss/bootstrap";
 
 :root {
   color-scheme: dark;

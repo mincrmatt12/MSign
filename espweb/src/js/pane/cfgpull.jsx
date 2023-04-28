@@ -3,7 +3,7 @@ import Form from 'react-bootstrap/Form'
 
 import _ from 'lodash';
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import {HostnameEdit} from './common/hostname';
 
 export default function CfgPullPane() {

@@ -1,10 +1,7 @@
-import "../css/boot.scss"
 import ReactDOM from 'react-dom'
 import React from 'react'
 import Navbar from 'react-bootstrap/Navbar'
 import Nav from 'react-bootstrap/Nav'
-import Form from 'react-bootstrap/Form'
-import Button from 'react-bootstrap/Form'
 import Container from 'react-bootstrap/Container'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
@@ -12,8 +9,6 @@ import Card from 'react-bootstrap/Card'
 import Alert from 'react-bootstrap/Alert'
 import {BrowserRouter as Router, Route} from 'react-router-dom'
 import {LinkContainer} from 'react-router-bootstrap'
-
-import "regenerator-runtime/runtime";
 
 import GlobalPane from "./pane/global"
 import TransitPane from "./pane/transit"
@@ -28,7 +23,7 @@ import ParcelsPane from "./pane/parcels"
 import WifiPane from "./pane/wifiadv"
 
 import ConfigContext from "./ctx"
-import BackendVersionContext from "./ver.js"
+import BackendVersionContext from "./ver"
 
 import _ from 'lodash';
 

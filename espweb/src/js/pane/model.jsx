@@ -12,7 +12,7 @@ import Alert from 'react-bootstrap/Alert'
 import Modal from 'react-bootstrap/Modal'
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-import ConfigContext from "../ctx.js";
+import ConfigContext from "../ctx";
 import _ from "lodash";
 
 function ModelPaneListEntry(props) {
@@ -68,28 +68,21 @@ class ModelRenderer extends React.Component {
 		this.triangleCount = dv.getUint16(0, true);
 
 		let fv = new Float32Array(ab.slice(2));
-		let geometry = new THREE.Geometry();
+		let pts = new Float32Array(this.triangleCount * 9);
+		let cols = new Float32Array(this.triangleCount * 9);
+		let geometry = new THREE.BufferGeometry();
 		for (let i = 0; i < this.triangleCount; ++i) {
-			geometry.vertices.push(
-				new THREE.Vector3(-fv[i*12 + 0], fv[i*12 + 1], fv[i*12 + 2]),
-				new THREE.Vector3(-fv[i*12 + 3], fv[i*12 + 4], fv[i*12 + 5]),
-				new THREE.Vector3(-fv[i*12 + 6], fv[i*12 + 7], fv[i*12 + 8])
-			);
-
-			let face = new THREE.Face3(i*3, i*3 + 1, i*3 + 2);
-			face.color.setRGB(
-				fv[i*12 + 9] / 256.0, fv[i*12 + 10] / 256.0, fv[i*12 + 11] / 256.0
-			);
-			geometry.faces.push(
-				face
-			);
+			for (let c = 0; c < 9; ++c) {
+				pts[i*9 + c] = (c % 3 == 0 ? -1 : 1) * fv[i*12 + c];
+				cols[i*9 + c] = fv[i * 12 + 9 + c % 3] / 255.0;
+			}
 		}
 
-		geometry.computeFaceNormals();
-		geometry.computeVertexNormals();
+		geometry.setAttribute("position", new THREE.BufferAttribute(pts, 3));
+		geometry.setAttribute("color", new THREE.BufferAttribute(cols, 3));
 
 		const material = new THREE.MeshBasicMaterial({
-			vertexColors: THREE.FaceColors,
+			vertexColors: true,
 			side: THREE.DoubleSide
 		});
 

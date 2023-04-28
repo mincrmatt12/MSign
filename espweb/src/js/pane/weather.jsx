@@ -5,7 +5,7 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import Row from 'react-bootstrap/Row'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import _ from 'lodash';
 
 function WeatherPane() {
@@ -62,13 +62,6 @@ function WeatherPane() {
 		<hr className="hr-gray" />
 
 		<Button disabled={!('geolocation' in navigator)} className="w-100" variant="info" onClick={useCurrentPlace}>use current location</Button>
-
-		<hr className="hr-gray" />
-
-		<InputGroup className="mb-3">
-			<FormControl type='text' value={address} placeholder="address" onChange={(e) => {setAddress(e.target.value);}} />
-			<Button variant="success" onClick={geocode}>geocode and use</Button>
-		</InputGroup>
 
 		<hr className="hr-gray" />
 	</div>

@@ -2,7 +2,7 @@ import React from 'react'
 import FormControl from 'react-bootstrap/FormControl'
 import Form from 'react-bootstrap/Form'
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import _ from 'lodash';
 
 function ApiPane() {

@@ -3,7 +3,7 @@ import FormControl from 'react-bootstrap/FormControl'
 import Form from 'react-bootstrap/Form'
 import InputGroup from 'react-bootstrap/InputGroup'
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import _, { parseInt } from 'lodash';
 
 function parseBssid(str) {

@@ -7,7 +7,7 @@ import Tabs from 'react-bootstrap/Tabs';
 
 import _ from 'lodash';
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import VersionTag from "./common/vertag";
 
 function GlobalPane() {

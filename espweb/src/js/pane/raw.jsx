@@ -8,7 +8,7 @@ import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 import Alert from 'react-bootstrap/Alert'
 
-import ConfigContext from '../ctx.js';
+import ConfigContext from '../ctx';
 import _ from 'lodash';
 
 function RawPane() {
