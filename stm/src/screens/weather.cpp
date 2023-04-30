@@ -404,10 +404,10 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 			col = led::color_t(70_c); break;
 		case FOG:
 			do_hatch = true;
-			hatch = 235_c;
+			hatch = 245_c;
 		case LIGHT_FOG:
 			text_out = code == FOG ? "Fog" : "Light fog";
-			col = led::color_t(225_c);
+			col = led::color_t(215_c);
 		    break;
 		case FLURRIES:
 		case LIGHT_SNOW:
@@ -527,13 +527,13 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 	// |  |///|
 	// |   ... scrolls
 	
-	const int leftside = 20; // configurable to allow for potential icons on left gutter (like sunrise/sunset)
-	const int topside = 5;
-	const int barwidth = 8;
-	const int segmentheight = 10;
-	const int linewidth = 3;
-	const int labelheight = 9;
-	const int labelbase = 2;
+	const static int leftside = 20; 
+	const static int topside = 5;
+	const static int barwidth = 8;
+	const static int segmentheight = 10;
+	const static int linewidth = 3;
+	const static int labelheight = 9;
+	const static int labelbase = 2;
 
 	slots::WeatherStateCode last = slots::WeatherStateCode::UNK;
 	auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
@@ -545,19 +545,54 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 
 	bool forcehourlabel = true;
 
+	// Compute the place for sunrise/sunset marks on the bar
+	bool sunlinestate = false;
+	uint64_t sunlinet1 = 0, sunlinet2 = 0;
+
+	if (rtc_time % 86400'0000 < times.sunrise) {
+		sunlinestate = false;
+		sunlinet1 = times.sunrise;
+		sunlinet2 = times.sunset;
+	}
+	else {
+		sunlinestate = true;
+		sunlinet1 = times.sunset;
+		sunlinet2 = times.sunrise;
+	}
+
 	for (int hour = 0; hour < 24; ++hour) {
 		int offset_y = topside + hour * segmentheight - expanded_hrbar_scroll / 128;
-		if (offset_y + segmentheight < 0) continue; // don't update last to keep a label onscreen
 		if (offset_y > 63) break;
 
 		slots::WeatherStateCode code = blk[hour], next = hour == 23 ? code : blk[hour + 1];
 		int effhour = (timedat.tm_hour + hour) % 24;
 		int64_t hourstart = (int64_t)effhour * (1000*60*60);
+		int64_t hourend = (int64_t)(effhour + 1) * (1000*60*60);
 		const char *label;
 
+		int tloffset = -1;
+
+		// Check if either time is in the current hour
+		if (sunlinet1 > hourstart && sunlinet1 < hourend) tloffset = (sunlinet1 - hourstart) / ((1000*60*60L) / segmentheight);
+		else if (sunlinet2 > hourstart && sunlinet2 < hourend) tloffset = (sunlinet2 - hourstart) / ((1000*60*60L) / segmentheight);
+
+		if (offset_y + segmentheight < 0) {
+			if (tloffset != -1) sunlinestate = !sunlinestate;
+			continue; // don't update last to keep a label onscreen
+		}
+
 		// Draw bar + lines
-		draw::rect(matrix.get_inactive_buffer(), leftside, std::max(0, offset_y), leftside + 1, std::max(0, offset_y + segmentheight), 0xff_c);
-		draw::rect(matrix.get_inactive_buffer(), leftside + 1 + barwidth, std::max(0, offset_y), leftside + 1 + barwidth + 1, std::max(0, offset_y + segmentheight), 0xff_c);
+		if (tloffset == -1) {
+			draw::rect(matrix.get_inactive_buffer(), leftside, std::max(0, offset_y), leftside + 1, std::max(0, offset_y + segmentheight), sunlinestate ? 0xff_c : 0x55_c);
+			draw::rect(matrix.get_inactive_buffer(), leftside + 1 + barwidth, std::max(0, offset_y), leftside + 1 + barwidth + 1, std::max(0, offset_y + segmentheight), sunlinestate ? 0xff_c : 0x55_c);
+		}
+		else {
+			draw::rect(matrix.get_inactive_buffer(), leftside, std::max(0, offset_y), leftside + 1, std::max(0, offset_y + tloffset), sunlinestate ? 0xff_c : 0x55_c);
+			draw::rect(matrix.get_inactive_buffer(), leftside + 1 + barwidth, std::max(0, offset_y), leftside + 1 + barwidth + 1, std::max(0, offset_y + tloffset), sunlinestate ? 0xff_c : 0x55_c);
+			sunlinestate = !sunlinestate;
+			draw::rect(matrix.get_inactive_buffer(), leftside, std::max(0, offset_y + tloffset), leftside + 1, std::max(0, offset_y + segmentheight), sunlinestate ? 0xff_c : 0x55_c);
+			draw::rect(matrix.get_inactive_buffer(), leftside + 1 + barwidth, std::max(0, offset_y + tloffset), leftside + 1 + barwidth + 1, std::max(0, offset_y + segmentheight), sunlinestate ? 0xff_c : 0x55_c);
+		}
 		fill_hourlybar(leftside + 1, std::max(0, offset_y), leftside + 1 + barwidth, std::max(0, offset_y + segmentheight), code, label, hourstart, true);
 
 		// Check if we need a label
