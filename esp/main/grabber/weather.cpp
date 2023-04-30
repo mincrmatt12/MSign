@@ -31,7 +31,7 @@ namespace weather {
 			case 1102: return WS::MOSTLY_CLOUDY;
 
 			case 2000: return WS::FOG;
-			case 2001: return WS::LIGHT_FOG;
+			case 2100: return WS::LIGHT_FOG;
 
 			case 4000: return WS::DRIZZLE;
 			case 4001: return WS::RAIN;
@@ -54,7 +54,9 @@ namespace weather {
 
 			case 8000: return WS::THUNDERSTORM;
 
-			default: return WS::UNK;
+			default: 
+				ESP_LOGW(TAG, "Unexpected weather code %d", code);
+				return WS::UNK;
 		}
 	}
 
