@@ -549,7 +549,7 @@ got_done:
 									chunk_counter = chunk_state.c.chunk_size;
 									// (buf + r) is past-end of read data.
 									int remain = (buf + r) - read_to;
-									ESP_LOGI(TAG, "got chunk %d %d %d", chunk_counter, total_amount, remain);
+									ESP_LOGD(TAG, "got chunk %d %d %d", chunk_counter, total_amount, remain);
 									memmove(buf, read_to, remain);
 									if (remain <= chunk_counter) {
 										chunk_counter -= remain;
