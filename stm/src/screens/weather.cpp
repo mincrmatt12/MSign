@@ -547,17 +547,9 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 
 	// Compute the place for sunrise/sunset marks on the bar
 	bool sunlinestate = false;
-	uint64_t sunlinet1 = 0, sunlinet2 = 0;
 
-	if (rtc_time % 86400'0000 < times.sunrise) {
-		sunlinestate = false;
-		sunlinet1 = times.sunrise;
-		sunlinet2 = times.sunset;
-	}
-	else {
+	if (auto eff=timedat.tm_hour*(1000*60*60); eff > times.sunrise && eff < times.sunset) {
 		sunlinestate = true;
-		sunlinet1 = times.sunset;
-		sunlinet2 = times.sunrise;
 	}
 
 	for (int hour = 0; hour < 24; ++hour) {
@@ -573,8 +565,8 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 		int tloffset = -1;
 
 		// Check if either time is in the current hour
-		if (sunlinet1 > hourstart && sunlinet1 < hourend) tloffset = (sunlinet1 - hourstart) / ((1000*60*60L) / segmentheight);
-		else if (sunlinet2 > hourstart && sunlinet2 < hourend) tloffset = (sunlinet2 - hourstart) / ((1000*60*60L) / segmentheight);
+		if (times.sunrise > hourstart && times.sunrise < hourend) tloffset = (times.sunrise - hourstart) / ((1000*60*60L) / segmentheight);
+		else if (times.sunset > hourstart && times.sunset < hourend) tloffset = (times.sunset - hourstart) / ((1000*60*60L) / segmentheight);
 
 		if (offset_y + segmentheight < 0) {
 			if (tloffset != -1) sunlinestate = !sunlinestate;
