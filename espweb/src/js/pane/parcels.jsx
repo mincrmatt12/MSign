@@ -1,13 +1,9 @@
 import React from 'react'
-import FormControl from 'react-bootstrap/FormControl'
-import InputGroup from 'react-bootstrap/InputGroup'
 import Form from 'react-bootstrap/Form'
-import Row from 'react-bootstrap/Row'
-import Col from 'react-bootstrap/Col'
 import Card from 'react-bootstrap/Card'
-import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
-import ListGroup from 'react-bootstrap/ListGroup'
+import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import Dropdown from 'react-bootstrap/Dropdown';
 
 import ConfigContext from "../ctx"
 import _ from "lodash"
@@ -25,24 +21,30 @@ function ParcelAddPanel({disabled, onNewId}) {
 			<Form.Label>carrier (from <a href="https://www.easypost.com/docs/api#carrier-tracking-strings">this list</a>)</Form.Label>
 			<Form.Control type="text" value={curCarrier} placeholder="leave blank for auto" onChange={(e) => setCurCarrier(e.target.value)} />
 		</Form.Group>
-		<Button className="w-100" disabled={disabled} variant="success" onClick={() => {
-			let params = {};
-			if (curCode === "") {
-				alert("missing code");
-				return;
-			}
-			params["code"] = curCode;
-			if (curCarrier !== "") params["carrier"] = curCarrier;
-			// talk to api
-			fetch("/a/newparcel", {method: "POST", body: JSON.stringify(params)})
-				.then((res) => {
-					if (!res.ok) return res.text().then(t => {
-						alert("failed: " + t);
-						throw new Error(t);
-					});
-					else return res.text();
-				}).then((text) => onNewId(text));
-		}}>create tracker</Button>
+		<Dropdown className="w-100" as={ButtonGroup}>
+			<Button disabled={disabled} variant="success" onClick={() => {
+				let params = {};
+				if (curCode === "") {
+					alert("missing code");
+					return;
+				}
+				params["code"] = curCode;
+				if (curCarrier !== "") params["carrier"] = curCarrier;
+				// talk to api
+				fetch("/a/newparcel", {method: "POST", body: JSON.stringify(params)})
+					.then((res) => {
+						if (!res.ok) return res.text().then(t => {
+							alert("failed: " + t);
+							throw new Error(t);
+						});
+						else return res.text();
+					}).then((text) => onNewId(text));
+			}}>create tracker</Button>
+			<Dropdown.Toggle className="flex-grow-0" split variant="success" id="create-parcel-drop" />
+			<Dropdown.Menu>
+				<Dropdown.Item as="button" onClick={() => onNewId("")}>create empty</Dropdown.Item>
+			</Dropdown.Menu>
+		</Dropdown>
 	</div>;
 }
 
@@ -66,6 +68,7 @@ function ParcelEntry({data, updateData}) {
 
 			<div className="my-2">
 				<Form.Check type="checkbox" checked={data["enabled"]} onChange={(e) => {updateData(["enabled"], e.target.checked);}} label="enabled" />
+				<Form.Check type="checkbox" checked={("consider_local_tz" in data) ? data["consider_local_tz"] : false} onChange={(e) => {updateData(["consider_local_tz"], e.target.checked);}} label="treat times as local" />
 			</div>
 		</Card.Body>
 	</Card>;
