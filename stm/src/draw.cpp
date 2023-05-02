@@ -388,29 +388,36 @@ namespace draw {
 		}
 
 		// seconds 
-		if (howfar <= 90) {
+		if (howfar <= 75) {
 			format_generic_relative_thing(buf, buflen, ago, "a second", "seconds", howfar);
 			return;
 		}
 
 		// minutes
+		howfar += 30; // round
 		howfar /= 60;
-		if (howfar <= 90) {
+		if (howfar <= 75) {
 			format_generic_relative_thing(buf, buflen, ago, "a minute", "minutes", howfar);
 			return;
 		}
 
 		// hours
+		howfar += 30; // round
 		howfar /= 60;
-		if (howfar <= 36) {
+		if (howfar <= 30) {
 			format_generic_relative_thing(buf, buflen, ago, "an hour", "hours", howfar);
 			return;
 		}
 
 		// days
+		howfar += 12; // round
 		howfar /= 24;
 		if (ago && howfar == 1) {
 			strncpy(buf, "yesterday", buflen);
+			return;
+		}
+		else if (!ago && howfar == 1) {
+			strncpy(buf, "tomorrow", buflen);
 			return;
 		}
 		else if (howfar <= 3) {
