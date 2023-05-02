@@ -235,11 +235,11 @@ namespace parcels {
 					}
 					else if (strcmp(stack[1]->name, "updated_at") == 0 && v.type == v.STR && !(pi.status.flags & pi.status.HAS_UPDATED_TIME)) {
 						pi.status.flags |= pi.status.HAS_UPDATED_TIME;
-						pi.updated_time = wifi::from_iso8601(v.str_val);
+						pi.updated_time = wifi::from_iso8601(v.str_val, cfg.local_tz);
 					}
 					else if (strcmp(stack[1]->name, "est_delivery_date") == 0 && v.type == v.STR) {
 						pi.status.flags |= pi.status.HAS_EST_DEILIVERY;
-						pi.estimated_delivery = wifi::from_iso8601(v.str_val);
+						pi.estimated_delivery = wifi::from_iso8601(v.str_val, cfg.local_tz);
 					}
 				}
 				else if (stack_ptr >= 3 && strcmp(stack[1]->name, "tracking_details") == 0 && stack[1]->is_array()) {
@@ -261,7 +261,7 @@ namespace parcels {
 					}
 					else if (strcmp(stack[2]->name, "datetime") == 0 && v.type == v.STR) {
 						pi.status.flags |= pi.status.HAS_UPDATED_TIME;
-						pi.updated_time = wifi::from_iso8601(v.str_val);
+						pi.updated_time = wifi::from_iso8601(v.str_val, cfg.local_tz);
 					}
 
 					// process location: 
@@ -365,7 +365,7 @@ namespace parcels {
 							pie.status.flags |= pie.status.HAS_STATUS;
 						}
 						else if (strcmp(stack[2]->name, "datetime") == 0 && v.type == v.STR) {
-							pie.updated_time = wifi::from_iso8601(v.str_val);
+							pie.updated_time = wifi::from_iso8601(v.str_val, cfg.local_tz);
 							pie.status.flags |= pie.status.HAS_UPDATED_TIME;
 						}
 

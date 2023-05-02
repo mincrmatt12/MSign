@@ -11,6 +11,9 @@ namespace parcels {
 		//!cfg: holds .enabled
 		mutable bool enabled = false; // set to false when detected as nonexistent
 
+		//!cfg: holds .consider_local_tz
+		bool local_tz = false;
+
 		//!cfg: holds .tracker_id
 		config::string_t tracker_id {};
 	};
