@@ -1119,7 +1119,7 @@ def generate_subparser_state_name(locator: ObjectLocatorGeneratorReturn):
 def generate_nodeenum_declaration(output, tree, structname="cfgstate", docs="STATE ENUM"):
     node_to_symbol_map = {}
 
-    output.add("// {docs}")
+    output.add(f"// {docs}")
     output.add(f"enum struct {structname} : uint16_t {{")
     with output as inner:
         def add_to_symbol_map(node: BaseJsonPathNode):
