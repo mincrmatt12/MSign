@@ -237,13 +237,13 @@ void screen::WeatherScreen::draw_currentstats() {
 
 	text_size = draw::text_size(disp_buf, font::lato_bold_15::info);
 
-	if (ctemp > 1000 && ctemp < 1600) {
+	if (ctemp >= 1000 && ctemp < 1600) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 240_c);
 	}
 	else if (ctemp < 1000 && ctemp > -1000) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, 100_c);
 	}
-	else if (ctemp >= 1000 && ctemp < 2750) {
+	else if (ctemp >= 1600 && ctemp < 2750) {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {50_c, 240_c, 50_c});
 	}
 	else if (ctemp >= 2750) {
