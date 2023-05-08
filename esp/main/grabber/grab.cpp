@@ -86,6 +86,9 @@ namespace grabber {
 		reload_all();
 
 		while (true) {
+			// Clear the refresh grabber flag
+			xEventGroupClearBits(wifi::events, wifi::GrabRequested);
+			// Wait for wifi to reconnect
 			stoppable(wifi::WifiConnected);
 
 			// Run all non-ssl grabbers
@@ -93,7 +96,7 @@ namespace grabber {
 				if (!grabbers[i]->ssl) run_grabber(i, grabbers[i]);
 			}
 
-			// Wait for time
+			// Wait for time (so ssl sync works)
 			stoppable(wifi::TimeSynced);
 
 			// Run all ssl grabbers
@@ -116,7 +119,7 @@ namespace grabber {
 			else delay = target - now;
 
 			if (delay) {
-				if (xEventGroupWaitBits(wifi::events, wifi::GrabRequested | wifi::GrabTaskStop, true, false, delay) & wifi::GrabTaskStop) {
+				if (xEventGroupWaitBits(wifi::events, wifi::GrabRequested | wifi::GrabTaskStop, false, false, delay) & wifi::GrabTaskStop) {
 					goto exit;
 				}
 			}
