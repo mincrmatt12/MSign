@@ -6,6 +6,8 @@
 #include "simplematrix.h"
 #include "../tskmem.h"
 #include "../ui.h"
+#include "srvd.h"
+#include "../srv.h"
 #include <alloca.h>
 #include <cstdio>
 
@@ -277,6 +279,31 @@ namespace crash {
 							show_backtrace_for("Traceback for screen", tSP, tPC, tLR);
 							rtos::get_task_regs(*reinterpret_cast<uint32_t **>(&tskmem::dbgtim), tPC, tSP, tLR);
 							show_backtrace_for("Traceback for dbgtim", tSP, tPC, tLR);
+						}
+					}
+					{
+						// Try to show servicer stats
+						if (auto * srvp = srvd::ServicerDebugAccessor::get_debug_servicer_pending_requests()) {
+							print_line("srv pending requests:", mkcolor(3, 3, 3), 1);
+							if (!rtos::for_all_in_queue<srv::Servicer::PendRequest>(srvp, [](const srv::Servicer::PendRequest& pr){
+								switch (pr.type) {
+									using enum srv::Servicer::PendRequest::PendRequestType;
+
+									case TypeNone: print_line("None", mkcolor(3, 1, 1), 2); break;
+									case TypeChangeTemp: print_line("ChangeTemp", mkcolor(2, 2, 3), 2); break;
+									case TypeChangeTempMulti: print_line("ChangeTempMulti", mkcolor(2, 2, 3), 2); break;
+									case TypeRxTime: print_line("RxTime", mkcolor(2, 3, 2), 2); break;
+									case TypeDumpLogOut: print_line("DumpLogOut", mkcolor(2, 3, 2), 2); break;
+									case TypeRefreshGrabber: print_line("RefreshGrabber", mkcolor(1, 1, 3), 2); break;
+									case TypeSleepMode: print_line("SleepMode", mkcolor(1, 3, 1), 2); break;
+									case TypeReset: print_line("Reset", mkcolor(3, 0, 0), 2); break;
+									case TypeSync: print_line("Sync", mkcolor(1, 1, 1), 2); break;
+									default: print_line("<invalid>", mkcolor(3, 1, 1), 2); break;
+								}
+							})) print_line("<struct invalid>", mkcolor(3, 0, 0), 2);
+							if (srvd::ServicerDebugAccessor::get_debug_servicer_did_ping()) {
+								print_line("srv ping waiting", mkcolor(3, 1, 1), 1);
+							}
 						}
 					}
 

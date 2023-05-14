@@ -14,6 +14,10 @@
 #include <queue.h>
 #include <task.h>
 
+namespace crash::srvd {
+	struct ServicerDebugAccessor;
+}
+
 namespace srv {
 	// Talks to the ESP8266
 	//
@@ -24,6 +28,9 @@ namespace srv {
 	//
 	// This class also handles the update procedure.
 	struct Servicer final : private ProtocolImpl {
+		// For debugging
+		friend struct ::crash::srvd::ServicerDebugAccessor;
+
 		// Init HW & RTOS stuff.
 		void init();
 		bool ready(); // is the esp talking?
@@ -115,6 +122,50 @@ namespace srv {
 		};
 
 		DebugInfo get_debug_information();
+
+		// Pending request queue entries -- made public for debug reasons.
+		struct PendRequest {
+			struct TimeRequest {
+				TaskHandle_t notify;
+				slots::protocol::TimeStatus &status_out;
+				uint64_t &timestamp_out;
+				uint64_t &start_out;
+				// used to avoid writing into weird memory
+				volatile int magic = 0x1234abcd;
+
+				~TimeRequest() {magic = 0;}
+				operator bool() const {return magic == 0x1234abcd;}
+			};
+			// Does _not_ sync, intended for "groups" in flash -- see set_temperature_all's template version
+			struct MultiTempRequest {
+				uint16_t temperature : 2;
+				uint16_t amount : 14;
+				const uint16_t * entries;
+			};
+			union {
+				struct {
+					uint16_t slotid : 12;
+					uint16_t temperature : 2;
+				};
+
+				TimeRequest * rx_req;
+				MultiTempRequest mt_req;
+				slots::protocol::GrabberID refresh;
+				bool sleeping;
+				TaskHandle_t sync_with;
+			};
+			enum PendRequestType : uint8_t {
+				TypeNone = 0,
+				TypeChangeTemp,
+				TypeDumpLogOut,
+				TypeRxTime,
+				TypeChangeTempMulti,
+				TypeRefreshGrabber,
+				TypeSleepMode,
+				TypeReset,
+				TypeSync
+			} type;
+		};
 	private:
 		const bheap::Block& _slot(uint16_t slotid);
 		static bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> arena;
@@ -167,49 +218,6 @@ namespace srv {
 		StaticSemaphore_t bheap_mutex_private;
 
 		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
-		// The format of these requests is this struct:
-		struct PendRequest {
-			struct TimeRequest {
-				TaskHandle_t notify;
-				slots::protocol::TimeStatus &status_out;
-				uint64_t &timestamp_out;
-				uint64_t &start_out;
-				// used to avoid writing into weird memory
-				volatile int magic = 0x1234abcd;
-
-				~TimeRequest() {magic = 0;}
-				operator bool() const {return magic == 0x1234abcd;}
-			};
-			// Does _not_ sync, intended for "groups" in flash -- see set_temperature_all's template version
-			struct MultiTempRequest {
-				uint16_t temperature : 2;
-				uint16_t amount : 14;
-				const uint16_t * entries;
-			};
-			union {
-				struct {
-					uint16_t slotid : 12;
-					uint16_t temperature : 2;
-				};
-
-				TimeRequest * rx_req;
-				MultiTempRequest mt_req;
-				slots::protocol::GrabberID refresh;
-				bool sleeping;
-				TaskHandle_t sync_with;
-			};
-			enum PendRequestType : uint8_t {
-				TypeNone = 0,
-				TypeChangeTemp,
-				TypeDumpLogOut,
-				TypeRxTime,
-				TypeChangeTempMulti,
-				TypeRefreshGrabber,
-				TypeSleepMode,
-				TypeReset,
-				TypeSync
-			} type;
-		};
 
 		QueueHandle_t pending_requests;
 		// Static queue allocation
