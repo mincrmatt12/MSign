@@ -369,7 +369,7 @@ namespace led {
 		bool active_buffer = false;
 		uint8_t pos = 0;
 		uint16_t row = 0;
-		uint8_t dma_buffer[(FB::effective_width * 2) + 3];
+		alignas(uint32_t) uint8_t dma_buffer[(FB::effective_width * 2) + 3];
 		TaskHandle_t notify_when_swapped = nullptr;
 
 		// impl for the wait system
