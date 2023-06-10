@@ -135,7 +135,6 @@ namespace led {
 			uint16_t * lo = &data[i*Storage::EffectiveWidth].r;
 			uint16_t * hi = lo + stb_lines*Storage::EffectiveWidth*3;
 			uint8_t  * bs = byte_stream;
-			uint32_t c0 = 1 | (1 << 16);
 
 			for (uint_fast16_t j = 0; j < Storage::EffectiveWidth / 2; ++j) {
 				asm volatile (
@@ -146,7 +145,7 @@ namespace led {
 					// Place red0  (r1 is now    g16r
 					"ubfx r1, r1, %[Pos], #1\n\t"
 					// Place red1
-					"and r2, %[C0], r2, lsr %[Pos]\n\t"
+					"lsr r2, r2, %[Pos]\n\t"
 					// Grab blue0
 					"bfi r10, r2, #1, #1\n\t"
 					// Mask red0
@@ -161,6 +160,8 @@ namespace led {
 					"bfi r10, r3, #1, #1\n\t"
 					// Bfi again to create final value to be orred
 					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
+					// Mask out r2
+					"and r2, r2, #0x00070000\n\t"
 					// Prepare bit sequence
 					"orr r11, r1, r2\n\t"
 					// Load bottom 3 bytes
@@ -172,7 +173,7 @@ namespace led {
 					// Place red0  (r1 is now    g16r
 					"ubfx r1, r1, %[Pos], #1\n\t"
 					// Place red1
-					"and r2, %[C0], r2, lsr %[Pos]\n\t"
+					"lsr r2, r2, %[Pos]\n\t"
 					// Grab blue0
 					"bfi r10, r2, #1, #1\n\t"
 					// Mask red0
@@ -187,6 +188,7 @@ namespace led {
 					"bfi r10, r3, #1, #1\n\t"
 					// Bfi again to create final value to be orred
 					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
+					"and r2, r2, #0x00070000\n\t"
 					"orr r10, r1, r2\n\t"
 					// Prepare actual value
 					"orr r11, r11, r10, lsl #3\n\t"
@@ -194,8 +196,8 @@ namespace led {
 					"orr r11, r11, #0x40004000\n\t"
 					// Store value 
 					"str r11, [%[Bs]], #4\n\t"
-					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
-					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [PosPlus]"i"(Pos + 16), [C0]"r"(c0)
+					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs) 
+					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [PosPlus]"i"(Pos + 16)
 					: "r1", "r2", "r3", "cc", "r10", "r11"
 				);
 			}
