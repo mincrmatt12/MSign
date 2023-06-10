@@ -136,69 +136,61 @@ namespace led {
 			uint16_t * hi = lo + stb_lines*Storage::EffectiveWidth*3;
 			uint8_t  * bs = byte_stream;
 
+			// used to mask out bits while shifting in operand2
+			uint32_t c0 = 1 | (1 << 16);
+
+			// scratch register to store word to write
+			uint32_t scratch;
+
 			for (uint_fast16_t j = 0; j < Storage::EffectiveWidth / 2; ++j) {
 				asm volatile (
-					// Load 3 words (or 6 colors / 2 pixels) into r1-r3 using ldm
+#define PROCESS_BITS(target) \
+					/* Select G0 & R0 out from the first word, leaving r1 looking like
+					   |0*15|G|0*15|R| */ \
+					"and r1, %[C0], r1, lsr %[Pos]\n\t" \
+					/* Select R1 & B0 out from the second word, leaving r2 looking like
+					   |0*15|R|0*15|B| */ \
+					"and r2, %[C0], r2, lsr %[Pos]\n\t" \
+					/* Move G0 from the top of r1 into the bottom of r1 -- this does not
+					   set extra bits as the upper 15 bits of r1 are always zero. */ \
+					"orr r1, r1, r1, lsr #15\n\t" \
+					/* Move B0 from the bottom of r2 into the bottom of r1 -- the upper bits
+					   of r1 will be corrupted by this but they will be ignored during a final
+					   bit field insert */ \
+					"orr r1, r1, r2, lsl #2\n\t" \
+					/* At this point, R1 is |junk*16|0*13|BGR| for the first pixel.
+					   Now, prepare the second pixel. Select B1 & G1 out of r3,
+					   leaving r3 looking like
+					   |0*15|B|0*15|G| */ \
+					"and r3, %[C0], r3, lsr %[Pos]\n\t" \
+					/* Move G1&B1 into the upper half of r2 after R1 which is already there.
+					   These will corrupt the bottom 3 bits of r2 but those will be overwritten
+					   during the bit field insert. */ \
+					"orr r2, r2, r3, lsl #17\n\t" \
+					/* Instead of writing the result into r2, write it into the scratch register
+					   to later get orred */ \
+					"orr " target ", r2, r3, lsl #2\n\t" \
+					/* Finally, copy the RGB0 part of r1 overwriting the bottom part of r2 to leave r2 in the desired state. */ \
+					"bfi " target ", r1, #0, #3\n\t"
+
+					// Load 3 words from the first row (or 6 colors / 2 pixels) into r1-r3 using ldm
 					"ldmia %[Lo]!, {r1,r2,r3}\n\t"
-					// Grab green0
-					"ubfx r10, r1, %[PosPlus], #1\n\t"
-					// Place red0  (r1 is now    g16r
-					"ubfx r1, r1, %[Pos], #1\n\t"
-					// Place red1
-					"lsr r2, r2, %[Pos]\n\t"
-					// Grab blue0
-					"bfi r10, r2, #1, #1\n\t"
-					// Mask red0
-					//"ubfx r1, r1, #1, #1\n\t"
-					// Or into r1
-					"bfi r1, r10, #1, #2\n\t" /// now r1 contains <junk>bgr in correct order
-					// Extract green1 into r10
-					"ubfx r10, r3, %[Pos], #1\n\t"
-					// Prepare pixel2
-					"lsr r3, r3, %[PosPlus]\n\t"
-					// Insert
-					"bfi r10, r3, #1, #1\n\t"
-					// Bfi again to create final value to be orred
-					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
-					// Mask out r2
-					"and r2, r2, #0x00070000\n\t"
-					// Prepare bit sequence
-					"orr r11, r1, r2\n\t"
-					// Load bottom 3 bytes
-				    
-					// Load 3 words (or 6 colors / 2 pixels) into r1-r3 using ldm
+					// Process them into the temp register
+					PROCESS_BITS("%[Temp]")
+					// Load 3 words from the second row (or 6 colors / 2 pixels) into r1-r3 using ldm
 					"ldmia %[Hi]!, {r1,r2,r3}\n\t"
-					// Grab green0
-					"ubfx r10, r1, %[PosPlus], #1\n\t"
-					// Place red0  (r1 is now    g16r
-					"ubfx r1, r1, %[Pos], #1\n\t"
-					// Place red1
-					"lsr r2, r2, %[Pos]\n\t"
-					// Grab blue0
-					"bfi r10, r2, #1, #1\n\t"
-					// Mask red0
-					//"ubfx r1, r1, #1, #1\n\t"
-					// Or into r1
-					"bfi r1, r10, #1, #2\n\t" /// now r1 contains <junk>bgr in correct order
-					// Extract green1 into r10
-					"ubfx r10, r3, %[Pos], #1\n\t"
-					// Prepare pixel2
-					"lsr r3, r3, %[PosPlus]\n\t"
-					// Insert
-					"bfi r10, r3, #1, #1\n\t"
-					// Bfi again to create final value to be orred
-					"bfi r2, r10, #17, #2\n\t" /// now r2 contains <junk>bgr<junk>
-					"and r2, r2, #0x00070000\n\t"
-					"orr r10, r1, r2\n\t"
+					// Process them into r2
+					PROCESS_BITS("r2")
+
 					// Prepare actual value
-					"orr r11, r11, r10, lsl #3\n\t"
-					"orr r11, r11, r11, lsl #8\n\t"
-					"orr r11, r11, #0x40004000\n\t"
+					"orr %[Temp], %[Temp], r2, lsl #3\n\t"
+					"orr %[Temp], %[Temp], %[Temp], lsl #8\n\t"
+					"orr %[Temp], %[Temp], #0x40004000\n\t"
 					// Store value 
-					"str r11, [%[Bs]], #4\n\t"
-					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs) 
-					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [PosPlus]"i"(Pos + 16)
-					: "r1", "r2", "r3", "cc", "r10", "r11"
+					"str %[Temp], [%[Bs]], #4\n\t"
+					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs), [Temp]"=r"(scratch)
+					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [C0]"r"(c0)
+					: "r1", "r2", "r3", "cc"
 				);
 			}
 		}
