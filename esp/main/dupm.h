@@ -123,7 +123,7 @@ namespace serial {
 
 		// Internal helpers
 		template<typename Func>
-		slots::PacketWrapper<>& wait_for_packet(Func&& filter, TickType_t timeout=portMAX_DELAY) {
+		slots::PacketWrapper<>& wait_for_packet(Func&& filter, TickType_t timeout) {
 			PacketFilterWrapper<Func> f{filter};
 			pending_packet_in = &f;
 			return wait_for_packet(timeout);
