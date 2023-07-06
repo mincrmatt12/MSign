@@ -782,18 +782,24 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		pos = std::max<int16_t>(0, pos);
 
 		using enum slots::PrecipData::PrecipType;
+		slots::PrecipData::PrecipType draw_as = data[i0].kind;
 		
-		switch (data[i0].kind) {
-			case slots::PrecipData::NONE:
+		// If one of the types of precip is NONE, use the other, otherwise pick whichever is closer.
+		if (data[i0].kind == NONE && data[i1].kind == NONE) return;
+		else if (data[i0].kind == NONE) draw_as = data[i1].kind;
+		else if (data[i1].kind != NONE && x - x0 - px > nx - x + x0) draw_as = data[i1].kind;
+		
+		switch (draw_as) {
+			case NONE:
 				break;
-			case slots::PrecipData::RAIN:
-			case slots::PrecipData::FREEZING_RAIN:
+			case RAIN:
+			case FREEZING_RAIN:
 				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob)));
 				break;
-			case slots::PrecipData::SNOW:
+			case SNOW:
 				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200_cu, colprob)), draw::cvt((0_ccu).mix(80_cu, colprob)));
 				break;
-			case slots::PrecipData::SLEET:
+			case SLEET:
 				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob)), draw::cvt((0_ccu).mix(80_cu, colprob)));
 				break;
 		}
