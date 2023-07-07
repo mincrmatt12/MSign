@@ -785,9 +785,9 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		slots::PrecipData::PrecipType draw_as = data[i0].kind;
 		
 		// If one of the types of precip is NONE, use the other, otherwise pick whichever is closer.
-		if (data[i0].kind == NONE && data[i1].kind == NONE) return;
-		else if (data[i0].kind == NONE) draw_as = data[i1].kind;
-		else if (data[i1].kind != NONE && x - x0 - px > nx - x + x0) draw_as = data[i1].kind;
+		if (data[i0].kind == NONE && data[i1].kind == NONE) {continue;}
+		else if (data[i0].kind == NONE) {draw_as = data[i1].kind;}
+		else if (data[i1].kind != NONE && x - x0 - px > nx - x + x0) {draw_as = data[i1].kind;}
 		
 		switch (draw_as) {
 			case NONE:
