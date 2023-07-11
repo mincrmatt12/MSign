@@ -532,7 +532,7 @@ ok:
 
 			for (auto& block : arena) {
 				if (!block || &block != &arena.get(block.slotid) || !arena.contents_size(block.slotid)) continue;
-				size_t this_reclaim = std::accumulate(arena.begin(block.slotid), arena.end(block.slotid), (size_t)0, [pred = std::forward<Pred>(from_blocks_matching)](auto& a, auto& b){
+				size_t this_reclaim = std::accumulate(arena.begin(block.slotid), arena.end(block.slotid), (size_t)0, [pred = std::forward<Pred>(from_blocks_matching)](const auto& a, const auto& b){
 					return pred(b) ? a + b.datasize : a;
 				});
 

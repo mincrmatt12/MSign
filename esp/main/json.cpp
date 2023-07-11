@@ -109,7 +109,7 @@ bool json::JSONParser::parse(const char *text) {
 }
 
 bool json::JSONParser::parse(const char *text, size_t size) {
-	ptrdiff_t head = 0; // hack to get around c++14 only
+	std::ptrdiff_t head = 0; // hack to get around c++14 only
 	return parse([&, head]() mutable -> int16_t {
 		if (head >= size) return -1;
 		return text[head++];

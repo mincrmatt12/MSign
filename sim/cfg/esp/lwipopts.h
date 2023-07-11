@@ -489,4 +489,6 @@
 */
 
 
+#define LWIP_COMPAT_SOCKETS 0
+
 #endif /* LWIP_LWIPOPTS_H */
