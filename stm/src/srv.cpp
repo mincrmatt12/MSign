@@ -113,7 +113,6 @@ void srv::Servicer::update_append_data(bool already_erased) {
 	}
 
 	this->update_state = USTATE_PACKET_WRITTEN;
-	wait_for_update_status_onscreen();
 
 #ifndef SIM
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
@@ -127,10 +126,6 @@ void srv::Servicer::update_append_data(bool already_erased) {
 
 		// Wait for busy
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-			asm volatile ("nop");
-			asm volatile ("nop");
-			asm volatile ("nop");
-			asm volatile ("nop");
 		}
 
 		// Program next byte
