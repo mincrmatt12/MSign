@@ -45,6 +45,11 @@ extern tasks::DispMan dispman;
 
 // Updating routines
 
+// for sim
+#ifndef RAMFUNC
+#define RAMFUNC
+#endif
+
 void __attribute__((noinline)) RAMFUNC srv::Servicer::erase_flash_sector() {
 	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
 	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_tempflash_sector_counter << FLASH_CR_SNB_Pos);
