@@ -109,18 +109,35 @@ SECTIONS
 
   /* used by the startup to initialize data */
   _sidata = LOADADDR(.data);
+  _sridata = LOADADDR(.ram_func);
+
+  /* Functions located in RAM are not allowed to call back into flash */
+  .ram_func (_evram - ORIGIN(RAM)) :
+  {
+	  *(.ram_func .ram_func*)     /* ram located functions */
+  } >ALIAS_RAM AT> FLASH
+
+  _srdata = ADDR(.ram_func) + ORIGIN(RAM);
+  _erdata = ADDR(.ram_func) + SIZEOF(.ram_func) + ORIGIN(RAM);
+
+  .ram_isr_vector (ADDR(.ram_func) + SIZEOF(.ram_func)) (NOLOAD):
+  {
+	  *(.ram_isr_vector)
+  } >ALIAS_RAM
 
   /* Initialized data sections goes into RAM, load LMA copy after code */
-  .data : 
+  .data (ADDR(.ram_isr_vector) + SIZEOF(.ram_isr_vector) + ORIGIN(RAM)) : 
   {
+	ASSERT((ADDR(.ram_isr_vector) + SIZEOF(.ram_isr_vector) < 0x1c000), "ramfuncs stretch past the end of SRAM1");
+
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
+
     *(.data .data*)           /* .data sections */
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
   } >RAM AT> FLASH
-
   
   /* Uninitialized data section */
   . = ALIGN(4);

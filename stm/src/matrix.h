@@ -5,10 +5,12 @@
 #include "gpio.h"
 #include <stdint.h>
 #include <string.h>
+#include "nvic.h"
 #include "pins.h"
 #include <FreeRTOS.h>
 #include <task.h>
 #include "color.h"
+#include "ramfunc.h"
 
 #ifdef USE_F2
 #include <stm32f2xx_ll_tim.h>
@@ -48,43 +50,43 @@ namespace led {
 			memset(data, 0x0, sizeof(data));
 		}
 
-		void prepare_stream(uint16_t i, uint8_t pos) {
+		void RAMFUNC prepare_stream(uint16_t i, uint8_t pos, uint8_t * bs) {
 			switch (pos) {
 				case 0:
-					prepare_stream_bf<0>(i);
+					prepare_stream_bf<0>(i, bs);
 					return;
 				case 1:
-					prepare_stream_bf<1>(i);
+					prepare_stream_bf<1>(i, bs);
 					return;
 				case 2:
-					prepare_stream_bf<2>(i);
+					prepare_stream_bf<2>(i, bs);
 					return;
 				case 3:
-					prepare_stream_bf<3>(i);
+					prepare_stream_bf<3>(i, bs);
 					return;
 				case 4:
-					prepare_stream_bf<4>(i);
+					prepare_stream_bf<4>(i, bs);
 					return;
 				case 5:
-					prepare_stream_bf<5>(i);
+					prepare_stream_bf<5>(i, bs);
 					return;
 				case 6:
-					prepare_stream_bf<6>(i);
+					prepare_stream_bf<6>(i, bs);
 					return;
 				case 7:
-					prepare_stream_bf<7>(i);
+					prepare_stream_bf<7>(i, bs);
 					return;
 				case 8:
-					prepare_stream_bf<8>(i);
+					prepare_stream_bf<8>(i, bs);
 					return;
 				case 9:
-					prepare_stream_bf<9>(i);
+					prepare_stream_bf<9>(i, bs);
 					return;
 				case 10:
-					prepare_stream_bf<10>(i);
+					prepare_stream_bf<10>(i, bs);
 					return;
 				case 11:
-					prepare_stream_bf<11>(i);
+					prepare_stream_bf<11>(i, bs);
 					return;
 				default:
 					__builtin_unreachable();
@@ -117,12 +119,10 @@ namespace led {
 			return (x < Width && y < Height);
 		}
 
-		uint8_t * byte_stream;
-
-		static constexpr uint16_t width = Width;
-		static constexpr uint16_t effective_width = Storage::EffectiveWidth;
-		static constexpr uint16_t height = Height;
-		static constexpr uint16_t stb_lines = 16;
+		static constexpr inline uint16_t width = Width;
+		static constexpr inline uint16_t effective_width = Storage::EffectiveWidth;
+		static constexpr inline uint16_t height = Height;
+		static constexpr inline uint16_t stb_lines = 16;
 
 	protected:
 		color_t data[Width*Height];
@@ -131,10 +131,9 @@ namespace led {
 
 	private:
 		template<unsigned Pos>
-		void prepare_stream_bf(uint16_t i) {
+		RAMFUNC void prepare_stream_bf(uint16_t i, uint8_t *bs) {
 			uint16_t * lo = &data[i*Storage::EffectiveWidth].r;
 			uint16_t * hi = lo + stb_lines*Storage::EffectiveWidth*3;
-			uint8_t  * bs = byte_stream;
 
 			// used to mask out bits while shifting in operand2
 			uint32_t c0 = 1 | (1 << 16);
@@ -222,10 +221,8 @@ namespace led {
 	struct Matrix {
 		typedef FB framebuffer_type;
 
-		Matrix() : fb0(), fb1() {
-			fb0.byte_stream = this->dma_buffer;
-			fb1.byte_stream = this->dma_buffer;
-		}
+		Matrix() : fb0(), fb1() {}
+
 		void init() {
 			// Enable clocks
 			LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);	 // timer
@@ -285,22 +282,17 @@ namespace led {
 			LL_TIM_SetOnePulseMode(TIM4, LL_TIM_ONEPULSEMODE_SINGLE);
 
 			// Setup le dma
-			LL_DMA_SetChannelSelection(DMA2, LL_DMA_STREAM_5, LL_DMA_CHANNEL_6);
-			LL_DMA_SetDataTransferDirection(DMA2, LL_DMA_STREAM_5, LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-			LL_DMA_SetStreamPriorityLevel(DMA2, LL_DMA_STREAM_5, LL_DMA_PRIORITY_VERYHIGH);
-			LL_DMA_SetMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MODE_NORMAL);
-			LL_DMA_SetPeriphIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_PERIPH_NOINCREMENT);
-			LL_DMA_SetMemoryIncMode(DMA2, LL_DMA_STREAM_5, LL_DMA_MEMORY_INCREMENT);
-			LL_DMA_SetPeriphSize(DMA2, LL_DMA_STREAM_5, LL_DMA_PDATAALIGN_BYTE);
-			LL_DMA_SetMemorySize(DMA2, LL_DMA_STREAM_5, LL_DMA_MDATAALIGN_BYTE);
-			LL_DMA_DisableFifoMode(DMA2, LL_DMA_STREAM_5);
+			DMA2_Stream5->CR = LL_DMA_CHANNEL_6 | DMA_SxCR_PL | DMA_SxCR_MINC |
+				               LL_DMA_MDATAALIGN_HALFWORD | LL_DMA_MBURST_INC4 |
+							   LL_DMA_DIRECTION_MEMORY_TO_PERIPH | DMA_SxCR_TCIE | DMA_SxCR_TEIE;
+			DMA2_Stream5->FCR = DMA_SxFCR_DMDIS | LL_DMA_FIFOTHRESHOLD_1_2;
 
-			LL_DMA_DisableIT_HT(DMA2, LL_DMA_STREAM_5);
-			LL_DMA_EnableIT_TC(DMA2, LL_DMA_STREAM_5);
-			LL_DMA_EnableIT_TE(DMA2, LL_DMA_STREAM_5);
+			// Setup the first line of EXTI as a sw irq
+			EXTI->EMR |= EXTI_EMR_EM0;
+			EXTI->IMR |= EXTI_IMR_IM0;
 		}
 
-		void start_display() {
+		void RAMFUNC start_display() {
 			// Set config values back to sane defaults
 			pos = 0;
 			row = 0;
@@ -309,7 +301,7 @@ namespace led {
 			should_swap = false;
 			delay_counter = 0;
 			// update timer mode to blank screen / proper
-			LL_TIM_OC_SetMode(TIM4, LL_TIM_CHANNEL_CH1, force_off ? LL_TIM_OCMODE_FORCED_INACTIVE : LL_TIM_OCMODE_PWM2);
+			TIM4->CCMR1 = (TIM4->CCMR1 & ~(TIM_CCMR1_CC1S_Msk | TIM_CCMR1_OC1M_Msk)) | (force_off ? LL_TIM_OCMODE_FORCED_INACTIVE : LL_TIM_OCMODE_PWM2);
 			// start the whole procedure
 			blast_row();
 		}
@@ -334,22 +326,29 @@ namespace led {
 		FB& get_inactive_buffer() {return active_buffer ? fb1 : fb0;}
 		const FB& get_active_buffer() {return active_buffer ? fb0 : fb1;}
 
-		void dma_finish() {
+		void RAMFUNC dma_finish() {
 			// blast is finished, stop dma + timer output
-			LL_TIM_DisableCounter(TIM1);
-			LL_DMA_DisableStream(DMA2, LL_DMA_STREAM_5);
+			TIM1->CR1 &= ~TIM_CR1_CEN;
+			DMA2_Stream5->CR &= ~DMA_SxCR_EN;
 			// check show
 			if (show) do_next();
 			else show = true;
 		}
 
-		void tim_elapsed() {
+		void RAMFUNC tim_elapsed() {
 			if (!delaying) return;
 			// we don't bother clearing counter enable since OPM will do it for us.
 			delaying = false;
 			if (show) do_next();
 			else {
 				show = true;
+			}
+		}
+
+		void sw_trap_fired() {
+			if (notify_when_swapped) {
+				xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+				notify_when_swapped = nullptr;
 			}
 		}
 
@@ -361,7 +360,9 @@ namespace led {
 		bool active_buffer = false;
 		uint8_t pos = 0;
 		uint16_t row = 0;
-		alignas(uint32_t) uint8_t dma_buffer[(FB::effective_width * 2) + 3];
+		// This is written to via 32-bit writes, and we want there to be at least one 16bit word
+		// at the end with all zeroes, hence the +4.
+		alignas(uint32_t) uint8_t dma_buffer[(FB::effective_width * 2) + 4] {};
 		TaskHandle_t notify_when_swapped = nullptr;
 
 		// impl for the wait system
@@ -379,32 +380,33 @@ namespace led {
 		
 		// clock is tied to tim2_ch3
 
-		FB& _get_active_buffer() {return active_buffer ? fb0 : fb1;}
+		inline FB& RAMFUNC _get_active_buffer() {return active_buffer ? fb0 : fb1;}
 
-		void blast_row() {
-			LL_DMA_ConfigAddresses(DMA2, LL_DMA_STREAM_5, (uint32_t)dma_buffer, (uint32_t)(&SIGN_DATA_Port->ODR), LL_DMA_DIRECTION_MEMORY_TO_PERIPH);
-			LL_DMA_SetDataLength(DMA2, LL_DMA_STREAM_5, (FB::effective_width * 2) + 1);
+		void RAMFUNC blast_row() {
+			DMA2_Stream5->M0AR = (uint32_t)dma_buffer;
+			DMA2_Stream5->PAR  = (uint32_t)(&SIGN_DATA_Port->ODR);
+			DMA2_Stream5->NDTR = sizeof dma_buffer;
 
 			// make sure the active buffer is ready
-			_get_active_buffer().prepare_stream(row, pos);
-			LL_DMA_EnableStream(DMA2, LL_DMA_STREAM_5);
+			_get_active_buffer().prepare_stream(row, pos, dma_buffer);
+			DMA2_Stream5->CR |= DMA_SxCR_EN;
 
 			// blasting is a-go
-			LL_TIM_SetCounter(TIM1, 0);
-			LL_TIM_EnableCounter(TIM1);
+			TIM1->CNT = 0;
+			TIM1->CR1 |= TIM_CR1_CEN;
 		}
-		void wait(uint16_t ticks) {
+		void RAMFUNC wait(uint16_t ticks) {
 			if (delaying) return;
 			// set the counter
 			delaying = true;
 			delay_counter = (ticks);
 			// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
-			LL_TIM_SetCounter(TIM4, 0); // this isn't really necessary but may as well
-			LL_TIM_SetAutoReload(TIM4, ticks); // 1 tick for the 0 state.
-			LL_TIM_EnableCounter(TIM4);
+			TIM4->CNT = 0;
+			TIM4->ARR = ticks;
+			TIM4->CR1 |= TIM_CR1_CEN;
 		}
 
-		void do_next() {
+		void RAMFUNC do_next() {
 			show = false;
 			uint16_t drawn_pos = 2 << pos; 
 			// set address pins
@@ -412,7 +414,7 @@ namespace led {
 				// We have finished clocking out a row, process buffer swaps
 				if (should_swap) {
 					active_buffer = !active_buffer;
-					if (notify_when_swapped) xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+					if (notify_when_swapped) EXTI->SWIER = 1; // Trigger EXTI 1, which will tell the RTOS to swap after this high prio interrupt finishes.
 					should_swap = false;
 					frames_without_refresh = 0;
 				}
