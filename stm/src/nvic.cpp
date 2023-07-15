@@ -38,7 +38,7 @@ namespace nvic {
 		// Wait for flash to be finished
 		while (FLASH->SR & FLASH_SR_BSY) {;}
 		// Find original vector in flash table
-		g_pfnVectors[__get_IPSR() & 0xff + 1]();
+		g_pfnVectors[__get_IPSR() & 0xff]();
 	}
 }
 
