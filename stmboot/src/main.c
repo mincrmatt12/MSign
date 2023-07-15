@@ -9,7 +9,7 @@
 #include "string.h"
 
 // BOOTLOADER REVISION CONSTANT
-const char BL_REV[4] = {'2', 'b', 0, 0};
+const char BL_REV[4] = {'2', 'c', 0, 0};
 
 extern const void * _sirtext;
 extern void * _srtext, *_ertext;
