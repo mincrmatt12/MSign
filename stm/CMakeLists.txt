@@ -144,8 +144,6 @@ else()
 endif()
 
 set_property(TARGET stm_crash PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-set_property(TARGET freertos PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/nvic.cpp PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 
 target_link_libraries(stm
 	cube_ll
