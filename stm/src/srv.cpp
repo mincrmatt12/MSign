@@ -55,6 +55,9 @@ void begin_update(uint8_t &state) {
 	update_package_sector_counter = 8; // sector 8 is currently being written into.
 	update_package_data_counter = 0;
 
+	// Prepare for update with correct vectors
+	nvic::setup_isrs_for_flash();
+
 	// Unlock FLASH
 	
 	FLASH->KEYR = FLASH_KEY1;
