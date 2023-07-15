@@ -9,7 +9,6 @@ pipeline {
 		stage ("Build") {
 			parallel {
 				stage("Trigger webui") {
-					agent any
 					when {
 						beforeAgent true
 						anyOf {

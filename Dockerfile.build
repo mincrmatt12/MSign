@@ -33,4 +33,4 @@ ADD requirements.txt py-requirements.txt
 ADD vendor/ESP8266_RTOS_SDK/requirements.txt py-requirements2.txt
 
 # python dependencies
-RUN python -m pip install -r py-requirements2.txt -r py-requirements.txt
+RUN sed -i 's/>=2.1.4,<35/~=36.0/' py-requirements2.txt && python -m pip install -r py-requirements2.txt -r py-requirements.txt

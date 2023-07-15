@@ -13,7 +13,6 @@ pipeline {
 					sh "WEBUPDATE_NO_REBUILD=1 ./generate_webupdate.sh"
 					sh "python3 generate_caupdate.py build/ca certs.bin"
 				}
-
 				zip dir: "espweb/build", zipFile: "sd.zip", archive: true
 				archiveArtifacts "espweb/web/webui.ar, espweb/certs.bin"
 			}
