@@ -7,11 +7,13 @@
 #include <stm32f2xx.h>
 #include <stm32f2xx_hal.h>
 #include <stm32f2xx_ll_usart.h>
+#include <stm32f2xx_ll_bus.h>
 #endif
 #ifdef USE_F4
 #include <stm32f4xx.h>
 #include <stm32f4xx_hal.h>
 #include <stm32f4xx_ll_usart.h>
+#include <stm32f4xx_ll_bus.h>
 #endif
 
 #include "srv.h"
@@ -57,6 +59,9 @@ void nvic::setup_isrs_for_flash(bool enable) {
 }
 
 void nvic::init() {
+	// Enable clock to SYSCFG
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
+
 	// Prepare RAM ISR table
 	__disable_fault_irq();
 	SYSCFG->MEMRMP = 0b11; // remap 0x0 to sram
