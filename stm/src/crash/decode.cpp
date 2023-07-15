@@ -137,7 +137,7 @@ namespace crash::decode {
 
 						// Check if we have reached the end of the backtrace
 						// (are we past the end of stack / are we in an invalid addres)
-						if (btps->SP >= reinterpret_cast<uint32_t>(&_estack) || btps->PC < 0x0800'0000 || btps->PC > 0x2400'0000) {
+						if (btps->SP >= reinterpret_cast<uint32_t>(&_estack) || (btps->PC < 0x0800'0000 && btps->PC > 0x1c000) || btps->PC > 0x2400'0000) {
 							btps->signalDone = true;
 							return true;
 						}
