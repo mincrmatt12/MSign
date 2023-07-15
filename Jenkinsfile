@@ -1,15 +1,26 @@
-// TODO: build website
 pipeline {
 	agent {
 		dockerfile {
 			label 'linux && docker'
-			args "-u 1001:1001"
 			filename 'Dockerfile.build'
 		}
 	}
 	stages {
 		stage ("Build") {
 			parallel {
+				stage("Trigger webui") {
+					agent any
+					when {
+						beforeAgent true
+						anyOf {
+							changeset "espweb/**/*.*"
+							changeset "Jenkinsfile.web"
+						}
+					}
+					steps {
+						build job: '../SignCode-webui', wait: false
+					}
+				}
 				stage("Build STM") {
 					steps {
 						// build for board

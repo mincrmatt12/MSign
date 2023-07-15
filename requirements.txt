@@ -8,7 +8,7 @@ cxxfilt
 pyelftools
 
 # building ca cert bundle
-cryptography~=3.0
+cryptography~=36.0
 
 # building config
 pygccxml
