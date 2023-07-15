@@ -5,7 +5,6 @@
 #include "../draw.h"
 #include "base.h"
 #include <string.h>
-#include <cmath>
 #include "../common/slots.h"
 #include "threed/fixed.h"
 

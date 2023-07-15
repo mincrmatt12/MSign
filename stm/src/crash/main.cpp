@@ -123,7 +123,9 @@ namespace crash {
 
 	void cmain(const char* errcode, uint32_t SP, uint32_t PC, uint32_t LR) {
 		// Mask out all application interrupts
-		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
+		__set_BASEPRI(2 << (8 - __NVIC_PRIO_BITS));
+		// Unremap memory
+		SYSCFG->MEMRMP = 0;
 		// Change VTOR to our VTOR
 		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
 		// Try to exit an exception handler, if possible. (todo)
@@ -173,10 +175,10 @@ namespace crash {
 		LL_Init1msTick(SystemCoreClock);
 
 		// Turn on interrupts
-		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
+		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));
 		NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
+		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,1)); // sequence after each other
 		NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
 		draw::text(matrix, "MSign crashed!", 0, 6, mkcolor(3, 0, 0));

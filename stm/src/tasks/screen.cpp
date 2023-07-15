@@ -26,146 +26,143 @@ extern tasks::Timekeeper timekeeper;
 #endif
 
 namespace tasks {
-	namespace {
-		// w=12, h=12, stride=2, color=255, 255, 255
-		const uint8_t nowifi[] = {
-			0b00000000,0b00000000,
-			0b00000000,0b00000000,
-			0b00001111,0b00000000,
-			0b00110000,0b11000000,
-			0b01000000,0b00100000,
-			0b10011111,0b10010000,
-			0b00100000,0b01000000,
-			0b01001111,0b00100000,
-			0b00010000,0b10000000,
-			0b00100000,0b01000000,
-			0b00000110,0b00000000,
-			0b00000110,0b00000000
-		};
+	// w=12, h=12, stride=2, color=255, 255, 255
+	const uint8_t nowifi[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00001111,0b00000000,
+		0b00110000,0b11000000,
+		0b01000000,0b00100000,
+		0b10011111,0b10010000,
+		0b00100000,0b01000000,
+		0b01001111,0b00100000,
+		0b00010000,0b10000000,
+		0b00100000,0b01000000,
+		0b00000110,0b00000000,
+		0b00000110,0b00000000
+	};
 
 
-		template <typename FB>
-		void show_test_pattern(uint8_t stage, FB& fb, const char * extra=nullptr) {
-			fb.clear();
-			draw::text(fb, "MSIGN V4.2" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
-			draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
-			char buf[5] = {0};
-			strncpy(buf, bootcmd_get_bl_revision(), 4);
-			draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", led::color_t{14, 4095, 127_c}, buf, led::color_t{4095});
-			switch (stage) {
-				case 1:
-					draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 0xff0000_cc);
-					break;
-				case 2:
-					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
-					draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0x00ff00_cc);
-					break;
-				case 3:
-					draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
-					if (extra) {
-						draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
-					}
-					else {
-						draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
-					}
-					break;
-				default:
-					break;
+	void show_test_pattern(uint8_t stage, matrix_type::framebuffer_type& fb, const char * extra=nullptr) {
+		fb.clear();
+		draw::text(fb, "MSIGN V4.2" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
+		draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
+		char buf[5] = {0};
+		strncpy(buf, bootcmd_get_bl_revision(), 4);
+		draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", led::color_t{14, 4095, 127_c}, buf, led::color_t{4095});
+		switch (stage) {
+			case 1:
+				draw::text(fb, "ESP WAIT", font::lcdpixel_6::info, 0, 28, 0xff0000_cc);
+				break;
+			case 2:
+				draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
+				draw::text(fb, "UPD NONE", font::lcdpixel_6::info, 0, 35, 0x00ff00_cc);
+				break;
+			case 3:
+				draw::text(fb, "ESP OK", font::lcdpixel_6::info, 0, 28, 0xffffff_cc);
+				if (extra) {
+					draw::text(fb, extra, font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
+				}
+				else {
+					draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
+				}
+				break;
+			default:
+				break;
+		}
+	}
+
+	void show_overlays(TickType_t& last_had_wifi_at) {
+		slots::WebuiStatus status{};
+		bool connected = true;
+
+		{
+			srv::ServicerLockGuard g(servicer);
+			auto& blk = servicer.slot<slots::WebuiStatus>(slots::WEBUI_STATUS);
+			if (blk) {
+				status = *blk;
 			}
+			if (auto &wf = servicer.slot<slots::WifiStatus>(slots::WIFI_STATUS); wf && !wf->connected) connected = false;
 		}
 
-		void show_overlays(TickType_t& last_had_wifi_at) {
-			slots::WebuiStatus status{};
-			bool connected = true;
+		int x = 128;
 
-			{
-				srv::ServicerLockGuard g(servicer);
-				auto& blk = servicer.slot<slots::WebuiStatus>(slots::WEBUI_STATUS);
-				if (blk) {
-					status = *blk;
-				}
-				if (auto &wf = servicer.slot<slots::WifiStatus>(slots::WIFI_STATUS); wf && !wf->connected) connected = false;
-			}
+		// show wifi fail
+		if (!connected && xTaskGetTickCount() - last_had_wifi_at > pdMS_TO_TICKS(1800)) {
+			draw::rect(matrix.get_inactive_buffer(), x - 14, 0, x, 12, 0);
 
-			int x = 128;
+			x -= 14;
+			// icon
+			draw::bitmap(matrix.get_inactive_buffer(), nowifi, 12, 12, 2, x, 0, 0xbb_c);
+			draw::line(matrix.get_inactive_buffer(), x, 0, x + 11, 11, 0xff3333_cc);
+		}
+		else if (connected) {
+			last_had_wifi_at = xTaskGetTickCount();
+		}
+		
+		// try to draw sysupgrade
+		if (status.flags & slots::WebuiStatus::RECEIVING_SYSUPDATE) {
+			// compute size
+			int width = draw::text_size("\xfe sys", font::dejavusans_10::info) + 2;
 
-			// show wifi fail
-			if (!connected && xTaskGetTickCount() - last_had_wifi_at > pdMS_TO_TICKS(1800)) {
-				draw::rect(matrix.get_inactive_buffer(), x - 14, 0, x, 12, 0);
+			// blank
+			draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+			x -= width;
 
-				x -= 14;
-				// icon
-				draw::bitmap(matrix.get_inactive_buffer(), nowifi, 12, 12, 2, x, 0, 0xbb_c);
-				draw::line(matrix.get_inactive_buffer(), x, 0, x + 11, 11, 0xff3333_cc);
-			}
-			else if (connected) {
-				last_had_wifi_at = xTaskGetTickCount();
-			}
-			
-			// try to draw sysupgrade
-			if (status.flags & slots::WebuiStatus::RECEIVING_SYSUPDATE) {
-				// compute size
-				int width = draw::text_size("\xfe sys", font::dejavusans_10::info) + 2;
+			// draw
+			draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ",led::color_t {10_c, 245_c, 30_c}, "sys", led::color_t{128_c, 128_c, 128_c});
+		}
+		
+		// try to draw webui
+		if (status.flags & slots::WebuiStatus::RECEIVING_WEBUI_PACK) {
+			// compute size
+			int width = draw::text_size("\xfe ui", font::dejavusans_10::info) + 2;
 
-				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
-				x -= width;
+			// blank
+			draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+			x -= width;
 
-				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ",led::color_t {10_c, 245_c, 30_c}, "sys", led::color_t{128_c, 128_c, 128_c});
-			}
-			
-			// try to draw webui
-			if (status.flags & slots::WebuiStatus::RECEIVING_WEBUI_PACK) {
-				// compute size
-				int width = draw::text_size("\xfe ui", font::dejavusans_10::info) + 2;
+			// draw
+			draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "ui", 0x7f7f7f_cc);
+		}
 
-				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
-				x -= width;
+		// try to draw cert
+		if (status.flags & slots::WebuiStatus::RECEIVING_CERT_PACK) {
+			// compute size
+			int width = draw::text_size("\xfe cert", font::dejavusans_10::info) + 2;
 
-				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "ui", 0x7f7f7f_cc);
-			}
+			// blank
+			draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+			x -= width;
 
-			// try to draw cert
-			if (status.flags & slots::WebuiStatus::RECEIVING_CERT_PACK) {
-				// compute size
-				int width = draw::text_size("\xfe cert", font::dejavusans_10::info) + 2;
+			// draw
+			draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "cert", 0x7f7f7f_cc);
+		}
 
-				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
-				x -= width;
+		// try to draw webui installing
+		if (status.flags & slots::WebuiStatus::INSTALLING_WEBUI_PACK) {
+			// compute size
+			int width = draw::text_size("\xfd ui", font::dejavusans_10::info) + 2;
 
-				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0x0af31e_cc, "cert", 0x7f7f7f_cc);
-			}
+			// blank
+			draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+			x -= width;
 
-			// try to draw webui installing
-			if (status.flags & slots::WebuiStatus::INSTALLING_WEBUI_PACK) {
-				// compute size
-				int width = draw::text_size("\xfd ui", font::dejavusans_10::info) + 2;
+			// draw
+			draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfd ", 0x0a1ef3_cc, "ui", 0x7f7f7f_cc);
+		}
 
-				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
-				x -= width;
+		// try to draw failed
+		if (status.flags & slots::WebuiStatus::LAST_RX_FAILED) {
+			// compute size
+			int width = draw::text_size("\xfe err", font::dejavusans_10::info) + 2;
 
-				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfd ", 0x0a1ef3_cc, "ui", 0x7f7f7f_cc);
-			}
+			// blank
+			draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
+			x -= width;
 
-			// try to draw failed
-			if (status.flags & slots::WebuiStatus::LAST_RX_FAILED) {
-				// compute size
-				int width = draw::text_size("\xfe err", font::dejavusans_10::info) + 2;
-
-				// blank
-				draw::rect(matrix.get_inactive_buffer(), x - width, 0, x, 12, 0);
-				x -= width;
-
-				// draw
-				draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0xff0505_cc, "err", 0xffffff_cc);
-			}
+			// draw
+			draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, x, 9, "\xfe ", 0xff0505_cc, "err", 0xffffff_cc);
 		}
 	}
 
@@ -193,10 +190,10 @@ namespace tasks {
 			}
 
 			if (servicer.updating()) {
-				// Go into a simple servicer only update mode
 				while (true) {
 					show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
 					matrix.swap_buffers();
+					update_cookie = servicer.update_status_version();
 				}
 
 				// Servicer will eventually reset the STM.

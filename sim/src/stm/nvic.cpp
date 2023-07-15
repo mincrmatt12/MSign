@@ -13,6 +13,9 @@ extern tasks::Timekeeper timekeeper;
 void nvic::init() {                                           
     // TODO                                                   
 }                                                             
+
+void nvic::setup_isrs_for_flash(bool enable) {
+}
                                                               
 extern "C" void DMA2_Stream5_IRQHandler() {                   
 }                                                             

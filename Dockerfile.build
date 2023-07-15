@@ -1,5 +1,5 @@
 # download / extract toolchains
-FROM debian:buster as toolchains
+FROM debian:bookworm as toolchains
 
 WORKDIR /opt/toolchains
 
@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y tar xz-utils
 RUN tar xf arm.tar.xz && tar xf esp.tar.gz
 
 # actual image
-FROM python:3.8-buster
+FROM python:3.8-bookworm
 
 # make directories
 WORKDIR /opt/work

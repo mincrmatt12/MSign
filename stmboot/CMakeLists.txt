@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 
 # specify target
 set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign'")
+set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
 
 # find library
 set(cube_ll_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc)
@@ -19,11 +20,7 @@ else()
 endif()
 
 # Check if we can find an openocd binary
-find_program(openocd_executable
-	openocd
-	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
-	NO_DEFAULT_PATH
-)
+find_program(openocd_executable openocd)
 
 add_executable(stmboot
 	src/main.c
@@ -90,7 +87,7 @@ if (EXISTS ${openocd_executable})
 
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stmboot> verify reset exit"
+		COMMAND ${openocd_executable} -f interface/${MSIGN_OCD_INTERFACE}.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stmboot> verify reset exit"
 	)
 
 	add_dependencies(upload stmboot)

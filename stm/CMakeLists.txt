@@ -33,15 +33,11 @@ endif()
 
 # specify target
 set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign' (for f4)")
+set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
 
 # Check if we can find an openocd binary
 
-find_program(openocd_executable
-	openocd
-	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
-	NO_DEFAULT_PATH
-)
-
+find_program(openocd_executable openocd)
 find_package(Python 3 COMPONENTS Interpreter)
 
 # Add libraries for the vendored libs
@@ -183,6 +179,11 @@ if (${Python_FOUND})
 	)
 endif()
 
+execute_process(COMMAND ${CMAKE_LINKER} --help OUTPUT_VARIABLE MSIGN_LINKER_HELP)
+if ("${MSIGN_LINKER_HELP}" MATCHES ".*warn-rwx.*")
+	set(USE_NO_WARN_RWX 1)
+endif()
+
 target_link_options(stm
 	PUBLIC
 	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/$<IF:$<STREQUAL:${MSIGN_BUILD_TYPE},minisign>,f4.ld,f2.ld>
@@ -190,6 +191,7 @@ target_link_options(stm
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic
 	-Wl,-Map=stm.map
+	$<$<BOOL:${USE_NO_WARN_RWX}>:-Wl,--no-warn-rwx-segment>
 	--specs=nano.specs
 )
 
@@ -213,7 +215,7 @@ if (EXISTS ${openocd_executable})
 
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
+		COMMAND ${openocd_executable} -f interface/${MSIGN_OCD_INTERFACE}.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
 	)
 
 	add_dependencies(upload stm)
