@@ -79,8 +79,8 @@ from elftools.elf.elffile import ELFFile
 cfg = {
     "stm/build_minisign/stm": (
         "stm.csv",
-        [".rodata", ".isr_vector", ".text", ".data", ".crash_data", ".init_array", ".fw_dbg"],
-        [".bss", ".data", ".vram"]
+        [".rodata", ".isr_vector", ".text", ".data", ".crash_data", ".init_array", ".fw_dbg", ".ram_func"],
+        [".bss", ".data", ".vram", ".ram_func", ".ram_isr_vector"]
     ),
     "esp/build/msign-esp.elf": (
         "esp.csv",
@@ -94,10 +94,14 @@ for fname, (csvname, flashs, rams) in cfg.items():
     ef = ELFFile(f)
     with open(csvname, "w") as fout:
         fout.write('"flash","ram"\\n')
+        flash_sz = sum(ef.get_section_by_name(x).data_size for x in flashs)
+        ram_sz = sum(ef.get_section_by_name(x).data_size for x in rams)
         fout.write("{},{}".format(
-            sum(ef.get_section_by_name(x).data_size for x in flashs),
-            sum(ef.get_section_by_name(x).data_size for x in rams)
+            flash_sz,
+            ram_sz
         ))
+
+        print("{}: flash: {}, ram: {}".format(fname, flash_sz, ram_sz))
     f.close()
 '''
 				sh 'python3 get_size.py'
