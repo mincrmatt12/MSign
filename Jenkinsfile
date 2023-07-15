@@ -17,7 +17,7 @@ pipeline {
 						}
 					}
 					steps {
-						build job: '../SignCode-webui', wait: false
+						build job: "../SignCode-webui/${env.BRANCH_NAME}", wait: false
 					}
 				}
 				stage("Build STM") {
