@@ -2,7 +2,6 @@
 #define DRAW_H
 
 #include "matrix.h"
-#include <cmath>
 #include <cstdlib>
 
 #ifndef SIM

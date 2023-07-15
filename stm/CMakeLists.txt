@@ -37,12 +37,7 @@ set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with Ope
 
 # Check if we can find an openocd binary
 
-find_program(openocd_executable
-	openocd
-	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
-	NO_DEFAULT_PATH
-)
-
+find_program(openocd_executable openocd)
 find_package(Python 3 COMPONENTS Interpreter)
 
 # Add libraries for the vendored libs
