@@ -125,7 +125,7 @@ namespace led {
 		static constexpr inline uint16_t stb_lines = 16;
 
 	protected:
-		color_t data[Width*Height];
+		alignas(uint32_t) color_t data[Width*Height];
 
 		color_t junk; // used as failsafe for read/write out of bounds
 
