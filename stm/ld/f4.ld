@@ -9,9 +9,10 @@ _Min_Stack_Size = 0x100; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-RAM    (xrw)      : ORIGIN = 0x20000000, LENGTH = 128K
-CCMRAM (rw)       : ORIGIN = 0x10000000, LENGTH = 64K
-FLASH  (rx)       : ORIGIN = 0x8004000, LENGTH = 496K
+ALIAS_RAM(xrw)  : ORIGIN = 0x00000000, LENGTH = 112K
+RAM       (rw)  : ORIGIN = 0x20000000, LENGTH = 128K
+CCMRAM    (rw)  : ORIGIN = 0x10000000, LENGTH = 64K
+FLASH    (xr)   : ORIGIN = 0x8004000, LENGTH = 496K
 }
 
 /* Define output sections */
