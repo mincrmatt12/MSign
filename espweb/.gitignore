@@ -4,3 +4,4 @@ node_modules/*
 *.lock
 yarn-error*
 *.log
+cacerts.bin

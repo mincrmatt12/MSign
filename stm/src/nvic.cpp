@@ -32,7 +32,7 @@ extern "C" uint8_t _srdata[];
 extern "C" uint8_t _erdata[];
 
 namespace nvic {
-	alignas(0x400) __attribute__((section(".ram_isr_vector"))) void (*volatile ram_isr_table[80 + 16])(void) = {};
+	alignas(0x200) __attribute__((section(".ram_isr_vector"))) void (*volatile ram_isr_table[80 + 16])(void) = {};
 
 	void RAMFUNC unstalled_proxy_ram_irqhandler() {
 		// Wait for flash to be finished
