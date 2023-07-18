@@ -12,6 +12,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <utility>
+#include "tasks/screen.h"
 
 #include <semphr.h>
 
@@ -27,6 +28,7 @@
 #define FLASH_KEY2 0xCDEF89ABU
 
 extern tasks::Timekeeper timekeeper;
+extern tasks::DispMan dispman;
 
 #define USTATE_WAITING_FOR_READY 0
 #define USTATE_SEND_READY 20
@@ -43,17 +45,33 @@ extern tasks::Timekeeper timekeeper;
 
 // Updating routines
 
-uint32_t update_package_data_ptr;
-uint32_t update_package_data_counter = 0;
-uint8_t update_package_sector_counter = 5;
+// for sim
+#ifndef RAMFUNC
+#define RAMFUNC
+#endif
 
-void begin_update(uint8_t &state) {
+void __attribute__((noinline)) RAMFUNC srv::Servicer::erase_flash_sector() {
+	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
+	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_tempflash_sector_counter << FLASH_CR_SNB_Pos);
+
+	// Actually erase
+	
+	FLASH->CR |= FLASH_CR_STRT;
+	while (FLASH->SR & FLASH_SR_BSY) {;}
+}
+
+void srv::Servicer::begin_update() {
 #ifndef SIM
 	// Set data_ptr to the beginning of the update memory area.
 	
-	update_package_data_ptr = 0x0808'0000;
-	update_package_sector_counter = 8; // sector 8 is currently being written into.
-	update_package_data_counter = 0;
+	update_tempflash_data_ptr = 0x0808'0000;
+	update_tempflash_sector_counter = 8; // sector 8 is currently being written into.
+	update_tempflash_data_counter = 0;
+
+	// Prepare for update with correct vectors
+	nvic::setup_isrs_for_flash();
+	this->update_state = USTATE_ERASING_BEFORE_IMAGE;
+	wait_for_update_status_onscreen();
 
 	// Unlock FLASH
 	
@@ -62,62 +80,57 @@ void begin_update(uint8_t &state) {
 
 	// Erase sector 8
 	
-	CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-	FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SNB_Pos);
-
-	// Actually erase
-	
-	FLASH->CR |= FLASH_CR_STRT;
+	portENTER_CRITICAL();
+	erase_flash_sector();
+	portEXIT_CRITICAL();
 #endif
-	state = USTATE_ERASING_BEFORE_IMAGE;
 }
 
-void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased=false) {
-	if (!util::crc_valid(data, amt + 2)) {
-		state = USTATE_PACKET_WRITE_FAIL_CSUM;
+void srv::Servicer::update_append_data(bool already_erased) {
+	if (!util::crc_valid(this->update_pkg_buffer, this->update_pkg_size + 2)) {
+		this->update_state = USTATE_PACKET_WRITE_FAIL_CSUM;
 		return;
 	}
 
 	// Append data to counter
-	if ((update_package_data_counter + amt) >= 131072 && !already_erased) {
-		++update_package_sector_counter;
+	if ((update_tempflash_data_counter + this->update_pkg_size) >= 131072 && !already_erased) {
+		++update_tempflash_sector_counter;
+
+		this->update_state = USTATE_ERASING_BEFORE_PACKET;
+		wait_for_update_status_onscreen();
 
 		// Erase the sector
 #ifndef SIM
-		CLEAR_BIT(FLASH->CR, FLASH_CR_SNB);
-		FLASH->CR |= FLASH_CR_SER /* section erase */ | (update_package_sector_counter << FLASH_CR_SNB_Pos);
-
-		// Actually erase
-		
-		FLASH->CR |= FLASH_CR_STRT;
+		portENTER_CRITICAL();
+		erase_flash_sector();
+		portEXIT_CRITICAL();
 #endif
-
-		state = USTATE_ERASING_BEFORE_PACKET;
 
 		return;
 	}
 	else if (already_erased) {
 		// we've just erased, so set the data counter to the amount in this new section
-		update_package_data_counter = (update_package_data_counter + amt) - 131072;
+		update_tempflash_data_counter = (update_tempflash_data_counter + this->update_pkg_size) - 131072;
 	}
 	else {
 		// Otherwise, just program the data
-		update_package_data_counter += amt;
+		update_tempflash_data_counter += this->update_pkg_size;
 	}
+
+	this->update_state = USTATE_PACKET_WRITTEN;
 
 #ifndef SIM
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
 
+	int amt = this->update_pkg_size;
+	uint8_t *data = this->update_pkg_buffer;
+
 	while (amt--) {
 		FLASH->CR |= FLASH_CR_PG;
-		(*(uint8_t *)(update_package_data_ptr++)) = *(data++); // Program this byte
+		(*(uint8_t *)(update_tempflash_data_ptr++)) = *(data++); // Program this byte
 
 		// Wait for busy
 		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
-			asm volatile ("nop");
-			asm volatile ("nop");
-			asm volatile ("nop");
-			asm volatile ("nop");
 		}
 
 		// Program next byte
@@ -127,8 +140,13 @@ void append_data(uint8_t &state, uint8_t * data, size_t amt, bool already_erased
 	
 	CLEAR_BIT(FLASH->CR, FLASH_CR_PG);
 #endif
+}
 
-	state = USTATE_PACKET_WRITTEN;
+void srv::Servicer::wait_for_update_status_onscreen() {
+	++update_status_cookie;
+	while (dispman.latest_update_cookie() != update_status_cookie) {
+		vTaskDelay(pdMS_TO_TICKS(50));
+	}
 }
 
 void srv::Servicer::set_temperature(uint16_t slotid, uint32_t temp) {
@@ -934,7 +952,7 @@ void srv::Servicer::do_update_logic() {
 #endif
 					this->update_state = USTATE_WAITING_FOR_PACKET;
 
-					append_data(this->update_state, this->update_pkg_buffer, this->update_pkg_size, true);
+					update_append_data(true);
 				}
 				break;
 			}
@@ -1066,7 +1084,7 @@ void srv::Servicer::process_update_packet(uint8_t cmd, uint8_t len) {
 				xStreamBufferReceive(dma_rx_queue, this->update_pkg_buffer, this->update_pkg_size, portMAX_DELAY);
 				memcpy(update_pkg_buffer + update_pkg_size, &crc, 2);
 
-				append_data(update_state, update_pkg_buffer, update_pkg_size);
+				update_append_data();
 				break;
 			}
 			break;
@@ -1303,7 +1321,7 @@ void srv::Servicer::process_update_cmd(slots::protocol::UpdateCmd cmd) {
 		case UpdateCmd::PREPARE_FOR_IMAGE:
 			{
 				// Prepare to read byte
-				begin_update(this->update_state);
+				begin_update();
 
 				// When BSY bit is 0 the loop will send us to the right state.
 				break;
@@ -1350,7 +1368,7 @@ const char * srv::Servicer::update_status() {
 			snprintf(update_status_buffer, 16, "UPD CFAIL");
 			break;
 		case USTATE_ERASING_BEFORE_PACKET:
-			snprintf(update_status_buffer, 16, "UPD EPS%02d", update_package_sector_counter);
+			snprintf(update_status_buffer, 16, "UPD EPS%02d", update_tempflash_sector_counter);
 			break;
 		case USTATE_WAITING_FOR_PACKET:
 			snprintf(update_status_buffer, 16, "UPD P%04d", update_chunks_remaining);
@@ -1368,6 +1386,10 @@ const char * srv::Servicer::update_status() {
 	}
 
 	return update_status_buffer;
+}
+
+uint32_t srv::Servicer::update_status_version() {
+	return update_status_cookie;
 }
 
 srv::Servicer::DebugInfo srv::Servicer::get_debug_information() {

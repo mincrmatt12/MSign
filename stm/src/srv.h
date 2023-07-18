@@ -43,6 +43,8 @@ namespace srv {
 
 		// Update state introspections
 		const char * update_status();
+		// Changes every time the update_status changes -- screen task uses this to yield so that status is shown before disabling flash
+		uint32_t     update_status_version();
 
 		// Data request methods
 		void set_temperature(uint16_t slotid, uint32_t temperature);
@@ -187,6 +189,12 @@ namespace srv {
 		// Main loop in update mode.
 		void do_update_logic();
 
+		// Flash routines
+		void begin_update();
+		void update_append_data(bool already_erased=false);
+		void erase_flash_sector();
+		void wait_for_update_status_onscreen();
+
 		// Connect to the ESP
 		void do_handshake();
 
@@ -212,6 +220,15 @@ namespace srv {
 		uint16_t update_checksum = 0;
 		// how many chunks remaining in update
 		uint16_t update_chunks_remaining = 0;
+		// used for syncing display state
+		uint32_t update_status_cookie = 0;
+
+		// keeps track of where in flash we are
+		uint32_t update_tempflash_data_ptr;
+		// number of bytes written to current sector
+		uint32_t update_tempflash_data_counter = 0;
+		// which flash sector
+		uint8_t update_tempflash_sector_counter = 5;
 
 		// Sync primitives + log buffers + dma buffer
 		SemaphoreHandle_t bheap_mutex;

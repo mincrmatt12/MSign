@@ -16,7 +16,7 @@
 namespace gpio {
 	template<uint32_t Port, uint32_t Mask>
 	struct Pin {
-		inline Pin& operator=(const bool& on) {
+		__attribute__((always_inline)) inline Pin& operator=(const bool& on) {
 			if (on) {
 				((GPIO_TypeDef *)Port)->BSRR |= (1 << Mask);
 			}

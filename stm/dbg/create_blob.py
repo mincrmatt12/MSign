@@ -82,7 +82,8 @@ def run(inelf, outbin):
 
     for symbol in symtable_section.iter_symbols():
         try:
-            if not elf.get_section(symbol.entry.st_shndx).name.startswith(".text"):
+            sect_name = elf.get_section(symbol.entry.st_shndx).name
+            if not sect_name.startswith(".text") and not sect_name.startswith(".ram_func"):
                 continue
         except TypeError:
             continue
@@ -106,7 +107,7 @@ def run(inelf, outbin):
         cie: CIE = fde.cie
 
         base_address = fde.header.initial_location
-        if base_address < 0x08000000:  # not in flash
+        if base_address < 0x08000000 and base_address > 0x1c000:  # not in flash or sram1
             continue
             
         instructions = cie.instructions + fde.instructions

@@ -18,6 +18,10 @@ namespace tasks {
 		bool interacting(bool screen_only=true) const {
 			return interact_timeout && interact_mode && (!screen_only || interact_mode == InteractByScreen);
 		}
+
+		uint32_t latest_update_cookie() const {
+			return update_cookie;
+		}
 	private:
 		screen::ScreenSwapper<
 			screen::TTCScreen,
@@ -49,6 +53,7 @@ namespace tasks {
 		uint32_t last_swapped_at = 0;
 		uint32_t interact_timeout = 0;
 		uint32_t override_timeout = 0;
+		volatile uint32_t update_cookie = 0xffff'ffff;
 		TickType_t last_had_wifi_at = 0;
 
 		bool early_transition_informed = false;

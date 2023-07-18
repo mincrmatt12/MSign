@@ -16,6 +16,8 @@
 #include <cmath>
 
 matrix_type matrix __attribute__((section(".vram")));
+// Hackery to convince gcc to put this in the right section
+template RAMFUNC void matrix_type::framebuffer_type::prepare_stream(uint16_t i, uint8_t pos, uint8_t * bs);
 srv::Servicer servicer{};
 uint64_t rtc_time;
 

@@ -11,6 +11,9 @@
 .word _sidata
 .word _sdata
 .word _edata
+.word _sridata
+.word _srdata
+.word _erdata
 .word _sbss
 .word _ebss
 
@@ -30,6 +33,16 @@ copy_data_loop:
 	str r2, [r0], #4
 	cmp r0, r1
 	bcc copy_data_loop
+
+	ldr r3, =_sridata /* r3 == pointer to copy from */
+	ldr r0, =_srdata
+	ldr r1, =_erdata
+
+copy_rdata_loop:
+	ldr r2, [r3], #4
+	str r2, [r0], #4
+	cmp r0, r1
+	bcc copy_rdata_loop
 
 	/* zero out bss */
 	mov r0, #0
