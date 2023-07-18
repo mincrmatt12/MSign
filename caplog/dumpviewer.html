@@ -77,16 +77,16 @@
 				border-right-width: 5px;
 			}
 
-			div.block-flush {
-				border-right-color: indianred !important;
-				border-right-width: 5px;
+			div.block-last {
+				border-bottom-color: green !important;
+				border-bottom-width: 5px;
 			}
 
-			div.block-warm.block-dirty,div.block-warm.block-flush {
+			div.block-warm.block-dirty {
 				border-right-width: 8px;
 			}
 
-			div.block-hot.block-dirty,div.block-hot.block-flush {
+			div.block-hot.block-dirty {
 				border-right-width: 10px;
 			}
 		</style>
@@ -269,8 +269,8 @@
 					}
 					if (blk.flags[1]) {
 						if (flagstr) flagstr += ", ";
-						flagstr += "flush";
-						styles += " block-flush";
+						flagstr += "last";
+						styles += " block-last";
 					}
 
 					if (flagstr) {
