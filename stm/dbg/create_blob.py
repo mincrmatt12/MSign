@@ -103,11 +103,15 @@ def run(inelf, outbin):
     fdes = [x for x in dbgdata.CFI_entries() if isinstance(x, FDE)]
     fde: FDE
 
+    ram_func_bottom = elf.get_section_by_name(".ram_func").header["sh_addr"]
+
     for fde in fdes:
         cie: CIE = fde.cie
 
         base_address = fde.header.initial_location
         if base_address < 0x08000000 and base_address > 0x1c000:  # not in flash or sram1
+            continue
+        if base_address < ram_func_bottom:
             continue
             
         instructions = cie.instructions + fde.instructions
