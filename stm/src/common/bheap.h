@@ -662,10 +662,11 @@ finish_setting:
 						// If this is a remote block, just increase the size
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
+							bool requires_flagend = x->next()->flags & Block::FlagLast;
 							x->next()->location = Block::LocationCanonical;
 							x->next()->datasize = 0;
 							x->next()->slotid = Block::SlotEmpty;
-							if (x->next()->flags & Block::FlagLast) x->flags |= Block::FlagLast;
+							if (requires_flagend) x->flags |= Block::FlagLast;
 						}
 						else {
 							// Copy the data

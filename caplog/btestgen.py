@@ -36,9 +36,13 @@ for record in relevant_record["blocks"]:
         (tempstrs[record["temperature"]] << (12+14)) |
         (locstrs[record["location"]] << (12+14+2)) |
         (record["flags"][0] << (12+14+2+2)) |
-        (record["flags"][1] << (12+14+2+2+1))
+        (record["flags"][1] << (12+14+2+2))
     )
-    struct.pack_into("<I", array, pos, hdr)
+    try:
+        struct.pack_into("<I", array, pos, hdr)
+    except struct.error:
+        print("invalid record:", record, hdr)
+        raise
     pos += 4
     # write data
     if "contents" in record:
