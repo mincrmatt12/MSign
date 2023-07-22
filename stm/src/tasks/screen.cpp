@@ -4,6 +4,7 @@
 #include "../fonts/lcdpixel_6.h"
 #include "../fonts/tahoma_9.h"
 #include "../common/bootcmd.h"
+#include "../common/ver.h"
 #include "../srv.h"
 #include "../ui.h"
 #include "../crash/main.h"
@@ -45,7 +46,7 @@ namespace tasks {
 
 	void show_test_pattern(uint8_t stage, matrix_type::framebuffer_type& fb, const char * extra=nullptr) {
 		fb.clear();
-		draw::text(fb, "MSIGN V4.2" MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
+		draw::text(fb, "MSIGN V" MSIGN_MAJOR_VERSION_STRING MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
 		draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
 		char buf[5] = {0};
 		strncpy(buf, bootcmd_get_bl_revision(), 4);
@@ -319,7 +320,7 @@ namespace tasks {
 						last_swapped_at = timekeeper.current_time;
 					}
 					else if (ui::buttons[ui::Buttons::POWER] && op) {
-						op = OverlayPanelClosed;
+						close_panel();
 					}
 					else if (ui::buttons.held(ui::Buttons::POWER, pdMS_TO_TICKS(2000))) do_sleep_mode();
 					break;

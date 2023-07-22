@@ -68,6 +68,7 @@ namespace tasks {
 				//SubmenuConnInfo = 1,
 				SubmenuSelectScreen = 2,
 				SubmenuDebug = 3,
+				SubmenuDebugCrash = 4,
 				// SubmenuDebugSrv = 4,
 				SubmenuTetris = 5,
 			} submenu = SubmenuMain;
@@ -80,13 +81,15 @@ namespace tasks {
 		enum OverlayPanel : uint8_t {
 			OverlayPanelClosed = 0,
 			OverlayPanelDebugSrv = 1,
-			OverlayPanelConnInfo = 2
+			OverlayPanelConnInfo = 2,
+			OverlayPanelVerInfo = 3
 		} op;
 
 		void open_panel(OverlayPanel pan) {
-			if (pan == op) op = OverlayPanelClosed; // toggle semantics
+			if (pan == op) close_panel(); // toggle semantics
 			else op = pan;
 		}
+		void close_panel();
 
 		void draw_menu_list(const char * const * entries, bool last_is_close=true);
 
