@@ -2,9 +2,15 @@
 #include "../draw.h"
 #include "../srv.h"
 #include "../crash/main.h"
+#include "../common/bootcmd.h"
 
 #include "../fonts/tahoma_9.h"
 #include "timekeeper.h"
+#include "../common/ver.h"
+
+#ifndef MSIGN_GIT_REV
+#define MSIGN_GIT_REV "-unk"
+#endif
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -99,6 +105,19 @@ namespace {
 		snprintf(buf, 32, "%d / %d / %d", (int)di.free_space_arena, (int)di.free_space_cleanup_arena, (int)di.used_hot_space_arena);
 		op.multi_text("f/c/h: ", 0xff_c, buf, 0xff_c);
 	}
+
+	void draw_ver_panel() {
+		OverlayPanel op;
+
+		srv::ServicerLockGuard g(servicer);
+		const auto& remote_ver_blk = servicer.slot<const char *>(slots::ESP_VER_STR);
+		char buf[5] = {0}; strncpy(buf, bootcmd_get_bl_revision(), 4);
+		
+		op.multi_text("bl rev: ", 0xff_c, buf, 0x6666ff_cc);
+		op.multi_text("stm ver: ", 0xff_c, "V" MSIGN_MAJOR_VERSION_STRING MSIGN_GIT_REV, 0x6666ff_cc);
+		op.multi_text("esp ver: ", 0xff_c, (remote_ver_blk ? *remote_ver_blk : "<unknown>"), (remote_ver_blk ? 0x6666ff_cc : 0xff6666_cc));
+	}
+
 }
 
 void tasks::DispMan::draw_menu_list(const char * const * entries, bool last_is_close) {
@@ -170,9 +189,22 @@ void tasks::DispMan::do_overlay_panels() {
 		case OverlayPanelConnInfo:
 			draw_conn_panel();
 			break;
+		case OverlayPanelVerInfo:
+			draw_ver_panel();
+			break;
 		default:
 			break;
 	}
+}
+
+void tasks::DispMan::close_panel() {
+	switch (op) {
+		case OverlayPanelVerInfo:
+			servicer.set_temperature(slots::ESP_VER_STR, bheap::Block::TemperatureCold);
+			break;
+		default: break;
+	}
+	op = OverlayPanelClosed;
 }
 
 void tasks::DispMan::do_menu_overlay() {
@@ -197,13 +229,20 @@ void tasks::DispMan::do_menu_overlay() {
 
 	const static char * const debug_entries[] = {
 		"reset",
-		"crash (panic)",
-		"crash (nf panic)",
-		"crash (mem)",
-		"crash (wdog)",
+		"crash",
 		"enable div0 trp",
 		"servicer debug",
+		"version info",
 		"T E T R I S",
+		nullptr
+	};
+
+	const static char * const debug_crash_entries[] = {
+		"panic",
+		"nf panic",
+		"mem",
+		"wdog",
+
 		nullptr
 	};
 
@@ -272,34 +311,51 @@ void tasks::DispMan::do_menu_overlay() {
 					servicer.reset();
 				}
 				else if (ms.selected == 1) {
-					crash::panic("test panic");
+					ms.selected = 0;
+					ms.submenu = MS::SubmenuDebugCrash;
+					return;
 				}
 				else if (ms.selected == 2) {
-					crash::panic_nonfatal("test nonfatal");
-				}
-				else if (ms.selected == 3) {
-					volatile uint32_t * the_void = (uint32_t *)(0x20021234);
-					(void)(*the_void);
-				}
-				else if (ms.selected == 4) {
-					vTaskDelay(pdMS_TO_TICKS(30'000));
-				}
-				else if (ms.selected == 5) {
 #ifndef SIM
 					SCB->CCR |= SCB_CCR_DIV_0_TRP_Msk;
 #endif
 					goto close;
 				}
-				else if (ms.selected == 6) {
+				else if (ms.selected == 3) {
 					ms.selected = 0;
 					open_panel(OverlayPanelDebugSrv);
 					goto close;
 				}
-				else if (ms.selected == 7) {
+				else if (ms.selected == 4) {
+					ms.selected = 0;
+					servicer.set_temperature(slots::ESP_VER_STR, bheap::Block::TemperatureHot);
+					open_panel(OverlayPanelVerInfo);
+					goto close;
+				}
+				else if (ms.selected == 5) {
 					ms.selected = 0;
 					ms.submenu = MS::SubmenuTetris;
 					interact_mode = InteractTetris;
 					return;
+				}
+			}
+			break;
+		case MS::SubmenuDebugCrash:
+			draw_menu_list(debug_crash_entries, false);
+
+			if (ui::buttons[ui::Buttons::SEL]) {
+				if (ms.selected == 0) {
+					crash::panic("test panic");
+				}
+				else if (ms.selected == 1) {
+					crash::panic_nonfatal("test nonfatal");
+				}
+				else if (ms.selected == 2) {
+					volatile uint32_t * the_void = (uint32_t *)(0x20021234);
+					(void)(*the_void);
+				}
+				else if (ms.selected == 3) {
+					vTaskDelay(pdMS_TO_TICKS(30'000));
 				}
 			}
 			break;
@@ -318,6 +374,7 @@ void tasks::DispMan::do_menu_overlay() {
 	}
 
 	if (ui::buttons[ui::Buttons::POWER]) {
+back:
 		switch (ms.submenu) {
 			case MS::SubmenuTetris:
 closetetris:
@@ -330,8 +387,10 @@ close:
 				last_swapped_at = timekeeper.current_time;
 				interact_mode = InteractNone;
 				break;
+			case MS::SubmenuDebugCrash:
+				ms.submenu = MS::SubmenuDebug;
+				break;
 			default:
-back:
 				ms.submenu = MS::SubmenuMain;
 				break;
 		}

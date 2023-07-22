@@ -19,6 +19,10 @@
 #include "../dwhttp.h"
 #include <esp_system.h>
 
+#ifndef SIM
+#include "esp_ota_ops.h"
+#endif
+
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
 		&transit::ttc::ttc_grabber,
@@ -160,6 +164,14 @@ exit:
 	}
 
 	void start() {
+		serial::interface.update_slot_nosync(slots::ESP_VER_STR,
+#ifndef SIM
+					esp_ota_get_app_description()->version
+#else
+					"fakesim"
+#endif
+		);
+
 		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 		auto tmr = xTimerCreate("gtmr", pdMS_TO_TICKS(3000), true, nullptr, check_and_restart_grabber_timer);
 		if (tmr == nullptr || xTimerStart(tmr, pdMS_TO_TICKS(2500)) != pdPASS) {

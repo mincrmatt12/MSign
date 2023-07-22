@@ -15,6 +15,7 @@ namespace slots {
 	enum DataID : uint16_t {
 		WIFI_STATUS = 0x01,			// STRUCT; WifiStatus, info about wifi connection
 		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
+		ESP_VER_STR = 0x03,         // STRING; version string (as shown in webui) of the esp8266
 
 		VIRTUAL_BUTTONMAP = 0x10, 	// UINT16_T; bitmap, override of the data on GPIOA for the buttons
 
