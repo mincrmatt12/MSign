@@ -581,6 +581,7 @@ namespace bheap {
 
 					// Null out old contents
 					containing_block.slotid = Block::SlotEmpty;
+					containing_block.location = Block::LocationCanonical;
 
 					// Evict cache for this block
 					return true;
@@ -620,6 +621,7 @@ finish_setting:
 						bcache.evict(slotid);
 					}
 					endptr.slotid = Block::SlotEmpty;
+					endptr.location = Block::LocationCanonical;
 				}
 				else {
 					// truncate
