@@ -1,16 +1,65 @@
 #include "sd.h"
 
+#include <fcntl.h>
 #include <fstream>
 #include <ff.h>
 #include <esp_log.h>
 #include <diskio.h>
 #include <iostream>
 #include <filesystem>
+#include <string.h>
+#include <unistd.h>
+
+#include <sys/mman.h>
 
 const static char * TAG = "diskio_fake_sd";
 
 namespace sd {
 	FATFS fs;
+
+	struct mmap_holder {
+		mmap_holder() {}
+
+		mmap_holder(const mmap_holder&) = delete;
+		mmap_holder(mmap_holder&&) = delete;
+
+		~mmap_holder() {
+			if (mapping_base) {
+				munmap(mapping_base, sector_count * 512);
+				mapping_base = nullptr;
+			}
+		}
+
+		void init() {
+			if (mapping_base) return;
+			sector_count = std::filesystem::file_size("sdcard.bin") / 512;
+
+			int fd = open("sdcard.bin", O_RDWR);
+			if (fd >= 0) {
+				mapping_base = mmap(nullptr, sector_count * 512, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+				if (mapping_base == MAP_FAILED) throw std::runtime_error("failed to map");
+				close(fd);
+			}
+			else {
+				throw std::runtime_error("failed to open sdcard");
+			}
+		}
+		void * get_sector_address(LBA_t sector) {
+			return (void *)((uintptr_t)mapping_base + sector * 512);
+		}
+
+		explicit operator bool() const {
+			return mapping_base != nullptr;
+		}
+
+		size_t get_sector_count() {
+			return sector_count;
+		}
+
+	private:
+		void * mapping_base = nullptr;
+		size_t sector_count = 0;
+	};
 
 	InitStatus init() {
 		ESP_LOGI(TAG, "initing fake thingy");
@@ -39,46 +88,37 @@ namespace sd {
 	}
 }
 
-std::fstream sd_bigblob;
+sd::mmap_holder mmap_holder;
 
 extern "C" DSTATUS disk_initialize(BYTE) {
-	if (sd_bigblob.is_open()) return 0;
-
-	// Try to open the sdcard.bin file
-	sd_bigblob.open("sdcard.bin", std::ios::in|std::ios::out|std::ios::binary);
-	if (!sd_bigblob.is_open()) return STA_NOINIT;
+	mmap_holder.init();
 	return 0;
 }
 
 extern "C" DSTATUS disk_status(BYTE) {
-	if (sd_bigblob.is_open()) return 0;
+	if (mmap_holder) return 0;
 	return STA_NOINIT;
 }
 
 extern "C" DRESULT disk_write(BYTE, const BYTE* buff, LBA_t sec, UINT count) {
-	if (!sd_bigblob.is_open()) return RES_NOTRDY;
-	sd_bigblob.seekp(sec*512, std::ios_base::beg);
-	sd_bigblob.write(reinterpret_cast<const char *>(buff), count*512);
-	if (!sd_bigblob) return RES_ERROR;
+	if (!mmap_holder) return RES_NOTRDY;
+	memcpy(mmap_holder.get_sector_address(sec), buff, count*512);
 	return RES_OK;
 }
 
 extern "C" DRESULT disk_read(BYTE, BYTE* buff, LBA_t sec, UINT count) {
-	if (!sd_bigblob.is_open()) return RES_NOTRDY;
-	sd_bigblob.seekg(sec*512, std::ios_base::beg);
-	sd_bigblob.read(reinterpret_cast<char *>(buff), count*512);
-	if (!sd_bigblob) return RES_ERROR;
+	if (!mmap_holder) return RES_NOTRDY;
+	memcpy(buff, mmap_holder.get_sector_address(sec), count*512);
 	return RES_OK;
 }
 
 extern "C" DRESULT disk_ioctl(BYTE, BYTE cmd, void *buff) {
-	if (!sd_bigblob.is_open()) return RES_NOTRDY;
+	if (!mmap_holder) return RES_NOTRDY;
 	switch (cmd) {
 		case CTRL_SYNC:
-			sd_bigblob.sync();
 			return RES_OK;
 		case GET_SECTOR_COUNT:
-			*((DWORD *) buff) = std::filesystem::file_size(std::filesystem::current_path() / "sdcard.bin") / 512;
+			*((DWORD *) buff) = mmap_holder.get_sector_count();
 			return RES_OK;
 		case GET_SECTOR_SIZE:
 			*((DWORD *) buff) = 512;
