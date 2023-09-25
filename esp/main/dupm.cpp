@@ -392,10 +392,10 @@ warm_hot_send_remotes:
 							for (int tries = 0; tries < 3; ++tries) {
 								switch (single_store_fulfill(b->slotid, arena.block_offset(*b), b->datasize, b->data(), true)) {
 									case slots::protocol::DataStoreFulfillResult::Ok:
-										// finish by setting block to remote
-										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
 										// mark not dirty
 										b->flags &= ~bheap::Block::FlagDirty;
+										// finish by setting block to remote
+										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
 										goto ok;
 									case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
 										if (dur.d_temp.newtemperature == bheap::Block::TemperatureWarm) {
@@ -404,7 +404,7 @@ warm_hot_send_remotes:
 											// Send a cold
 											inform_temp_change(dur.d_temp.slotid, bheap::Block::TemperatureCold);
 										}
-										[[fallthrough]];
+										return;
 									case slots::protocol::DataStoreFulfillResult::IllegalState:
 									case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
 										ESP_LOGE(TAG, "bad state for block");
