@@ -13,7 +13,6 @@
 #include "draw.h"
 #include <cstring>
 #include <stdlib.h>
-#include <cmath>
 
 matrix_type matrix __attribute__((section(".vram")));
 // Hackery to convince gcc to put this in the right section
