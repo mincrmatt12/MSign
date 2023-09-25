@@ -192,6 +192,7 @@ namespace srv {
 		// Flash routines
 		void begin_update();
 		void update_append_data(bool already_erased=false);
+		void update_append_data_copy();
 		void erase_flash_sector();
 		void wait_for_update_status_onscreen();
 

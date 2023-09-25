@@ -118,22 +118,38 @@ void srv::Servicer::update_append_data(bool already_erased) {
 	}
 
 	this->update_state = USTATE_PACKET_WRITTEN;
+	update_append_data_copy();
+}
 
+__attribute__((noinline)) RAMFUNC void srv::Servicer::update_append_data_copy() {
 #ifndef SIM
-	CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE); // set psize to 0; byte by byte access
-
 	int amt = this->update_pkg_size;
 	uint8_t *data = this->update_pkg_buffer;
 
-	while (amt--) {
-		FLASH->CR |= FLASH_CR_PG;
-		(*(uint8_t *)(update_tempflash_data_ptr++)) = *(data++); // Program this byte
-
-		// Wait for busy
-		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {
+	while (amt) {
+		// program with maximum possible parallelism
+		if (amt >= 4 && (uintptr_t)update_tempflash_data_ptr % 4 == 0) {
+			MODIFY_REG(FLASH->CR, FLASH_CR_PSIZE, FLASH_CR_PG | FLASH_CR_PSIZE_1);
+			(*(uint32_t *)(update_tempflash_data_ptr)) = *(uint32_t *)(data);
+			update_tempflash_data_ptr += 4;
+			data += 4;
+			amt -= 4;
+		}
+		else if (amt >= 2 && (uintptr_t)update_tempflash_data_ptr % 2 == 0) {
+			MODIFY_REG(FLASH->CR, FLASH_CR_PSIZE, FLASH_CR_PG | FLASH_CR_PSIZE_0);
+			(*(uint16_t *)(update_tempflash_data_ptr)) = *(uint16_t *)(data);
+			update_tempflash_data_ptr += 2;
+			data += 2;
+			amt -= 2;
+		}
+		else {
+			MODIFY_REG(FLASH->CR, FLASH_CR_PSIZE, FLASH_CR_PG);
+			(*(uint8_t *)(update_tempflash_data_ptr++)) = *(data++);
+			--amt;
 		}
 
-		// Program next byte
+		// Wait for busy
+		while (READ_BIT(FLASH->SR, FLASH_SR_BSY)) {}
 	}
 
 	// Clear pg byte
