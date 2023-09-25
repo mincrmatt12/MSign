@@ -71,7 +71,7 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 			if (dma_buffer[1] == 0) goto do_process;
 			
 			recv_full();
-			last_comm = timekeeper.current_time;
+			// last_comm = timekeeper.current_time;
 		}
 		else {
 do_process:
