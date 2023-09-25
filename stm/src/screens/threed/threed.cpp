@@ -360,21 +360,23 @@ namespace threed {
 				int w0 = w0_row;
 				int w1 = w1_row;
 				int w2 = w2_row;
+				int_fast16_t x = minx;
 
-				for (int_fast16_t x = minx; x <= maxx; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
-					if ((w0|w1|w2) >= 0) {
-						// point is guaranteed to be on screen since min/max are capped in screen.
-						// compute depth:
-
-						int sum = (w0 + w1 + w2);
-						if (!sum) continue;
-						int16_t d = (scaled_az * w0 + scaled_bz * w1 + scaled_cz * w2) / sum;
-						if (d > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
-						color.set_spare(d);
-						matrix.get_inactive_buffer().at_unsafe(x, y) = color;
-					}
+				for (; x <= maxx; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
+					if ((w0|w1|w2) >= 0) goto linestart;
 				}
+				goto lineover;
 
+				for (; x <= maxx && (w0|w1|w2) >= 0; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
+linestart:
+					int sum = (w0 + w1 + w2);
+					if (!sum) continue;
+					int16_t d = (scaled_az * w0 + scaled_bz * w1 + scaled_cz * w2) / sum;
+					if (d > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
+					color.set_spare(d);
+					matrix.get_inactive_buffer().at_unsafe(x, y) = color;
+				}
+lineover:
 				w0_row += w0_dy;
 				w1_row += w1_dy;
 				w2_row += w2_dy;
