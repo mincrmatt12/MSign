@@ -75,7 +75,7 @@ namespace dwhttp {
 
 					// Set a 5 second rcvtimeo 
 					const struct timeval timeout = { 5, 0 };
-					setsockopt(sockno, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+					lwip_setsockopt(sockno, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
 
 					// We are now connected.
 					return true;
