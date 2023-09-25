@@ -314,7 +314,7 @@ namespace led {
 
 			// This uses the task notification value to wait for something to happen.
 			// This _does_ preclude the use of notification values for anything else.
-			xTaskNotifyWait(0, 0xffffffffUL, NULL, portMAX_DELAY);
+			ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
 		}
 
 		void swap_buffers_from_isr() {
@@ -347,7 +347,7 @@ namespace led {
 
 		void sw_trap_fired() {
 			if (notify_when_swapped) {
-				xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+				vTaskNotifyGiveFromISR(notify_when_swapped, nullptr);
 				notify_when_swapped = nullptr;
 			}
 		}
