@@ -4,7 +4,10 @@
 #include <cstdlib>
 #include <cstdint>
 #include <functional>
+
+#ifndef STANDALONE_JSON
 #include "dwhttp.h"
+#endif
 
 namespace json {
 	struct PathNode {
