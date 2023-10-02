@@ -2,13 +2,14 @@
 #include "esp_log.h"
 #include <esp_system.h>
 #include <cstdlib>
+#include <memory>
 #include <string.h>
 #include <bearssl.h>
 
 #include <lwip/sockets.h>
 #include <lwip/sys.h>
 #include <lwip/netdb.h>
-#include <vector>
+
 extern "C" {
 #include <http_client.h>
 #include <http_chunked_recv.h>
@@ -16,8 +17,7 @@ extern "C" {
 
 #include <wpabr_bufman.h>
 
-#include "sd.h"
-#include <memory>
+#include <ff.h>
 
 #undef connect
 #undef read
@@ -486,6 +486,8 @@ namespace dwhttp {
 
 		struct DownloaderBase {
 			virtual size_t read_from(uint8_t * buf, size_t max) = 0;
+			virtual bool   raw_write(const uint8_t * buf, size_t len) = 0;
+			virtual bool   parse_response_headers() = 0;
 			virtual void   stop() = 0;
 
 			inline const int& result_code() const {
@@ -507,20 +509,22 @@ namespace dwhttp {
 			http_client_state_t state;
 			http_chunked_recv_state_t chunk_state;
 			int chunk_counter = 0;
+			int remain_bytes = 0;
 		};
 
 		template<typename Adapter>
-		struct Downloader : DownloaderBase {
+		struct Downloader final : DownloaderBase {
 			size_t read_from(uint8_t *buf, size_t max) override {
 				if (!socket.is_connected()) return 0;
 				if (is_chunked() && chunk_counter && max > chunk_counter) max = chunk_counter;
 				int r = socket.read_some(buf, max); // read into the buffer first
 				if (r <= 0) {
 					ESP_LOGW(TAG, "Read failed from %s", last_server);
-					socket.close();
+					stop();
 					return 0;
 				}
 				if (!is_chunked()) {
+					remain_bytes = std::max(0, remain_bytes - r);
 					return r;
 				}
 				else {
@@ -538,6 +542,7 @@ retry:
 							case HTTP_CHUNKED_RECV_DONE:
 got_done:
 								// End of file, return total amount read so far
+								remain_bytes = 0;
 								return total_amount;
 							case HTTP_CHUNKED_RECV_FAIL:
 								// Invalid format
@@ -586,12 +591,20 @@ got_done:
 			void stop() override {
 				socket.close();
 				last_server = nullptr;
+				remain_bytes = 0;
 			}
-
-			bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const uint8_t * body=nullptr, const size_t bodylen=0) {
+			
+			bool start_request(const char *host, const char *path, const char* method) {
 				if (socket.is_connected() && (!last_server || strcmp(host, last_server))) {
 					ESP_LOGW(TAG, "Socket wasn't closed, closing");
-					socket.close();
+					stop();
+				}
+				else if (socket.is_connected()) {
+					// If there are remaining bytes in the previous transmission, read them.
+					while (remain_bytes) {
+						uint8_t junk_buf[32];
+						ESP_LOGD(TAG, "dumped %d", read_from(junk_buf, 32));
+					}
 				}
 				if (last_server != host || !socket.is_connected()) {
 					if (!socket.connect(host)) {
@@ -625,6 +638,47 @@ got_done:
 					return false;
 				}
 
+				return true;
+			}
+
+			bool parse_response_headers() override {
+				socket.flush();
+				while (true) {
+					uint8_t buf;
+					int recvd_bytes = socket.read(&buf, 1);
+					if (recvd_bytes < 0) {
+						ESP_LOGE(TAG, "Got error while recving");
+						stop();
+						return false;
+					}
+					// Otherwise, feed it into nmfu
+					switch (http_client_feed(&buf, 1 + &buf, &state)) {
+						case HTTP_CLIENT_OK:
+							continue;
+						case HTTP_CLIENT_FAIL:
+							ESP_LOGE(TAG, "Parser failed");
+							stop();
+							return false;
+						case HTTP_CLIENT_DONE:
+							ESP_LOGD(TAG, "Finished parsing req headers");
+							goto finish_req;
+					}
+				}
+finish_req:
+				ESP_LOGD(TAG, "Ready with code = %d; length = %d; unklen = %d", result_code(), content_length(), is_unknown_length());
+				if (is_chunked()) {
+					http_chunked_recv_start(&chunk_state);
+					chunk_counter = 0;
+					remain_bytes = -1;
+				}
+				else {
+					remain_bytes = content_length();
+				}
+				return true;
+			}
+
+			bool request(const char *host, const char *path, const char* method, const char * const headers[][2], const uint8_t * body=nullptr, const size_t bodylen=0) {
+				if (!start_request(host, path, method)) return false;
 				// Send body length if present
 				if (body) {
 					char buf[32];
@@ -659,36 +713,11 @@ got_done:
 					}
 				}
 
-				socket.flush();
+				return parse_response_headers();
+			}
 
-				while (true) {
-					uint8_t buf;
-					int recvd_bytes = socket.read(&buf, 1);
-					if (recvd_bytes < 0) {
-						ESP_LOGE(TAG, "Got error while recving");
-						stop();
-						return false;
-					}
-					// Otherwise, feed it into nmfu
-					switch (http_client_feed(&buf, 1 + &buf, &state)) {
-						case HTTP_CLIENT_OK:
-							continue;
-						case HTTP_CLIENT_FAIL:
-							ESP_LOGE(TAG, "Parser failed");
-							stop();
-							return false;
-						case HTTP_CLIENT_DONE:
-							ESP_LOGD(TAG, "Finished parsing req headers");
-							goto finish_req;
-					}
-				}
-finish_req:
-				ESP_LOGD(TAG, "Ready with code = %d; length = %d; unklen = %d", result_code(), content_length(), is_unknown_length());
-				if (is_chunked()) {
-					http_chunked_recv_start(&chunk_state);
-					chunk_counter = 0;
-				}
-				return true;
+			bool raw_write(const uint8_t *buf, size_t len) override {
+				return socket.write(buf, len);
 			}
 		private:
 			Adapter socket;
@@ -719,6 +748,23 @@ finish_req:
 
 			return dwhttp::Download((dwhttp::detail::DownloaderBase *)&dwnld);
 		}
+		
+		template<typename T>
+		dwhttp::Connection open_site_impl(const char * host, const char * path, const char *method) {
+			static auto& dwnld = dwhttp::detail::get_downloader<T>();
+			dwnld.start_request(host, path, method);
+
+			return dwhttp::Connection((dwhttp::detail::DownloaderBase *)&dwnld);
+		}
+	}
+}
+
+dwhttp::Connection dwhttp::open_site(const char * host, const char * path, const char * method) {
+	if (host[0] != '_') {
+		return detail::open_site_impl<detail::adapter::HttpAdapter>(host, path, method);
+	}
+	else {
+		return detail::open_site_impl<detail::adapter::HttpsAdapter>(++host, path, method);
 	}
 }
 
@@ -741,8 +787,8 @@ dwhttp::Download dwhttp::download_with_callback(const char * host, const char * 
 
 dwhttp::Download::~Download() {
 	if (adapter) {
-		if (!nonclose || (is_unknown_length() && !(((dwhttp::detail::DownloaderBase *)adapter)->is_chunked()))) { // unknown_length == connection: close == force stop connection
-			((dwhttp::detail::DownloaderBase *)(adapter))->stop();
+		if (!nonclose || (is_unknown_length() && !adapter->is_chunked())) { // unknown_length == connection: close == force stop connection
+			adapter->stop();
 		}
 		adapter = nullptr;
 	}
@@ -757,7 +803,7 @@ int16_t dwhttp::Download::operator()() {
 		recvread = 0;
 	}
 	if (recvread == recvpending) {
-		recvpending = ((dwhttp::detail::DownloaderBase *)adapter)->read_from(recvbuf, 32);
+		recvpending = adapter->read_from(recvbuf, 32);
 		recvread = 0;
 	}
 	if (recvpending == 0) return -1; // eof
@@ -773,18 +819,18 @@ size_t dwhttp::Download::operator()(uint8_t * buf, size_t amount) {
 		*buf++ = (uint8_t)v;
 		--amount;
 	}
-	r += ((dwhttp::detail::DownloaderBase *)adapter)->read_from(buf, amount);
+	r += adapter->read_from(buf, amount);
 	return r;
 }
 
 int dwhttp::Download::result_code() const {
-	return ((dwhttp::detail::DownloaderBase *)adapter)->result_code();
+	return adapter->result_code();
 }
 int dwhttp::Download::content_length() const {
-	return ((dwhttp::detail::DownloaderBase *)adapter)->content_length();
+	return adapter->content_length();
 }
 bool dwhttp::Download::is_unknown_length() const {
-	return ((dwhttp::detail::DownloaderBase *)adapter)->is_unknown_length();
+	return adapter->is_unknown_length();
 }
 
 void dwhttp::close_connection(bool ssl) {
@@ -793,5 +839,65 @@ void dwhttp::close_connection(bool ssl) {
 	}
 	else {
 		detail::dwnld.stop();
+	}
+}
+
+void dwhttp::Connection::send_header_name(const char* name) {
+	uint8_t terminator[2] = {':', ' '};
+	adapter->raw_write((const uint8_t *)name, strlen(name));
+	adapter->raw_write(terminator, 2);
+}
+
+void dwhttp::Connection::send_header_value_part(const char* value, size_t length) {
+	adapter->raw_write((const uint8_t *)value, length);
+}
+
+void dwhttp::Connection::send_header_end() {
+	adapter->raw_write((const uint8_t *)"\r\n", 2);
+}
+
+void dwhttp::Connection::start_body(size_t content_length) {
+	char sz_buffer[16]; snprintf(sz_buffer, sizeof sz_buffer, "%d", (int)content_length);
+	send_header("Content-Length", sz_buffer);
+	send_header_end();
+
+	transfer_chunked = false;
+	current_state = SEND_BODY;
+}
+
+void dwhttp::Connection::start_body() {
+	send_header("Transfer-Encoding", "chunked");
+	send_header_end();
+
+	transfer_chunked = true;
+	current_state = SEND_BODY;
+}
+
+void dwhttp::Connection::write(const uint8_t * body, size_t length) {
+	if (transfer_chunked) {
+		if (!length) return;
+		char sz_buffer[16]; snprintf(sz_buffer, sizeof sz_buffer, "%x\r\n", (int)length);
+		adapter->raw_write((const uint8_t *)sz_buffer, strlen(sz_buffer));
+	}
+	adapter->raw_write(body, length);
+	if (transfer_chunked) {
+		send_header_end();
+	}
+}
+
+void dwhttp::Connection::end_body() {
+	if (current_state != SEND_BODY) {
+		send_header_end();
+	}
+	else if (transfer_chunked) {
+		static const char * const end_chunked = "0\r\n\r\n";
+		adapter->raw_write((const uint8_t *)end_chunked, strlen(end_chunked));
+	}
+	if (adapter->parse_response_headers()) {
+		current_state = RECEIVE;
+	}
+	else {
+		adapter->stop();
+		current_state = CLOSED;
 	}
 }
