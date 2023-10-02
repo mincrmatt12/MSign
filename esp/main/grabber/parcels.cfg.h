@@ -5,9 +5,6 @@
 namespace parcels {
 	//!cfg: receives .parcels.trackers[$i].name
 	void set_parcel_name(size_t i, const char* value);
-
-	//!cfg: receives .parcels.trackers!size
-	void set_parcels_count(size_t value);
 	
 	struct ParcelConfig {
 		//!cfg: holds .carrier_id
@@ -22,6 +19,9 @@ namespace parcels {
 		//!cfg: holds .additional_param
 		config::string_t additional_param {};
 	};
+
+	//!cfg: holds .parcels.trackers!size, default 0
+	extern uint8_t parcel_count;
 
 	//!cfg: holds .parcels.key, default nullptr
 	extern config::string_t parcels_api_key;

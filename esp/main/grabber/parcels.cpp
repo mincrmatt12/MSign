@@ -468,7 +468,10 @@ namespace parcels {
 		return true;
 	}
 
-	void init() {needs_reinit = true;}
+	void init() {
+		set_parcels_count(parcel_count);
+		needs_reinit = parcel_count > 0;
+	}
 	bool loop() {
 		if (!parcels_api_key) return true;
 		if (needs_reinit) {
@@ -480,7 +483,7 @@ namespace parcels {
 		}
 
 		// If there are no configured packages, return early.
-		if (parcel_dynamic_infos[0].state == ParcelDynamicInfo::MISSING) {
+		if (parcel_count == 0 || parcel_dynamic_infos[0].state == ParcelDynamicInfo::MISSING) {
 			sccfg::set_force_disable_screen(slots::ScCfgInfo::PARCELS, true);
 			serial::interface.delete_slot(slots::PARCEL_INFOS);
 			serial::interface.delete_slot(slots::PARCEL_EXTRA_INFOS);
