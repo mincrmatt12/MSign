@@ -21,8 +21,8 @@ function ApiPane() {
 			<FormControl type='text' value={_.get(cfg, 'cfgpull.secret', '')} onChange={(e) => {updateCfg('cfgpull.secret', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
-		<Form.Group controlId="epst_ctrl" className="my-2">
-			<Form.Label>easypost</Form.Label>
+		<Form.Group controlId="17track_ctrl" className="my-2">
+			<Form.Label>17track</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'parcels.key', '')} onChange={(e) => {updateCfg('parcels.key', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
