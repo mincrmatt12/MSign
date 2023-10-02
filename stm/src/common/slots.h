@@ -60,6 +60,7 @@ namespace slots {
 		PARCEL_STATUS_SHORT = 0x52, // STRING[]; status/location table for short view
 		PARCEL_STATUS_LONG = 0x53,  // ''; status/location table for full view
 		PARCEL_EXTRA_INFOS = 0x54,  // STRUCT[]; ExtraParcelInfoEntry; full package tracking logs (with some cutoff)
+		PARCEL_CARRIER_NAMES = 0x55,// STRING[]; cross-referenced for carrier changes in the extended view.
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
@@ -228,9 +229,11 @@ namespace slots {
 			HAS_STATUS = 1,
 			HAS_LOCATION = 2,
 			HAS_EST_DEILIVERY = 4, // cannot be set on ExtraParcelInfoEntry
-			HAS_UPDATED_TIME = 8,   
-			EXTRA_INFO_TRUNCATED = 16, // cannot  be set on ExtraParcelInfoEntry
-			EXTRA_INFO_MISSING   = 32 // cannot  be set on ExtraParcelInfoEntry
+			HAS_EST_DELIVERY_RANGE = 8, // ''
+			HAS_UPDATED_TIME = 16,   
+			EXTRA_INFO_TRUNCATED = 32, // cannot be set on ExtraParcelInfoEntry
+			EXTRA_INFO_MISSING   = 64, // ''
+			HAS_NEW_CARRIER = 128,     // cannot be set on ParcelInfo
 		};
 
 		uint8_t flags;
@@ -257,12 +260,14 @@ namespace slots {
 		} status_icon;
 
 		uint64_t updated_time;   // when was the last status received
-		uint64_t estimated_delivery; // when do we expect to get the package
+		uint64_t estimated_delivery_from; // earliest time package is expected to arrive.
+		uint64_t estimated_delivery_to;   // latest time package is expected to arrive. if HAS_EST_DELIVERY_RANGE is unset, only this is populated.
 	};
 
 	struct ExtraParcelInfoEntry {
 		ParcelStatusLine status; // refd into PARCEL_STATUS_LONG
 		uint8_t for_parcel; // which parcel is this an entry for
+		uint16_t new_subcarrier_offset; // refd into PARCEL_CARRIER_NAMES
 		uint64_t updated_time;
 	};
 

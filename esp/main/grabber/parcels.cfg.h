@@ -3,19 +3,24 @@
 #include "../config.h"
 
 namespace parcels {
-
 	//!cfg: receives .parcels.trackers[$i].name
 	void set_parcel_name(size_t i, const char* value);
+
+	//!cfg: receives .parcels.trackers!size
+	void set_parcels_count(size_t value);
 	
 	struct ParcelConfig {
-		//!cfg: holds .enabled
-		mutable bool enabled = false; // set to false when detected as nonexistent
+		//!cfg: holds .carrier_id
+		mutable int carrier_id {};
 
-		//!cfg: holds .consider_local_tz
-		bool local_tz = false;
+		//!cfg: holds .final_carrier_id
+		mutable int final_carrier_id {};
 
-		//!cfg: holds .tracker_id
-		config::string_t tracker_id {};
+		//!cfg: holds .tracking_number
+		config::string_t tracking_number {};
+
+		//!cfg: holds .additional_param
+		config::string_t additional_param {};
 	};
 
 	//!cfg: holds .parcels.key, default nullptr

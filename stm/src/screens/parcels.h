@@ -25,7 +25,7 @@ namespace screen {
 
 		led::color_t draw_parcel_name(int16_t y, const slots::ParcelInfo& psl);
 
-		int16_t draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time);
+		int16_t draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name);
 
 		// Scroll tracker for parcels
 		constexpr static draw::PageScrollHelper::Params scroll_params = {

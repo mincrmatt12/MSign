@@ -2,6 +2,7 @@
 #include "../srv.h"
 #include "../fonts/tahoma_9.h"
 #include "../fonts/dejavu_12.h"
+#include "../fonts/dejavu_10.h"
 #include "../fonts/lcdpixel_6.h"
 #include "../tasks/screen.h"
 #include "../tasks/timekeeper.h"
@@ -148,7 +149,8 @@ screen::ParcelScreen::~ParcelScreen() {
 		slots::PARCEL_NAMES,
 		slots::PARCEL_STATUS_SHORT,
 		slots::PARCEL_STATUS_LONG,
-		slots::PARCEL_EXTRA_INFOS
+		slots::PARCEL_EXTRA_INFOS,
+		slots::PARCEL_CARRIER_NAMES
 	>(bheap::Block::TemperatureCold);
 }
 
@@ -232,6 +234,7 @@ bool screen::ParcelScreen::interact() {
 			if (ui::buttons[ui::Buttons::SEL]) {
 				servicer.set_temperature_all<
 					slots::PARCEL_EXTRA_INFOS,
+					slots::PARCEL_CARRIER_NAMES,
 					slots::PARCEL_STATUS_LONG
 				>(bheap::Block::TemperatureHot);
 
@@ -243,6 +246,7 @@ bool screen::ParcelScreen::interact() {
 			if (ui::buttons[ui::Buttons::POWER]) {
 				servicer.set_temperature_all<
 					slots::PARCEL_EXTRA_INFOS,
+					slots::PARCEL_CARRIER_NAMES,
 					slots::PARCEL_STATUS_LONG
 				>(bheap::Block::TemperatureWarm);
 				subscreen = SubscreenSelecting;
@@ -271,7 +275,7 @@ bool screen::ParcelScreen::interact() {
 	return false;
 }
 
-int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time) {
+int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name) {
 	/* 
 	 * 01234567
 	 *   *  T
@@ -293,14 +297,27 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	 */
 
 	bool onscreen = !(y >= 64 || y < -32);
+	auto& fb = matrix.get_inactive_buffer();
 
-	int16_t end_y = y;
+	int16_t pre_header_y = y;
+	int16_t line_start_y = y;
+
+	if (psl.flags & psl.HAS_NEW_CARRIER && carrier_name) {
+		// Assume spacing is setup properly. 
+		draw::text(matrix.get_inactive_buffer(), carrier_name, font::dejavusans_10::info, 4 + draw::scroll(timekeeper.current_time / 10, draw::text_size(carrier_name, font::dejavusans_10::info), 123), y + 8, 0xff_c);
+
+		pre_header_y += 11;
+		line_start_y += 5;
+	}
+
+	int16_t end_y = pre_header_y;
 	int16_t bulb_centering_y = 0;
 
 	// Draw scrolling text first (so we can mask it)
 	if (psl.flags & psl.HAS_STATUS && psl.status_offset < heap_size) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 10;
-		if (onscreen) draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + draw::scroll(timekeeper.current_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), end_y + 8, 0xff_c);
+		if (onscreen) draw::text(matrix.get_inactive_buffer(), heap + psl.status_offset, font::tahoma_9::info, 5 + 
+				draw::scroll(timekeeper.current_time / 10, draw::text_size(heap + psl.status_offset, font::tahoma_9::info), 123), end_y + 8, 0xff_c);
 		end_y += 10;
 	}
 
@@ -344,14 +361,17 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	// Mask out the scrolling bubbling line
 	if (onscreen) {
 		draw::rect(matrix.get_inactive_buffer(), 0, y, 5, end_y, 0);
-		draw::line(matrix.get_inactive_buffer(), 2, y, 2, end_y, 0x40_c);
+		draw::line(matrix.get_inactive_buffer(), 2, line_start_y, 2, end_y, 0x40_c);
 
 		// draw the bulb
-		int16_t bulbpos = y + (bulb_centering_y - y) / 2;
-		auto& fb = matrix.get_inactive_buffer();
+		int16_t bulbpos = pre_header_y + (bulb_centering_y - pre_header_y) / 2;
 
 		fb.at(1, bulbpos) = fb.at(3, bulbpos) = fb.at(2, bulbpos - 1) = fb.at(2, bulbpos + 1) = 0x55ff55_cc;
 		fb.at(2, bulbpos) = 0;
+
+		// draw header dip
+		if (psl.flags & psl.HAS_NEW_CARRIER && carrier_name)
+			fb.at(3, line_start_y) = 0x40_c;
 	}
 
 	return end_y - y + 1;
@@ -364,42 +384,48 @@ void screen::ParcelScreen::draw_loading() {
 }
 
 void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
-	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || (!(parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) && (!servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS)))) {
+	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || (!(parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) && (!servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS) || !servicer.slot(slots::PARCEL_CARRIER_NAMES)))) {
 		draw_loading();
 		return;
 	}
 	// expects lock to be held
 	auto statuses = *servicer[slots::PARCEL_STATUS_SHORT], statuses_long = *servicer[slots::PARCEL_STATUS_LONG];
 	const auto& extra_infos = servicer.slot<slots::ExtraParcelInfoEntry *>(slots::PARCEL_EXTRA_INFOS);
+	auto carriers = *servicer[slots::PARCEL_CARRIER_NAMES];
+	auto carriers_size = servicer[slots::PARCEL_CARRIER_NAMES].datasize;
 	
 	// Draw scrollable content first
-	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -6;
+	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -5;
 	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 18 : 12;
 
 	{
 		int16_t y = header_height - parcel_entries_scroll/128;
+		auto& fb = matrix.get_inactive_buffer();
 
 		// draw initial location
-		{
-			auto sz = draw_long_parcel_entry(y, parcel.status, statuses, servicer[slots::PARCEL_STATUS_SHORT].datasize, parcel.updated_time);
+		if (parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) {
+			auto sz = draw_long_parcel_entry(y, parcel.status, statuses, servicer[slots::PARCEL_STATUS_SHORT].datasize, parcel.updated_time, nullptr);
 			y += sz;
 			parcel_entries_size += sz;
 		}
+		else {
+			bool do_space = false;
+			for (const auto& ei : extra_infos) {
+				if (ei.for_parcel != selected_parcel) continue;
 
-		if (parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) goto skip_ei;
-
-		for (const auto& ei : extra_infos) {
-			if (ei.for_parcel != selected_parcel) continue;
-			
-			// draw the entry
-			auto sz = draw_long_parcel_entry(y, ei.status, statuses_long, servicer[slots::PARCEL_STATUS_LONG].datasize, ei.updated_time);
-			y += sz;
-			parcel_entries_size += sz;
+				if (ei.status.flags & slots::ParcelStatusLine::HAS_NEW_CARRIER && do_space) {
+					fb.at(1, y-1) = fb.at(3, y-1) = 0x40_c;
+					y += 2;
+				}
+				
+				// draw the entry
+				auto sz = draw_long_parcel_entry(y, ei.status, statuses_long, servicer[slots::PARCEL_STATUS_LONG].datasize, ei.updated_time, ei.new_subcarrier_offset > carriers_size ? nullptr : carriers + ei.new_subcarrier_offset);
+				y += sz;
+				parcel_entries_size += sz;
+				do_space = true;
+			}
 		}
-
-skip_ei:
 		y -= 1;
-		auto& fb = matrix.get_inactive_buffer();
 
 		// then, draw end stop/arrow
 		if (parcel.status.flags & parcel.status.EXTRA_INFO_TRUNCATED) {
@@ -415,7 +441,7 @@ skip_ei:
 	draw_parcel_name(0, parcel);
 	// Show estimated delivery if present
 	if (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) {
-		char buf[48] = "est. delivery "; draw::format_relative_date(buf+strlen(buf), 48-strlen(buf), parcel.estimated_delivery);
+		char buf[48] = "est. delivery "; draw::format_relative_date(buf+strlen(buf), 48-strlen(buf), parcel.estimated_delivery_to);
 		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, 17, 0xaa_c);
 	}
@@ -514,9 +540,9 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 	{
 		int16_t bulbpos = 64;
 
-		if (parcel.status.flags & slots::ParcelStatusLine::HAS_EST_DEILIVERY && parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery > rtc_time) {
+		if (parcel.status.flags & slots::ParcelStatusLine::HAS_EST_DEILIVERY && parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery_to > rtc_time) {
 			// If more than 5 days out, place close to start
-			int hours = (parcel.estimated_delivery - rtc_time) / (60*60*1000LL);
+			int hours = (parcel.estimated_delivery_to - rtc_time) / (60*60*1000LL);
 			if (hours >= 5*24) {
 				bulbpos = 12;
 			}
