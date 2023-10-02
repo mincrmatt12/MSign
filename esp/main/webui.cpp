@@ -2,7 +2,6 @@
 #include "config.h"
 #include "esp_log.h"
 #include "grabber/grab.h"
-#include "grabber/parcels.h"
 #include "serial.h"
 #include "common/util.h"
 #include "ff.h"
@@ -749,38 +748,6 @@ reachedend:
 			send_static_response(204, "No Content", "");
 			lwip_close(client_sock);
 			serial::interface.reset();
-		}
-		else if (strcasecmp(tgt, "newparcel") == 0) {
-			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
-
-			// process params
-			char * got_code = nullptr, * got_carrier = nullptr;
-			bool is_400 = false;
-
-			json::JSONParser r_p([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& value) {
-				if (stack_ptr == 2) {
-					if (strcmp(stack[1]->name, "code") == 0 && value.type == value.STR && !got_code) got_code = strdup(value.str_val);
-					else if (strcmp(stack[1]->name, "carrier") == 0 && value.type == value.STR && !got_carrier) got_carrier = strdup(value.str_val);
-					else is_400 = true;
-				}
-			});
-
-			if (!r_p.parse([](){return read_from_req_body();}) || is_400) {
-				free(got_code); free(got_carrier);
-				goto badrequest;
-			}
-
-			// Otherwise, try to get a request code
-			char * result_id = parcels::generate_tracker_id(got_code, got_carrier, is_400);
-			if (result_id == nullptr) {
-				send_static_response(400, "Bad Request", "Failed to create tracker for unknown reason (maybe down / internal bug)");
-				return;
-			}
-			else {
-				send_static_response(is_400 ? 400 : 201, is_400 ? "Bad Request" : "Created", result_id);
-				free(result_id);
-				return;
-			}
 		}
 		else {
 			// Temp.
