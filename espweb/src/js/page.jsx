@@ -117,7 +117,7 @@ function App() {
 
 			<Container className="contbrd">
 				<Row>
-					<Col xs="5" sm="4" md="3" lg="2">
+					<Col sm="4" md="3" lg="2" className="mb-2">
 						<Card bg="dark">
 							<Nav variant="pills" className="flex-column msign-left-nav">
 								<LinkContainer to="/" exact>
@@ -158,7 +158,7 @@ function App() {
 						</Card>
 					</Col>
 					<BackendVersionContext.Provider value={fetchedVer}>
-						<Col xs="7" sm="8" md="9" lg="10" className="mb-2">
+						<Col sm="8" md="9" lg="10" className="mb-2">
 							{error ? <Alert variant='warning'>failed to load config; running in test mode -- no changes will be saved.</Alert> : ""}
 							{loading ? <Alert variant='info'>loading...</Alert> : <ConfigContext.Provider value={[cfg, (path, value) => {
 								if (path === "*") {
