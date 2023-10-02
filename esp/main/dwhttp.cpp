@@ -600,10 +600,16 @@ got_done:
 					stop();
 				}
 				else if (socket.is_connected()) {
+					auto tme = xTaskGetTickCount();
 					// If there are remaining bytes in the previous transmission, read them.
-					while (remain_bytes) {
+					while (remain_bytes && socket.is_connected()) {
 						uint8_t junk_buf[32];
 						ESP_LOGD(TAG, "dumped %d", read_from(junk_buf, 32));
+						if (xTaskGetTickCount() - tme > pdMS_TO_TICKS(250)) {
+							ESP_LOGW(TAG, "stuck dumping previous connection; reconnecting");
+							stop();
+							break;
+						}
 					}
 				}
 				if (last_server != host || !socket.is_connected()) {
