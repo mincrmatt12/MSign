@@ -2,22 +2,17 @@
 
 import os
 import mmap
-import ctypes
 import time
 import struct
 import stat
 import sys
 import sdl2
 import sdl2.ext
-
-rtld = ctypes.PyDLL("librt.so", use_errno=True)
+import _posixshmem
 
 # Create shared memory
 
-shm_fd = rtld.shm_open(ctypes.create_string_buffer(b"/msign_buttons"), ctypes.c_int(os.O_RDWR | os.O_CREAT | os.O_EXCL), ctypes.c_ushort(0o666))
-
-if shm_fd == -1:
-    raise RuntimeError(os.strerror(ctypes.get_errno()))
+shm_fd = _posixshmem.shm_open("/msign_buttons", os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o666)
 
 print("> created shm fd")
 
@@ -75,5 +70,5 @@ try:
             update_dat()
         time.sleep(0.01)
 finally:
-    rtld.shm_unlink(ctypes.create_string_buffer(b"/msign_buttons"))
+    _posixshmem.shm_unlink("/msign_buttons")
     print("> cleaned up")
