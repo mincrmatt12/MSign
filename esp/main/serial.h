@@ -81,7 +81,7 @@ namespace serial {
 
 		// Get the size of a slot from the arena (implicitly syncs).
 		//
-		// Returns bheap::Arena::npos if not in the arena (i.e. returns directly the result of contents_size).
+		// Returns 0 if not present in the arena.
 		size_t current_slot_size(uint16_t slotid);
 
 		// MANUAL SLOT UPDATE

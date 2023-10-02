@@ -266,7 +266,7 @@ void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
 }
 
 size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
-	size_t result = ~0u;
+	size_t result = 0u;
 
 	DataUpdateRequest dur;
 	dur.type = DataUpdateRequest::TypeGetSize;
