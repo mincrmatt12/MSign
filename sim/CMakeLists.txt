@@ -9,6 +9,9 @@ set(SIM_BRSSL_PATH ${CMAKE_CURRENT_LIST_DIR}/../vendor/BearSSL)
 set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs_priv)
 set(SIM_B64_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/libb64)
 
+set(STM_PHYS_DIR ${CMAKE_CURRENT_LIST_DIR}/../stm/src)
+set(ESP_PHYS_DIR ${CMAKE_CURRENT_LIST_DIR}/../esp/main)
+
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
@@ -42,11 +45,11 @@ message(STATUS "Generating source trees...")
 
 # b) glob for files
 file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.[ch]*)
-file(GLOB_RECURSE STM_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
+file(GLOB_RECURSE STM_SRCS FOLLOW_SYMLINKS ${STM_PHYS_DIR}/*.[ch]*)
 
 file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.[ch]*)
-file(GLOB_RECURSE ESP_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/*.[ch]*)
-file(GLOB         ESP_NMFUS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/parser/*.nmfu)
+file(GLOB_RECURSE ESP_SRCS FOLLOW_SYMLINKS ${ESP_PHYS_DIR}/*.[ch]*)
+file(GLOB         ESP_NMFUS ${ESP_PHYS_DIR}/parser/*.nmfu)
 
 # now, create a new list, called TOTAL_STM_SRCS, from the original list
 set(TOTAL_STM_SRCS ${STM_SRCS})
@@ -76,7 +79,7 @@ add_custom_command(TARGET copy_stm_src PRE_BUILD
 	COMMENT "Copying stm sources" 
 	BYPRODUCTS ${TOTAL_STM_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
-	${CMAKE_CURRENT_LIST_DIR}/../stm/src ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
+	${STM_PHYS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
 )
 
 add_custom_target(copy_esp_src)
@@ -84,7 +87,7 @@ add_custom_command(TARGET copy_esp_src PRE_BUILD
 	COMMENT "Copying esp sources" 
 	BYPRODUCTS ${TOTAL_ESP_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
-	${CMAKE_CURRENT_LIST_DIR}/../esp/main ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
+	${ESP_PHYS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
 )
 
 # mark the files as generated
@@ -312,3 +315,6 @@ target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE
 add_dependencies(espsim copy_esp_src esp_parsers)
 
 target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64 esp_wpabufman)
+
+# ----- utilities -----
+add_subdirectory(utils)
