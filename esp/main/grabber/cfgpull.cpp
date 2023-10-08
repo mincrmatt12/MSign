@@ -72,22 +72,25 @@ bool cfgpull::loop() {
 
 	bool new_config = false, new_system = false;
 	{
-		char metrics_string[256];
-		{
-			int free_mem = esp_get_free_heap_size();
-			int free_dram = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+		auto resp = dwhttp::open_site(pull_host, "/a/versions");
 
-			snprintf(metrics_string, sizeof metrics_string, "mem_free %d; mem_free_dram %d; esp_tickcount %d", free_mem, free_dram, xTaskGetTickCount());
-		}
-
-		const char *headers[][2] = {
 #ifndef SIM
-				{"X-MSign-Metrics", metrics_string},
+		{
+			char metrics_buf[32];
+			auto metrics_sender = resp.begin_header("X-MSign-Metrics");
+			resp.write("mem_free ");
+			snprintf(metrics_buf, sizeof metrics_buf, "%d", esp_get_free_heap_size());
+			resp.write(metrics_buf);
+			resp.write("; mem_free_dram ");
+			snprintf(metrics_buf, sizeof metrics_buf, "%d", heap_caps_get_free_size(MALLOC_CAP_8BIT));
+			resp.write(metrics_buf);
+			resp.write("; esp_tickcount ");
+			snprintf(metrics_buf, sizeof metrics_buf, "%d", xTaskGetTickCount());
+			resp.write(metrics_buf);
+		}
 #endif
-				{nullptr, nullptr}
-		};
 
-		auto resp = dwhttp::download_with_callback(pull_host, "/a/versions", headers);
+		resp.end_body();
 		if (!resp.ok()) return false;
 
 		json::JSONParser jp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& jv){
