@@ -98,7 +98,7 @@ function App() {
 
 	return (
 		<Router basename="/">
-			<Navbar variant="dark" bg="dark">
+			<Navbar variant="dark" bg="dark" expand="sm">
 				<Container fluid>
 					<Navbar.Brand>msign control panel</Navbar.Brand>
 					<Nav variant="pills">

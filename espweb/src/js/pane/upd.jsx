@@ -90,7 +90,7 @@ class UpdatePane extends React.Component {
 							<Form.Control name="file" required type="file" accept=".ar" />
 						</Form.Group>
 					</Col>
-					<Col sm="3" xs="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
+					<Col md="3" sm="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
 						<Button className="w-100" type="submit" variant="danger">upload new ui</Button>
 					</Col>
 				</Row>
@@ -112,7 +112,7 @@ class UpdatePane extends React.Component {
 						</Form.Group>
 					</Col>
 
-					<Col sm="3" xs="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
+					<Col md="3" sm="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
 						<Button type="submit" variant="danger">upload new firmware</Button>
 					</Col>
 				</Row>
@@ -128,7 +128,7 @@ class UpdatePane extends React.Component {
 							<Form.Control name="file" required type="file" accept=".bin" />
 						</Form.Group>
 					</Col>
-					<Col sm="3" xs="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
+					<Col md="3" sm="5" className="border-start hr-darkgray d-flex flex-column justify-content-center">
 						<Button className="w-100" type="submit" variant="danger">upload new CAs</Button>
 					</Col>
 				</Row>
