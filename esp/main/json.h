@@ -67,6 +67,12 @@ namespace json {
 		TreeSlabAllocator();
 		~TreeSlabAllocator();
 
+		TreeSlabAllocator(const TreeSlabAllocator&) = delete;
+		TreeSlabAllocator(TreeSlabAllocator&&) = delete;
+
+		TreeSlabAllocator& operator=(const TreeSlabAllocator&) = delete;
+		TreeSlabAllocator& operator=(TreeSlabAllocator&&) = delete;
+
 		// Allocate a single object
 		template<typename T, typename ...Args>
 		T* make(Args&& ...args) {
@@ -125,6 +131,12 @@ namespace json {
 		JSONParser(JSONCallback && c, bool is_utf8=false);
 		~JSONParser();
 
+		JSONParser(const JSONParser&) = delete;
+		JSONParser(JSONParser&&) = delete;
+
+		JSONParser& operator=(const JSONParser&) = delete;
+		JSONParser& operator=(JSONParser&&) = delete;
+
 		bool parse(const char * text);
 		bool parse(const char * text, size_t size);
 		bool parse(TextCallback && c);
@@ -137,9 +149,12 @@ namespace json {
 			return *stack[stack_ptr - 1];
 		}
 
+		bool grow_stack();
 		template<typename... Args>
-		inline void push(Args&&... args) {
+		inline bool push(Args&&... args) {
+			if (!grow_stack()) return false;
 			stack[stack_ptr++] = memory.make<PathNode>(std::forward<Args>(args)...);
+			return true;
 		}
 		void pop () {
 			memory.finish(stack[--stack_ptr]);
@@ -162,12 +177,13 @@ namespace json {
 		char next();
 
 		char temp = 0;
-		uint8_t    stack_ptr;
+		uint8_t stack_ptr = 0;
+		uint8_t stack_size = 0;
 
-		bool need = true;
-		bool is_utf8 = false;
+		bool need : 1;
+		bool is_utf8 : 1;
 
-		PathNode * stack[20];
+		PathNode **stack{};
 
 		JSONCallback cb;
 		TextCallback tcb;

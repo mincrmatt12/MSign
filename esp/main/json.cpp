@@ -13,6 +13,15 @@ const static char * const TAG = "json";
 const char * const json::PathNode::ROOT_NAME = "(root)";
 const char * const json::PathNode::ANON_NAME = "(anon)";
 
+static bool report_stackbig() {
+#ifndef STANDALONE_JSON
+	ESP_LOGW(TAG, "cancelling json parse due to stack overflow");
+#endif
+	return false;
+}
+
+#define SAFE_PUSH(...) do {if (!push(__VA_ARGS__)) return report_stackbig();} while(0)
+
 json::TreeSlabAllocator::TreeSlabAllocator() {
 	tail = new Chunk();
 	_last = tail->data;
@@ -96,13 +105,23 @@ bool json::TreeSlabAllocator::append(const uint8_t * data, size_t amount) {
 	return true;
 }
 
-json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : is_utf8(is_utf8), cb(std::move(c)) {
-	this->stack_ptr = 0;
+json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : need(true), is_utf8(is_utf8), cb(std::move(c)) {
 	push();
 }
 
 json::JSONParser::~JSONParser() {
 	while (this->stack_ptr > 0) pop();
+	free(stack);
+}
+
+bool json::JSONParser::grow_stack() {
+	if (stack_ptr == stack_size) {
+		// nesting level too high
+		if (stack_size + 4 > 32) return false;
+		stack_size += 4;
+		stack = static_cast<PathNode **>(realloc(stack, sizeof(PathNode *) * stack_size));
+	}
+	return true;
 }
 
 bool json::JSONParser::parse(const char *text) {
@@ -328,7 +347,7 @@ bool json::JSONParser::parse_array() {
 		top().index = 0;
 	}
 	else {
-		push(true);
+		SAFE_PUSH(true);
 		top().array = true;
 		top().index = 0;
 	}
@@ -362,7 +381,7 @@ bool json::JSONParser::parse_object() {
 		}
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
-		push(n);
+		SAFE_PUSH(n);
 		if (!advance_whitespace()) {free(n); return false;}
 		if (peek() != ':') {free(n); return false;}
 		next();
