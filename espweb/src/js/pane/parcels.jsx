@@ -65,15 +65,19 @@ function CarrierChooser({code, updateCode}) {
 	const resolved = nameById(allCarriers, code);
 	const [modalOpen, setModalOpen] = React.useState(false);
 
+	const actualInput = <Form.Control placeholder="auto" value={code == 0 ? "" : code} onChange={(e) => updateCode(
+		e.target.value === "" ? 0 : (Number.parseInt(e.target.value) || code)
+	)} />;
+
 	if (allCarriers.length == 0) {
 		return <InputGroup>
-			<Form.Control placeholder="auto" value={code == 0 ? "" : code} onChange={(e) => updateCode(Number.parseInt(e.target.value))} />
+			{actualInput}
 		</InputGroup>;
 	}
 	else {
 		return <>
 			<InputGroup>
-				<Form.Control placeholder="auto" value={code == 0 ? "" : code} onChange={(e) => updateCode(Number.parseInt(e.target.value))} />
+				{actualInput}
 				{code == 0 || <InputGroup.Text>{resolved}</InputGroup.Text>}
 				<Dropdown>
 					<Dropdown.Toggle variant="secondary" className="border-black" />
@@ -106,13 +110,13 @@ function ParcelEntry({data, updateData}) {
 		<hr className="hr-darkgray" />
 
 		<Row className="my-2">
-			<Col>
+			<Col md className="mb-1">
 				<Form.Group controlId="tc">
 					<Form.Label>initial carrier</Form.Label>
 					<CarrierChooser code={data["carrier_id"] ?? 0} updateCode={(v) => {updateData(["carrier_id"], v)}} />
 				</Form.Group>
 			</Col>
-			<Col>
+			<Col md>
 				<Form.Group controlId="tc">
 					<Form.Label>final carrier</Form.Label>
 					<CarrierChooser code={data["final_carrier_id"] ?? 0} updateCode={(v) => {updateData(["final_carrier_id"], v)}} />
