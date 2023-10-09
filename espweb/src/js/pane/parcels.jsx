@@ -48,8 +48,8 @@ function ChooseCarrierDialog({updateCode, close, isOpen}) {
 			</Form.Group>
 			{results.length > 0 && <hr className="hr-gray" />}
 			{results.map(({key, name}) => <div className="bg-secondary d-flex align-items-center rounded p-2 my-2">
-				<Col sm="8" md="10" as="p" className="my-0 mb-1">{name}</Col>
-				<Col sm="4" md="2"><Button className="w-100" onClick={() => {
+				<Col xs="8" md="10" as="p" className="my-0 mb-1">{name}</Col>
+				<Col xs="4" md="2"><Button className="w-100" onClick={() => {
 					updateCode(key); close();
 				}}>use</Button></Col>
 			</div>)}
