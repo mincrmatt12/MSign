@@ -13,7 +13,7 @@ pipeline {
 					withEnv(["npm_config_global_folder=${WORKSPACE}/espweb/ci-global"]) {
 						sh 'yarn install'
 						sh "python3 generate_sd.py"
-						sh "WEBUPDATE_NO_REBUILD=1 ./generate_webupdate.sh"
+						sh "ar q web/webui.ar web/*"
 						sh "python3 generate_caupdate.py build/ca certs.bin"
 					}
 				}

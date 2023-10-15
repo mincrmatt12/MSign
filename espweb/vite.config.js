@@ -33,10 +33,13 @@ export default (() => {
 					page: resolve(__dirname, "./src/page.html")
 				},
 				output: {
-					manualChunks: false,
-					inlineDynamicImports: true,
-					assetFileNames: '[name].[ext]',
-					entryFileNames: '[name].js'
+					manualChunks: (id) => {
+						if (id.includes("node_modules")) return "vendor";
+						else return "page";
+					},
+					chunkFileNames: '[name].[hash:16].js',
+					assetFileNames: '[name].[hash:16].[ext]',
+					entryFileNames: '[name].[hash:16].js'
 				}
 			}
 		},

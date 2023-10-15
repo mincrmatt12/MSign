@@ -48,6 +48,7 @@ namespace upd {
 #define e(v) {"/web/" v, v "/"}, {"/web/" v ".gz", v ".gz/"} 
 		e("page.html"),
 		e("page.js"),
+		e("vendor.js"),
 		e("page.css")
 #undef e
 	};

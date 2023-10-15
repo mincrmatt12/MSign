@@ -1,12 +1,11 @@
 #!/bin/sh
 
-if [ ${WEBUPDATE_NO_REBUILD:-0} -ne 1 ]; then
-	rm -rf web
-	yarn build
-else
-	rm -rf web/*.gz web/webui.ar
-fi
+rm -rf web
+yarn build
 
 cd web
-gzip -k -9 page.css page.html page.js
+mv page.*.css page.css
+mv page.*.js page.js
+mv vendor.*.js vendor.js
+gzip -k -9 page.css page.html page.js vendor.js
 ar q webui.ar *

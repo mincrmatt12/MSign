@@ -801,15 +801,15 @@ notfound:
 				return;
 			case HTTP_SERVE_AUTH_TYPE_OK:
 				if (!check_auth(reqstate->c.auth_string)) {
-					send_static_response(403, "Forbidden", "Invalid authentication.");
+					send_static_response(401, "Unauthorized", "Invalid authentication.");
 					return;
 				}
 				break;
 		}
 
 		// Check if this is an API method
-		if (strncmp(reqstate->c.url, "a/", 2) == 0) {
-			do_api_response(reqstate->c.url + 2);
+		if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_API) {
+			do_api_response(reqstate->c.api_url);
 		}
 		else {
 			// Only allow GET requests
@@ -817,56 +817,74 @@ notfound:
 				send_static_response(405, "Method Not Allowed", "Static resources are only gettable with GET");
 				return;
 			}
-			// Check for a favicon
-			if (strcasecmp(reqstate->c.url, "favicon.ico") == 0) {
-				ESP_LOGD(TAG, "Sending 404");
-				// Send a 404
-				send_static_response(404, "Not Found", "No favicon is present");
-				return;
-			}
 
-			char valid_etag[16];
+			char valid_etag[16]{};
 			const char * actual_name = nullptr;
 			const char * content_type = nullptr;
 
 			// Check for the js files
-			if (strcasecmp(reqstate->c.url, "page.js") == 0) {
+			if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_JS) {
 				snprintf(valid_etag, 16, "E%djs", etag_num);
 				actual_name = "page.js";
 				content_type = "application/javascript";
 			}
-			else if (strcasecmp(reqstate->c.url, "page.css") == 0) {
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_CSS) {
 				snprintf(valid_etag, 16, "E%dcss", etag_num);
 				actual_name = "page.css";
 				content_type = "text/css";
 			}
-			else {
-				snprintf(valid_etag, 16, "E%dht", etag_num);
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_VENDOR_JS) {
+				snprintf(valid_etag, 16, "E%dvjs", etag_num);
+				actual_name = "vendor.js";
+				content_type = "application/javascript";
+			}
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_HTML) {
 				actual_name = "page.html";
 				content_type = "text/html; charset=UTF-8";
 			}
+			else {
+				ESP_LOGE(TAG, "Unexpected target_url enum -- aborting");
+				send_static_response(404, "Not Found", "Unknown target url");
+				return;
+			}
 
-			// Check for etag-ability
-			if (reqstate->c.is_conditional && strcmp(valid_etag, reqstate->c.etag) == 0) {
-				// Send a 304
-				print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nETag: ");
-				print_to_client(valid_etag);
-				print_to_client("\r\n\r\n");
+			bool client_cached = (reqstate->c.is_conditional && valid_etag[0] && strcmp(valid_etag, reqstate->c.etag) == 0);
+			if (reqstate->c.is_cacheable) {
+				if (client_cached) {
+					// Send a 304
+					print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=31536000\r\nConnection: close\r\nETag: ");
+					print_to_client(valid_etag);
+					print_to_client("\r\n\r\n");
+				}
+				else {
+					print_to_client("HTTP/1.1 200 OK\r\nCache-Control: max-age=31536000\r\nConnection: close\r\nContent-Type: ");
+
+					// Send the content type
+					print_to_client(content_type);
+					// Send the etag
+					if (valid_etag[0]) {
+						print_to_client("\r\nETag: \"");
+						print_to_client(valid_etag);
+						print_to_client("\"\r\n");
+					}
+					else {
+						print_to_client("\r\n");
+					}
+					send_cacheable_file(actual_name);
+				}
 			}
 			else {
-				ESP_LOGD(TAG, "Starting response");
-				// Start a response
-				print_to_client("HTTP/1.1 200 OK\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nContent-Type: ");
-
-				// Send the content type
-				print_to_client(content_type);
-				// Send the etag
-				print_to_client("\r\nETag: \"");
-				print_to_client(valid_etag);
-				print_to_client("\"\r\n");
-
-				// Send the file contents
-				send_cacheable_file(actual_name);
+				if (client_cached) {
+					print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=900, stale-while-revalidate=300, private\r\nConnection: close\r\nETag: ");
+					print_to_client(valid_etag);
+					print_to_client("\r\n\r\n");
+				}
+				else {
+					print_to_client("HTTP/1.1 200 OK\r\nCache-Control: no-cache\r\nConnection: close\r\nContent-Type: ");
+					print_to_client(content_type);
+					print_to_client("\r\n");
+					send_cacheable_file(actual_name);
+				}
 			}
 		}
 	}
@@ -890,6 +908,12 @@ notfound:
 			case HTTP_SERVE_ERROR_CODE_BAD_REQUEST:
 				// Send a boring old request
 				send_static_response(400, "Bad Request", "You have sent an invalid request");
+				break;
+			case HTTP_SERVE_ERROR_CODE_NOT_FOUND:
+				send_static_response(404, "Not Found", "Requested resource is nonexistent.");
+				break;
+			case HTTP_SERVE_ERROR_CODE_AUTH_TOO_LONG:
+				send_static_response(401, "Unauthorized", "Invalid authentication.");
 				break;
 			default:
 				// Send a boring old request
