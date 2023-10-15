@@ -98,6 +98,11 @@ def send_css():
 def send_js():
     return send_file(db.get_webui_file("page.js"), mimetype="application/javascript")
 
+@app.route("/vendor.js")
+@auth.priv_required(auth.Priv.READ)
+def send_js():
+    return send_file(db.get_webui_file("vendor.js"), mimetype="application/javascript")
+
 @app.route("/a/conf.json")
 @auth.priv_required(auth.Priv.READ)
 def get_config():
