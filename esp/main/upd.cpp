@@ -3,15 +3,17 @@
 #include <esp_log.h>
 #include "config.h"
 #include "common/util.h"
-#include "esp_system.h"
 #include "sd.h"
-#include "uart.h"
 #include "common/slots.h"
 #include <FreeRTOS.h>
 #include <task.h>
 
+#ifndef SIM
+#include <uart.h>
 #include <esp_partition.h>
+#include <esp_system.h>
 #include <esp_ota_ops.h>
+#endif
 
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
@@ -59,186 +61,16 @@ namespace upd {
 			case USTATE_NONE:
 				return upd::NO_UPDATE;
 			default:
+#ifdef SIM
+				ESP_LOGW(TAG, "sim, skipping sys update");
+				return upd::NO_UPDATE;
+#else
 				return upd::FULL_SYSTEM;
+#endif
 		}
 	}
 
-	bool copy_updated_file(const char* tfname, FIL* source, int length) {
-		FIL target; f_open(&target, tfname, FA_WRITE | FA_CREATE_ALWAYS);
-		int bytes_since_last_yield = 0;
-		uint8_t buf[256];
-		UINT br;
-		for (int i = 0; i < length; i += 256) {
-			int size_of_tx = (length - i >= 256) ? 256 : (length - i);
-			if (f_eof(source)) {
-				f_close(&target);
-				ESP_LOGE(TAG, "failed to copy");
-				return false;
-			}
-			f_read(source, buf, size_of_tx, &br);
-			UINT bw;
-			f_write(&target, buf, br, &bw);
-			bytes_since_last_yield += bw;
-			if (bytes_since_last_yield > 4096) {
-				vTaskDelay(10);
-				bytes_since_last_yield = 0;
-			}
-		}
-
-		f_close(&target);
-		return true;
-	}
-
-	void update_website() {
-		// check for the webui.ar file
-		if (f_stat("/upd/webui.ar", NULL) != FR_OK) {
-			ESP_LOGE(TAG, "tried to update web but no webui.ar file");
-			return;
-		}
-
-		// otherwise, prepare by BLOWING THE OLD SHIT TO LITTE BITS
-		
-		ESP_LOGD(TAG, "removing old files...");
-
-		f_unlink("/web/page.html");
-		f_unlink("/web/page.css");
-		f_unlink("/web/page.js");
-		f_unlink("/web/page.html.gz");
-		f_unlink("/web/page.css.gz");
-		f_unlink("/web/page.js.gz");
-		f_unlink("/web/etag"); // ignore failures here
-
-		FIL arF; f_open(&arF, "/upd/webui.ar", FA_READ);
-	 	uint8_t magic[8];
-		UINT br;
-		int files_read = 0;
-		if ((f_read(&arF, magic, sizeof(magic), &br), br) != sizeof(magic) ||
-				memcmp(magic, "!<arch>\n", sizeof(magic)) ) {
-			f_close(&arF);
-	invalidformat:
-			ESP_LOGE(TAG, "what kind of shit are you trying to pull here? give me a .ar file...");
-			goto failure;
-		}
-
-		while (files_read < 6) {
-			uint8_t fileHeader[60];
-			do {
-				if (f_read(&arF, &fileHeader[0], 1, &br) != FR_OK || !br) {
-					ESP_LOGE(TAG, "invalid ar file");
-					f_close(&arF);
-					goto failure;
-				}
-			} while (fileHeader[0] == '\n');
-			f_read(&arF, &fileHeader[1], sizeof(fileHeader)-1, &br);
-			if (br != sizeof(fileHeader)-1) {
-				f_close(&arF);
-				goto failure;
-			}
-			fileHeader[58] = 0;
-
-			int iH = 0, iC = 0, iJ = 0, iHc = 0, iCc = 0, iJc = 0;
-			// check the filename
-			if ((iH = memcmp(fileHeader, "page.html/", 10))
-				&& (iC = memcmp(fileHeader, "page.css/", 9)) && (iJ = memcmp(fileHeader, "page.js/ ", 9)) && 
-				(iHc = memcmp(fileHeader, "page.html.gz", 12))
-				&& (iCc = memcmp(fileHeader, "page.css.gz/", 11)) && (iJc = memcmp(fileHeader, "page.js.gz/", 10))) {
-				ESP_LOGD(TAG, "unknown entry");
-				f_close(&arF);
-				
-				goto failure;
-			}
-
-			// ok, now get the size
-			int length;
-			if (1 != sscanf((char *)(fileHeader + 48), "%d", &length) || !length) {
-				goto invalidformat;
-			}
-
-			const char * tfname;
-			if (!iH) tfname = "/web/page.html";
-			else if (!iC) tfname = "/web/page.css";
-			else if (!iJ) tfname = "/web/page.js";
-			else if (!iHc) tfname = "/web/page.html.gz";
-			else if (!iCc) tfname = "/web/page.css.gz";
-			else if (!iJc) tfname = "/web/page.js.gz";
-			else goto failure;
-
-			ESP_LOGI(TAG, "updating: %s", tfname);
-			if (copy_updated_file(tfname, &arF, length))
-				++files_read;
-			else goto failure;
-		}
-		f_close(&arF);
-
-		ESP_LOGI(TAG, "finished ui update.");
-failure: // clean up
-		f_unlink("/upd/state");
-		f_unlink("/upd/webui.ar");
-		f_rmdir("/upd");
-	}
-
-
-	void update_cacerts() {
-		// Expects certs.bin to be in /upd folder
-		if (f_stat("/upd/certs.bin", NULL) != FR_OK) {
-			ESP_LOGE(TAG, "tried to update certs but no certs.bin");
-			return;
-		}
-
-		ESP_LOGI(TAG, "Updating CA cert archive");
-
-		FIL caF; f_open(&caF, "/upd/certs.bin", FA_READ);
-		uint8_t magic[4];
-		UINT br;
-
-		if (f_read(&caF, magic, sizeof(magic), &br) != FR_OK || br != 4 || memcmp(magic, "MSCA", 4)) {
-			f_close(&caF);
-			ESP_LOGE(TAG, "invalid certs.bin");
-			return;
-		}
-
-		uint32_t files_left;
-		f_read(&caF, &files_left, 4, &br);
-
-		char target_filename[64 + 4 + 1] { "/ca/" };
-
-		while (files_left--) {
-			// Read filename
-			f_read(&caF, target_filename + 4, 64, &br);
-			if (br != 64) {
-				f_close(&caF);
-				return;
-			}
-			uint32_t file_size;
-			f_read(&caF, &file_size, 4, &br);
-			if (br != 4) {
-				f_close(&caF);
-				return;
-			}
-
-			// If file exists, skip it
-			if (f_stat(target_filename, NULL) == FR_OK) {
-				ESP_LOGI(TAG, "File %s already exists, skipping", target_filename);
-				f_lseek(&caF, f_tell(&caF) + file_size);
-				continue;
-			}
-
-			ESP_LOGI(TAG, "Installing new cert %s", target_filename);
-			if (!copy_updated_file(target_filename, &caF, (int)file_size)) {
-				f_close(&caF);
-				return;
-			}
-		}
-
-		f_close(&caF);
-
-		f_unlink("/upd/state");
-		f_unlink("/upd/certs.bin");
-		f_rmdir("/upd");
-
-		return;
-	}
-
+#ifndef SIM
 	// routines for doing update
 	void send_update_chunk(uint8_t * buffer, size_t length) {
 		if (length > 253) {
@@ -304,7 +136,6 @@ failure: // clean up
 
 
 	// full system update
-
 	void update_system() {
 		// check the files are present
 		uint16_t crc_esp, crc_stm;
@@ -564,4 +395,7 @@ failure: // clean up
 			}
 		}
 	}
+#else
+	void update_system() {}
+#endif
 }
