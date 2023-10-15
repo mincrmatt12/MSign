@@ -104,7 +104,7 @@ foreach(nmfu_file ${ESP_NMFUS})
 	get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
 	list(APPEND TOTAL_ESP_SRCS ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c)
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.h
-		COMMAND ${NMFU_EXECUTABLE} -O3 ${nmfu_file} -finclude-user-ptr $<$<STREQUAL:${nmfu_target_name},http_serve>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-fyield-support>
+		COMMAND ${NMFU_EXECUTABLE} -O3 ${nmfu_file} -fuse-packed-enums -finclude-user-ptr $<$<STREQUAL:${nmfu_target_name},http_serve>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-fyield-support>
 		DEPENDS ${nmfu_file}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 	)
