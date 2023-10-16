@@ -411,8 +411,10 @@ reachedend:
 		else if (strcasecmp(tgt, "model.bin") == 0 || strcasecmp(tgt, "model1.bin") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
 
+			const char * sd_path = (strcasecmp(tgt, "model.bin") == 0) ? "/model.bin" : "/model1.bin";
+
 			FIL f; 
-			if (f_open(&f, tgt - 1, FA_READ) == FR_OK) {
+			if (f_open(&f, sd_path, FA_READ) == FR_OK) {
 				print_to_client("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n");
 				stream_file(&f);
 				f_close(&f);
