@@ -99,6 +99,8 @@ parser {
                 error_code = URL_TOO_LONG;
                 finish;
             }
+
+            " "; // Match the space after the URL to ensure we catch not found properly.
         }
         catch (nomatch) {
             waitend();
@@ -108,7 +110,7 @@ parser {
 
 		// Match the following space and HTTP version
 
-		" HTTP/";
+		"HTTP/";
 
 		case {
 			"1.1","1.0" -> {}
