@@ -15,9 +15,9 @@ namespace transit::ttc {
 		config::string_t dirtag[4]{};
 		//!cfg: holds .stopid
 		int stopid = -1;
-		//!cfg: holds .dirtag_alt
+		//!cfg: holds .alt_dirtag
 		config::string_t alt_dirtag[4]{};
-		//!cfg: holds .stopid_alt
+		//!cfg: holds .alt_stopid
 		int alt_stopid = -1;
 		//!cfg: holds .distance
 		uint8_t distance_minutes = 5;

@@ -19,17 +19,6 @@ namespace transit::ttc {
 
 	// Populate the info and times with the information for this slot.
 	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6], uint64_t times_b[6]) {
-		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.stopid);
-
-		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
-		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
-
-		if (dw.result_code() < 200 || dw.result_code() > 299) {
-			return false;
-		}
-
-		dw.make_nonclose();
 
 		ESP_LOGD(TAG, "Parsing json data");
 		// message is here now read it
@@ -41,7 +30,7 @@ namespace transit::ttc {
 			uint64_t epoch = 0;
 			bool layover = false;
 			int tag = 0;
-		} state;
+		} state{};
 
 		int max_e = 0, max_e_alt = 0;
 		
@@ -123,19 +112,48 @@ namespace transit::ttc {
 			}
 		});
 
+		char url[80];
+
 		bool ok = true;
 
-		if (!parser.parse(dw)) {
+		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.stopid);
+		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
+		if (dw.result_code() < 200 || dw.result_code() > 299) {
+			ok = false;
+		}
+		else {
+			dw.make_nonclose();
+		}
+
+		if (ok && !parser.parse(dw)) {
 			ok = false;
 			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
+
+		if (entry.alt_stopid > 0) {
+			snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.alt_stopid);
+			dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
+			if (dw.result_code() < 200 || dw.result_code() > 299) {
+				ok = false;
+			}
+			else {
+				dw.make_nonclose();
+			}
+
+			new (&state) State{};
+
+			if (ok && !parser.parse(dw)) {
+				ok = false;
+				ESP_LOGE(TAG, "Parse alt failed");
+			} // parse while calling our function.
+		}
 
 		// Ensure the array is sorted
 		if (max_e && max_e < 6)
 			std::sort(times, times+max_e);
 
 		if (max_e_alt && max_e_alt < 6)
-			std::sort(times_b, times+max_e_alt);
+			std::sort(times_b, times_b+max_e_alt);
 
 		return ok;
 	}
