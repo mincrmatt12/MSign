@@ -5,12 +5,12 @@ import Form from 'react-bootstrap/Form'
 import Row from 'react-bootstrap/Row'
 import Col from 'react-bootstrap/Col'
 import Card from 'react-bootstrap/Card'
-import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from '../../ctx';
+import ConfigContext, {intInteract} from '../../ctx';
 import _ from 'lodash';
 
+import {directions} from './enums';
 import {getURLPrefix, HostnameEdit} from '../common/hostname';
 
 export default function GTFSPane() {
@@ -45,18 +45,11 @@ export default function GTFSPane() {
 		<hr className="hr-gray" />
 		{entries.map((x, idx) => {
 			const hasSecond = "route_alt" in x && "stop_alt" in x;
-			const directions = [
-				"na",
-				"west",
-				"east",
-				"south",
-				"north"
-			];
 
 			return <Card className="my-3" key={idx}>
 				<Card.Body>
 					<Row>
-						<Col sm="11" xs="10">
+						<Col md="10" lg="11">
 							<Form.Check checked={hasSecond} onChange={(e) => {
 								if (e.target.checked) {
 									x.route_alt = "";
@@ -108,14 +101,14 @@ export default function GTFSPane() {
 							</Form.Group>
 							<Form.Group className="my-2">
 								<Form.Label>distance on foot (minutes)</Form.Label>
-								<Form.Control type="number" step={1} defaultValue={5} onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'distance'], Number.parseInt(e.target.value))} value={x.distance}/>
+								<Form.Control type="text" onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'distance'], intInteract(e.target.value))} placeholder="5" value={x.distance}/>
 							</Form.Group>
 							{has_alt &&
 								<Form.Check type="checkbox" label="use secondary feed" value={_.get(['gtfs', 'entries', idx, 'use_alt_feed'], false)} 
 									onChange={(e) => updateCfg(['gtfs', 'entries', idx, 'use_alt_feed'], e.target.checked)} />
 							}
 						</Col>
-						<Col sm="1" xs="2">
+						<Col md="2" lg="1">
 							<Button variant="danger" onClick={() => {
 								updateCfg('gtfs.entries', _.filter(entries, (_, i) => i != idx));
 							}} className="h-100 w-100">X</Button>

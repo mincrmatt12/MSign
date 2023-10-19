@@ -165,6 +165,9 @@ function App() {
 									setCfg(value);
 								}
 								else {
+									if (value instanceof Function) {
+										value = value(_.get(cfg, path));
+									}
 									setCfg(_.setWith(_.clone(cfg), path, value, _.clone));
 								}
 								setDirty(true);

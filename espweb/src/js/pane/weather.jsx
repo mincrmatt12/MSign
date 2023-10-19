@@ -5,7 +5,7 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import Row from 'react-bootstrap/Row'
 import Button from 'react-bootstrap/Button'
 
-import ConfigContext from '../ctx';
+import ConfigContext, { floatInteract } from '../ctx';
 import _ from 'lodash';
 
 function WeatherPane() {
@@ -45,17 +45,13 @@ function WeatherPane() {
 		<Form.Group className="my-2" controlId="latitude_control">
 			<Form.Label>latitude</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'weather.coord[0]', 0.0)} onChange={(e) => {
-				const value = Number.parseFloat(e.target.value);
-				if (Number.isNaN(value)) e.preventDefault();
-				else updateCfg('weather.coord[0]', value);
+				updateCfg('weather.coord[0]', floatInteract(e.target.value));
 			}} />
 		</Form.Group>
 		<Form.Group className="my-2" controlId="longitude_control">
 			<Form.Label>longitude</Form.Label>
 			<FormControl type='text' value={_.get(cfg, 'weather.coord[1]', 0.0)} onChange={(e) => {
-				const value = Number.parseFloat(e.target.value);
-				if (Number.isNaN(value)) e.preventDefault();
-				else updateCfg('weather.coord[1]', value);
+				updateCfg('weather.coord[1]', floatInteract(e.target.value));
 			}} />
 		</Form.Group>
 

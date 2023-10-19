@@ -3,7 +3,7 @@ import FormControl from 'react-bootstrap/FormControl'
 import Form from 'react-bootstrap/Form'
 import InputGroup from 'react-bootstrap/InputGroup'
 
-import ConfigContext from '../ctx';
+import ConfigContext, { intInteract } from '../ctx';
 import _, { parseInt } from 'lodash';
 
 function parseBssid(str) {
@@ -37,9 +37,7 @@ function BssidElement() {
 function NumberInput({path, ...extra}) {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
 
-	return <FormControl type='text' {...extra} value={_.get(cfg, path, '')} onChange={(e) => {
-		if (e.target.value !== "" && Number.isNaN(parseInt(e.target.value))) e.preventDefault();
-		else updateCfg(path, e.target.value ? parseInt(e.target.value) : undefined)}} />
+	return <FormControl type='text' {...extra} value={_.get(cfg, path, '')} onChange={(e) => {updateCfg(path, intInteract(e.target.value));}} />
 }
 
 function WifiPane() {
