@@ -88,6 +88,9 @@ namespace json {
 		// Free up the latest allocation
 		void finish(void * obj);
 
+		// Free all memory and reset
+		void reset();
+
 	private:
 		bool append(const uint8_t * data, size_t amount);
 

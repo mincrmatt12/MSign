@@ -36,6 +36,20 @@ bool json::TreeSlabAllocator::push(uint8_t c) {
 	return append(&c, 1);
 }
 
+void json::TreeSlabAllocator::reset() {
+	if (!tail) {
+		tail = new Chunk();
+	}
+	else {
+		if (tail->previous) {
+			delete tail->previous;
+			tail->previous = nullptr;
+		}
+		tail->used = 0;
+	}
+	_last = _start = tail->data;
+}
+
 uint8_t * json::TreeSlabAllocator::end() {
 	// If _last is not 4-byte, aligned, make it aligned.
 	if ((uintptr_t)_last % 4) {
@@ -139,8 +153,14 @@ bool json::JSONParser::parse(const char *text, size_t size) {
 bool json::JSONParser::parse(TextCallback && cb) {
 	this->tcb = std::move(cb);
 
-	while (this->stack_ptr > 1) pop(); // just in case
-	if (this->stack_ptr < 1) push(); // root node
+	need = true;
+	temp = 0;
+
+	if (this->stack_ptr != 1) {
+		memory.reset();
+		this->stack_ptr = 0;
+		push();
+	}
 
 	return parse_value();
 }
