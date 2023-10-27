@@ -363,7 +363,7 @@ namespace led {
 		// This is written to via 32-bit writes, and we want there to be at least one 16bit word
 		// at the end with all zeroes, hence the +4.
 		alignas(uint32_t) uint8_t dma_buffer[(FB::effective_width * 2) + 4] {};
-		TaskHandle_t notify_when_swapped = nullptr;
+		volatile TaskHandle_t notify_when_swapped = nullptr;
 
 		// impl for the wait system
 		uint16_t delay_counter = 0;
@@ -373,7 +373,7 @@ namespace led {
 		bool show = false;
 
 		// should swap buffers
-		bool should_swap = false;
+		volatile bool should_swap = false;
 
 		// pins
 		gpio::Pin<GPIOB_BASE, 5> strobe;
