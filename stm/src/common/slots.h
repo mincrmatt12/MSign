@@ -105,6 +105,11 @@ namespace slots {
 			SUBWAY_OFF = (1 << 22), // we think the alert means the subway is currently broken / out of service / off
 		};
 
+		bool exist_set(int slot) const {
+			if (slot < 0 || slot > 4) return false;
+			return flags & (EXIST_0 << slot);
+		}
+
 		const static inline uint32_t EXIST_MASK = 0b11111;
 	};
 

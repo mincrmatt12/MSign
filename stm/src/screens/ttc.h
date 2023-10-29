@@ -16,6 +16,8 @@ namespace screen {
 
 		void draw();
 		void refresh();
+
+		bool interact();
 	private:
 		void draw_bus();
 		// Draw an entire slot 
@@ -31,6 +33,8 @@ namespace screen {
 
 		constexpr static draw::PageScrollHelper::Params scroll_params = {};
 		draw::PageScrollHelper scroll_helper{scroll_params};
+
+		int selected_slot = 0;
 	};
 }
 

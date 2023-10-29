@@ -55,7 +55,7 @@ void screen::TTCScreen::draw() {
 			servicer.take_lock();
 		}
 
-		{
+		if (!dispman.interacting()) {
 			auto y = scroll_helper.begin();
 			// Check first slot
 			for (uint8_t slot = 0; slot < 5; ++slot) {
@@ -69,6 +69,27 @@ void screen::TTCScreen::draw() {
 				}
 			}
 		}
+		else {
+			auto y = scroll_helper.begin();
+			// Check first slot
+			for (uint8_t slot = 0; slot < 5; ++slot) {
+				if (info->flags & (slots::TTCInfo::EXIST_0 << slot)) {
+					auto height = draw_slot(y, *servicer.slot<uint8_t *>(slots::TTC_NAME_1 + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1a + slot), servicer.slot<uint64_t *>(slots::TTC_TIME_1b + slot),
+						false, false, // todo
+						info->altdircodes_a[slot],
+						info->altdircodes_b[slot],
+						info->stopdistance[slot]
+					);
+					if (selected_slot == slot) {
+						if (height) {
+							draw::gradient_rect(matrix.get_inactive_buffer(), 0, y + 9, 32, y + 10, 0xaa23e8_ccu, 35_cu);
+						}
+						y.fix(height);
+					}
+					else y += height;
+				}
+			}
+		}
 	}
 
 	draw::rect(matrix.get_inactive_buffer(), 0, 0, 128, 10, 0);
@@ -79,7 +100,28 @@ void screen::TTCScreen::draw() {
 		draw_alertstr();
 	}
 	draw::rect(matrix.get_inactive_buffer(), 0, 9, 128, 10, 50_c);
+}
 
+bool screen::TTCScreen::interact() {
+	srv::ServicerLockGuard g(servicer);
+
+	const auto& info = servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
+	if (info) {
+		int dir = 0;
+		if (ui::buttons[ui::Buttons::PRV]) dir -= 1;
+		if (ui::buttons[ui::Buttons::NXT]) dir += 1;
+		if (dir) {
+			int tries = 0;
+			do {  
+				selected_slot += dir;
+				if (selected_slot > 4) selected_slot = 0;
+				if (selected_slot < 0) selected_slot = 4;
+			} while (!info->exist_set(selected_slot) && ++tries < 5);
+			if (tries >= 5) selected_slot = 0;
+		}
+	}
+
+	return ui::buttons[ui::Buttons::POWER];
 }
 
 void screen::TTCScreen::draw_alertstr() {
