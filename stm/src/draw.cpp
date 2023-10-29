@@ -337,6 +337,12 @@ namespace draw {
 			}
 			else {
 				scroll_target = scroll_offset + onscreen_height; // Otherwise, scroll all the currently "onscreen" content.
+
+				// However, if that places the end of the content past the end of the screen region, just scroll to the
+				// end of the screen.
+				if (params.start_y + total_height - scroll_target < params.screen_region_end) {
+					scroll_target = params.start_y + total_height - params.screen_region_end;
+				}
 			}
 		}
 		else {
@@ -347,13 +353,24 @@ namespace draw {
 	}
 
 	void PageScrollHelper::fix_at(int16_t total_height, int16_t min_y, int16_t max_y) {
-		if (max_y < params.screen_region_end) {
-			scroll_offset = 0;
-			scroll_target = 0;
+		auto region_height = params.screen_region_end - params.start_y;
+		auto threshold_screen_middle = params.threshold_screen_start +
+			(params.threshold_screen_end - params.threshold_screen_start) / 2 - (max_y - min_y) / 2;
+		int16_t scroll_pos = 0;
+
+		if (total_height <= region_height || max_y <= threshold_screen_middle) {
+			scroll_pos = 0;
 		}
 		else {
-			scroll_offset = scroll_target = min_y;
+			// Scroll to place in middle
+			scroll_pos = min_y - (threshold_screen_middle - params.start_y);
+			// If that puts the end of the content on-screen, place the end of the content onscreen
+			if (params.start_y + total_height - scroll_pos < params.screen_region_end) {
+				scroll_pos = params.start_y + total_height - params.screen_region_end;
+			}
 		}
+
+		scroll_offset = scroll_target = scroll_pos;
 	}
 
 	PageScrollHelper::ScrollTracker PageScrollHelper::begin() {
