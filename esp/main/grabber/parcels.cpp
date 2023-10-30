@@ -9,6 +9,8 @@
 
 static const char * const TAG = "parcels";
 
+#define BASE_URL "/track/v2.2"
+
 namespace parcels {
 	struct ParcelDynamicInfo {
 		int16_t name_offset{};
@@ -181,7 +183,7 @@ namespace parcels {
 
 		// First, go and scan all unknown packages with gettracklist.
 		if (std::any_of(std::begin(parcel_dynamic_infos), std::end(parcel_dynamic_infos), [](const auto& x){return x.state == ParcelDynamicInfo::UNKNOWN;})) {
-			auto request = dwhttp::open_site("_api.17track.net", "/track/v2.1/gettracklist", "POST");
+			auto request = dwhttp::open_site("_api.17track.net", BASE_URL "/gettracklist", "POST");
 			authorize_request(request);
 
 			request.start_body();
@@ -278,7 +280,7 @@ namespace parcels {
 
 		// Check if anything needs registering.
 		if (std::any_of(std::begin(parcel_dynamic_infos), std::end(parcel_dynamic_infos), [](const auto& x){return x.state == ParcelDynamicInfo::UNREGISTERED;})) {
-			auto request = dwhttp::open_site("_api.17track.net", "/track/v2.1/register", "POST");
+			auto request = dwhttp::open_site("_api.17track.net", BASE_URL "/register", "POST");
 			authorize_request(request);
 			request.make_nonclose();
 
@@ -348,7 +350,7 @@ namespace parcels {
 		if (std::any_of(std::begin(parcel_dynamic_infos), std::end(parcel_dynamic_infos), [](const auto& x){
 			return x.requires_changeinfo();
 		})) {
-			auto request = dwhttp::open_site("_api.17track.net", "/track/v2.1/changeinfo", "POST");
+			auto request = dwhttp::open_site("_api.17track.net", BASE_URL "/changeinfo", "POST");
 			authorize_request(request);
 			request.make_nonclose();
 
@@ -407,7 +409,7 @@ namespace parcels {
 		if (std::any_of(std::begin(parcel_dynamic_infos), std::end(parcel_dynamic_infos), [](const auto& x){
 			return x.state == ParcelDynamicInfo::CHANGE_CARRIER;
 		})) {
-			auto request = dwhttp::open_site("_api.17track.net", "/track/v2.1/changecarrier", "POST");
+			auto request = dwhttp::open_site("_api.17track.net", BASE_URL "/changecarrier", "POST");
 			authorize_request(request);
 			request.make_nonclose();
 
@@ -496,7 +498,7 @@ namespace parcels {
 		auto append_shortheap = generate_strappender(slots::PARCEL_STATUS_SHORT), append_longheap = generate_strappender(slots::PARCEL_STATUS_LONG), 
 			 append_carriers = generate_strappender(slots::PARCEL_CARRIER_NAMES);
 
-		auto request = dwhttp::open_site("_api.17track.net", "/track/v2.1/gettrackinfo", "POST");
+		auto request = dwhttp::open_site("_api.17track.net", BASE_URL "/gettrackinfo", "POST");
 		authorize_request(request);
 		request.start_body();
 		request.write("[");
