@@ -88,9 +88,12 @@ parser {
                             is_cacheable = true;
                         }
                     }
-                    /\/[a-z]+/, "/" -> {
+                    /\/[a-z]+\/?/, "/" -> {
                         target_url = PAGE_HTML;
                         is_cacheable = false;
+                        optional {
+                            /[#?][^ ]*/;
+                        }
                     }
                 }
             }
