@@ -47,6 +47,7 @@ type_names = [
 type_names_re = [
     ("screen::ScreenSwapper<(.*)>(?=::)", "swap_t"),
     ("bheap::Arena<\\d+u, lru::Cache<\\d+u, \\d+u> >", "arena_t"),
+    (r"^tskmem::TaskHolder<\d+u>::create<([\w:]+)>\([\w:& ]+, char const\*, u32\)::{lambda\(void\*\)#1}::_FUN\(void\*\)$", r"(task for \1)::run()"),
     (r"^std::enable_if<(?:.*), (.*)>::type", r"\1"),
     (r"(?<=<| )(\d+)(u?), (?:\d+u?, )*(\d+)u?", r"\1...\3\2"),
     ("\\blong\\b", "s32"),
