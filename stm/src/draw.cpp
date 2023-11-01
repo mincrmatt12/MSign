@@ -358,7 +358,7 @@ namespace draw {
 			(params.threshold_screen_end - params.threshold_screen_start) / 2 - (max_y - min_y) / 2;
 		int16_t scroll_pos = 0;
 
-		if (total_height <= region_height || max_y <= threshold_screen_middle) {
+		if (total_height <= region_height || min_y <= threshold_screen_middle) {
 			scroll_pos = 0;
 		}
 		else {
