@@ -624,7 +624,7 @@ namespace parcels {
 						}
 						// Other metadata
 						else if (stack_ptr == 6) {
-							if (!strcmp(stack[5]->name, "time_iso") && v.type == v.STR) {
+							if (!strcmp(stack[5]->name, "time_utc") && v.type == v.STR) {
 								parcel_info.updated_time = wifi::from_iso8601(v.str_val);
 								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 							}
