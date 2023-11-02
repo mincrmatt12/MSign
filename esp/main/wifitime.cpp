@@ -166,9 +166,17 @@ time_t wifi::timegm(tm const* t)
 	return 60 * (60 * (24L * days_since_1970 + t->tm_hour) + t->tm_min) + t->tm_sec;
 }
 
-uint64_t wifi::from_iso8601(const char *ts, bool treat_as_local) {
+uint64_t wifi::from_iso8601(const char *ts, bool treat_as_local, bool treat_midnight_as_end_of_day) {
 	struct tm parsed{};
 	sscanf(ts, "%d-%d-%dT%d:%d:%dZ", &parsed.tm_year, &parsed.tm_mon, &parsed.tm_mday, &parsed.tm_hour, &parsed.tm_min, &parsed.tm_sec);
+	if (auto sl = strlen(ts); sl >= 20 && (
+		ts[19] != 'Z' && strcmp(ts + 19, "+00:00")))
+		treat_as_local = true;
+	if (treat_midnight_as_end_of_day && !(parsed.tm_min || parsed.tm_sec || parsed.tm_hour)) {
+		parsed.tm_sec = 59;
+		parsed.tm_min = 59;
+		parsed.tm_hour = 23;
+	}
 	parsed.tm_mon -= 1;
 	parsed.tm_year -= 1900;
 	uint64_t millis = 1000 * (uint64_t)wifi::timegm(&parsed);

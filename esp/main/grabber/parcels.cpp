@@ -588,9 +588,9 @@ namespace parcels {
 				if (stack_ptr >= 6 && !strcmp(stack[4]->name, "time_metrics") && !strcmp(stack[5]->name, "estimated_delivery_date")) {
 					if (stack_ptr == 7 && v.type == json::Value::STR) { // record timestamps
 						if (!strcmp(stack[6]->name, "from"))
-							parcel_info.estimated_delivery_from = wifi::from_iso8601(v.str_val);
+							parcel_info.estimated_delivery_from = wifi::from_iso8601(v.str_val, true, true);
 						if (!strcmp(stack[6]->name, "to"))
-							parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val);
+							parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true);
 					}
 					if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info with flags and move from-->to
 						if (parcel_info.estimated_delivery_from && parcel_info.estimated_delivery_to) {
@@ -676,7 +676,7 @@ namespace parcels {
 								current_epi.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
 							}
 							else if (stack_ptr == 8) {
-								if (!strcmp(stack[7]->name, "time_iso") && v.type == v.STR) {
+								if (!strcmp(stack[7]->name, "time_utc") && v.type == v.STR) {
 									current_epi.updated_time = wifi::from_iso8601(v.str_val);
 									current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 								}
