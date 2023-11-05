@@ -3,14 +3,18 @@
 #include "config.h"
 #include "serial.h"
 
+#include "wifitime.cfg.h"
+
+#ifndef SIM
 #include <esp_log.h>
 #include <esp_wifi.h>
 #include <esp_event_loop.h>
 #include <esp_wpa2.h>
-
-#include "wifitime.cfg.h"
-
 #include <lwip/apps/sntp.h>
+#else
+#include <sys/time.h>
+#endif
+
 #include "grabber/grab.h"
 
 EventGroupHandle_t wifi::events;
@@ -18,6 +22,7 @@ EventGroupHandle_t wifi::events;
 static const char * const TAG = "wifiman";
 static const char * const T_TAG = "sntp";
 
+#ifndef SIM
 void sntp_timer_cb(TimerHandle_t xTimer) {
 	// Wait for time to be set
     time_t now = 0;
@@ -133,6 +138,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 	return ESP_OK;
 }
 
+#endif
 
 
 // stolen from stackoverflow
@@ -203,6 +209,8 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 	now = timegm(&current_time);
 	return ((uint64_t)now * 1000) + millis % 1000;
 }
+
+#ifndef SIM
 
 bool wifi::init() {
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
@@ -291,3 +299,5 @@ bool wifi::init() {
 
 	return true;
 }
+
+#endif
