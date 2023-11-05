@@ -1,4 +1,4 @@
-import {defineConfig} from 'vite'
+import {defineConfig, splitVendorChunkPlugin} from 'vite'
 import react from '@vitejs/plugin-react'
 import {resolve} from 'path'
 import {execSync} from 'child_process';
@@ -21,7 +21,8 @@ export default (() => {
 						}
 					)
 				}
-			}
+			},
+			splitVendorChunkPlugin()
 		],
 		build: {
 			outDir: "../web/",
@@ -33,10 +34,6 @@ export default (() => {
 					page: resolve(__dirname, "./src/page.html")
 				},
 				output: {
-					manualChunks: (id) => {
-						if (id.includes("node_modules")) return "vendor";
-						else return "page";
-					},
 					chunkFileNames: '[name].[hash:16].js',
 					assetFileNames: '[name].[hash:16].[ext]',
 					entryFileNames: '[name].[hash:16].js'
