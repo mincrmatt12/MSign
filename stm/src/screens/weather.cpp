@@ -842,8 +842,10 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		switch (draw_as) {
 			case NONE:
 				break;
-			case RAIN:
 			case FREEZING_RAIN:
+				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob)), draw::cvt((0_ccu).mix(0xaaaaf2_ccu, colprob)));
+				break;
+			case RAIN:
 				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob)));
 				break;
 			case SNOW:
