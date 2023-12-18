@@ -1,0 +1,409 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<export version="E">
+  <design>
+    <source>/home/matthew/SignCode/board/buttons/buttons.kicad_sch</source>
+    <date>Sun 17 Dec 2023 01:52:17 AM</date>
+    <tool>Eeschema 7.0.9-7.0.9~ubuntu23.10.1</tool>
+    <sheet number="1" name="/" tstamps="/">
+      <title_block>
+        <title/>
+        <company/>
+        <rev/>
+        <date/>
+        <source>buttons.kicad_sch</source>
+        <comment number="1" value=""/>
+        <comment number="2" value=""/>
+        <comment number="3" value=""/>
+        <comment number="4" value=""/>
+        <comment number="5" value=""/>
+        <comment number="6" value=""/>
+        <comment number="7" value=""/>
+        <comment number="8" value=""/>
+        <comment number="9" value=""/>
+      </title_block>
+    </sheet>
+  </design>
+  <components>
+    <comp ref="C1">
+      <value>47nF</value>
+      <footprint>Capacitor_SMD:C_0603_1608Metric</footprint>
+      <fields>
+        <field name="LCSC Part">C1622</field>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="LCSC Part" value="C1622"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Unpolarized capacitor"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>c1498063-940e-42a9-81bf-5f51334cfe45</tstamps>
+    </comp>
+    <comp ref="C2">
+      <value>47nF</value>
+      <footprint>Capacitor_SMD:C_0603_1608Metric</footprint>
+      <fields>
+        <field name="LCSC Part">C1622</field>
+      </fields>
+      <libsource lib="Device" part="C" description="Unpolarized capacitor"/>
+      <property name="LCSC Part" value="C1622"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Unpolarized capacitor"/>
+      <property name="ki_keywords" value="cap capacitor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>361fba88-67fe-4e7e-adff-bc4ffb1f623f</tstamps>
+    </comp>
+    <comp ref="J1">
+      <value>Conn_01x09_Pin</value>
+      <footprint>Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Horizontal</footprint>
+      <fields>
+        <field name="LCSC Part">C25752</field>
+      </fields>
+      <libsource lib="Connector" part="Conn_01x09_Pin" description="Generic connector, single row, 01x09, script generated"/>
+      <property name="LCSC Part" value="C25752"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Generic connector, single row, 01x09, script generated"/>
+      <property name="ki_keywords" value="connector"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>05937e0c-b518-4622-b8e9-674333364c86</tstamps>
+    </comp>
+    <comp ref="R1">
+      <value>12k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <libsource lib="Device" part="R_US" description="Resistor, US symbol"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Resistor, US symbol"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>ad8c0bda-d40c-433d-b33e-2dc03070b712</tstamps>
+    </comp>
+    <comp ref="R2">
+      <value>12k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <libsource lib="Device" part="R_US" description="Resistor, US symbol"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Resistor, US symbol"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>cd4ed9cc-6039-4e8c-a36f-b8d3d9d96191</tstamps>
+    </comp>
+    <comp ref="R3">
+      <value>12k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <libsource lib="Device" part="R_US" description="Resistor, US symbol"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Resistor, US symbol"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>e906fa5d-8498-45d1-ab0f-4a4f9356647c</tstamps>
+    </comp>
+    <comp ref="R4">
+      <value>12k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <libsource lib="Device" part="R_US" description="Resistor, US symbol"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Resistor, US symbol"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>76fb4e74-ef61-4262-b919-1535bf7f184c</tstamps>
+    </comp>
+    <comp ref="R5">
+      <value>12k</value>
+      <footprint>Resistor_SMD:R_0402_1005Metric</footprint>
+      <libsource lib="Device" part="R_US" description="Resistor, US symbol"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <property name="ki_description" value="Resistor, US symbol"/>
+      <property name="ki_keywords" value="R res resistor"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>96eea738-0e65-4e33-bccf-982ca50706c2</tstamps>
+    </comp>
+    <comp ref="SW1">
+      <value>PB-22E86C</value>
+      <footprint>easyeda2kicad:SW-TH_6P-L8.45-W8.45-P2.50-LS5.5-BL</footprint>
+      <fields>
+        <field name="LCSC Part">C2848957</field>
+      </fields>
+      <libsource lib="LCSC" part="PB-22E86C" description=""/>
+      <property name="LCSC Part" value="C2848957"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>a6977f38-dd67-4738-a25c-86c45773920a</tstamps>
+    </comp>
+    <comp ref="SW2">
+      <value>PB-22E86C</value>
+      <footprint>easyeda2kicad:SW-TH_6P-L8.45-W8.45-P2.50-LS5.5-BL</footprint>
+      <fields>
+        <field name="LCSC Part">C2848957</field>
+      </fields>
+      <libsource lib="LCSC" part="PB-22E86C" description=""/>
+      <property name="LCSC Part" value="C2848957"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>634356bb-4740-4bc8-8a3d-259ea36aba89</tstamps>
+    </comp>
+    <comp ref="SW3">
+      <value>PB-22E86C</value>
+      <footprint>easyeda2kicad:SW-TH_6P-L8.45-W8.45-P2.50-LS5.5-BL</footprint>
+      <fields>
+        <field name="LCSC Part">C2848957</field>
+      </fields>
+      <libsource lib="LCSC" part="PB-22E86C" description=""/>
+      <property name="LCSC Part" value="C2848957"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>2f385377-f0f6-40f3-94ac-1ccf12f67e20</tstamps>
+    </comp>
+    <comp ref="SW4">
+      <value>PB-22E86C</value>
+      <footprint>easyeda2kicad:SW-TH_6P-L8.45-W8.45-P2.50-LS5.5-BL</footprint>
+      <fields>
+        <field name="LCSC Part">C2848957</field>
+      </fields>
+      <libsource lib="LCSC" part="PB-22E86C" description=""/>
+      <property name="LCSC Part" value="C2848957"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>3f48ac05-cebc-4af6-9646-09217a203ae1</tstamps>
+    </comp>
+    <comp ref="SW5">
+      <value>RKJXV1224005</value>
+      <footprint>easyeda2kicad:SW-TH_RKJXV1224005</footprint>
+      <datasheet>https://lcsc.com/product-detail/5-way-Tactile-Switchs_ALPS_RKJXV1224005_RKJXV1224005_C146170.html</datasheet>
+      <fields>
+        <field name="LCSC Part">C146170</field>
+      </fields>
+      <libsource lib="LCSC" part="RKJXV1224005" description=""/>
+      <property name="LCSC Part" value="C146170"/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="buttons.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>f8048fdc-76aa-435e-aea8-5b2c2789ccba 515505cf-9130-40dc-a074-1d17dbb69c33</tstamps>
+    </comp>
+  </components>
+  <libparts>
+    <libpart lib="Connector" part="Conn_01x09_Pin">
+      <description>Generic connector, single row, 01x09, script generated</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>Connector*:*_1x??_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">J</field>
+        <field name="Value">Conn_01x09_Pin</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="Pin_1" type="passive"/>
+        <pin num="2" name="Pin_2" type="passive"/>
+        <pin num="3" name="Pin_3" type="passive"/>
+        <pin num="4" name="Pin_4" type="passive"/>
+        <pin num="5" name="Pin_5" type="passive"/>
+        <pin num="6" name="Pin_6" type="passive"/>
+        <pin num="7" name="Pin_7" type="passive"/>
+        <pin num="8" name="Pin_8" type="passive"/>
+        <pin num="9" name="Pin_9" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="C">
+      <description>Unpolarized capacitor</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>C_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">C</field>
+        <field name="Value">C</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="Device" part="R_US">
+      <description>Resistor, US symbol</description>
+      <docs>~</docs>
+      <footprints>
+        <fp>R_*</fp>
+      </footprints>
+      <fields>
+        <field name="Reference">R</field>
+        <field name="Value">R_US</field>
+        <field name="Datasheet">~</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="passive"/>
+        <pin num="2" name="" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="LCSC" part="PB-22E86C">
+      <fields>
+        <field name="Reference">SW</field>
+        <field name="Value">PB-22E86C</field>
+        <field name="Footprint">easyeda2kicad:SW-TH_6P-L8.45-W8.45-P2.50-LS5.5-BL</field>
+        <field name="LCSC Part">C2848957</field>
+      </fields>
+      <pins>
+        <pin num="1" name="" type="unspecified"/>
+        <pin num="2" name="" type="unspecified"/>
+        <pin num="3" name="" type="unspecified"/>
+        <pin num="4" name="" type="unspecified"/>
+        <pin num="5" name="" type="unspecified"/>
+        <pin num="6" name="" type="unspecified"/>
+      </pins>
+    </libpart>
+    <libpart lib="LCSC" part="RKJXV1224005">
+      <docs>https://lcsc.com/product-detail/5-way-Tactile-Switchs_ALPS_RKJXV1224005_RKJXV1224005_C146170.html</docs>
+      <fields>
+        <field name="Reference">SW</field>
+        <field name="Value">RKJXV1224005</field>
+        <field name="Footprint">easyeda2kicad:SW-TH_RKJXV1224005</field>
+        <field name="Datasheet">https://lcsc.com/product-detail/5-way-Tactile-Switchs_ALPS_RKJXV1224005_RKJXV1224005_C146170.html</field>
+        <field name="LCSC Part">C146170</field>
+      </fields>
+      <pins>
+        <pin num="1" name="B" type="unspecified"/>
+        <pin num="2" name="DTA" type="unspecified"/>
+        <pin num="3" name="A" type="unspecified"/>
+        <pin num="4" name="A" type="unspecified"/>
+        <pin num="5" name="DTA" type="unspecified"/>
+        <pin num="6" name="B" type="unspecified"/>
+        <pin num="7" name="GND" type="unspecified"/>
+        <pin num="8" name="GND" type="unspecified"/>
+        <pin num="9" name="GND" type="unspecified"/>
+        <pin num="10" name="GND" type="unspecified"/>
+        <pin num="a" name="a" type="unspecified"/>
+        <pin num="b" name="b" type="unspecified"/>
+        <pin num="c" name="c" type="unspecified"/>
+        <pin num="d" name="d" type="unspecified"/>
+      </pins>
+    </libpart>
+  </libparts>
+  <libraries>
+    <library logical="Connector">
+      <uri>/usr/share/kicad/symbols//Connector.kicad_sym</uri>
+    </library>
+    <library logical="Device">
+      <uri>/usr/share/kicad/symbols//Device.kicad_sym</uri>
+    </library>
+    <library logical="LCSC">
+      <uri>/home/matthew/Documents/Kicad/easyeda2kicad/easyeda2kicad.kicad_sym</uri>
+    </library>
+  </libraries>
+  <nets>
+    <net code="1" name="+3V3">
+      <node ref="J1" pin="9" pinfunction="Pin_9" pintype="passive"/>
+      <node ref="SW1" pin="3" pintype="unspecified"/>
+      <node ref="SW2" pin="3" pintype="unspecified"/>
+      <node ref="SW3" pin="3" pintype="unspecified"/>
+      <node ref="SW4" pin="3" pintype="unspecified"/>
+      <node ref="SW5" pin="3" pinfunction="A" pintype="unspecified"/>
+      <node ref="SW5" pin="4" pinfunction="A" pintype="unspecified"/>
+      <node ref="SW5" pin="a" pinfunction="a" pintype="unspecified"/>
+      <node ref="SW5" pin="c" pinfunction="c" pintype="unspecified"/>
+    </net>
+    <net code="2" name="/ADCBTN">
+      <node ref="J1" pin="7" pinfunction="Pin_7" pintype="passive"/>
+      <node ref="R1" pin="1" pintype="passive"/>
+      <node ref="SW5" pin="b" pinfunction="b" pintype="unspecified"/>
+      <node ref="SW5" pin="d" pinfunction="d" pintype="unspecified"/>
+    </net>
+    <net code="3" name="/MENBTN">
+      <node ref="J1" pin="6" pinfunction="Pin_6" pintype="passive"/>
+      <node ref="R2" pin="2" pintype="passive"/>
+      <node ref="SW1" pin="2" pintype="unspecified"/>
+    </net>
+    <net code="4" name="/PWRBTN">
+      <node ref="J1" pin="2" pinfunction="Pin_2" pintype="passive"/>
+      <node ref="R5" pin="2" pintype="passive"/>
+      <node ref="SW4" pin="2" pintype="unspecified"/>
+    </net>
+    <net code="5" name="/SELBTN">
+      <node ref="J1" pin="3" pinfunction="Pin_3" pintype="passive"/>
+      <node ref="R3" pin="2" pintype="passive"/>
+      <node ref="SW2" pin="2" pintype="unspecified"/>
+    </net>
+    <net code="6" name="/TABBTN">
+      <node ref="J1" pin="8" pinfunction="Pin_8" pintype="passive"/>
+      <node ref="R4" pin="2" pintype="passive"/>
+      <node ref="SW3" pin="2" pintype="unspecified"/>
+    </net>
+    <net code="7" name="/XADC">
+      <node ref="C2" pin="1" pintype="passive"/>
+      <node ref="J1" pin="4" pinfunction="Pin_4" pintype="passive"/>
+      <node ref="SW5" pin="5" pinfunction="DTA" pintype="unspecified"/>
+    </net>
+    <net code="8" name="/YADC">
+      <node ref="C1" pin="1" pintype="passive"/>
+      <node ref="J1" pin="5" pinfunction="Pin_5" pintype="passive"/>
+      <node ref="SW5" pin="2" pinfunction="DTA" pintype="unspecified"/>
+    </net>
+    <net code="9" name="GND">
+      <node ref="C1" pin="2" pintype="passive"/>
+      <node ref="C2" pin="2" pintype="passive"/>
+      <node ref="J1" pin="1" pinfunction="Pin_1" pintype="passive"/>
+      <node ref="R1" pin="2" pintype="passive"/>
+      <node ref="R2" pin="1" pintype="passive"/>
+      <node ref="R3" pin="1" pintype="passive"/>
+      <node ref="R4" pin="1" pintype="passive"/>
+      <node ref="R5" pin="1" pintype="passive"/>
+      <node ref="SW1" pin="1" pintype="unspecified"/>
+      <node ref="SW2" pin="1" pintype="unspecified"/>
+      <node ref="SW3" pin="1" pintype="unspecified"/>
+      <node ref="SW4" pin="1" pintype="unspecified"/>
+      <node ref="SW5" pin="1" pinfunction="B" pintype="unspecified"/>
+      <node ref="SW5" pin="10" pinfunction="GND" pintype="unspecified"/>
+      <node ref="SW5" pin="6" pinfunction="B" pintype="unspecified"/>
+      <node ref="SW5" pin="7" pinfunction="GND" pintype="unspecified"/>
+      <node ref="SW5" pin="8" pinfunction="GND" pintype="unspecified"/>
+      <node ref="SW5" pin="9" pinfunction="GND" pintype="unspecified"/>
+    </net>
+    <net code="10" name="unconnected-(SW1-Pad4)">
+      <node ref="SW1" pin="4" pintype="unspecified"/>
+    </net>
+    <net code="11" name="unconnected-(SW1-Pad5)">
+      <node ref="SW1" pin="5" pintype="unspecified"/>
+    </net>
+    <net code="12" name="unconnected-(SW1-Pad6)">
+      <node ref="SW1" pin="6" pintype="unspecified"/>
+    </net>
+    <net code="13" name="unconnected-(SW2-Pad4)">
+      <node ref="SW2" pin="4" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="14" name="unconnected-(SW2-Pad5)">
+      <node ref="SW2" pin="5" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="15" name="unconnected-(SW2-Pad6)">
+      <node ref="SW2" pin="6" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="16" name="unconnected-(SW3-Pad4)">
+      <node ref="SW3" pin="4" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="17" name="unconnected-(SW3-Pad5)">
+      <node ref="SW3" pin="5" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="18" name="unconnected-(SW3-Pad6)">
+      <node ref="SW3" pin="6" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="19" name="unconnected-(SW4-Pad4)">
+      <node ref="SW4" pin="4" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="20" name="unconnected-(SW4-Pad5)">
+      <node ref="SW4" pin="5" pintype="unspecified+no_connect"/>
+    </net>
+    <net code="21" name="unconnected-(SW4-Pad6)">
+      <node ref="SW4" pin="6" pintype="unspecified+no_connect"/>
+    </net>
+  </nets>
+</export>

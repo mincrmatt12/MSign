@@ -4,3 +4,4 @@
 *.[bsh]##
 *.pro
 *.job
+*/*-backups/
