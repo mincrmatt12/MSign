@@ -6,7 +6,24 @@
 
 #include "ff.h"
 #include <stdlib.h>
+#include <time.h>
 
+DWORD get_fattime (void)
+{
+    time_t t;
+    struct tm *stm;
+
+
+    t = time(0);
+    stm = localtime(&t);
+
+    return (DWORD)(stm->tm_year - 80) << 25 |
+           (DWORD)(stm->tm_mon + 1) << 21 |
+           (DWORD)stm->tm_mday << 16 |
+           (DWORD)stm->tm_hour << 11 |
+           (DWORD)stm->tm_min << 5 |
+           (DWORD)stm->tm_sec >> 1;
+}
 
 #if FF_USE_LFN == 3	/* Dynamic memory allocation */
 
@@ -134,7 +151,7 @@ int ff_req_grant (	/* 1:Got a grant to access the volume, 0:Could not get a gran
 //	return (int)(err == OS_NO_ERR);
 
 	/* FreeRTOS */
-	return (int)(xSemaphoreTake(sobj, pdMS_TO_TICKS(5000)) == pdTRUE);
+	return (int)(xSemaphoreTake(sobj, pdMS_TO_TICKS(1000)) == pdTRUE);
 
 	/* CMSIS-RTOS */
 //	return (int)(osMutexWait(sobj, FF_FS_TIMEOUT) == osOK);

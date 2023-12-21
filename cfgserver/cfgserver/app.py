@@ -90,13 +90,21 @@ def root(_=None):
     return send_file(db.get_webui_file("page.html"), mimetype="text/html")
 
 @app.route("/page.css")
-def send_css():
+@app.route("/page.<_>.css")
+def send_css(_=None):
     return send_file(db.get_webui_file("page.css"), mimetype="text/css")
 
 @app.route("/page.js")
+@app.route("/page.<_>.js")
 @auth.priv_required(auth.Priv.READ)
-def send_js():
+def send_js(_=None):
     return send_file(db.get_webui_file("page.js"), mimetype="application/javascript")
+
+@app.route("/vendor.js")
+@app.route("/vendor.<_>.js")
+@auth.priv_required(auth.Priv.READ)
+def send_vjs(_=None):
+    return send_file(db.get_webui_file("vendor.js"), mimetype="application/javascript")
 
 @app.route("/a/conf.json")
 @auth.priv_required(auth.Priv.READ)

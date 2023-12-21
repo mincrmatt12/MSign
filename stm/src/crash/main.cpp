@@ -5,12 +5,23 @@
 #include "rtos.h"
 #include "simplematrix.h"
 #include "../tskmem.h"
-#include "stm32f2xx_ll_cortex.h"
-#include "stm32f2xx_ll_system.h"
 #include "../ui.h"
-#include "stm32f2xx_ll_utils.h"
+#include "srvd.h"
+#include "../srv.h"
 #include <alloca.h>
 #include <cstdio>
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_cortex.h>
+#include <stm32f2xx_ll_system.h>
+#include <stm32f2xx_ll_utils.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_cortex.h>
+#include <stm32f4xx_ll_system.h>
+#include <stm32f4xx_ll_utils.h>
+#endif
 
 extern "C" {
 	extern uint32_t _ecstack;
@@ -112,7 +123,9 @@ namespace crash {
 
 	void cmain(const char* errcode, uint32_t SP, uint32_t PC, uint32_t LR) {
 		// Mask out all application interrupts
-		__set_BASEPRI(3 << (8 - __NVIC_PRIO_BITS));
+		__set_BASEPRI(2 << (8 - __NVIC_PRIO_BITS));
+		// Unremap memory
+		SYSCFG->MEMRMP = 0;
 		// Change VTOR to our VTOR
 		SCB->VTOR = (uint32_t)&g_pfnVectors_crash;
 		// Try to exit an exception handler, if possible. (todo)
@@ -162,10 +175,10 @@ namespace crash {
 		LL_Init1msTick(SystemCoreClock);
 
 		// Turn on interrupts
-		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
+		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));
 		NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); // sequence after each other
+		NVIC_SetPriority(TIM1_BRK_TIM9_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,1)); // sequence after each other
 		NVIC_EnableIRQ(TIM1_BRK_TIM9_IRQn);
 
 		draw::text(matrix, "MSign crashed!", 0, 6, mkcolor(3, 0, 0));
@@ -268,6 +281,31 @@ namespace crash {
 							show_backtrace_for("Traceback for screen", tSP, tPC, tLR);
 							rtos::get_task_regs(*reinterpret_cast<uint32_t **>(&tskmem::dbgtim), tPC, tSP, tLR);
 							show_backtrace_for("Traceback for dbgtim", tSP, tPC, tLR);
+						}
+					}
+					{
+						// Try to show servicer stats
+						if (auto * srvp = srvd::ServicerDebugAccessor::get_debug_servicer_pending_requests()) {
+							print_line("srv pending requests:", mkcolor(3, 3, 3), 1);
+							if (!rtos::for_all_in_queue<srv::Servicer::PendRequest>(srvp, [](const srv::Servicer::PendRequest& pr){
+								switch (pr.type) {
+									using enum srv::Servicer::PendRequest::PendRequestType;
+
+									case TypeNone: print_line("None", mkcolor(3, 1, 1), 2); break;
+									case TypeChangeTemp: print_line("ChangeTemp", mkcolor(2, 2, 3), 2); break;
+									case TypeChangeTempMulti: print_line("ChangeTempMulti", mkcolor(2, 2, 3), 2); break;
+									case TypeRxTime: print_line("RxTime", mkcolor(2, 3, 2), 2); break;
+									case TypeDumpLogOut: print_line("DumpLogOut", mkcolor(2, 3, 2), 2); break;
+									case TypeRefreshGrabber: print_line("RefreshGrabber", mkcolor(1, 1, 3), 2); break;
+									case TypeSleepMode: print_line("SleepMode", mkcolor(1, 3, 1), 2); break;
+									case TypeReset: print_line("Reset", mkcolor(3, 0, 0), 2); break;
+									case TypeSync: print_line("Sync", mkcolor(1, 1, 1), 2); break;
+									default: print_line("<invalid>", mkcolor(3, 1, 1), 2); break;
+								}
+							})) print_line("<struct invalid>", mkcolor(3, 0, 0), 2);
+							if (srvd::ServicerDebugAccessor::get_debug_servicer_did_ping()) {
+								print_line("srv ping waiting", mkcolor(3, 1, 1), 1);
+							}
 						}
 					}
 

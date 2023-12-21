@@ -46,7 +46,7 @@
 
 #endif
 
-#ifdef STM32F205xx
+#if defined(STM32F205xx) || defined(STM32F405xx)
 
 #define ESP_USART USART2
 #define ESP_USART_Port GPIOA

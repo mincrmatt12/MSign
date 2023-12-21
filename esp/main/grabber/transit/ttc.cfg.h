@@ -9,18 +9,15 @@ namespace transit::ttc {
 
 	//!cfg: holds .ttc.agency_code, default "ttc"
 	extern config::string_t agency_code;
-
-	//!cfg: receives .ttc.entries[$n].name
-	void update_ttc_entry_name(size_t n, const char * value);
 	
 	struct TTCEntry {
 		//!cfg: holds .dirtag
 		config::string_t dirtag[4]{};
 		//!cfg: holds .stopid
 		int stopid = -1;
-		//!cfg: holds .dirtag_alt
+		//!cfg: holds .alt_dirtag
 		config::string_t alt_dirtag[4]{};
-		//!cfg: holds .stopid_alt
+		//!cfg: holds .alt_stopid
 		int alt_stopid = -1;
 		//!cfg: holds .distance
 		uint8_t distance_minutes = 5;
@@ -37,5 +34,5 @@ namespace transit::ttc {
 	};
 
 	//!cfg: holds .ttc.entries
-	extern config::lazy_t<TTCEntry[5]> entries;
+	extern config::lazy_t<TTCEntry> entries[5];
 }

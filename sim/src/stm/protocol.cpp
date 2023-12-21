@@ -84,6 +84,10 @@ void srv::ProtocolImpl::setup_uart_dma() {
     tcgetattr(0, &term);
     term.c_lflag &= ~(ICANON | ECHO); // Disable echo as well
     tcsetattr(0, TCSANOW, &term);
+
+	// Disable syncing
+	std::cout.tie(0);
+	setvbuf(stderr, NULL, _IONBF, 0);
 }
 
 void srv::ProtocolImpl::send() {

@@ -1,9 +1,16 @@
 #include "rng.h"
 
 #include "draw.h"
-#include "stm32f2xx.h"
-#include "stm32f2xx_ll_rng.h"
-#include "stm32f2xx_ll_bus.h"
+
+#ifdef USE_F2
+#include <stm32f2xx_ll_rng.h>
+#include <stm32f2xx_ll_bus.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_rng.h>
+#include <stm32f4xx_ll_bus.h>
+#endif
 
 #include <cmath>
 

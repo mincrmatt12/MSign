@@ -11,7 +11,7 @@
 
 namespace serial {
 	struct DataUpdateRequest {
-		enum : uint16_t {
+		enum Type : uint8_t {
 				   // sent from servicer as packets 
 			TypeSetTemp,
 			TypeMarkDirty,
@@ -21,40 +21,53 @@ namespace serial {
 			TypePatch,
 			TypePatchWithoutMarkDirty,
 			TypeTriggerUpdate,
-			TypeSync
-				
-		} type;
+			TypeSync,
+			TypeInlinePatch,
+			TypeInlinePatchWithoutMarkDirty,
+		};
 		union {
 			struct {
-				uint16_t slotid;
-				uint8_t newtemperature;
-			} d_temp;
+				Type type;
+				union {
+					struct {
+						uint16_t slotid;
+						uint8_t newtemperature;
+					} d_temp;
+					struct {
+						uint16_t slotid;
+						uint16_t offset;
+						uint16_t length;
+						const void * data;
+					} d_patch;
+					struct {
+						uint16_t slotid;
+						uint16_t size;
+					} d_chsize;
+					struct {
+						TickType_t by;
+						TaskHandle_t with;
+					} d_sync;
+					struct {
+						uint16_t slotid;
+						uint16_t offset;
+						uint16_t size;  
+					} d_dirty;
+					struct {
+						uint16_t slotid;
+					} d_trigger;
+					struct {
+						uint16_t slotid;
+						size_t *cursize_out;
+					} d_getsz;
+				};
+			};
 			struct {
-				uint16_t slotid;
+				Type type;
+				uint8_t data[11];
+				uint16_t slotid : 12;
+				uint16_t length : 4;
 				uint16_t offset;
-				uint16_t length;
-				const void * data;
-			} d_patch;
-			struct {
-				uint16_t slotid;
-				uint16_t size;
-			} d_chsize;
-			struct {
-				TaskHandle_t with;
-				TickType_t by;
-			} d_sync;
-			struct {
-				uint16_t slotid;
-				uint16_t offset;
-				uint16_t size;  
-			} d_dirty;
-			struct {
-				uint16_t slotid;
-			} d_trigger;
-			struct {
-				uint16_t slotid;
-				size_t *cursize_out;
-			} d_getsz;
+			} d_inline_patch;
 		};
 	};
 
@@ -110,7 +123,7 @@ namespace serial {
 
 		// Internal helpers
 		template<typename Func>
-		slots::PacketWrapper<>& wait_for_packet(Func&& filter, TickType_t timeout=portMAX_DELAY) {
+		slots::PacketWrapper<>& wait_for_packet(Func&& filter, TickType_t timeout) {
 			PacketFilterWrapper<Func> f{filter};
 			pending_packet_in = &f;
 			return wait_for_packet(timeout);
@@ -128,7 +141,7 @@ namespace serial {
 		// Handlers
 		void change_size_handler(DataUpdateRequest &dur);
 		void set_temp_handler(DataUpdateRequest &dur, bool send_pkt=true);
-		void patch_handler(DataUpdateRequest &dur, bool mark_dirty=true);
+		void patch_handler(uint16_t slotid, uint16_t offset, uint16_t length, const void * data, bool mark_dirty);
 		void mark_dirty_handler(DataUpdateRequest &dur);
 		void trigger_update_handler(DataUpdateRequest &dur);
 

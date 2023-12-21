@@ -1,0 +1,26 @@
+pipeline {
+	agent {
+		dockerfile {
+			label 'linux && docker'
+			filename 'Dockerfile.webbuild'
+		}
+	}
+	stages {
+		stage ("Build") {
+			steps {
+				dir("espweb") {
+					sh "mkdir -p ci-global"
+					withEnv(["npm_config_global_folder=${WORKSPACE}/espweb/ci-global"]) {
+						sh 'yarn install'
+						sh "python3 generate_sd.py"
+						sh "ar q web/webui.ar web/*"
+						sh "python3 generate_caupdate.py build/ca certs.bin"
+					}
+				}
+
+				zip dir: "espweb/build", zipFile: "sd.zip", archive: true
+				archiveArtifacts "espweb/web/webui.ar, espweb/certs.bin"
+			}
+		}
+	}
+}

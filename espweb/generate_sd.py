@@ -1,14 +1,17 @@
 """
-This script does two things, the first is running webpack to generate the pack.js, css and html files.
+This script does two things, the first is running vite to generate the pack.js, css and html files.
 Then it creates an archive file containing the ca certificates. It takes all the certs in the cert folder, converts them to der if neccesary and creates the cacert.ar file.
 The SD card structure is then located in the build folder
 """
 
 import os
 import shutil
+import re
 from subprocess import Popen, call, PIPE
 from cryptography import x509
 import hashlib
+
+HASHED_NAME = re.compile(r"(\w+)\.([a-z0-9]+)\.(\w+)")
 
 def create_directory():
     if not os.path.exists("build"):
@@ -18,7 +21,9 @@ def create_directory():
     os.mkdir("build/ca")
     if os.path.exists("build/web"):
         shutil.rmtree("build/web")
-
+    if os.path.exists("web"):
+        shutil.rmtree("web")
+    os.mkdir("web")
 
 def copy_all_certificates():
     res = []
@@ -53,9 +58,13 @@ def rename_certs(files):
 
 def create_page_data():
     call(['yarn', 'build'])
-    call(['gzip', '-k', '-f', '-9', 'web/page.html', 'web/page.js', 'web/page.css'])
+    # Rename files
+    for fname in os.listdir("web"):
+        m = HASHED_NAME.fullmatch(fname)
+        if m:
+            os.rename(os.path.join("web", fname), os.path.join("web", "{}.{}".format(m.group(1), m.group(3))))
+    call(['gzip', '-k', '-f', '-9', 'web/page.html', 'web/page.js', 'web/page.css', 'web/vendor.js'])
     shutil.copytree("web", "build/web")
-
 
 if __name__ == "__main__":
     create_directory()

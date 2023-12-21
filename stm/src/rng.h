@@ -12,8 +12,8 @@ namespace rng {
 	struct randengine {
 		using result_type = uint32_t;
 
-		constexpr inline result_type min() const { return 0; }
-		constexpr inline result_type max() const { return INT32_MAX; }
+		constexpr inline static result_type min() { return 0; }
+		constexpr inline static result_type max() { return INT32_MAX; }
 		
 		result_type operator()() {
 			return get();

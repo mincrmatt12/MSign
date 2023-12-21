@@ -1,12 +1,26 @@
 #include "json.h"
 #include "utf.h"
 #include <string.h>
+#include <utility>
 
 #ifndef STANDALONE_JSON
 #include <esp_log.h>
 #endif
 
-const static char * TAG = "json";
+const static char * const TAG = "json";
+
+// Declared separately to provide a single address for these (they're compared by address not strcmp for obvious reasons)
+const char * const json::PathNode::ROOT_NAME = "(root)";
+const char * const json::PathNode::ANON_NAME = "(anon)";
+
+static bool report_stackbig() {
+#ifndef STANDALONE_JSON
+	ESP_LOGW(TAG, "cancelling json parse due to stack overflow");
+#endif
+	return false;
+}
+
+#define SAFE_PUSH(...) do {if (!push(__VA_ARGS__)) return report_stackbig();} while(0)
 
 json::TreeSlabAllocator::TreeSlabAllocator() {
 	tail = new Chunk();
@@ -20,6 +34,20 @@ json::TreeSlabAllocator::~TreeSlabAllocator() {
 
 bool json::TreeSlabAllocator::push(uint8_t c) {
 	return append(&c, 1);
+}
+
+void json::TreeSlabAllocator::reset() {
+	if (!tail) {
+		tail = new Chunk();
+	}
+	else {
+		if (tail->previous) {
+			delete tail->previous;
+			tail->previous = nullptr;
+		}
+		tail->used = 0;
+	}
+	_last = _start = tail->data;
 }
 
 uint8_t * json::TreeSlabAllocator::end() {
@@ -91,13 +119,23 @@ bool json::TreeSlabAllocator::append(const uint8_t * data, size_t amount) {
 	return true;
 }
 
-json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : is_utf8(is_utf8), cb(std::move(c)) {
-	this->stack_ptr = 0;
+json::JSONParser::JSONParser(JSONCallback && c, bool is_utf8) : need(true), is_utf8(is_utf8), cb(std::move(c)) {
 	push();
 }
 
 json::JSONParser::~JSONParser() {
 	while (this->stack_ptr > 0) pop();
+	free(stack);
+}
+
+bool json::JSONParser::grow_stack() {
+	if (stack_ptr == stack_size) {
+		// nesting level too high
+		if (stack_size + 4 > 32) return false;
+		stack_size += 4;
+		stack = static_cast<PathNode **>(realloc(stack, sizeof(PathNode *) * stack_size));
+	}
+	return true;
 }
 
 bool json::JSONParser::parse(const char *text) {
@@ -105,7 +143,7 @@ bool json::JSONParser::parse(const char *text) {
 }
 
 bool json::JSONParser::parse(const char *text, size_t size) {
-	ptrdiff_t head = 0; // hack to get around c++14 only
+	std::ptrdiff_t head = 0; // hack to get around c++14 only
 	return parse([&, head]() mutable -> int16_t {
 		if (head >= size) return -1;
 		return text[head++];
@@ -115,8 +153,14 @@ bool json::JSONParser::parse(const char *text, size_t size) {
 bool json::JSONParser::parse(TextCallback && cb) {
 	this->tcb = std::move(cb);
 
-	while (this->stack_ptr > 1) pop(); // just in case
-	if (this->stack_ptr < 1) push(); // root node
+	need = true;
+	temp = 0;
+
+	if (this->stack_ptr != 1) {
+		memory.reset();
+		this->stack_ptr = 0;
+		push();
+	}
 
 	return parse_value();
 }
@@ -323,14 +367,16 @@ bool json::JSONParser::parse_array() {
 		top().index = 0;
 	}
 	else {
-		push();
+		SAFE_PUSH(true);
 		top().array = true;
 		top().index = 0;
 	}
 
 	while (peek() != 0) {
 		next();
-		parse_value();
+		if (!advance_whitespace()) return false;
+		if (peek() == ']') break;
+		if (!parse_value()) return false;
 		if (!advance_whitespace()) return false;
 		if (peek() == ',') ++top().index;
 		else if (peek() == ']') break;
@@ -350,9 +396,12 @@ bool json::JSONParser::parse_object() {
 	while (peek() != 0) {
 		next();
 		if (!advance_whitespace()) return false;
+		if (peek() == '}') {
+			break;
+		}
 		char * n = parse_string_text();
 		if (n == nullptr) return false;
-		push(n);
+		SAFE_PUSH(n);
 		if (!advance_whitespace()) {free(n); return false;}
 		if (peek() != ':') {free(n); return false;}
 		next();

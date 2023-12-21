@@ -14,6 +14,8 @@ namespace config {
 	// Slightly less posessive unique_ptr, "lazy" as in "lazily allocated"
 	template<typename T>
 	struct lazy_t {
+		static_assert(!std::is_array_v<T>, "lazy arrays do not work");
+
 		const T* get() const {return ptr;}
 		const T* get(const T& def) const {return (*this) ? get() : def;}
 
@@ -38,7 +40,7 @@ namespace config {
 		}
 		~lazy_t() {
 			if (ptr) {
-				delete ptr;
+				dispose();
 				ptr = nullptr;
 			}
 		}
@@ -51,9 +53,9 @@ namespace config {
 
 		template<typename I>
 		lazy_t& operator=(I x) {
-			static_assert(std::is_same_v<std::decay_t<I>, T*> || (std::is_array_v<T> && std::is_same_v<std::decay_t<I>, std::decay_t<T>>));
+			static_assert(std::is_same_v<std::decay_t<I>, T*>);
 
-			if (ptr) delete ptr;
+			if (ptr) dispose();
 			ptr = (T*)x;
 			return *this;
 		}
@@ -61,6 +63,15 @@ namespace config {
 		using inner = T;
 	private:
 		T* ptr{nullptr};
+
+		inline void dispose() {
+			if constexpr (std::is_array_v<T>) {
+				delete[] ptr;
+			}
+			else {
+				delete ptr;
+			}
+		}
 	};
 
 	struct string_t {

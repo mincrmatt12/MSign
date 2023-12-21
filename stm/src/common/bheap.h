@@ -14,7 +14,7 @@
 #define MSN_BHEAP_INLINE_V constexpr static
 #endif
 
-#if defined(STM32F205xx) || defined(STM32F207xx)
+#if defined(STM32F205xx) || defined(STM32F207xx) || defined(STM32F405xx)
 #include "../crash/main.h"
 #define ms_assert msign_assert
 #else
@@ -60,7 +60,7 @@ namespace bheap {
 		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
 
 		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
-		MSN_BHEAP_INLINE_V uint32_t FlagAux = 2;
+		MSN_BHEAP_INLINE_V uint32_t FlagLast = 2;
 
 		// DATA ACCESS
 
@@ -93,12 +93,14 @@ namespace bheap {
 
 		// Get the next block of the same type (4 byte alignment)
 		const Block *next() const {
+			if (*this && flags & FlagLast) return nullptr;
 			const Block *adj = this;
 			while ((adj = adj->adjacent()) != nullptr && adj->slotid != this->slotid) {}
 			return adj;
 		}
 
 		Block * next() {
+			if (*this && flags & FlagLast) return nullptr;
 			Block * adj = this;
 			while ((adj = adj->adjacent()) != nullptr && adj->slotid != this->slotid) {}
 			return adj;
@@ -412,15 +414,21 @@ namespace bheap {
 			newb.datasize = static_cast<uint32_t>(datasize);
 			newb.temperature = Block::TemperatureCold;
 			newb.location = datalocation;
-			newb.flags = 0;
+			newb.flags = Block::FlagLast;
 
-			if (contains(slotid)) newb.temperature = get(slotid).temperature;
+			Block *target = nullptr;
+			if (contains(slotid)) {
+				newb.temperature = get(slotid).temperature;
+				target = &last(slotid);
+			}
 
 			for (Block* x = contains(slotid) ? &last(slotid) : &first; x->adjacent(); x = x->adjacent()) {
 				if (x->slotid == Block::SlotEnd) return false; // end; fragmented
 				if (*x) continue; // non-empty
 				// empty block, is there space?
 				if (x->will_fit(newb, 0)) {
+					// clear last flag
+					if (target) target->flags &= ~Block::FlagLast;
 					// place this block there
 					x->insert(newb, 0);
 					// note we don't have to update the cache since it'll get filled at the next lookup anyways.
@@ -573,6 +581,7 @@ namespace bheap {
 
 					// Null out old contents
 					containing_block.slotid = Block::SlotEmpty;
+					containing_block.location = Block::LocationCanonical;
 
 					// Evict cache for this block
 					return true;
@@ -602,6 +611,8 @@ finish_setting:
 			// if the actual size == size, we just do nothing
 			while (contents_size(slotid) > size) {
 				auto& endptr = last(slotid);
+				// clear the last flag on any walked block
+				endptr.flags &= ~Block::FlagLast;
 				uint32_t should_reclaim = contents_size(slotid) - size;
 				if (should_reclaim >= endptr.datasize && (&endptr != &get(slotid) || endptr.temperature == Block::TemperatureCold)) {
 					// delete the block
@@ -610,12 +621,15 @@ finish_setting:
 						bcache.evict(slotid);
 					}
 					endptr.slotid = Block::SlotEmpty;
+					endptr.location = Block::LocationCanonical;
 				}
 				else {
 					// truncate
 					endptr.shrink(endptr.datasize - should_reclaim);
 				}
 			}
+			// re-set the last flag: notice that last() will be valid here as either flaglast is unset or untouched
+			last(slotid).flags |= Block::FlagLast;
 			return true;
 		}
 
@@ -645,13 +659,16 @@ finish_setting:
 					// 	- the location is equal
 					// 	- the flush flag is equal (if the dirty flag is unequal, or it)
 
-					while (x->location == x->next()->location && (x->flags & Block::FlagAux) == (x->next()->flags & Block::FlagAux)) {
+					while (x->location == x->next()->location) {
+						// Update flagLast
 						// If this is a remote block, just increase the size
 						if (x->location == Block::LocationRemote) {
 							x->datasize += x->next()->datasize;
+							bool requires_flagend = x->next()->flags & Block::FlagLast;
 							x->next()->location = Block::LocationCanonical;
 							x->next()->datasize = 0;
 							x->next()->slotid = Block::SlotEmpty;
+							if (requires_flagend) x->flags |= Block::FlagLast;
 						}
 						else {
 							// Copy the data
@@ -659,6 +676,7 @@ finish_setting:
 							void * append_data = x->next()->data();
 							char * append_data_to = ((char*)x->data()) + x->datasize;
 							Block *should_end_at = x->next()->adjacent();
+							if (x->next()->flags & Block::FlagLast) x->flags |= Block::FlagLast;
 							x->datasize += old.datasize;
 							// Append data
 							memmove(append_data_to, append_data, old.datasize);
@@ -833,7 +851,7 @@ finish_setting:
 			}
 			if (mode & FreeSpaceHomogenizeable) {
 				for (auto blk = const_iterator(after); blk != cend(); ++blk) {
-					if (*blk && blk->next() && blk->location == blk->next()->location && (blk->flags & Block::FlagAux) == (blk->next()->flags & Block::FlagAux)) total += 4;
+					if (*blk && blk->next() && blk->location == blk->next()->location) total += 4;
 				}
 			}
 			return total;
@@ -1119,6 +1137,8 @@ copy_data:
 			block.adjacent()->location = block.location;
 			block.adjacent()->temperature = block.temperature;
 			block.adjacent()->flags = block.flags;
+			// Unset last flag on new inner bock
+			block.flags &= ~Block::FlagLast;
 			block.adjacent()->datasize = new_length;
 
 			return true;

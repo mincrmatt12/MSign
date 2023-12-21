@@ -14,6 +14,10 @@
 #include <queue.h>
 #include <task.h>
 
+namespace crash::srvd {
+	struct ServicerDebugAccessor;
+}
+
 namespace srv {
 	// Talks to the ESP8266
 	//
@@ -24,6 +28,9 @@ namespace srv {
 	//
 	// This class also handles the update procedure.
 	struct Servicer final : private ProtocolImpl {
+		// For debugging
+		friend struct ::crash::srvd::ServicerDebugAccessor;
+
 		// Init HW & RTOS stuff.
 		void init();
 		bool ready(); // is the esp talking?
@@ -36,6 +43,8 @@ namespace srv {
 
 		// Update state introspections
 		const char * update_status();
+		// Changes every time the update_status changes -- screen task uses this to yield so that status is shown before disabling flash
+		uint32_t     update_status_version();
 
 		// Data request methods
 		void set_temperature(uint16_t slotid, uint32_t temperature);
@@ -115,59 +124,8 @@ namespace srv {
 		};
 
 		DebugInfo get_debug_information();
-	private:
-		const bheap::Block& _slot(uint16_t slotid);
-		bheap::Arena<STM_HEAP_SIZE, lru::Cache<4, 8>> arena;
 
-		// Called from ISR and populates queue.
-		void process_command() override;
-
-		// Wait send to complete (or return if not sending)
-		void wait_for_not_sending(); // uses notification
-
-		// Update specific routines
-
-		// Handle a single packet in update mode
-		void process_update_packet(uint8_t cmd, uint8_t len);
-		// Handle an UPDATE_CMD
-		void process_update_cmd(slots::protocol::UpdateCmd cmd);
-		// Send a single UPDATE_STATUS
-		void send_update_status(slots::protocol::UpdateStatus status);
-		// Main loop in update mode.
-		void do_update_logic();
-
-		// Connect to the ESP
-		void do_handshake();
-
-		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
-		void try_cleanup_heap(ssize_t space_to_clear); // returns done
-		void check_connection_ping(); // verify we're still connected with last_transmission
-		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
-
-		// Are we currently doing an update? If so, we _won't_ process _any_ data requests.
-		bool is_updating = false;
-		uint8_t update_state = 0;
-
-		// status shown on screen
-		char update_status_buffer[16];
-		// buffer of the last update package
-		uint8_t update_pkg_buffer[256];
-		// size of update pkg
-		uint32_t update_pkg_size = 0;
-
-		// update total size (new bin length)
-		uint32_t update_total_size = 0;
-		// checksum of entire update
-		uint16_t update_checksum = 0;
-		// how many chunks remaining in update
-		uint16_t update_chunks_remaining = 0;
-
-		// Sync primitives + log buffers + dma buffer
-		SemaphoreHandle_t bheap_mutex;
-		StaticSemaphore_t bheap_mutex_private;
-
-		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
-		// The format of these requests is this struct:
+		// Pending request queue entries -- made public for debug reasons.
 		struct PendRequest {
 			struct TimeRequest {
 				TaskHandle_t notify;
@@ -210,6 +168,74 @@ namespace srv {
 				TypeSync
 			} type;
 		};
+	private:
+		const bheap::Block& _slot(uint16_t slotid);
+		static bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> arena;
+
+		// Called from ISR and populates queue.
+		void process_command() override;
+
+		// Wait send to complete (or return if not sending)
+		void wait_for_not_sending(); // uses notification
+
+		// Update specific routines
+
+		// Handle a single packet in update mode
+		void process_update_packet(uint8_t cmd, uint8_t len);
+		// Handle an UPDATE_CMD
+		void process_update_cmd(slots::protocol::UpdateCmd cmd);
+		// Send a single UPDATE_STATUS
+		void send_update_status(slots::protocol::UpdateStatus status);
+		// Main loop in update mode.
+		void do_update_logic();
+
+		// Flash routines
+		void begin_update();
+		void update_append_data(bool already_erased=false);
+		void update_append_data_copy();
+		void erase_flash_sector();
+		void wait_for_update_status_onscreen();
+
+		// Connect to the ESP
+		void do_handshake();
+
+		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
+		void try_cleanup_heap(ssize_t space_to_clear); // returns done
+		void check_connection_ping(); // verify we're still connected with last_transmission
+		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
+
+		// Are we currently doing an update? If so, we _won't_ process _any_ data requests.
+		bool is_updating = false;
+		uint8_t update_state = 0;
+
+		// status shown on screen
+		char update_status_buffer[16];
+		// buffer of the last update package
+		uint8_t update_pkg_buffer[256];
+		// size of update pkg
+		uint32_t update_pkg_size = 0;
+
+		// update total size (new bin length)
+		uint32_t update_total_size = 0;
+		// checksum of entire update
+		uint16_t update_checksum = 0;
+		// how many chunks remaining in update
+		uint16_t update_chunks_remaining = 0;
+		// used for syncing display state
+		uint32_t update_status_cookie = 0;
+
+		// keeps track of where in flash we are
+		uint32_t update_tempflash_data_ptr;
+		// number of bytes written to current sector
+		uint32_t update_tempflash_data_counter = 0;
+		// which flash sector
+		uint8_t update_tempflash_sector_counter = 5;
+
+		// Sync primitives + log buffers + dma buffer
+		SemaphoreHandle_t bheap_mutex;
+		StaticSemaphore_t bheap_mutex_private;
+
+		// Queue for incoming set temperature requests. 16 elements long (or 64 bytes)
 
 		QueueHandle_t pending_requests;
 		// Static queue allocation

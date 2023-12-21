@@ -2,7 +2,6 @@
 #include "config.h"
 #include "esp_log.h"
 #include "grabber/grab.h"
-#include "grabber/parcels.h"
 #include "serial.h"
 #include "common/util.h"
 #include "ff.h"
@@ -29,11 +28,7 @@
 #undef bind
 #undef flush
 
-// config defaults
-#define DEFAULT_USERNAME "admin"
-#define DEFAULT_PASSWORD "admin"
-
-const static char * TAG = "webui";
+const static char * const TAG = "webui";
 
 namespace webui {
 	int etag_num;
@@ -416,8 +411,10 @@ reachedend:
 		else if (strcasecmp(tgt, "model.bin") == 0 || strcasecmp(tgt, "model1.bin") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_GET) goto invmethod;
 
+			const char * sd_path = (strcasecmp(tgt, "model.bin") == 0) ? "/model.bin" : "/model1.bin";
+
 			FIL f; 
-			if (f_open(&f, tgt - 1, FA_READ) == FR_OK) {
+			if (f_open(&f, sd_path, FA_READ) == FR_OK) {
 				print_to_client("HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Type: application/octet-stream\r\n");
 				stream_file(&f);
 				f_close(&f);
@@ -523,7 +520,7 @@ reachedend:
 			if (!ok) send_static_response(400, "Bad Request", "No files were provided.");
 			else send_static_response(204, "No Content", "");
 		}
-		else if (strcasecmp(tgt, "newui") == 0) {
+		else if (strcasecmp(tgt, "newui") == 0 || strcasecmp(tgt, "newca") == 0) {
 			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
 
 			switch (f_mkdir("0:/upd")) {
@@ -534,8 +531,10 @@ reachedend:
 					goto notfound;
 			}
 
+			bool is_ca = strcasecmp(tgt, "newca") == 0;
+
 			FIL out_ui;
-			if (f_open(&out_ui, "/upd/webui.ar", FA_CREATE_ALWAYS | FA_WRITE)) {
+			if (f_open(&out_ui, is_ca ? "/upd/certs.bin" : "/upd/webui.ar", FA_CREATE_ALWAYS | FA_WRITE)) {
 				ESP_LOGE(TAG, "Failed to write");
 				goto notfound;
 			}
@@ -549,7 +548,7 @@ reachedend:
 				
 				if (len == -1) {
 					clear_status_flag(slots::WebuiStatus::LAST_RX_FAILED, slots::WebuiStatus::RECEIVING_SYSUPDATE);
-					set_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					set_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					return true;
 				}
 				else if (len == -2) {
@@ -570,7 +569,7 @@ reachedend:
 				case MultipartStatus::EOF_EARLY:
 				default:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					clear_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					f_close(&out_ui);
 					return;
 				case MultipartStatus::INVALID_HEADER:
@@ -580,7 +579,7 @@ reachedend:
 					return;
 				case MultipartStatus::HOOK_ABORT:
 					set_status_flag(slots::WebuiStatus::LAST_RX_FAILED);
-					clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+					clear_status_flag(is_ca ? slots::WebuiStatus::RECEIVING_CERT_PACK : slots::WebuiStatus::RECEIVING_WEBUI_PACK);
 					send_static_response(400, "Bad Request", "You have sent invalid files.");
 					f_close(&out_ui);
 					return;
@@ -593,7 +592,7 @@ reachedend:
 					break;
 			}
 
-			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK);
+			clear_status_flag(slots::WebuiStatus::RECEIVING_WEBUI_PACK, slots::WebuiStatus::RECEIVING_CERT_PACK);
 			f_close(&out_ui);
 
 			if (!ok) {
@@ -606,11 +605,14 @@ reachedend:
 				return;
 			}
 
-			f_putc(0x10, &out_ui);
+			f_putc(is_ca ? 0x20 : 0x10, &out_ui);
 			f_close(&out_ui);
 
-			send_static_response(200, "OK", "Updating UI.");
+			send_static_response(200, "OK", is_ca ? "Updating CAs." : "Updating UI.");
 			lwip_close(client_sock);
+			if (is_ca) {
+				serial::interface.reset();
+			}
 			// trigger update
 			update_pending = true;
 		}
@@ -749,38 +751,6 @@ reachedend:
 			lwip_close(client_sock);
 			serial::interface.reset();
 		}
-		else if (strcasecmp(tgt, "newparcel") == 0) {
-			if (reqstate->c.method != HTTP_SERVE_METHOD_POST) goto invmethod;
-
-			// process params
-			char * got_code = nullptr, * got_carrier = nullptr;
-			bool is_400 = false;
-
-			json::JSONParser r_p([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& value) {
-				if (stack_ptr == 2) {
-					if (strcmp(stack[1]->name, "code") == 0 && value.type == value.STR && !got_code) got_code = strdup(value.str_val);
-					else if (strcmp(stack[1]->name, "carrier") == 0 && value.type == value.STR && !got_carrier) got_carrier = strdup(value.str_val);
-					else is_400 = true;
-				}
-			});
-
-			if (!r_p.parse([](){return read_from_req_body();}) || is_400) {
-				free(got_code); free(got_carrier);
-				goto badrequest;
-			}
-
-			// Otherwise, try to get a request code
-			char * result_id = parcels::generate_tracker_id(got_code, got_carrier, is_400);
-			if (result_id == nullptr) {
-				send_static_response(400, "Bad Request", "Failed to create tracker for unknown reason (maybe down / internal bug)");
-				return;
-			}
-			else {
-				send_static_response(is_400 ? 400 : 201, is_400 ? "Bad Request" : "Created", result_id);
-				free(result_id);
-				return;
-			}
-		}
 		else {
 			// Temp.
 			send_static_response(404, "Not Found", "Api method not recognized.");
@@ -833,15 +803,15 @@ notfound:
 				return;
 			case HTTP_SERVE_AUTH_TYPE_OK:
 				if (!check_auth(reqstate->c.auth_string)) {
-					send_static_response(403, "Forbidden", "Invalid authentication.");
+					send_static_response(401, "Unauthorized", "Invalid authentication.");
 					return;
 				}
 				break;
 		}
 
 		// Check if this is an API method
-		if (strncmp(reqstate->c.url, "a/", 2) == 0) {
-			do_api_response(reqstate->c.url + 2);
+		if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_API) {
+			do_api_response(reqstate->c.api_url);
 		}
 		else {
 			// Only allow GET requests
@@ -849,56 +819,74 @@ notfound:
 				send_static_response(405, "Method Not Allowed", "Static resources are only gettable with GET");
 				return;
 			}
-			// Check for a favicon
-			if (strcasecmp(reqstate->c.url, "favicon.ico") == 0) {
-				ESP_LOGD(TAG, "Sending 404");
-				// Send a 404
-				send_static_response(404, "Not Found", "No favicon is present");
-				return;
-			}
 
-			char valid_etag[16];
+			char valid_etag[16]{};
 			const char * actual_name = nullptr;
 			const char * content_type = nullptr;
 
 			// Check for the js files
-			if (strcasecmp(reqstate->c.url, "page.js") == 0) {
+			if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_JS) {
 				snprintf(valid_etag, 16, "E%djs", etag_num);
 				actual_name = "page.js";
 				content_type = "application/javascript";
 			}
-			else if (strcasecmp(reqstate->c.url, "page.css") == 0) {
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_CSS) {
 				snprintf(valid_etag, 16, "E%dcss", etag_num);
 				actual_name = "page.css";
 				content_type = "text/css";
 			}
-			else {
-				snprintf(valid_etag, 16, "E%dht", etag_num);
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_VENDOR_JS) {
+				snprintf(valid_etag, 16, "E%dvjs", etag_num);
+				actual_name = "vendor.js";
+				content_type = "application/javascript";
+			}
+			else if (reqstate->c.target_url == HTTP_SERVE_TARGET_URL_PAGE_HTML) {
 				actual_name = "page.html";
 				content_type = "text/html; charset=UTF-8";
 			}
+			else {
+				ESP_LOGE(TAG, "Unexpected target_url enum -- aborting");
+				send_static_response(404, "Not Found", "Unknown target url");
+				return;
+			}
 
-			// Check for etag-ability
-			if (reqstate->c.is_conditional && strcmp(valid_etag, reqstate->c.etag) == 0) {
-				// Send a 304
-				print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nETag: ");
-				print_to_client(valid_etag);
-				print_to_client("\r\n\r\n");
+			bool client_cached = (reqstate->c.is_conditional && valid_etag[0] && strcmp(valid_etag, reqstate->c.etag) == 0);
+			if (reqstate->c.is_cacheable) {
+				if (client_cached) {
+					// Send a 304
+					print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=31536000\r\nConnection: close\r\nETag: ");
+					print_to_client(valid_etag);
+					print_to_client("\r\n\r\n");
+				}
+				else {
+					print_to_client("HTTP/1.1 200 OK\r\nCache-Control: max-age=31536000\r\nConnection: close\r\nContent-Type: ");
+
+					// Send the content type
+					print_to_client(content_type);
+					// Send the etag
+					if (valid_etag[0]) {
+						print_to_client("\r\nETag: \"");
+						print_to_client(valid_etag);
+						print_to_client("\"\r\n");
+					}
+					else {
+						print_to_client("\r\n");
+					}
+					send_cacheable_file(actual_name);
+				}
 			}
 			else {
-				ESP_LOGD(TAG, "Starting response");
-				// Start a response
-				print_to_client("HTTP/1.1 200 OK\r\nCache-Control: max-age=172800, stale-while-revalidate=604800\r\nConnection: close\r\nContent-Type: ");
-
-				// Send the content type
-				print_to_client(content_type);
-				// Send the etag
-				print_to_client("\r\nETag: \"");
-				print_to_client(valid_etag);
-				print_to_client("\"\r\n");
-
-				// Send the file contents
-				send_cacheable_file(actual_name);
+				if (client_cached) {
+					print_to_client("HTTP/1.1 304 Not Modified\r\nCache-Control: max-age=900, stale-while-revalidate=300, private\r\nConnection: close\r\nETag: ");
+					print_to_client(valid_etag);
+					print_to_client("\r\n\r\n");
+				}
+				else {
+					print_to_client("HTTP/1.1 200 OK\r\nCache-Control: no-cache\r\nConnection: close\r\nContent-Type: ");
+					print_to_client(content_type);
+					print_to_client("\r\n");
+					send_cacheable_file(actual_name);
+				}
 			}
 		}
 	}
@@ -922,6 +910,12 @@ notfound:
 			case HTTP_SERVE_ERROR_CODE_BAD_REQUEST:
 				// Send a boring old request
 				send_static_response(400, "Bad Request", "You have sent an invalid request");
+				break;
+			case HTTP_SERVE_ERROR_CODE_NOT_FOUND:
+				send_static_response(404, "Not Found", "Requested resource is nonexistent.");
+				break;
+			case HTTP_SERVE_ERROR_CODE_AUTH_TOO_LONG:
+				send_static_response(401, "Unauthorized", "Invalid authentication.");
 				break;
 			default:
 				// Send a boring old request
@@ -967,6 +961,14 @@ restart:
 			ESP_LOGE(TAG, "unable to create socket");
 			while (1) {vTaskDelay(1000);}
 		}
+		
+		{
+			int on = 1;
+			if (lwip_setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(int)) < 0) {
+				ESP_LOGW(TAG, "failed to set reuseaddr");
+			}
+		}
+
 
 		{
 			sockaddr_in baddr{};

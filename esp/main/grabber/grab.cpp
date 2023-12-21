@@ -19,6 +19,10 @@
 #include "../dwhttp.h"
 #include <esp_system.h>
 
+#ifndef SIM
+#include "esp_ota_ops.h"
+#endif
+
 namespace grabber {
 	constexpr const Grabber * const grabbers[] = {
 		&transit::ttc::ttc_grabber,
@@ -80,11 +84,15 @@ namespace grabber {
 }
 		// Wait for wifi
 		stoppable(wifi::WifiConnected);
+		stoppable(wifi::StmConnected);
 
 		// Init all grabbers
 		reload_all();
 
 		while (true) {
+			// Clear the refresh grabber flag
+			xEventGroupClearBits(wifi::events, wifi::GrabRequested);
+			// Wait for wifi to reconnect
 			stoppable(wifi::WifiConnected);
 
 			// Run all non-ssl grabbers
@@ -92,7 +100,7 @@ namespace grabber {
 				if (!grabbers[i]->ssl) run_grabber(i, grabbers[i]);
 			}
 
-			// Wait for time
+			// Wait for time (so ssl sync works)
 			stoppable(wifi::TimeSynced);
 
 			// Run all ssl grabbers
@@ -115,7 +123,7 @@ namespace grabber {
 			else delay = target - now;
 
 			if (delay) {
-				if (xEventGroupWaitBits(wifi::events, wifi::GrabRequested | wifi::GrabTaskStop, true, false, delay) & wifi::GrabTaskStop) {
+				if (xEventGroupWaitBits(wifi::events, wifi::GrabRequested | wifi::GrabTaskStop, false, false, delay) & wifi::GrabTaskStop) {
 					goto exit;
 				}
 			}
@@ -156,6 +164,14 @@ exit:
 	}
 
 	void start() {
+		serial::interface.update_slot_nosync(slots::ESP_VER_STR,
+#ifndef SIM
+					esp_ota_get_app_description()->version
+#else
+					"fakesim"
+#endif
+		);
+
 		memset(wants_to_run_at, 0, sizeof(wants_to_run_at));
 		auto tmr = xTimerCreate("gtmr", pdMS_TO_TICKS(3000), true, nullptr, check_and_restart_grabber_timer);
 		if (tmr == nullptr || xTimerStart(tmr, pdMS_TO_TICKS(2500)) != pdPASS) {

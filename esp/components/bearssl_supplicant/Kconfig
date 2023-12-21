@@ -1,0 +1,7 @@
+menu "TLS Buffer Manager"
+	
+	config WPA_BR_TLS_OUT_SIZE
+		int "TX Buffer size"
+		default 1024
+
+endmenu

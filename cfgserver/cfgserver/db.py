@@ -33,7 +33,7 @@ def update_webui_archive(upload):
     Install a new webui archive from f, a flask upload
     """
 
-    FILES = ("page.html", "page.css", "page.js")
+    FILES = ("page.html", "page.css", "page.js", "vendor.js")
     archive = unix_ar.open(upload, "r")
 
     with tempfile.TemporaryDirectory() as tmpdir:

@@ -1,11 +1,20 @@
 #include "bootcmd.h"
 
 // really just present here to check for STM and i couldn't be bothered to add a define
-#if (defined(STM32F205xx) || defined(STM32F207xx)) && !defined(SIM)
-#include "stm32f2xx_ll_rtc.h"
-#include "stm32f2xx_ll_pwr.h"
-#include "stm32f2xx_ll_rcc.h"
-#include "stm32f2xx_ll_bus.h"
+#if (defined(STM32F205xx) || defined(STM32F207xx) || defined(STM32F405xx)) && !defined(SIM)
+#ifdef USE_F2
+#include <stm32f2xx_ll_rtc.h>
+#include <stm32f2xx_ll_pwr.h>
+#include <stm32f2xx_ll_rcc.h>
+#include <stm32f2xx_ll_bus.h>
+#endif
+
+#ifdef USE_F4
+#include <stm32f4xx_ll_rtc.h>
+#include <stm32f4xx_ll_pwr.h>
+#include <stm32f4xx_ll_rcc.h>
+#include <stm32f4xx_ll_bus.h>
+#endif
 
 void bootcmd_init() {
 	LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_PWR);

@@ -15,6 +15,7 @@ namespace slots {
 	enum DataID : uint16_t {
 		WIFI_STATUS = 0x01,			// STRUCT; WifiStatus, info about wifi connection
 		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
+		ESP_VER_STR = 0x03,         // STRING; version string (as shown in webui) of the esp8266
 
 		VIRTUAL_BUTTONMAP = 0x10, 	// UINT16_T; bitmap, override of the data on GPIOA for the buttons
 
@@ -36,10 +37,9 @@ namespace slots {
 		TTC_TIME_5b = 0x3e,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
 
-		WEATHER_ICON = 0x40,		// STRING; icon name from darksky
 		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
 		WEATHER_STATUS = 0x45,		// STRING; weather status string
-		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateArrayCode; list of ENUMS for the state per-hour
+		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateCode; list of ENUMS for the state per-hour
 		WEATHER_TIME_SUN = 0x42,    // STRUCT; WeatherTimes - time for sunrise/sunset, used to show the info for hourlybar
 
 		WEATHER_TEMP_GRAPH = 0x4a,  // INT16_T[]; feels like temp data per hour (/100)
@@ -60,6 +60,7 @@ namespace slots {
 		PARCEL_STATUS_SHORT = 0x52, // STRING[]; status/location table for short view
 		PARCEL_STATUS_LONG = 0x53,  // ''; status/location table for full view
 		PARCEL_EXTRA_INFOS = 0x54,  // STRUCT[]; ExtraParcelInfoEntry; full package tracking logs (with some cutoff)
+		PARCEL_CARRIER_NAMES = 0x55,// STRING[]; cross-referenced for carrier changes in the extended view.
 
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
@@ -104,7 +105,45 @@ namespace slots {
 			SUBWAY_OFF = (1 << 22), // we think the alert means the subway is currently broken / out of service / off
 		};
 
+		bool exist_set(int slot) const {
+			if (slot < 0 || slot > 4) return false;
+			return flags & (EXIST_0 << slot);
+		}
+
 		const static inline uint32_t EXIST_MASK = 0b11111;
+	};
+
+	enum struct WeatherStateCode : uint8_t {
+		UNK = 0,
+
+		CLEAR = 0x10,
+		PARTLY_CLOUDY,
+		CLOUDY,
+		MOSTLY_CLOUDY,
+
+		DRIZZLE = 0x20,
+		LIGHT_RAIN,
+		RAIN,
+		HEAVY_RAIN,
+
+		SNOW = 0x30,
+		FLURRIES,
+		LIGHT_SNOW,
+		HEAVY_SNOW,
+
+		FREEZING_DRIZZLE = 0x20 | 0x80,
+		FREEZING_LIGHT_RAIN,
+		FREEZING_RAIN,
+		FREEZING_HEAVY_RAIN,
+
+		LIGHT_FOG = 0x40,
+		FOG = 0x41,
+		
+		LIGHT_ICE_PELLETS = 0x50,
+		ICE_PELLETS,
+		HEAVY_ICE_PELLETS,
+
+		THUNDERSTORM = 0x60
 	};
 
 	struct WeatherInfo {
@@ -113,16 +152,11 @@ namespace slots {
 		int16_t ltemp;
 		int16_t htemp;
 		int16_t crtemp;
+		WeatherStateCode icon;
 	};
 
 	struct WeatherTimes {
 		uint64_t sunrise, sunset;
-	};
-
-	struct VStr {
-		uint8_t index;
-		uint8_t size;
-		uint8_t data[14];
 	};
 
 	struct ScCfgTime {
@@ -156,9 +190,14 @@ namespace slots {
 	};
 
 	struct PrecipData {
-		uint8_t is_snow; // is this preciptation snowy
+		enum PrecipType : uint8_t {
+			NONE = 0,
+			RAIN,
+			SNOW,
+			SLEET,
+			FREEZING_RAIN
+		} kind;
 		uint8_t probability; // from 0-255 as 0.0-1.0
-		int16_t stddev; // precipitation error (0 if unknown) * 100
 		int16_t amount; // mm / hr * 100
 	};
 
@@ -195,8 +234,11 @@ namespace slots {
 			HAS_STATUS = 1,
 			HAS_LOCATION = 2,
 			HAS_EST_DEILIVERY = 4, // cannot be set on ExtraParcelInfoEntry
-			HAS_UPDATED_TIME = 8,   
-			EXTRA_INFO_TRUNCATED = 16 // cannot  be set on ExtraParcelInfoEntry
+			HAS_EST_DELIVERY_RANGE = 8, // ''
+			HAS_UPDATED_TIME = 16,   
+			EXTRA_INFO_TRUNCATED = 32, // cannot be set on ExtraParcelInfoEntry
+			EXTRA_INFO_MISSING   = 64, // ''
+			HAS_NEW_CARRIER = 128,     // cannot be set on ParcelInfo
 		};
 
 		uint8_t flags;
@@ -223,35 +265,18 @@ namespace slots {
 		} status_icon;
 
 		uint64_t updated_time;   // when was the last status received
-		uint64_t estimated_delivery; // when do we expect to get the package
+		uint64_t estimated_delivery_from; // earliest time package is expected to arrive.
+		uint64_t estimated_delivery_to;   // latest time package is expected to arrive. if HAS_EST_DELIVERY_RANGE is unset, only this is populated.
 	};
 
 	struct ExtraParcelInfoEntry {
 		ParcelStatusLine status; // refd into PARCEL_STATUS_LONG
 		uint8_t for_parcel; // which parcel is this an entry for
+		uint16_t new_subcarrier_offset; // refd into PARCEL_CARRIER_NAMES
 		uint64_t updated_time;
 	};
 
 #pragma pack (pop)
-
-	enum struct WeatherStateArrayCode : uint8_t {
-		UNK = 0,
-
-		CLEAR = 0x10,
-		PARTLY_CLOUDY,
-		MOSTLY_CLOUDY,
-		OVERCAST,
-
-		DRIZZLE = 0x20,
-		LIGHT_RAIN,
-		RAIN,
-		HEAVY_RAIN,
-
-		SNOW = 0x30,
-		HEAVY_SNOW,
-
-		FOG = 0x40
-	};
 
 	// PROTOCOL DEFINITIONS
 	

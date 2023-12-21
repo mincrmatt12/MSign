@@ -96,3 +96,11 @@ The only file the fake ESP currently reads is the `config.txt`, placed in the wo
 ## Logging
 
 There are two programs provided here, `logtime.py` and `mergelog.py`, which create a logfile with extra bytes for the time and merge two of those logs into a normal log respectively.
+
+## Extras
+
+The `utils/` folder contains a few utilities which are compiled along with the simulator, which can be used for experimenting with some of the libraries available on both systems.
+
+### `jdump`
+
+`jdump` reads JSON from standard input and outputs a trace of how the `json::JSONParser` class will interpret it.

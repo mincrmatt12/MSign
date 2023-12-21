@@ -6,7 +6,7 @@
 #include "esp_log.h"
 #include "sccfg.cfg.h"
 
-const static char * TAG = "sccfg";
+const static char * const TAG = "sccfg";
 
 namespace sccfg {
 

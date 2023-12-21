@@ -13,11 +13,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <stdarg.h>
-#include <stdlib.h>
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE 1
 #endif
+#include <stdarg.h>
+#include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdbool.h>
@@ -75,6 +75,7 @@ static int esp_log_write_str(const char *s)
 }
 
 static uint32_t fake_Timer = 0;
+
 
 uint32_t esp_log_timestamp() {
 	return fake_Timer++;

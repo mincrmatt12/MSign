@@ -16,5 +16,5 @@ set(OBJCOPY_EXECUTABLE ${TOOLCHAIN_DIR}/arm-none-eabi-objcopy${TOOLCHAIN_EXT})
 set(CMAKE_TRY_COMPILE_TARGET_TYPE "STATIC_LIBRARY")
 
 # we always build with debug info because of the crash handler
-set(CMAKE_C_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -ggdb3")
-set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mcpu=cortex-m3 -mfloat-abi=soft -fno-exceptions -fno-rtti -Wno-register -ggdb3")
+set(CMAKE_C_FLAGS "-nostdlib -mthumb -mfloat-abi=soft -ggdb3")
+set(CMAKE_CXX_FLAGS "-nostdlib -mthumb -mfloat-abi=soft -fno-exceptions -fno-rtti -Wno-register -ggdb3")

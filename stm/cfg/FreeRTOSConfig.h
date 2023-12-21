@@ -17,7 +17,7 @@ void msign_panic(const char* y);
 #define configMAX_PRIORITIES              (7)
 #define configSUPPORT_STATIC_ALLOCATION   1
 #define configSUPPORT_DYNAMIC_ALLOCATION  0
-#define configCPU_CLOCK_HZ                (SystemCoreClock)
+#define configCPU_CLOCK_HZ                (F_CPU)
 #define configTICK_RATE_HZ                ((TickType_t)1000)
 #define configMINIMAL_STACK_SIZE          ((uint16_t)128)
 #define configMAX_TASK_NAME_LEN           (8)

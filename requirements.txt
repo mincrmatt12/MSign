@@ -1,14 +1,14 @@
 # python dependencies for the MSign
 
 # building parsers
-nmfu>=0.5.0a3
+nmfu>=0.5.5
 
 # building debug tools
 cxxfilt
 pyelftools
 
 # building ca cert bundle
-cryptography~=3.0
+cryptography>=41.0
 
 # building config
 pygccxml

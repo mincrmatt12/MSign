@@ -4,8 +4,6 @@
 #include <uart.h>
 #include <esp_system.h>
 
-const static char *TAG = "protocol";
-
 void protocol::ProtocolImpl::init_hw() {
 	memset(rx_buf, 0, sizeof rx_buf);
 

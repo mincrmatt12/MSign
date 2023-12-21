@@ -1,10 +1,15 @@
+#ifdef USE_F2
 #include <stm32f2xx.h>
+#endif
+#ifdef USE_F4
+#include <stm32f4xx.h>
+#endif
 #include "common/bootcmd.h"
 #include <stdbool.h>
 #include "string.h"
 
 // BOOTLOADER REVISION CONSTANT
-const char BL_REV[4] = {'2', 'b', 0, 0};
+const char BL_REV[4] = {'2', 'c', 0, 0};
 
 extern const void * _sirtext;
 extern void * _srtext, *_ertext;

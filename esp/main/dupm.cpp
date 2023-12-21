@@ -7,7 +7,7 @@
 #include <utility>
 #include <numeric>
 
-static const char * TAG = "dupm";
+static const char * const TAG = "dupm";
 
 namespace serial {
 
@@ -166,11 +166,19 @@ block_ok:
 					break;
 				case DataUpdateRequest::TypePatch:
 					// Update data
-					patch_handler(dur);
+					patch_handler(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, true);
 					break;
 				case DataUpdateRequest::TypePatchWithoutMarkDirty:
 					// Update data
-					patch_handler(dur, false);
+					patch_handler(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, false);
+					break;
+				case DataUpdateRequest::TypeInlinePatch:
+					// Update data
+					patch_handler(dur.d_inline_patch.slotid, dur.d_inline_patch.offset, dur.d_inline_patch.length, dur.d_inline_patch.data, true);
+					break;
+				case DataUpdateRequest::TypeInlinePatchWithoutMarkDirty:
+					// Update data
+					patch_handler(dur.d_inline_patch.slotid, dur.d_inline_patch.offset, dur.d_inline_patch.length, dur.d_inline_patch.data, false);
 					break;
 				case DataUpdateRequest::TypeMarkDirty:
 					// Mark region dirty (or just send out blocks, depending on temp)
@@ -181,8 +189,6 @@ block_ok:
 					break;
 				case DataUpdateRequest::TypeTriggerUpdate:
 					trigger_update_handler(dur);
-					break;
-				default:
 					break;
 			}
 		}
@@ -197,21 +203,21 @@ block_ok:
 		sync_pending = true;
 	}
 
-	void DataUpdateManager::patch_handler(DataUpdateRequest &dur, bool mark_dirty) {
+	void DataUpdateManager::patch_handler(uint16_t slotid, uint16_t offset, uint16_t length, const void * data, bool mark_dirty) {
 		if (
 		// Ensure slot exists
-			!arena.contains(dur.d_patch.slotid) ||
+			!arena.contains(slotid) ||
 		// Ensure slot is correct size
-		    (dur.d_patch.offset + dur.d_patch.length > arena.contents_size(dur.d_patch.slotid))
+		    (offset + length > arena.contents_size(slotid))
 		) {
-			ESP_LOGE(TAG, "dropping update request for slot %03x which is wrong size/doesn't exist.", dur.d_patch.slotid);
+			ESP_LOGE(TAG, "dropping update request for slot %03x which is wrong size/doesn't exist.", slotid);
 			return;
 		}
 		
 		// Update contents, storing directly.
-		if (!arena.update_contents(dur.d_patch.slotid, dur.d_patch.offset, dur.d_patch.length, dur.d_patch.data, [&](uint32_t offset, uint32_t length, const void *data){
+		if (!arena.update_contents(slotid, offset, length, data, [&](uint32_t offset, uint32_t length, const void *data){
 			for (int tries = 0; tries < 4; ++tries) {
-				switch (single_store_fulfill(dur.d_patch.slotid, offset, length, data, true)) {
+				switch (single_store_fulfill(slotid, offset, length, data, true)) {
 					case slots::protocol::DataStoreFulfillResult::Ok:
 						return true;
 					case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
@@ -386,10 +392,10 @@ warm_hot_send_remotes:
 							for (int tries = 0; tries < 3; ++tries) {
 								switch (single_store_fulfill(b->slotid, arena.block_offset(*b), b->datasize, b->data(), true)) {
 									case slots::protocol::DataStoreFulfillResult::Ok:
-										// finish by setting block to remote
-										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
 										// mark not dirty
 										b->flags &= ~bheap::Block::FlagDirty;
+										// finish by setting block to remote
+										arena.set_location(b->slotid, arena.block_offset(*b), b->datasize, bheap::Block::LocationRemote);
 										goto ok;
 									case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_Failed:
 										if (dur.d_temp.newtemperature == bheap::Block::TemperatureWarm) {
@@ -398,7 +404,7 @@ warm_hot_send_remotes:
 											// Send a cold
 											inform_temp_change(dur.d_temp.slotid, bheap::Block::TemperatureCold);
 										}
-										[[fallthrough]];
+										return;
 									case slots::protocol::DataStoreFulfillResult::IllegalState:
 									case slots::protocol::DataStoreFulfillResult::InvalidOrNak:
 										ESP_LOGE(TAG, "bad state for block");
@@ -526,7 +532,7 @@ ok:
 
 			for (auto& block : arena) {
 				if (!block || &block != &arena.get(block.slotid) || !arena.contents_size(block.slotid)) continue;
-				size_t this_reclaim = std::accumulate(arena.begin(block.slotid), arena.end(block.slotid), (size_t)0, [pred = std::forward<Pred>(from_blocks_matching)](auto& a, auto& b){
+				size_t this_reclaim = std::accumulate(arena.begin(block.slotid), arena.end(block.slotid), (size_t)0, [pred = std::forward<Pred>(from_blocks_matching)](const auto& a, const auto& b){
 					return pred(b) ? a + b.datasize : a;
 				});
 
@@ -931,7 +937,7 @@ common_remote_use_end:
 		if (arena.free_space() > target_free_space_buffer) return;
 		arena.defrag();
 		if (arena.free_space() > target_free_space_buffer) return;
-		ESP_LOGW(TAG, "cleanout_esp_space");
+		ESP_LOGD(TAG, "cleanout_esp_space");
 		// - moving things to the stm
 		auto budget = calculate_memory_budget();
 		auto needed_space = target_free_space_buffer - arena.free_space();
@@ -1042,7 +1048,7 @@ common_remote_use_end:
 					cleanout_esp_space();
 				}
 				else {
-					ESP_LOGW(TAG, "not enough space allocating for %03x, moving", dur.d_temp.slotid);
+					ESP_LOGD(TAG, "not enough space allocating for %03x, moving", dur.d_temp.slotid);
 				}
 
 				// There was no space for this block, and we've already tried a cleanup at this point, so we have to try further clearing.
@@ -1075,7 +1081,7 @@ retry_chsize:
 		if (done_ok) return;
 
 		// Alright, now we can start allocating onto the STM
-		ESP_LOGW(TAG, "out of space chsize, allocating...");
+		ESP_LOGD(TAG, "out of space chsize, allocating...");
 
 		// Before we do so, though, we might be getting an obscenely long update request which we could partially fit on our heap. There's a threshold here so we don't do
 		// something dumb like split a 8 byte block into two 4 byte chunks.
@@ -1100,7 +1106,7 @@ retry_allocation:
 				ESP_LOGE(TAG, "Out of space allocating space in hot block, bailing.");
 				return;
 			}
-			ESP_LOGW(TAG, "Out of space moving block to STM, trying to remove duplicates and place locally.");
+			ESP_LOGD(TAG, "Out of space moving block to STM, trying to remove duplicates and place locally.");
 			if (ensure_budget_space(TryForLocalDedup, dur.d_chsize.slotid, new_blk_size + 4)) {
 				// We've created enough space locally, just do that instead.
 				if (arena.add_block(dur.d_chsize.slotid, bheap::Block::LocationCanonical, new_blk_size)) {
@@ -1139,7 +1145,7 @@ retry_allocation:
 					// Totally invalid, give up.
 					break;
 				case slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain:
-					ESP_LOGW(TAG, "not enough space, awaiting cleanup");
+					ESP_LOGD(TAG, "not enough space, awaiting cleanup");
 					[[fallthrough]];
 				case slots::protocol::DataStoreFulfillResult::Timeout:
 					vTaskDelay(pdMS_TO_TICKS(5));

@@ -14,30 +14,58 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
    add_compile_options (-fcolor-diagnostics)
 endif ()
 
+# setup cpu name & clock speed
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
+
+	add_definitions(
+		-DF_CPU=168000000L
+	)
+else()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m3")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m3")
+
+	add_definitions(
+		-DF_CPU=120000000L
+	)
+endif()
+
 # specify target
-set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board'")
+set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign' (for f4)")
+set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
 
 # Check if we can find an openocd binary
 
-find_program(openocd_executable
-	openocd
-	PATHS $ENV{HOME}/.platformio/packages/tool-openocd/bin ENV OPENOCD_DIR
-	NO_DEFAULT_PATH
-)
-
+find_program(openocd_executable openocd)
 find_package(Python 3 COMPONENTS Interpreter)
 
 # Add libraries for the vendored libs
 
 # hal
-file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
+	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_*.c)
+else()
+	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
+endif()
 
 add_library(cube_ll OBJECT ${cube_ll_srcs})
 
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
+	target_include_directories(cube_ll PUBLIC
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
+	)
+else()
+	target_include_directories(cube_ll PUBLIC
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
+	)
+endif()
+
 target_include_directories(cube_ll PUBLIC
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
-	${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
 	${CMAKE_CURRENT_SOURCE_DIR}/cfg
 )
 
@@ -52,12 +80,14 @@ target_compile_options(cube_ll PUBLIC
 if (MSIGN_BUILD_TYPE STREQUAL "board")
 	target_compile_definitions(cube_ll PUBLIC
 		-DSTM32F205xx
-		-DF_CPU=120000000L
 	)
 elseif (MSIGN_BUILD_TYPE STREQUAL "nucleo")
 	target_compile_definitions(cube_ll PUBLIC
 		-DSTM32F207xx
-		-DF_CPU=120000000L
+	)
+elseif (MSIGN_BUILD_TYPE STREQUAL "minisign")
+	target_compile_definitions(cube_ll PUBLIC
+		-DSTM32F405xx
 	)
 endif()
 
@@ -65,6 +95,7 @@ endif()
 set(freertos_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 
 # rtos
+# compiled against cm3 because we don't use the cm4 fpu
 add_library(freertos OBJECT
 	${freertos_dir}/event_groups.c
 	${freertos_dir}/list.c
@@ -106,6 +137,12 @@ target_link_libraries(stm_crash
 	freertos
 )
 
+if (MSIGN_BUILD_TYPE STREQUAL "minisign")
+	target_compile_definitions(stm_crash PUBLIC USE_F4)
+else()
+	target_compile_definitions(stm_crash PUBLIC USE_F2)
+endif()
+
 set_property(TARGET stm_crash PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
 
 target_link_libraries(stm
@@ -142,13 +179,19 @@ if (${Python_FOUND})
 	)
 endif()
 
+execute_process(COMMAND ${CMAKE_LINKER} --help OUTPUT_VARIABLE MSIGN_LINKER_HELP)
+if ("${MSIGN_LINKER_HELP}" MATCHES ".*warn-rwx.*")
+	set(USE_NO_WARN_RWX 1)
+endif()
+
 target_link_options(stm
 	PUBLIC
-	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/app.ld
+	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/$<IF:$<STREQUAL:${MSIGN_BUILD_TYPE},minisign>,f4.ld,f2.ld>
 	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic
 	-Wl,-Map=stm.map
+	$<$<BOOL:${USE_NO_WARN_RWX}>:-Wl,--no-warn-rwx-segment>
 	--specs=nano.specs
 )
 
@@ -164,9 +207,15 @@ add_custom_command(TARGET stm
 if (EXISTS ${openocd_executable})
 	message(STATUS "Found OPENOCD " ${openocd_executable})
 
+	if (MSIGN_BUILD_TYPE STREQUAL "minisign")
+		set(upload_cfg stm32f4x.cfg)
+	else()
+		set(upload_cfg stm32f2x.cfg)
+	endif()
+
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/stlink.cfg -f target/stm32f2x.cfg -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
+		COMMAND ${openocd_executable} -f interface/${MSIGN_OCD_INTERFACE}.cfg -f target/${upload_cfg} -c "program $<TARGET_FILE:stm> verify reset exit" || echo "program $<TARGET_FILE:stm> verify reset" | telnet localhost 4444
 	)
 
 	add_dependencies(upload stm)

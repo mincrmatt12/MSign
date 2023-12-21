@@ -17,7 +17,7 @@
 #include <esp_wifi.h>
 #endif
 
-const static char * TAG = "app_main";
+const static char * const TAG = "app_main";
 
 #ifdef SIM
 #define STACK_MULT 8
@@ -62,6 +62,10 @@ extern "C" void app_main() {
 		case upd::FULL_SYSTEM:
 			upd::update_system();
 			ESP_LOGW(TAG, "somehow returned from update_system? restarting anyways.");
+			esp_restart();
+			break;
+		case upd::CERTIFICATE_FILE:
+			upd::update_cacerts();
 			esp_restart();
 			break;
 		default:

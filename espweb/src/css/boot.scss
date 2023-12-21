@@ -1,11 +1,87 @@
 // Add overrides to bootstrap themes:
 
-@import "~bootswatch/dist/darkly/variables";
+@import "bootswatch/dist/darkly/variables";
 $font-family-sans-serif:      "Roboto Mono", "Courier New", monospace !important;
 $font-size-base: 0.95rem;
 
 $pagination-active-bg: $dark;
 @import url('https://fonts.googleapis.com/css?family=Roboto+Mono:400,700&display=swap');
-@import "~bootstrap/scss/bootstrap";
-@import "~bootswatch/dist/darkly/bootswatch";
+@import "bootstrap/scss/bootstrap";
+
+:root {
+  color-scheme: dark;
+}
+
+// Typography
+
+.blockquote {
+  &-footer {
+    color: $gray-600;
+  }
+}
+
+// Forms
+
+.form-control {
+  color-scheme: light;
+}
+
+.input-group-addon {
+  color: $white;
+}
+
+.form-floating > label {
+  color: $gray-700;
+}
+
+// Navs
+
+.nav-tabs,
+.nav-pills {
+  .nav-link.active:focus,
+  .nav-link.active:hover,
+  .nav-item.open .nav-link:focus,
+  .nav-item.open .nav-link:hover {
+    color: $white;
+  }
+}
+
+.msign-left-nav {
+  .nav-link {
+    color: $white;
+  }
+}
+
+.breadcrumb a {
+  color: $white;
+}
+
+.pagination {
+  a:hover {
+    text-decoration: none;
+  }
+}
+
+// Indicators
+
+.alert {
+  color: $white;
+  border: none;
+
+  a,
+  .alert-link {
+    color: $white;
+    text-decoration: underline;
+  }
+
+  @each $color, $value in $theme-colors {
+    &-#{$color} {
+      @if $enable-gradients {
+        background: $value linear-gradient(180deg, mix($white, $value, 15%), $value) repeat-x;
+      } @else {
+        background-color: $value;
+      }
+    }
+  }
+}
 @import "./ext.scss"

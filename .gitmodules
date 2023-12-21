@@ -5,12 +5,19 @@
 [submodule "vendor/FreeRTOS"]
 	path = vendor/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
+	ignore = dirty
 [submodule "vendor/STM32CubeF2"]
 	path = vendor/STM32CubeF2
 	url = https://github.com/STMicroelectronics/STM32CubeF2
+	ignore = dirty
 [submodule "vendor/BearSSL"]
 	path = vendor/BearSSL
 	url = https://github.com/mincrmatt12/bearssl-dyncert
+	ignore = dirty
 [submodule "vendor/lwip"]
 	path = vendor/lwip
 	url = https://git.savannah.nongnu.org/git/lwip.git
+[submodule "vendor/STM32CubeF4"]
+	path = vendor/STM32CubeF4
+	url = https://github.com/STMicroelectronics/STM32CubeF4
+	ignore = dirty

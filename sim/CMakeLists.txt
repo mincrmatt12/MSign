@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.15)
 project(signsim)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_BUILD_TYPE Debug)
 set(SIM_FREERTOS_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 set(SIM_LWIP_DIR ${CMAKE_CURRENT_LIST_DIR}/../vendor/lwip/src)
 set(SIM_BRSSL_PATH ${CMAKE_CURRENT_LIST_DIR}/../vendor/BearSSL)
 set(SIM_FATFS_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/fatfs_priv)
 set(SIM_B64_PATH ${CMAKE_CURRENT_LIST_DIR}/../esp/components/libb64)
+
+set(STM_PHYS_DIR ${CMAKE_CURRENT_LIST_DIR}/../stm/src)
+set(ESP_PHYS_DIR ${CMAKE_CURRENT_LIST_DIR}/../esp/main)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
@@ -42,11 +45,11 @@ message(STATUS "Generating source trees...")
 
 # b) glob for files
 file(GLOB_RECURSE STM_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/stm/*.[ch]*)
-file(GLOB_RECURSE STM_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../stm/src/*.[ch]*)
+file(GLOB_RECURSE STM_SRCS FOLLOW_SYMLINKS ${STM_PHYS_DIR}/*.[ch]*)
 
 file(GLOB_RECURSE ESP_OVERRIDE_SRCS ${CMAKE_CURRENT_LIST_DIR}/src/esp/*.[ch]*)
-file(GLOB_RECURSE ESP_SRCS FOLLOW_SYMLINKS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/*.[ch]*)
-file(GLOB         ESP_NMFUS ${CMAKE_CURRENT_LIST_DIR}/../esp/main/parser/*.nmfu)
+file(GLOB_RECURSE ESP_SRCS FOLLOW_SYMLINKS ${ESP_PHYS_DIR}/*.[ch]*)
+file(GLOB         ESP_NMFUS ${ESP_PHYS_DIR}/parser/*.nmfu)
 
 # now, create a new list, called TOTAL_STM_SRCS, from the original list
 set(TOTAL_STM_SRCS ${STM_SRCS})
@@ -76,7 +79,7 @@ add_custom_command(TARGET copy_stm_src PRE_BUILD
 	COMMENT "Copying stm sources" 
 	BYPRODUCTS ${TOTAL_STM_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
-	${CMAKE_CURRENT_LIST_DIR}/../stm/src ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
+	${STM_PHYS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/stmsrc ${CMAKE_CURRENT_LIST_DIR}/src/stm
 )
 
 add_custom_target(copy_esp_src)
@@ -84,7 +87,7 @@ add_custom_command(TARGET copy_esp_src PRE_BUILD
 	COMMENT "Copying esp sources" 
 	BYPRODUCTS ${TOTAL_ESP_SRCS}
 	COMMAND python3 ${CMAKE_CURRENT_LIST_DIR}/cmake/copy.py
-	${CMAKE_CURRENT_LIST_DIR}/../esp/main ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
+	${ESP_PHYS_DIR} ${CMAKE_CURRENT_BINARY_DIR}/espsrc ${CMAKE_CURRENT_LIST_DIR}/src/esp
 )
 
 # mark the files as generated
@@ -101,7 +104,7 @@ foreach(nmfu_file ${ESP_NMFUS})
 	get_filename_component(nmfu_target_name ${nmfu_file} NAME_WE)
 	list(APPEND TOTAL_ESP_SRCS ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c)
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/${nmfu_target_name}.h
-		COMMAND ${NMFU_EXECUTABLE} -O3 ${nmfu_file} -finclude-user-ptr $<$<STREQUAL:${nmfu_target_name},http_serve>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-fyield-support>
+		COMMAND ${NMFU_EXECUTABLE} -O3 ${nmfu_file} -fuse-packed-enums -finclude-user-ptr $<$<STREQUAL:${nmfu_target_name},http_serve>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-findirect-start-ptr> $<$<STREQUAL:${nmfu_target_name},http_chunked_recv>:-fyield-support>
 		DEPENDS ${nmfu_file}
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
 	)
@@ -135,7 +138,8 @@ target_link_libraries(stm_freertos Threads::Threads)
 add_executable(stmsim ${TOTAL_STM_SRCS})
 file(RELATIVE_PATH BINARY_PATH_RELATIVE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR}/.)
 target_include_directories(stmsim PRIVATE ${BINARY_PATH_RELATIVE}/stmsrc)
-target_compile_options(stmsim PRIVATE -DSIM )
+target_compile_options(stmsim PRIVATE -DSIM)
+set_property(TARGET stmsim PROPERTY CXX_STANDARD 20)
 add_dependencies(stmsim copy_stm_src)
 
 target_link_libraries(stmsim stm_freertos rt)
@@ -292,9 +296,25 @@ target_include_directories(esp_b64 PUBLIC
 # e) add target for ESP build
 add_custom_target(esp_parsers DEPENDS ${ESP_NMFU_SRCS})
 
+# f) add wpabr
+
+add_library(esp_wpabufman STATIC
+	${CMAKE_CURRENT_LIST_DIR}/../esp/components/bearssl_supplicant/src/bufman.c
+)
+
+target_include_directories(esp_wpabufman PUBLIC
+	${CMAKE_CURRENT_LIST_DIR}/../esp/components/bearssl_supplicant/include
+)
+
+target_compile_options(esp_wpabufman PRIVATE -DSIM)
+target_link_libraries(esp_wpabufman esp_bearssl esp_freertos)
+
 add_executable(espsim ${TOTAL_ESP_SRCS})
 target_compile_options(espsim PRIVATE -DSIM)
 target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
 add_dependencies(espsim copy_esp_src esp_parsers)
 
-target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64)
+target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64 esp_wpabufman)
+
+# ----- utilities -----
+add_subdirectory(utils)

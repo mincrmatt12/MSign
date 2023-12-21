@@ -1,21 +1,29 @@
 // Main HTTP server parser definition
 
 
-out str[40] url;
+out str[36] api_url;
 out str[16] etag;
 out bool is_conditional = false;
 out bool is_gzipable = false;
 out bool is_chunked = false;
+out bool is_cacheable = false;
+out enum {
+    PAGE_HTML, 
+    PAGE_CSS,
+    PAGE_JS,
+    VENDOR_JS,
+    API
+} target_url;
 out enum{JSON,PLAIN,MULTIPART_FILE,OTHER} content_type;
 out enum{GET,POST,PUT,DELETE} method;
-out enum{OK,BAD_METHOD,URL_TOO_LONG,AUTH_TOO_LONG,UNSUPPORTED_VERSION,BAD_REQUEST,UNSUPPORTED_ENCODING} error_code;
+out enum{OK,BAD_METHOD,URL_TOO_LONG,AUTH_TOO_LONG,UNSUPPORTED_VERSION,BAD_REQUEST,UNSUPPORTED_ENCODING,NOT_FOUND} error_code;
 out enum{NO_AUTH,INVALID_TYPE,OK} auth_type;
 out str[52] auth_string;
 out str[71] multipart_boundary;
 out int content_length = 0;
 
 macro ows() {
-	optional { " "; }
+	optional { /[\ \t]+/; }
 }
 
 macro waitend() {
@@ -38,24 +46,74 @@ parser {
 			}
 		}
 
-		// Match the space and first slash of the URL
+		// Match the space (but not the first / as that is in the case)
 
-		" /";
+		" ";
 
 		// Grab the url
 
-		try {
-			url += /[a-zA-Z0-9_\-.?&\/#]*/;
-		}
-		catch (outofspace) {
-			waitend();
-			error_code = URL_TOO_LONG;
-			finish;
-		}
+        try {
+            try {
+                greedy case {
+                    prio 2 {
+                        "/a/" -> {
+                            target_url = API;
+                            is_cacheable = false;
+                            api_url += /[a-zA-Z0-9_\-.?&\/#]*/;
+                        }
+                    }
+                    prio 1 {
+                        "/page.js" -> {
+                            target_url = PAGE_JS;
+                            is_cacheable = false;
+                        }
+                        "/page.css" -> {
+                            target_url = PAGE_CSS;
+                            is_cacheable = false;
+                        }
+                        "/vendor.js" -> {
+                            target_url = VENDOR_JS;
+                            is_cacheable = false;
+                        }
+                        /\/page\.[0-9a-f]+\.js/ -> {
+                            target_url = PAGE_JS;
+                            is_cacheable = true;
+                        }
+                        /\/page\.[0-9a-f]+\.css/ -> {
+                            target_url = PAGE_CSS;
+                            is_cacheable = true;
+                        }
+                        /\/vendor\.[0-9a-f]+\.js/ -> {
+                            target_url = VENDOR_JS;
+                            is_cacheable = true;
+                        }
+                    }
+                    /\/[a-z]+\/?/, "/" -> {
+                        target_url = PAGE_HTML;
+                        is_cacheable = false;
+                        optional {
+                            /[#?][^\ ]*/;
+                        }
+                    }
+                }
+            }
+            catch (outofspace) {
+                waitend();
+                error_code = URL_TOO_LONG;
+                finish;
+            }
+
+            " "; // Match the space after the URL to ensure we catch not found properly.
+        }
+        catch (nomatch) {
+            waitend();
+            error_code = NOT_FOUND;
+            finish;
+        }
 
 		// Match the following space and HTTP version
 
-		" HTTP/";
+		"HTTP/";
 
 		case {
 			"1.1","1.0" -> {}
@@ -77,13 +135,10 @@ parser {
 				// We match the Accept-Encoding parameter to check for gzip
 				"Accept-Encoding:"i -> {
 					ows(); // per the standard
-					loop gzip_matcher {
-						case {
-							"gzip" -> {is_gzipable = true;}
-							"\r\n" -> {break gzip_matcher;}
-							else -> {/./;} // ignore invalid things
-						}
-					}
+					greedy case {
+                        prio 0 "\r\n", /[^\ \t\r\n]+[^\r\n]*\r\n/ -> {is_gzipable = false;}
+                        prio 1 /(gzip|[^\ \t\r\n]+[^\r\n]*,[\ \t]*gzip)(\r\n|[\ ,;][^\r\n]*\r\n)/ -> {is_gzipable = true;}
+                    }
 				}
 
 				// We match the Transfer-Encoding parameter only to check for chunked or unsupported

@@ -1,3 +1,6 @@
-FROM node
+FROM nikolaik/python-nodejs:python3.11-nodejs20-bullseye
 
-RUN apt-get update && apt-get install -y gzip ar
+WORKDIR /opt/pydeps
+
+ADD requirements.txt requirements.txt
+RUN pip3 install -r requirements.txt

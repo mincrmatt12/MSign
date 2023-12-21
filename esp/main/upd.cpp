@@ -3,15 +3,17 @@
 #include <esp_log.h>
 #include "config.h"
 #include "common/util.h"
-#include "esp_system.h"
 #include "sd.h"
-#include "uart.h"
 #include "common/slots.h"
 #include <FreeRTOS.h>
 #include <task.h>
 
+#ifndef SIM
+#include <uart.h>
 #include <esp_partition.h>
+#include <esp_system.h>
 #include <esp_ota_ops.h>
+#endif
 
 #define USTATE_NOT_READ 0xff
 #define USTATE_NONE 0xfe
@@ -26,16 +28,12 @@
 
 #define USTATE_READY_FOR_CERT 0x20
 
-const static char * TAG="updater";
+const static char * const TAG="updater";
 
 namespace upd {
-	uint8_t update_state = 0xff;
-
+	uint8_t update_state = USTATE_NOT_READ;
 
 	UpdateKind needed() {
-		if (update_state != USTATE_NOT_READ) {
-			goto compute;
-		}
 		// check the SD for presence of upd/state file
 		if (f_stat("/upd/state", NULL) == FR_OK) {
 			ESP_LOGI(TAG, "update file exists...");
@@ -54,7 +52,7 @@ namespace upd {
 		else {
 			update_state = USTATE_NONE;
 		}
-	compute:
+
 		switch (update_state) {
 			case USTATE_READY_FOR_WEB:
 				return upd::WEB_UI;
@@ -63,129 +61,16 @@ namespace upd {
 			case USTATE_NONE:
 				return upd::NO_UPDATE;
 			default:
+#ifdef SIM
+				ESP_LOGW(TAG, "sim, skipping sys update");
+				return upd::NO_UPDATE;
+#else
 				return upd::FULL_SYSTEM;
+#endif
 		}
 	}
 
-	void update_website() {
-		// check for the webui.ar file
-		if (f_stat("/upd/webui.ar", NULL) != FR_OK) {
-			ESP_LOGD(TAG, "tried to update web but no webui.ar file");
-			return;
-		}
-
-		// otherwise, prepare by BLOWING THE OLD SHIT TO LITTE BITS
-		
-		ESP_LOGD(TAG, "removing old files...");
-
-		f_unlink("/web/page.html");
-		f_unlink("/web/page.css");
-		f_unlink("/web/page.js");
-		f_unlink("/web/page.html.gz");
-		f_unlink("/web/page.css.gz");
-		f_unlink("/web/page.js.gz");
-		f_unlink("/web/etag"); // ignore failures here
-
-		FIL arF; f_open(&arF, "/upd/webui.ar", FA_READ);
-	 	uint8_t magic[8];
-		UINT br;
-		int files_read = 0;
-		if ((f_read(&arF, magic, sizeof(magic), &br), br) != sizeof(magic) ||
-				memcmp(magic, "!<arch>\n", sizeof(magic)) ) {
-			f_close(&arF);
-	invalidformat:
-			ESP_LOGE(TAG, "what kind of shit are you trying to pull here? give me a .ar file...");
-			goto failure;
-		}
-
-		while (files_read < 6) {
-			uint8_t fileHeader[60];
-			do {
-				if (f_read(&arF, &fileHeader[0], 1, &br) != FR_OK || !br) {
-					ESP_LOGE(TAG, "invalid ar file");
-					f_close(&arF);
-					goto failure;
-				}
-			} while (fileHeader[0] == '\n');
-			f_read(&arF, &fileHeader[1], sizeof(fileHeader)-1, &br);
-			if (br != sizeof(fileHeader)-1) {
-				f_close(&arF);
-				goto failure;
-			}
-			fileHeader[58] = 0;
-
-			int iH = 0, iC = 0, iJ = 0, iHc = 0, iCc = 0, iJc = 0;
-			// check the filename
-			if ((iH = memcmp(fileHeader, "page.html/", 10))
-				&& (iC = memcmp(fileHeader, "page.css/", 9)) && (iJ = memcmp(fileHeader, "page.js/ ", 9)) && 
-				(iHc = memcmp(fileHeader, "page.html.gz", 12))
-				&& (iCc = memcmp(fileHeader, "page.css.gz/", 11)) && (iJc = memcmp(fileHeader, "page.js.gz/", 10))) {
-				ESP_LOGD(TAG, "unknown entry");
-				f_close(&arF);
-				
-				goto failure;
-			}
-
-			// ok, now get the size
-			int length;
-			if (1 != sscanf((char *)(fileHeader + 48), "%d", &length) || !length) {
-				goto invalidformat;
-			}
-
-			const char * tfname;
-			if (!iH) tfname = "/web/page.html";
-			else if (!iC) tfname = "/web/page.css";
-			else if (!iJ) tfname = "/web/page.js";
-			else if (!iHc) tfname = "/web/page.html.gz";
-			else if (!iCc) tfname = "/web/page.css.gz";
-			else if (!iJc) tfname = "/web/page.js.gz";
-			else goto failure;
-
-			FIL target; f_open(&target, tfname, FA_WRITE | FA_CREATE_ALWAYS);
-
-			int bytes_since_last_yield = 0;
-
-			ESP_LOGI(TAG, "updating: %s", tfname);
-
-			{ 
-				uint8_t buf[256];
-				for (int i = 0; i < length; i += 256) {
-					int size_of_tx = (length - i >= 256) ? 256 : (length - i);
-					if (f_eof(&arF)) {
-						f_close(&target);
-						f_close(&arF);
-						ESP_LOGE(TAG, "failed to copy");
-						goto failure;
-					}
-					f_read(&arF, buf, size_of_tx, &br);
-					UINT bw;
-					f_write(&target, buf, br, &bw);
-					bytes_since_last_yield += bw;
-					if (bytes_since_last_yield > 4096) {
-						vTaskDelay(10);
-						bytes_since_last_yield = 0;
-					}
-				}
-			}
-
-			f_close(&target);
-			++files_read;
-		}
-		f_close(&arF);
-
-		ESP_LOGI(TAG, "finished ui update.");
-failure: // clean up
-		f_unlink("/upd/state");
-		f_unlink("/upd/webui.ar");
-		f_rmdir("/upd");
-	}
-
-	void update_cacerts() {
-		// TODO: make me extract the AR file.
-
-		return;
-	}
-
+#ifndef SIM
 	// routines for doing update
 	void send_update_chunk(uint8_t * buffer, size_t length) {
 		if (length > 253) {
@@ -251,7 +136,6 @@ failure: // clean up
 
 
 	// full system update
-
 	void update_system() {
 		// check the files are present
 		uint16_t crc_esp, crc_stm;
@@ -511,4 +395,7 @@ failure: // clean up
 			}
 		}
 	}
+#else
+	void update_system() {}
+#endif
 }

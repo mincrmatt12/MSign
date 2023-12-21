@@ -24,9 +24,9 @@ endif ()
 
 idf_component_register(SRCS ${msign_esp_srcs})
 
-macro(add_nmfu_target nmfu_target_name extra_flags)
+macro(add_nmfu_target nmfu_target_name)
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.c ${CMAKE_CURRENT_BINARY_DIR}/parser/${nmfu_target_name}.h
-		COMMAND ${NMFU_EXECUTABLE} -O3 ${CMAKE_CURRENT_LIST_DIR}/parser/${nmfu_target_name}.nmfu ${extra_flags}
+		COMMAND ${NMFU_EXECUTABLE} -O3 -fuse-packed-enums ${CMAKE_CURRENT_LIST_DIR}/parser/${nmfu_target_name}.nmfu ${ARGN}
 		DEPENDS ${CMAKE_CURRENT_LIST_DIR}/parser/${nmfu_target_name}.nmfu
 		WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/parser
 	)
@@ -60,7 +60,8 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 		COMMENT "Generating config parser..."
 	)
 
-	set_property(TARGET ${COMPONENT_LIB} PROPERTY CXX_STANDARD 17)
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
 	target_link_options(${COMPONENT_LIB} PUBLIC -Wl,-u -Wl,_printf_float)
+	target_compile_options(${COMPONENT_LIB} PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -std=gnu++17>
+)
 endif()

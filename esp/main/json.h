@@ -4,21 +4,31 @@
 #include <cstdlib>
 #include <cstdint>
 #include <functional>
+
+#ifndef STANDALONE_JSON
 #include "dwhttp.h"
+#endif
 
 namespace json {
 	struct PathNode {
-		char * name = nullptr;
-		uint16_t index;
-		bool array;
+		const char * name = nullptr;
+		uint16_t index = 0;
+		bool array = false;
 
-		PathNode() {}
-		PathNode(char * name_in) : name(name_in), index(0), array(false) {}
-		PathNode(char * name_in, uint16_t index) : name(name_in), index(index), array(true) {}
+		// constructs root
+		PathNode() : name(ROOT_NAME) {}
+		explicit PathNode(bool array) : name(ANON_NAME), array(array) {}
+		explicit PathNode(const char * name_in) : name(name_in), index(0), array(false) {}
+		PathNode(const char * name_in, uint16_t index) : name(name_in), index(index), array(true) {}
 
 		inline bool is_array() const {return array && !is_root();}
-		inline bool is_root() const {return name == nullptr;}
+		inline bool is_root() const {return name == ROOT_NAME;}
+		inline bool is_anon() const {return name == ANON_NAME;}
 		inline bool is_obj() const {return !array && !is_root();}
+	
+	private:
+		static const char * const ROOT_NAME;
+		static const char * const ANON_NAME;
 	};
 
 	struct Value {
@@ -57,6 +67,12 @@ namespace json {
 		TreeSlabAllocator();
 		~TreeSlabAllocator();
 
+		TreeSlabAllocator(const TreeSlabAllocator&) = delete;
+		TreeSlabAllocator(TreeSlabAllocator&&) = delete;
+
+		TreeSlabAllocator& operator=(const TreeSlabAllocator&) = delete;
+		TreeSlabAllocator& operator=(TreeSlabAllocator&&) = delete;
+
 		// Allocate a single object
 		template<typename T, typename ...Args>
 		T* make(Args&& ...args) {
@@ -71,6 +87,9 @@ namespace json {
 
 		// Free up the latest allocation
 		void finish(void * obj);
+
+		// Free all memory and reset
+		void reset();
 
 	private:
 		bool append(const uint8_t * data, size_t amount);
@@ -115,6 +134,12 @@ namespace json {
 		JSONParser(JSONCallback && c, bool is_utf8=false);
 		~JSONParser();
 
+		JSONParser(const JSONParser&) = delete;
+		JSONParser(JSONParser&&) = delete;
+
+		JSONParser& operator=(const JSONParser&) = delete;
+		JSONParser& operator=(JSONParser&&) = delete;
+
 		bool parse(const char * text);
 		bool parse(const char * text, size_t size);
 		bool parse(TextCallback && c);
@@ -127,9 +152,12 @@ namespace json {
 			return *stack[stack_ptr - 1];
 		}
 
+		bool grow_stack();
 		template<typename... Args>
-		inline void push(Args&&... args) {
+		inline bool push(Args&&... args) {
+			if (!grow_stack()) return false;
 			stack[stack_ptr++] = memory.make<PathNode>(std::forward<Args>(args)...);
+			return true;
 		}
 		void pop () {
 			memory.finish(stack[--stack_ptr]);
@@ -152,12 +180,13 @@ namespace json {
 		char next();
 
 		char temp = 0;
-		uint8_t    stack_ptr;
+		uint8_t stack_ptr = 0;
+		uint8_t stack_size = 0;
 
-		bool need = true;
-		bool is_utf8 = false;
+		bool need : 1;
+		bool is_utf8 : 1;
 
-		PathNode * stack[20];
+		PathNode **stack{};
 
 		JSONCallback cb;
 		TextCallback tcb;

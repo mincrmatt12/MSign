@@ -93,10 +93,18 @@ namespace threed::m {
 #endif
 		}
 
+		constexpr fixed_t reciprocal() const {
+			return fixed_t((1 << (2 * Fac)) / value, nullptr);
+		}
+
 		constexpr fixed_t operator/(fixed_t other) const {
+#ifdef FIXED_USE_HIGHPREC
 			int64_t a = (int64_t)value * (int64_t)Mul; // done here to try and get the compiler to use SMULL
 			int64_t b = other.value;
 			return fixed_t(a / b, nullptr);
+#else
+			return (*this) * other.reciprocal();
+#endif
 		}
 
 #define make_op(x) inline constexpr fixed_t& operator x##= (fixed_t other) {return (*this = *this x other);}

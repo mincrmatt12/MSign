@@ -47,6 +47,7 @@ type_names = [
 type_names_re = [
     ("screen::ScreenSwapper<(.*)>(?=::)", "swap_t"),
     ("bheap::Arena<\\d+u, lru::Cache<\\d+u, \\d+u> >", "arena_t"),
+    (r"^tskmem::TaskHolder<\d+u>::create<([\w:]+)>\([\w:& ]+, char const\*, u32\)::{lambda\(void\*\)#1}::_FUN\(void\*\)$", r"(task for \1)::run()"),
     (r"^std::enable_if<(?:.*), (.*)>::type", r"\1"),
     (r"(?<=<| )(\d+)(u?), (?:\d+u?, )*(\d+)u?", r"\1...\3\2"),
     ("\\blong\\b", "s32"),
@@ -82,7 +83,8 @@ def run(inelf, outbin):
 
     for symbol in symtable_section.iter_symbols():
         try:
-            if not elf.get_section(symbol.entry.st_shndx).name.startswith(".text"):
+            sect_name = elf.get_section(symbol.entry.st_shndx).name
+            if not sect_name.startswith(".text") and not sect_name.startswith(".ram_func"):
                 continue
         except TypeError:
             continue
@@ -102,11 +104,15 @@ def run(inelf, outbin):
     fdes = [x for x in dbgdata.CFI_entries() if isinstance(x, FDE)]
     fde: FDE
 
+    ram_func_bottom = elf.get_section_by_name(".ram_func").header["sh_addr"]
+
     for fde in fdes:
         cie: CIE = fde.cie
 
         base_address = fde.header.initial_location
-        if base_address < 0x08000000:  # not in flash
+        if base_address < 0x08000000 and base_address > 0x1c000:  # not in flash or sram1
+            continue
+        if base_address < ram_func_bottom:
             continue
             
         instructions = cie.instructions + fde.instructions

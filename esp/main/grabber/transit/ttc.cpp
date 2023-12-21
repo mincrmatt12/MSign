@@ -1,5 +1,6 @@
 #include "ttc.h"
 #include "../../json.h"
+#include "../sccfg.h"
 #include "../../serial.h"
 #include "../../dwhttp.h"
 #include "../../wifitime.h"
@@ -8,31 +9,16 @@
 
 #include <algorithm>
 #include <esp_log.h>
-#include <ttc_rdf.h>
 
-const static char * TAG = "ttc";
+const static char * const TAG = "ttc";
 
 namespace transit::ttc {
-	void update_ttc_entry_name(size_t n, const char * value) {
-		serial::interface.update_slot(slots::TTC_NAME_1 + n, value);
-	}
-
 	void init() {
+		if (impl == TTC) load_static_info("ttc");
 	}
 
 	// Populate the info and times with the information for this slot.
 	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6], uint64_t times_b[6]) {
-		char url[80];
-		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.stopid);
-
-		// Yes this uses HTTP, and not just because it's possible but because the TTC webservices break if you use HTTPS yes really.
-		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
-
-		if (dw.result_code() < 200 || dw.result_code() > 299) {
-			return false;
-		}
-
-		dw.make_nonclose();
 
 		ESP_LOGD(TAG, "Parsing json data");
 		// message is here now read it
@@ -44,7 +30,7 @@ namespace transit::ttc {
 			uint64_t epoch = 0;
 			bool layover = false;
 			int tag = 0;
-		} state;
+		} state{};
 
 		int max_e = 0, max_e_alt = 0;
 		
@@ -126,19 +112,48 @@ namespace transit::ttc {
 			}
 		});
 
+		char url[80];
+
 		bool ok = true;
 
-		if (!parser.parse(dw)) {
+		snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.stopid);
+		auto dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
+		if (dw.result_code() < 200 || dw.result_code() > 299) {
+			ok = false;
+		}
+		else {
+			dw.make_nonclose();
+		}
+
+		if (ok && !parser.parse(dw)) {
 			ok = false;
 			ESP_LOGE(TAG, "Parse failed");
 		} // parse while calling our function.
+
+		if (entry.alt_stopid > 0) {
+			snprintf(url, 80, "/service/publicJSONFeed?command=predictions&a=%s&stopId=%d", agency_code.get(), entry.alt_stopid);
+			dw = dwhttp::download_with_callback("_retro.umoiq.com", url);
+			if (dw.result_code() < 200 || dw.result_code() > 299) {
+				ok = false;
+			}
+			else {
+				dw.make_nonclose();
+			}
+
+			new (&state) State{};
+
+			if (ok && !parser.parse(dw)) {
+				ok = false;
+				ESP_LOGE(TAG, "Parse alt failed");
+			} // parse while calling our function.
+		}
 
 		// Ensure the array is sorted
 		if (max_e && max_e < 6)
 			std::sort(times, times+max_e);
 
 		if (max_e_alt && max_e_alt < 6)
-			std::sort(times_b, times+max_e_alt);
+			std::sort(times_b, times_b+max_e_alt);
 
 		return ok;
 	}
@@ -148,39 +163,10 @@ namespace transit::ttc {
 		int offset = 0;
 	};
 
-	void update_alertstr(slots::TTCInfo& info) {
-		ttc_rdf_state_t state;
-		AlertParserState aps_ptr{info};
-
-		auto dw = dwhttp::download_with_callback("www.ttc.ca", "/RSS/Service_Alerts/index.rss");
-
-		if (dw.result_code() < 200 || dw.result_code() > 299) {
-			return;
-		}
-
-		ttc_rdf_start(&state);
-		state.userptr = &aps_ptr;
-
-		// Run this through the parser
-		uint8_t buffer[64];
-		size_t amount = 0;
-		while ((amount = dw(buffer, 64)) != 0) {
-			// only works on little-endian
-			switch (ttc_rdf_feed(buffer, buffer + amount, &state)) {
-				case TTC_RDF_OK:
-					continue;
-				case TTC_RDF_FAIL:
-					ESP_LOGE(TAG, "RDF parser failed");
-					[[fallthrough]];
-				case TTC_RDF_DONE:
-					return;
-			}
-		}
-	}
-
 	bool loop() {
 		if (transit::impl != transit::TTC) return true;
 
+		bool did_get_any = false;
 		slots::TTCInfo x{};
 		for (uint8_t slot = 0; slot < 5; ++slot) {
 			uint64_t local_times[6], local_times_b[6];
@@ -189,10 +175,14 @@ namespace transit::ttc {
 
 			if (entries[slot] && *entries[slot]) {
 				if (update_slot_times_and_info(*entries[slot], slot, x, local_times, local_times_b)) {
-					if (local_times[0])
+					if (local_times[0]) {
 						serial::interface.update_slot_raw(slots::TTC_TIME_1a + slot, local_times, sizeof(uint64_t) * std::count_if(std::begin(local_times), std::end(local_times), [](auto x){return x != 0;}));
-					if (local_times_b[0])
+						did_get_any = true;
+					}
+					if (local_times_b[0]) {
 						serial::interface.update_slot_raw(slots::TTC_TIME_1b + slot, local_times_b, sizeof(uint64_t) * std::count_if(std::begin(local_times_b), std::end(local_times_b), [](auto x){return x != 0;}));
+						did_get_any = true;
+					}
 
 					// set slot altcodes
 					x.altdircodes_a[slot] = (char)entries[slot]->dir_a;
@@ -203,71 +193,11 @@ namespace transit::ttc {
 			}
 		}
 		dwhttp::close_connection(true);
-		update_alertstr(x);
 		if (!(x.flags & slots::TTCInfo::SUBWAY_ALERT)) {
 			serial::interface.delete_slot(slots::TTC_ALERTSTR);
 		}
 		serial::interface.update_slot(slots::TTC_INFO, x);
+		sccfg::set_force_disable_screen(slots::ScCfgInfo::TTC, !did_get_any);
 		return true;
 	}
-}
-
-extern "C" void ttc_rdf_on_advisory_hook(ttc_rdf_state_t *state, uint8_t inval) {
-	if (!transit::ttc::alert_search) return;
-	transit::ttc::AlertParserState& ps = *reinterpret_cast<transit::ttc::AlertParserState *>(state->userptr);
-
-	ESP_LOGD(TAG, "Got advisory entry %s", state->c.advisory);
-
-	// Check all semicolon separated entries
-	{
-		char * search_query = strdup(transit::ttc::alert_search);
-		char * token = strtok(search_query, ";");
-		bool found = false;
-		while (token && strlen(token)) {
-			if (strcasestr(state->c.advisory, token)) {
-				ESP_LOGD(TAG, "matched on %s", token);
-				found = true;
-				break;
-			}
-			token = strtok(NULL, ";");
-		}
-		free(search_query);
-		if (!found) return;
-	}
-
-	// Ignore if we see the string elevator in there
-	if (strcasestr(state->c.advisory, "elevator")) return;
-
-	// Is the first alert?
-	if (!(ps.info.flags & slots::TTCInfo::SUBWAY_ALERT)) {
-		// Clear the type flags
-		ps.info.flags &= ~(slots::TTCInfo::SUBWAY_DELAYED | slots::TTCInfo::SUBWAY_OFF);
-		// Mark this alert.
-		ps.info.flags |=   slots::TTCInfo::SUBWAY_ALERT;
-	}
-	
-	// If it isn't a regular service...
-	if (!strcasestr(state->c.advisory, "regular service has")) {
-		// Try and guess the type of error:
-		if (strcasestr(state->c.advisory, "delays of") || strcasestr(state->c.advisory, "major delays") || strcasestr(state->c.advisory, "trains are not stopping") || strcasestr(state->c.advisory, "trains not stopping")) {
-			ps.info.flags |= slots::TTCInfo::SUBWAY_DELAYED;
-		}
-		if (strcasestr(state->c.advisory, "no service")) {
-			ps.info.flags |= slots::TTCInfo::SUBWAY_OFF;
-		}
-	}
-
-	size_t newlength = strlen(state->c.advisory);
-	// Add to the slot data:
-	// If this is the first entry, we don't need to add a ' / ' marker, otherwise we do
-	if (ps.offset != 0) newlength += 3;
-	serial::interface.allocate_slot_size(slots::TTC_ALERTSTR, ps.offset + newlength + 1);
-	if (ps.offset == 0) {
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, 0, state->c.advisory, strlen(state->c.advisory)+1);
-	}
-	else {
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset + 3, state->c.advisory, strlen(state->c.advisory)+1, false); // sync this on the separator
-		serial::interface.update_slot_partial(slots::TTC_ALERTSTR, ps.offset, " / ", 3);
-	}
-	ps.offset += newlength;
 }

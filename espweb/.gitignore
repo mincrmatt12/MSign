@@ -2,5 +2,7 @@ build/
 web/
 node_modules/*
 *.lock
+!yarn.lock
 yarn-error*
 *.log
+cacerts.bin

@@ -5,7 +5,6 @@
 #include "../draw.h"
 #include "base.h"
 #include <string.h>
-#include <cmath>
 #include "../common/slots.h"
 #include "threed/fixed.h"
 
@@ -197,7 +196,7 @@ namespace threed {
 		Vec3 current_pos, current_look, current_lookdir;
 		Vec3 camera_look, camera_look_target;
 		uint16_t interp_progress = 20000;
-		uint64_t last_update, last_new_data;
+		uint32_t last_update, last_new_data;
 
 		enum InteractMode : uint8_t {
 			MOVE_POS,
