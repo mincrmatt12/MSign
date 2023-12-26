@@ -107,6 +107,7 @@ namespace octoprint {
 			serial::interface.delete_slot(slots::PRINTER_BITMAP);
 			serial::interface.update_slot_nosync(slots::PRINTER_INFO, pi);
 			serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
+			serial::interface.sync();
 			return true;
 		};
 
