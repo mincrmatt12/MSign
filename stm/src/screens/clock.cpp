@@ -24,5 +24,5 @@ void screen::ClockScreen::draw() {
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 
 	uint16_t width = draw::text_size(buf, font::dejavusans_12::info);
-	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 60 - (width / 2) + draw::distorted_ease_wave(rtc_time, 150, 850, 8), 11, bg_color);
+	draw::outline_text(matrix.get_inactive_buffer(), buf, font::dejavusans_12::info, 60 - (width / 2) + draw::distorted_ease_wave(rtc_time, 150, 850, 8), 11, bg_color);
 }

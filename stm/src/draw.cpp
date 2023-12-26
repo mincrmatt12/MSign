@@ -2,6 +2,7 @@
 #include "tasks/timekeeper.h"
 #include <ctime>
 #include <stdio.h>
+#include <bit>
 
 extern tasks::Timekeeper timekeeper;
 extern uint64_t rtc_time;
@@ -23,8 +24,25 @@ namespace draw {
 			}
 		}
 	}
+	void outline_bitmap(matrix_type::framebuffer_type &fb, const uint8_t * bitmap, uint8_t width, uint8_t height, uint8_t stride, uint16_t x, uint16_t y, led::color_t rgb) {
+		for (uint16_t i = 0, y0 = y; i < height; ++i, ++y0) {
+			for (uint16_t j = 0, x0 = x; j < width; ++j, ++x0) {
+				uint8_t byte = j / 8;
+				uint8_t bit = 1 << (7 - (j % 8));
+				bool chosen = (bitmap[(i * stride) + byte] & bit) != 0;
+				if (chosen) {
+					fb.at(x0, y0) = rgb;
+					if (j == 0 || !(bitmap[(i * stride) + (j + 1) / 8] & std::rotl(bit, 1))) fb.at(x0-1, y0) = 0;
+					if (j == width-1 || !(bitmap[(i * stride) + (j - 1) / 8] & std::rotr(bit, 1))) fb.at(x0+1, y0) = 0;
+					if (i == 0 || !(bitmap[((i - 1) * stride) + j / 8] & bit)) fb.at(x0, y0-1) = 0;
+					if (i == height-1 || !(bitmap[((i + 1) * stride) + j / 8] & bit)) fb.at(x0, y0+1) = 0;
+				}
+			}
+		}
+	}
 
-	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+	template<bool Outline>
+	uint16_t text_impl(matrix_type::framebuffer_type &fb, const uint8_t *text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
 		if (!text) return x;
 		uint16_t pen = x;
 		uint8_t c, c_prev = 0;
@@ -47,7 +65,10 @@ namespace draw {
 			}
 			c_prev = c;
 			if (data[c] == nullptr) continue; // invalid character
-			bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), rgb);
+			if constexpr (Outline)
+				outline_bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), rgb);
+			else
+				bitmap(fb, data[c], *(metrics + (c * 6) + 0), *(metrics + (c * 6) + 1), *(metrics + (c * 6) + 2), pen + *(metrics + (c * 6) + 4), y - *(metrics + (c * 6) + 5), rgb);
 			pen += *(metrics + (c * 6) + 3);
 		}
 		return pen;
@@ -137,7 +158,19 @@ namespace draw {
 	}
 
 	uint16_t text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
-		return ::draw::text(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
+		return ::draw::text_impl<false>(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
+	}
+
+	uint16_t outline_text(matrix_type::framebuffer_type &fb, const char * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+		return ::draw::text_impl<true>(fb, reinterpret_cast<const uint8_t *>(text), font, x, y, rgb, kern_on);
+	}
+
+	uint16_t text(matrix_type::framebuffer_type &fb, const uint8_t * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+		return ::draw::text_impl<false>(fb, text, font, x, y, rgb, kern_on);
+	}
+
+	uint16_t outline_text(matrix_type::framebuffer_type &fb, const uint8_t * text, const void * const font[], uint16_t x, uint16_t y, led::color_t rgb, bool kern_on) {
+		return ::draw::text_impl<true>(fb, text, font, x, y, rgb, kern_on);
 	}
 
 	int16_t search_kern_table(uint8_t a, uint8_t b, const int16_t * kern, const uint32_t size) {
