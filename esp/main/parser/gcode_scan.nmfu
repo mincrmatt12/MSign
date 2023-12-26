@@ -1,0 +1,127 @@
+// Parses GCode with just enough precision to extract extrude moves
+// Does not do any processing of the gcode, just outputs commands.
+
+hook got_command;
+
+out int{size 8} x_int;
+out int{size 8} y_int;
+out int{size 8} z_int;
+out int{size 8} e_int;
+
+// These are cleared to negative for missing, otherwise they are the number of digits after the decimal point.
+out int{size 1} x_decimal = -1;
+out int{size 1} y_decimal = -1;
+out int{size 1} z_decimal = -1;
+out int{size 1} e_decimal = -1;
+
+// used by read_fract
+out bool temp_negative = false;
+
+// Kept track of by a massive foreach
+out int{size 4, unsigned} file_pos = 0;
+
+out enum {
+    G_MOVE,
+    E_RELATIVE_ON,
+    E_RELATIVE_OFF,
+    G_RELATIVE_ON,
+    G_RELATIVE_OFF,
+    G_RESET_E
+} command_type;
+
+macro read_fract(out int, out decimal) {
+    int = 0;
+    decimal = 0;
+
+    temp_negative = false;
+    optional {
+        "-";
+        temp_negative = true;
+    }
+
+    foreach {
+        /\d+/;
+    } do {
+        if temp_negative {
+            int = [int * 10 - ($last - '0')];
+        }
+        else {
+            int = [int * 10 + ($last - '0')];
+        }
+    }
+
+    optional {
+        ".";
+        foreach {
+            /\d*/;
+        } do {
+            if temp_negative {
+                int = [int * 10 - ($last - '0')];
+            }
+            else {
+                int = [int * 10 + ($last - '0')];
+            }
+            decimal = [decimal + 1];
+        }
+    }
+}
+
+macro send_single_command(expr target) {
+    command_type = target;
+    got_command();
+    wait "\n";
+}
+
+parser {
+    foreach {
+        loop cmds {
+            case {
+                // move to
+                /G0?[01](\.\d+)?\s/ -> {
+                    command_type = G_MOVE;
+
+                    x_decimal = -1;
+                    y_decimal = -1;
+                    z_decimal = -1;
+                    e_decimal = -1;
+
+                    loop args {
+                        try {
+                            case {
+                                "x"i -> { read_fract(x_int, x_decimal); }
+                                "y"i -> { read_fract(y_int, y_decimal); }
+                                "z"i -> { read_fract(z_int, z_decimal); }
+                                "e"i -> { read_fract(e_int, e_decimal); }
+                            }
+                        }
+                        catch (nomatch) {
+                            optional {
+                                /[^\s;]+/;
+                            }
+                        }
+                        case {
+                            " " -> {}
+                            ";" -> {
+                                wait "\n";
+                                break args;
+                            }
+                            "\r\n","\n" -> { break args; }
+                        }
+                    }
+
+                    got_command();
+                }
+                // relative modes
+                /G90(\.\d+)?/ -> { send_single_command(G_RELATIVE_OFF); }
+                /G91(\.\d+)?/ -> { send_single_command(G_RELATIVE_ON); }
+                /M82(\.\d+)?/ -> { send_single_command(E_RELATIVE_OFF); }
+                /M83(\.\d+)?/ -> { send_single_command(E_RELATIVE_ON); }
+                /G92(\.\d+)?[^Ee\r\n]+[Ee]-?0/ -> { send_single_command(G_RESET_E); }
+
+                else -> {wait "\n";}
+            }
+        }
+    } do {
+        file_pos = [file_pos + 1];  
+    }
+}

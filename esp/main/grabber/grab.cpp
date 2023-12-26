@@ -8,6 +8,7 @@
 #include "modelserve.h"
 #include "parcels.h"
 #include "cfgpull.h"
+#include "octoprint.h"
 // end grabbers
 
 #include "../wifitime.h"
@@ -31,6 +32,7 @@ namespace grabber {
 		&sccfg::sccfg_grabber,
 		&modelserve::modelserve_grabber,
 		&parcels::parcels_grabber,
+		&octoprint::octoprint_grabber,
 
 		// leave cfgpull at the end
 		&cfgpull::cfgpull_grabber

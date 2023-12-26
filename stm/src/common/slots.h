@@ -62,6 +62,12 @@ namespace slots {
 		PARCEL_EXTRA_INFOS = 0x54,  // STRUCT[]; ExtraParcelInfoEntry; full package tracking logs (with some cutoff)
 		PARCEL_CARRIER_NAMES = 0x55,// STRING[]; cross-referenced for carrier changes in the extended view.
 
+		PRINTER_INFO = 0x800,       // STRUCT; PrinterInfo; status metadata from octoprint
+		PRINTER_STATUS = 0x801,     // STRING; current printer "state" string from octoprint (raw)
+		PRINTER_FILENAME = 0x802,   // STRING; gcode filename (excluding the .gcode suffix)
+		PRINTER_BITMAP = 0x803,     // BITS; raw bitmap of the currently printing layer
+		PRINTER_BITMAP_INFO = 0x804,// STRUCT; PrinterBitmapInfo
+
 		SCCFG_INFO = 0xb0, 			// STRUCT; ScCfgInfo, enabled screen bitmask, screen on/off
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
 	};
@@ -166,8 +172,7 @@ namespace slots {
 			WEATHER = 1,
 			MODEL = 2,
 			PARCELS = 3,
-			JENKINS = 4,
-			PRINTER = 5
+			PRINTER = 4,
 		} screen_id;
 	};
 
@@ -179,7 +184,6 @@ namespace slots {
 			WEATHER = 1 << ScCfgTime::WEATHER,
 			MODEL = 1 << ScCfgTime::MODEL,
 			PARCELS = 1 << ScCfgTime::PARCELS,
-			JENKINS = 1 << ScCfgTime::JENKINS,
 			PRINTER = 1 << ScCfgTime::PRINTER
 		};
 	};
@@ -276,6 +280,36 @@ namespace slots {
 		uint64_t updated_time;
 	};
 
+	struct PrinterInfo {
+		enum StatusCode : uint8_t {
+			DISCONNECTED = 0, // printer is disconnected (generally results in screen being hidden)
+			READY = 1,        // printer is online but not printing anything (excludes print paused)
+			PRINTING = 2,     // printer has an active job
+
+			UNKNOWN = 0xff
+		} status_code; 
+		int8_t percent_done; // undefined if not printing
+		uint16_t total_layer_count;
+		uint8_t filament_r, filament_g, filament_b;
+		uint8_t pad;
+		uint64_t estimated_print_done; // timestamp of estimated print completion
+	};
+
+	struct PrinterBitmapInfo {
+		// describes the bitmap in PRINTER_BITMAP; stored with no stride bytes, everything
+		// is packed as densely as possible.
+		//
+		// bitmap[x, y] = bitmap[(idx := y * width + x) / 8] & (1 << idx % 8)
+		uint16_t bitmap_width; // pixels
+		uint16_t bitmap_height; // pixels
+		int16_t current_layer_height; // in 1/100ths of a mm
+		uint16_t current_layer_number;
+		int8_t file_process_percent; // -1 if not processing (not 100)
+
+		constexpr inline static int8_t PROCESSED_OK = -1;
+		constexpr inline static int8_t PROCESSED_FAIL = -2;
+	};
+
 #pragma pack (pop)
 
 	// PROTOCOL DEFINITIONS
@@ -369,6 +403,7 @@ namespace slots {
 			MODELSERVE = 2,
 			CFGPULL = 3,
 			PARCELS = 4,
+			PRINTER = 5,
 			
 			ALL = 0xfa,
 			NONE = 0xfb

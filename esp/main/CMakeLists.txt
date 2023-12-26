@@ -53,6 +53,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 	add_nmfu_target(ttc_rdf "-finclude-user-ptr")
 	add_nmfu_target(gtfs_tripupdate "-finclude-user-ptr")
 	add_nmfu_target(http_chunked_recv "-fyield-support" "-findirect-start-ptr")
+	add_nmfu_target(gcode_scan "-finclude-user-ptr")
 
 	add_custom_command(OUTPUT ${CMAKE_CURRENT_LIST_DIR}/configldr.cpp
 		COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/../confgen/generator.py ${msign_esp_cfg_hdrs} ${CMAKE_CURRENT_LIST_DIR}/configldr.cpp
