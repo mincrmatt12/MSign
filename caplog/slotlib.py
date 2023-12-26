@@ -3,7 +3,7 @@ from pygccxml import declarations
 from pygccxml import parser
 import re
 import os
-from slotlib_inner import SlotType, SlotTypeArray, SlotTypeString, DeclaredMember, DeclaredMemberStruct 
+from slotlib_inner import SlotType, SlotTypeArray, SlotTypeString, DeclaredMember, DeclaredMemberStruct, SlotTypeBits
 
 def snake_to_camel(text):
     return "".join(x.title() for x in text.split("_"))
@@ -149,6 +149,8 @@ def _handle_match(entryname, match_data):
             _handle_match(entryname, previous_match)
         elif match_type == "STRING":
             slot_types[entryname][1] = SlotTypeString()
+        elif match_type == "BITS":
+            slot_types[entryname][1] = SlotTypeBits()
         else:
             # create dummy with one member
             slot_types[entryname][1] = \

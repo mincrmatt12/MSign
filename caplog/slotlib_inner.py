@@ -214,3 +214,17 @@ class SlotTypeString:
         else:
             return len(dat)
 
+class SlotTypeBits:
+    def __repr__(self):
+        return "SlotTypeBits()"
+
+    def parse(self, dat):
+        return dat
+
+    def get_formatted(self, data, min_pos=0, max_pos=0):
+        if min_pos and max_pos:
+            arr = data[min_pos:max_pos]
+        else:
+            arr = data
+
+        return binascii.hexlify(arr).decode("ascii")
