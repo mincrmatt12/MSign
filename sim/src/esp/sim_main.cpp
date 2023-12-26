@@ -57,7 +57,12 @@ void finished(void *) {
 		netif_set_default(&netif);
 
 		ip4_addr_t dns;
-		IP4_ADDR(&dns, 1, 1, 1, 1);
+		if (const char *dns_str = getenv("SIMESP_DNS")) {
+		    ip4addr_aton(dns_str, &dns);
+		}
+		else {
+			IP4_ADDR(&dns, 1, 1, 1, 1);
+		}
 		dns_setserver(0, &dns);
 }
 
