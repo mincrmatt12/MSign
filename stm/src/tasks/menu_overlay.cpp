@@ -222,6 +222,7 @@ void tasks::DispMan::do_menu_overlay() {
 		"weather",
 		"clock",
 		"parcels",
+		"printer",
 
 		"back",
 		nullptr

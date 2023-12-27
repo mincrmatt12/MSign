@@ -8,6 +8,7 @@
 #include "../screens/clock.h"
 #include "../screens/threed.h"
 #include "../screens/parcels.h"
+#include "../screens/octoprint.h"
 
 #include "../screens/tetris.h"
 
@@ -31,6 +32,7 @@ namespace tasks {
 				screen::ClockScreen
 			>,
 			screen::ParcelScreen,
+			screen::OctoprintScreen,
 
 			// hidden screens
 

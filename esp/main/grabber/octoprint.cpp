@@ -39,14 +39,18 @@ namespace octoprint {
 		};
 
 		OctoprintApiContext() = default;
+
 		~OctoprintApiContext() {
-			dwhttp::close_connection(host[0] == '_');
+			close();
 		}
 
 		dwhttp::Download request(const char * path) {
 			auto result = dwhttp::download_with_callback(host, path, headers);
 			result.make_nonclose();
 			return result;
+		}
+		void close() {
+			dwhttp::close_connection(host[0] == '_');
 		}
 	};
 
@@ -90,6 +94,7 @@ namespace octoprint {
 		}
 
 		f_close(&f);
+		ctx.close(); // free memory associated with http before rendering gcode
 
 		// File is downloaded, parse it.
 		return process_gcode(current_layer_count);
@@ -214,6 +219,7 @@ namespace octoprint {
 		}
 		else {
 			if (needs_download) {
+				serial::interface.update_slot(slots::PRINTER_INFO, pi);
 				download_current_gcode(pending_gcode_download_path.get(), ctx);
 			}
 
@@ -221,7 +227,7 @@ namespace octoprint {
 			if (pi.status_code == pi.PRINTING)
 				send_bitmap_for(filepos_now);
 			else
-				send_bitmap_for(0);
+				send_bitmap_for(RANDOM_FILEPOS);
 		}
 
 		serial::interface.update_slot(slots::PRINTER_INFO, pi);

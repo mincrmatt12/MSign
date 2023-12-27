@@ -164,4 +164,8 @@ namespace threed::m {
 
 #undef make_op
 
+namespace screen {
+	namespace fm = ::threed::m;
+}
+
 #endif

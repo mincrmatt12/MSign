@@ -4,9 +4,11 @@
 #include <memory>
 #include <stdint.h>
 #include <string.h>
+#include <esp_system.h>
 #include "octoprint.cfg.h"
 #include "../common/slots.h"
 #include "../serial.h"
+#include <esp_task_wdt.h>
 
 static const char * TAG = "octoprintbitmap";
 
@@ -294,6 +296,9 @@ namespace octoprint {
 					return false;
 				}
 
+				// Feed the task watchdog while processing the file as it takes a while.
+				esp_task_wdt_reset();
+
 				switch (gcode_scan_feed(buf, buf + br, &scanner)) {
 					case GCODE_SCAN_OK:
 					case GCODE_SCAN_DONE:
@@ -349,7 +354,14 @@ namespace octoprint {
 				float layerheight;
 			};
 
-			while (!f_eof(&boffs)) {
+			if (filepos == RANDOM_FILEPOS) {
+				layeridx = esp_random() % (f_size(&boffs) / sizeof(BoffEntry));
+				f_lseek(&boffs, layeridx * sizeof(BoffEntry));
+				BoffEntry be;
+				f_read(&boffs, &be, sizeof(BoffEntry), &br);
+				layerheight = be.layerheight;
+			}
+			else while (!f_eof(&boffs)) {
 				BoffEntry be;
 
 				f_read(&boffs, &be, sizeof(BoffEntry), &br);

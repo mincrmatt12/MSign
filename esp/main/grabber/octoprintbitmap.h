@@ -10,6 +10,8 @@ namespace octoprint {
 	// Processes the gcode and writes out the helper files.
 	bool process_gcode(uint16_t &layer_count_out);
 
+	constexpr inline uint32_t RANDOM_FILEPOS = ~0u;
+
 	// Sends out the correct layer bitmap
 	void send_bitmap_for(uint32_t filepos);
 
