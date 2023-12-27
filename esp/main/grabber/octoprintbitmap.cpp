@@ -296,6 +296,7 @@ namespace octoprint {
 				while (++tries <= 3) {
 					if (auto code = f_read(&gcode_file, buf, FF_MIN_SS, &br); code != FR_OK) {
 						ESP_LOGW(TAG, "Failed to read ./job.gcode, trying again (code %d)", code);
+						vTaskDelay(pdMS_TO_TICKS(20));
 					}
 					else break;
 				}
@@ -309,7 +310,7 @@ namespace octoprint {
 				bytes_since_last_yield += br;
 				if (bytes_since_last_yield >= 32768) {
 					bytes_since_last_yield = 0;
-					vTaskDelay(pdMS_TO_TICKS(15));
+					vTaskDelay(pdMS_TO_TICKS(10));
 				}
 
 				switch (gcode_scan_feed(buf, buf + br, &scanner)) {
@@ -517,7 +518,12 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 					{
 						gstate->clear_bitmap();
 						UINT br;
-						f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br);
+						if (f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br) != FR_OK) {
+							vTaskDelay(pdMS_TO_TICKS(10));
+							if (f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br) != FR_OK) {
+								ESP_LOGE(TAG, "failed to read modeinfo");
+							}
+						}
 					}
 					else {
 						gstate->layer_info = GcodeMachineState::LayerInfo{gstate->pos};

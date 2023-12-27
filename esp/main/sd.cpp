@@ -933,7 +933,10 @@ retry:
 	ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::read_status::Ok) {
 		++tries;
-		if (tries < 3) goto retry;
+		if (tries < 3) {
+			if (tries == 2) vTaskDelay(pdMS_TO_TICKS(10));
+			goto retry;
+		}
 	}
 	portENTER_CRITICAL();
 	sd::spi::deselect();
@@ -963,7 +966,10 @@ retry:
 	ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
 	if (x != sd::write_status::Ok) {
 		++tries;
-		if (tries < 3) goto retry;
+		if (tries < 3) {
+			if (tries == 2) vTaskDelay(pdMS_TO_TICKS(10));
+			goto retry;
+		}
 	}
 	portENTER_CRITICAL();
 	sd::spi::deselect();
