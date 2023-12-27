@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include <memory>
 #include "../wifitime.h"
+#include "sccfg.h"
 
 static const char * TAG = "octoprint";
 
@@ -105,7 +106,10 @@ namespace octoprint {
 	}
 
 	bool loop() {
-		if (!api_key || !host) return true;
+		if (!api_key || !host) {
+			sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, true);
+			return true;
+		}
 		OctoprintApiContext ctx;
 
 		slots::PrinterInfo pi;
@@ -117,6 +121,7 @@ namespace octoprint {
 			serial::interface.update_slot_nosync(slots::PRINTER_INFO, pi);
 			serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
 			serial::interface.sync();
+			sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, true);
 			return true;
 		};
 
@@ -151,6 +156,8 @@ namespace octoprint {
 				return fail("Unreachable");
 			}
 		}
+
+		sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, false);
 
 		uint32_t filepos_now{};
 		bool has_job = false, needs_download = false;
