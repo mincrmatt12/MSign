@@ -10,28 +10,6 @@ import _ from 'lodash';
 
 function WeatherPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
-	const [address, setAddress] = React.useState("");
-
-	const geocode = () => {
-		let url = "http://open.mapquestapi.com/geocoding/v1/address?key=gIjVAAXB6OXgGJRKTK5CGZ2u2BUYsM5i&location=" + encodeURIComponent(address);
-
-		fetch(url)
-			.then((resp) => {
-				if (resp.ok)
-					return resp.json();
-				throw new Error("invalid resp");
-			})
-			.then((obj) => {
-				updateCfg('weather.coord', [
-					obj.results[0].locations[0].latLng.lat,
-					obj.results[0].locations[0].latLng.lng,
-				])
-			})
-			.catch((e) => {
-				console.log(e);
-				alert("couldn't geocode");
-			});
-	};
 
 	const useCurrentPlace = () => {
 		navigator.geolocation.getCurrentPosition((pos) => {
