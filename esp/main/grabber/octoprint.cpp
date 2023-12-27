@@ -120,6 +120,7 @@ namespace octoprint {
 			serial::interface.delete_slot(slots::PRINTER_BITMAP);
 			serial::interface.update_slot_nosync(slots::PRINTER_INFO, pi);
 			serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
+			serial::interface.delete_slot(slots::PRINTER_FILENAME);
 			serial::interface.sync();
 			sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, true);
 			return true;
@@ -227,6 +228,7 @@ namespace octoprint {
 			delete_cached_data();
 			serial::interface.delete_slot(slots::PRINTER_BITMAP_INFO);
 			serial::interface.delete_slot(slots::PRINTER_BITMAP);
+			serial::interface.delete_slot(slots::PRINTER_FILENAME);
 		}
 		else {
 			if (needs_download) {
