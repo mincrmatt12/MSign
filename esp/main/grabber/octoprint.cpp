@@ -14,6 +14,7 @@ namespace octoprint {
 	// we set this back to -1 whenever we notice the printer not printing anything
 	int64_t file_disambig_time = -1;
 	uint16_t current_layer_count = 0;
+	bool gcode_ok = false;
 
 	void init() {
 		// Reset the processed model
@@ -56,6 +57,7 @@ namespace octoprint {
 
 	void delete_cached_data() {
 		file_disambig_time = -1;
+		gcode_ok = false;
 		f_unlink("/cache/printer/layers.bin");
 		f_unlink("/cache/printer/bitmaps.bin");
 		f_unlink("/cache/printer/boffs.bin");
@@ -220,14 +222,22 @@ namespace octoprint {
 		else {
 			if (needs_download) {
 				serial::interface.update_slot(slots::PRINTER_INFO, pi);
-				download_current_gcode(pending_gcode_download_path.get(), ctx);
+				if (!download_current_gcode(pending_gcode_download_path.get(), ctx)) {
+					gcode_ok = false;
+					delete_cached_data();
+				}
+				else {
+					gcode_ok = true;
+				}
 			}
 
 			pi.total_layer_count = current_layer_count;
-			if (pi.status_code == pi.PRINTING)
-				send_bitmap_for(filepos_now);
-			else
-				send_bitmap_for(RANDOM_FILEPOS);
+			if (gcode_ok) {
+				if (pi.status_code == pi.PRINTING)
+					send_bitmap_for(filepos_now);
+				else
+					send_bitmap_for(RANDOM_FILEPOS);
+			}
 		}
 
 		serial::interface.update_slot(slots::PRINTER_INFO, pi);

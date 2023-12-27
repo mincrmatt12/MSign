@@ -291,8 +291,16 @@ namespace octoprint {
 			while (!f_eof(&gcode_file)) {
 				UINT br;
 
-				if (f_read(&gcode_file, buf, FF_MIN_SS, &br) != FR_OK) {
-					ESP_LOGE(TAG, "Failed to read ./job.gcode");
+				int tries = 0;
+
+				while (++tries <= 3) {
+					if (auto code = f_read(&gcode_file, buf, FF_MIN_SS, &br); code != FR_OK) {
+						ESP_LOGW(TAG, "Failed to read ./job.gcode, trying again (code %d)", code);
+					}
+					else break;
+				}
+				if (tries > 3) {
+					ESP_LOGE(TAG, "Failed to read job.gcode, giving up.");
 					pt.fail();
 
 					return false;
