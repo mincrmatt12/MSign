@@ -30,6 +30,7 @@ namespace octoprint {
 		uint16_t layer{};
 
 		float layerheight{};
+		bool had_sd_error{};
 
 		FIL modelinfo{}, auxinfo{}; // auxinfo is bitmaps while drawing and index map while indexing
 		std::unique_ptr<uint8_t[]> bitmap;
@@ -323,6 +324,11 @@ namespace octoprint {
 						pt.fail();
 						return false;
 				}
+				if (machine.had_sd_error) {
+					ESP_LOGE(TAG, "machine parser indicated error, exiting");
+					pt.fail();
+					return false;
+				}
 			}
 			common_finished_layer(&machine, &scanner, true);
 			return true;
@@ -518,11 +524,16 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 					{
 						gstate->clear_bitmap();
 						UINT br;
-						if (f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br) != FR_OK) {
-							vTaskDelay(pdMS_TO_TICKS(10));
+						int tries = 0;
+						while (++tries <= 3) {
 							if (f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br) != FR_OK) {
-								ESP_LOGE(TAG, "failed to read modeinfo");
+								vTaskDelay(pdMS_TO_TICKS(20));
+								ESP_LOGW(TAG, "failed to read modelinfo, trying again");
 							}
+							else break;
+						}
+						if (tries > 3) {
+							gstate->had_sd_error = true;
 						}
 					}
 					else {

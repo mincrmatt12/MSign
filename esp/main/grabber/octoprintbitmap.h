@@ -26,6 +26,7 @@ namespace octoprint {
 			commit();
 		}
 		~GcodeParseProgressTracker() {
+			serial::interface.update_slot_nosync(slots::PRINTER_BITMAP_INFO, temp_bitinfo);
 			serial::interface.sync();
 		}
 	private:

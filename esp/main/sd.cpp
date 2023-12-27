@@ -934,7 +934,7 @@ retry:
 	if (x != sd::read_status::Ok) {
 		++tries;
 		if (tries < 3) {
-			if (tries == 2) vTaskDelay(pdMS_TO_TICKS(10));
+			vTaskDelay(pdMS_TO_TICKS(20));
 			goto retry;
 		}
 	}
@@ -967,7 +967,7 @@ retry:
 	if (x != sd::write_status::Ok) {
 		++tries;
 		if (tries < 3) {
-			if (tries == 2) vTaskDelay(pdMS_TO_TICKS(10));
+			vTaskDelay(pdMS_TO_TICKS(20));
 			goto retry;
 		}
 	}
