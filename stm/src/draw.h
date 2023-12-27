@@ -128,6 +128,16 @@ namespace draw {
 			return multi_text_impl(fb, font, y, multi_text_impl(fb, font, y, x, text, rgb), std::forward<Args>(next_strings)...);
 		}
 
+		template<typename TextPtr>
+		inline uint16_t outline_multi_text_impl(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t y, uint16_t x, const TextPtr *text, led::color_t rgb) {
+			return ::draw::outline_text(fb, text, font, x, y, rgb);
+		}
+		
+		template<typename TextPtr, typename ...Args>
+		inline uint16_t outline_multi_text_impl(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t y, uint16_t x, const TextPtr *text, led::color_t rgb, Args&& ...next_strings) {
+			return outline_multi_text_impl(fb, font, y, outline_multi_text_impl(fb, font, y, x, text, rgb), std::forward<Args>(next_strings)...);
+		}
+
 		inline void multi_gradient_rect(matrix_type::framebuffer_type& fb, uint16_t x0, uint16_t y0, uint16_t y1, led::color_t rgb0) {}
 
 		template<typename ...Args>
@@ -140,6 +150,11 @@ namespace draw {
 	template<typename ...Args>
 	inline uint16_t multi_text(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t x, uint16_t y, Args&& ...text_then_colors) {
 		return detail::multi_text_impl(fb, font, y, x, std::forward<Args>(text_then_colors)...);
+	}
+
+	template<typename ...Args>
+	inline uint16_t outline_multi_text(matrix_type::framebuffer_type& fb, const void * const font[], uint16_t x, uint16_t y, Args&& ...text_then_colors) {
+		return detail::outline_multi_text_impl(fb, font, y, x, std::forward<Args>(text_then_colors)...);
 	}
 
 	template<typename ...Args>
