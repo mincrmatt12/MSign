@@ -62,6 +62,8 @@ namespace octoprint {
 		f_unlink("/cache/printer/bitmaps.bin");
 		f_unlink("/cache/printer/boffs.bin");
 		f_unlink("/cache/printer/job.gcode");
+
+		serial::interface.delete_slot(slots::PRINTER_BITMAP);
 	}
 
 	// download_path is freed by caller

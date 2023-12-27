@@ -116,7 +116,7 @@ void screen::OctoprintScreen::draw_gcode_progressbar(int8_t progress) {
 	int16_t bar_x_pos = 0;
 
 	if (progress == slots::PrinterBitmapInfo::PROCESSED_OK) {
-		bar_color = 0x33cc33_cc;
+		bar_color = 0x3333ff_cc;
 		snprintf(text, sizeof text, "loading bitmap");
 		bar_x_pos = 128;
 	}

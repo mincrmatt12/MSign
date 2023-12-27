@@ -236,9 +236,21 @@ namespace octoprint {
 	}
 
 	void common_finished_layer(GcodeMachineState *gstate, gcode_scan_state_t *sstate, bool is_last=false) {
-		UINT bw;
+		UINT bw = 0, total_bw = 0;
 		if (gstate->drawing) {
-			f_write(&gstate->auxinfo, gstate->bitmap.get(), GcodeMachineState::BITMAP_SIZE, &bw);
+			int tries = 0;
+			while (total_bw < GcodeMachineState::BITMAP_SIZE && tries < 5) {
+				auto code = f_write(&gstate->auxinfo, gstate->bitmap.get() + total_bw, GcodeMachineState::BITMAP_SIZE - total_bw, &bw);
+				total_bw += bw;
+				if (code != FR_OK) {
+					vTaskDelay(pdMS_TO_TICKS(15));
+					++tries;
+				}
+			}
+			if (tries >= 5) {
+				ESP_LOGE(TAG, "failed to write bitmaps.bin");
+				gstate->had_sd_error = true;
+			}
 		}
 		else {
 			GcodeMachineState::DrawInfo new_dinfo(gstate->layer_info);
@@ -528,12 +540,14 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 						while (++tries <= 3) {
 							if (f_read(&gstate->modelinfo, &gstate->draw_info, sizeof(GcodeMachineState::DrawInfo), &br) != FR_OK) {
 								vTaskDelay(pdMS_TO_TICKS(20));
-								ESP_LOGW(TAG, "failed to read modelinfo, trying again");
+								if (tries > 1)
+									ESP_LOGD(TAG, "failed to read modelinfo, trying again");
 							}
 							else break;
 						}
 						if (tries > 3) {
 							gstate->had_sd_error = true;
+							ESP_LOGE(TAG, "failed to read modelinfo");
 						}
 					}
 					else {
