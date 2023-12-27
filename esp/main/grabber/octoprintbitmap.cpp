@@ -282,10 +282,10 @@ namespace octoprint {
 			pt.update(current_progress);
 		};
 
-		UINT bytes_since_last_yield = 0;
 
 		auto phase = [&]{
 			gcode_scan_start(&scanner);
+			UINT bytes_since_last_yield = 0;
 
 			// do the first pass of processing
 			while (!f_eof(&gcode_file)) {
@@ -309,7 +309,7 @@ namespace octoprint {
 				bytes_since_last_yield += br;
 				if (bytes_since_last_yield >= 32768) {
 					bytes_since_last_yield = 0;
-					vTaskDelay(pdMS_TO_TICKS(10));
+					vTaskDelay(pdMS_TO_TICKS(15));
 				}
 
 				switch (gcode_scan_feed(buf, buf + br, &scanner)) {
@@ -338,12 +338,17 @@ namespace octoprint {
 		ESP_LOGD(TAG, "parsed layers ok");
 		machine.reset(true);
 
-		f_rewind(&gcode_file);
+		vTaskDelay(pdMS_TO_TICKS(25));
+
+		f_close(&gcode_file);
+		f_open(&gcode_file, "/cache/printer/job.gcode", FA_READ);
+
 		if (!phase())
 		{
 			f_close(&gcode_file);
 			return false;
 		}
+		f_close(&gcode_file);
 		ESP_LOGD(TAG, "drew bitmaps ok");
 
 		layer_count_out = machine.layer;
