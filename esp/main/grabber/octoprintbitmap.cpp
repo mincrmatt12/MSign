@@ -282,6 +282,8 @@ namespace octoprint {
 			pt.update(current_progress);
 		};
 
+		UINT bytes_since_last_yield = 0;
+
 		auto phase = [&]{
 			gcode_scan_start(&scanner);
 
@@ -296,8 +298,11 @@ namespace octoprint {
 					return false;
 				}
 
-				// Feed the task watchdog while processing the file as it takes a while.
-				esp_task_wdt_reset();
+				bytes_since_last_yield += br;
+				if (bytes_since_last_yield >= 32768) {
+					bytes_since_last_yield = 0;
+					vTaskDelay(pdMS_TO_TICKS(10));
+				}
 
 				switch (gcode_scan_feed(buf, buf + br, &scanner)) {
 					case GCODE_SCAN_OK:
