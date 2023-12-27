@@ -67,12 +67,41 @@ namespace octoprint {
 		serial::interface.delete_slot(slots::PRINTER_BITMAP);
 	}
 
+	void process_display_name(const char * original_string) {
+		int start = 0;
+		int end = strlen(original_string);
+
+		// Check if string ends with .gcode
+		if (!strcasecmp(".gcode", original_string + end - 6)) {
+			end -= 6;
+		}
+
+		// Check if string starts with any of the prefixes
+		for (auto prefix : filter_prefixes) {
+			if (!prefix) break;
+			if (!strncmp(original_string, prefix.get(), strlen(prefix.get()))) {
+				start = strlen(prefix.get());
+				break;
+			}
+		}
+
+		if (start >= end) {
+			start = 0;
+			end = strlen(original_string);
+		}
+
+		serial::interface.allocate_slot_size(slots::PRINTER_FILENAME, end - start + 1);
+		serial::interface.update_slot_at(slots::PRINTER_FILENAME, '\x00', end - start, true, false);
+		serial::interface.update_slot_range(slots::PRINTER_FILENAME, original_string + start, 0, end - start);
+	}
+
 	// download_path is freed by caller
 	bool download_current_gcode(const char * download_path, OctoprintApiContext& ctx) {
 		// Assumes file_disambig_time has been updated.
 		auto resp = ctx.request(download_path);
 		if (!resp.ok()) {
 			ESP_LOGE(TAG, "failed to open download for gcode");
+			return false;
 		}
 
 		GcodeParseProgressTracker pt;
@@ -197,7 +226,7 @@ namespace octoprint {
 					}
 					else if (v.type != v.STR) return;
 					else if (!strcmp(stack[3]->name, "display")) {
-						serial::interface.update_slot(slots::PRINTER_FILENAME, v.str_val);
+						process_display_name(v.str_val);
 					}
 					else if (!strcmp(stack[3]->name, "path")) {
 						char *tgt{};

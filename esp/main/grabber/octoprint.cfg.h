@@ -19,4 +19,7 @@ namespace octoprint {
 
 	//!cfg: holds .octoprint.g_relative_is_e, default false
 	extern bool g_relative_is_e;
+
+	//!cfg: holds .octoprint.filter_prefixes
+	extern config::string_t filter_prefixes[3];
 }

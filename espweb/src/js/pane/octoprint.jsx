@@ -10,7 +10,7 @@ import ConfigContext, { floatInteract } from '../ctx';
 import _ from 'lodash';
 
 function convertColorToString(color) {
-	return "#" + color.map((x) => x.toString(16).padStart("0", 2)).join("");
+	return "#" + color.map((x) => x.toString(16).padStart(2, "0")).join("");
 }
 
 function convertStringToColor(cstring) {
@@ -23,6 +23,7 @@ function convertStringToColor(cstring) {
 
 function OctoprintPage() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
+	const current_prefixes = _.get(cfg, "octoprint.filter_prefixes", []);
 
 	return <div>
 		<hr className="hr-gray" />
@@ -42,6 +43,20 @@ function OctoprintPage() {
 				} onChange={(e) => updateCfg("octoprint.filament_color", convertStringToColor(e.target.value))} />
 		</Form.Group>
 
+		<hr className="hr-gray" />
+		<Form.Group className="my-2">
+			<Form.Label>filtered filename prefixes</Form.Label>
+			<div>
+				{ // _.concat is so that the entire set is one list so react tracks focus between the new/old elements
+					_.concat(current_prefixes.map((y, idx) =>
+					<Form.Control type="text" className="mb-2" value={y} key={idx} onChange={(e) => {
+						if (e.target.value) updateCfg(['octoprint', 'filter_prefixes', idx], e.target.value);
+						else updateCfg(['octoprint', 'filter_prefixes'], _.filter(current_prefixes, (_, i) => i != idx));
+					}} />),
+					(current_prefixes.length < 3 && <Form.Control type="text" value="" key={current_prefixes.length} placeholder="add new..." onChange={(e) => 
+						updateCfg('octoprint.filter_prefixes', _.concat(current_prefixes, e.target.value))} />))}
+			</div>
+		</Form.Group>
 		<hr className="hr-gray" />
 	</div>
 }
