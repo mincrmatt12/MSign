@@ -26,6 +26,11 @@ function ApiPane() {
 			<FormControl type='text' value={_.get(cfg, 'parcels.key', '')} onChange={(e) => {updateCfg('parcels.key', e.target.value ? e.target.value : undefined)}} />
 		</Form.Group>
 
+		<Form.Group controlId="octoprint_ctrl" className="my-2">
+			<Form.Label>octoprint</Form.Label>
+			<FormControl type='text' value={_.get(cfg, 'octoprint.key', '')} onChange={(e) => {updateCfg('octoprint.key', e.target.value ? e.target.value : undefined)}} />
+		</Form.Group>
+
 		<hr className="hr-gray" />
 	</div>
 }

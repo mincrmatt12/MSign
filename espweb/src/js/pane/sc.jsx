@@ -44,7 +44,8 @@ const screens = [
 	"ttc",
 	"weather",
 	"model",
-	"parcels"
+	"parcels",
+	"printer"
 ];
 
 function ScEntry({data, updateData}) {

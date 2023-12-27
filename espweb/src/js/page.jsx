@@ -20,6 +20,7 @@ import ModelPane from "./pane/model"
 import CfgPullPane from "./pane/cfgpull"
 import RawPane from "./pane/raw"
 import ParcelsPane from "./pane/parcels"
+import OctoprintPane from "./pane/octoprint"
 import WifiPane from "./pane/wifiadv"
 
 import ConfigContext from "./ctx"
@@ -144,6 +145,9 @@ function App() {
 								<LinkContainer to="/parcels">
 									<Nav.Link>parcels</Nav.Link>
 								</LinkContainer>
+								<LinkContainer to="/octoprint">
+									<Nav.Link>octoprint</Nav.Link>
+								</LinkContainer>
 								<LinkContainer to="/cfgpull">
 									<Nav.Link>cfgpull</Nav.Link>
 								</LinkContainer>
@@ -198,6 +202,9 @@ function App() {
 								</Route>
 								<Route path="/cfgpull">
 									<CfgPullPane />
+								</Route>
+								<Route path="/octoprint">
+									<OctoprintPane />
 								</Route>
 								<Route path="/upd" component={UpdatePane} />
 								<Route path="/raw" component={RawPane} />
