@@ -83,7 +83,7 @@ void screen::OctoprintScreen::draw() {
 	if (pinfo->status_code == pinfo->PRINTING) {
 		const auto &binfo = servicer.slot<slots::PrinterBitmapInfo>(slots::PRINTER_BITMAP_INFO);
 		char buf[32];
-		if (binfo) {
+		if (binfo && binfo->file_process_percent == binfo->PROCESSED_OK) {
 			snprintf(buf, sizeof buf, "%02d%%", pinfo->percent_done);
 			auto x = draw::outline_multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, 1, y, buf, 0x22ff22_cc, "done; ly ", 0x77_c);
 			snprintf(buf, sizeof buf, "%d/%d (%d.%02d mm)", binfo->current_layer_number, pinfo->total_layer_count, binfo->current_layer_height / 100, binfo->current_layer_height % 100);
@@ -107,6 +107,7 @@ void screen::OctoprintScreen::refresh() {
 }
 
 void screen::OctoprintScreen::draw_disabled_background(const char *text) {
+	matrix.get_inactive_buffer().clear();
 	draw::text(matrix.get_inactive_buffer(), text, font::lato_bold_15::info, 64 - draw::text_size(text, font::lato_bold_15::info) / 2, 40, 0x3333ff_cc);
 }
 
@@ -140,6 +141,7 @@ void screen::OctoprintScreen::draw_gcode_progressbar(int8_t progress) {
 
 	int16_t text_pos = 64 - draw::text_size(text, font::lcdpixel_6::info) / 2;
 
+	matrix.get_inactive_buffer().clear();
 	draw::rect(matrix.get_inactive_buffer(), 0, 57, bar_x_pos, 64, bar_color);
 	draw::rect(matrix.get_inactive_buffer(), bar_x_pos, 57, 128, 64, 0);
 	draw::outline_text(matrix.get_inactive_buffer(), text, font::lcdpixel_6::info, text_pos, 63, 0xff_c);
@@ -150,7 +152,10 @@ void screen::OctoprintScreen::draw_background() {
 	const auto &bit_blk = servicer[slots::PRINTER_BITMAP];
 
 	if (!bii_blk)
+	{
+		matrix.get_inactive_buffer().clear();
 		return;
+	}
 
 	if (bii_blk->file_process_percent != slots::PrinterBitmapInfo::PROCESSED_OK) {
 		draw_gcode_progressbar(bii_blk->file_process_percent);
@@ -160,6 +165,10 @@ void screen::OctoprintScreen::draw_background() {
 	if (!bit_blk || bit_blk.datasize < ((bii_blk->bitmap_width * bii_blk->bitmap_height) / 8)) {
 		draw_gcode_progressbar(bii_blk->file_process_percent);
 		return;
+	}
+
+	if (servicer.slot_dirty(slots::PRINTER_BITMAP)) {
+		has_valid_bitmap_drawn = false;
 	}
 
 	fm::fixed_t aspect_ratio = fm::fixed_t(bii_blk->bitmap_width) / bii_blk->bitmap_height;
@@ -209,42 +218,94 @@ void screen::OctoprintScreen::draw_background() {
 	}
 }
 
-void screen::OctoprintScreen::fill_gcode_area(const bheap::TypedBlock<uint8_t *>& bitmap, const slots::PrinterBitmapInfo& binfo, 
-							 int x0, int y0, int x1, int y1, bool rotate_90, led::color_t filament) {
+template<bool Rotate90>
+void screen::OctoprintScreen::fill_gcode_area_impl(const bheap::TypedBlock<uint8_t *>& bitmap, const slots::PrinterBitmapInfo& binfo, 
+							 int x0, int y0, int x1, int y1, led::color_t filament) {
 	// Precompute:
 	// 	how far each step in x and y take us in the bitmap.
 	//
-	// for normal, x goes along x axes, otherwise it goes along y axis (vise versa for y step)
-	fm::fixed_t x_step = (rotate_90 ? binfo.bitmap_height - 1 : binfo.bitmap_width - 1) / fm::fixed_t(x1 - x0);
-	fm::fixed_t y_step = (rotate_90 ? binfo.bitmap_width  - 1: binfo.bitmap_height - 1) / fm::fixed_t(y1 - y0);
+	// for normal, x goes along x axes, otherwise it goes along y axis (vise versa for y step).
+	// these reference different axes in the bitmap w.r.t Rotate90 -- x_step is the distance travelled along one motion in the
+	// screen x axis, it is a vector in either the bitmap's x/y direction depending on Rotate90.
+	fm::fixed_t x_step = (Rotate90 ? binfo.bitmap_height - 1 : binfo.bitmap_width - 1) / fm::fixed_t(x1 - x0);
+	fm::fixed_t y_step = (Rotate90 ? binfo.bitmap_width  - 1: binfo.bitmap_height - 1) / fm::fixed_t(y1 - y0);
 
-	// these are referenced to the bitmap
-	fm::fixed_t x_bpos = rotate_90 ? binfo.bitmap_width - y_step : 0, y_bpos = 0;
-	fm::fixed_t x_tail_bpos = rotate_90 ? binfo.bitmap_width : x_step, y_tail_bpos = rotate_90 ? x_step : y_step;
+	// these are referenced to the bitmap -- x is the actual x coord (after rotation), sim. for y.
+	// _tail_bpos is the opposite end of a rectangle containing all pixels to sample.
+	fm::fixed_t x_bpos = Rotate90 ? binfo.bitmap_width - y_step : 0, y_bpos = 0;
+	fm::fixed_t x_tail_bpos = Rotate90 ? binfo.bitmap_width : x_step, y_tail_bpos = Rotate90 ? x_step : y_step;
 
 	auto& fb = matrix.get_inactive_buffer();
+	const auto& last_fb = matrix.get_active_buffer();
+
+	// determine if cache can be used
+	if (last_x1 - last_x0 != x1 - x0 || last_y1 - last_y0 != y1 - y0)
+		has_valid_bitmap_drawn = false;
+
+	// Declared outside of loop for speed
+	int cache_x_offset = 0, cache_y_offset = 0;
+	bool cache_valid = false;
+	led::color_t cache_color{};
+
+	if (has_valid_bitmap_drawn) {
+		cache_x_offset = last_x0 - x0;
+		cache_y_offset = last_y0 - y0;
+	}
+
+	// Used as upper bits of red channel for valid cached data.
+	const static uint16_t cache_code = 0b1010;
+
+	// Fill the edges of the screen with black (we don't manually clear)
+	if (x0 > 0) {
+		draw::rect(fb, 0, 0, x0, 64, 0);
+	}
+	if (x1 < 128) {
+		draw::rect(fb, x0, 0, 128, 64, 0);
+	}
+	if (y0 > 0) {
+		draw::rect(fb, std::max(0, x0), 0, std::min(128, x1), y0, 0);
+	}
+	if (y1 < 64) {
+		draw::rect(fb, std::max(0, x0), y1, std::min(128, x1), 64, 0);
+	}
 
 	for (int y = y0; y < y1; ++y) {
 		for (int x = x0; x < x1; ++x) {
 			if (fb.on_screen(x, y)) {
-				int region_count = 0, hit_count = 0;
-				for (int by = std::min<int>(binfo.bitmap_height - 1, y_bpos.round()); 
-						by <= std::min<int>(binfo.bitmap_height - 1, y_tail_bpos.round()); ++by) {
-					for (int bx = std::min<int>(binfo.bitmap_width - 1, x_bpos.round()); 
-						bx <= std::min<int>(binfo.bitmap_width - 1, x_tail_bpos.round()); ++bx) {
-
-						int bit_idx = by * binfo.bitmap_width + bx;
-						if (bitmap[bit_idx / 8] & (1 << (bit_idx % 8))) ++hit_count;
-						++region_count;
+				if (has_valid_bitmap_drawn) {
+					int cache_x = x + cache_x_offset;
+					int cache_y = y + cache_y_offset;
+					if (last_fb.on_screen(cache_x, cache_y)) {
+						const auto& screen_color = last_fb.at(cache_x, cache_y);
+						if (screen_color.r >> 12 == cache_code) {
+							cache_color = screen_color;
+							cache_valid = true;
+						}
+						else cache_valid = false;
 					}
+					else cache_valid = false;
 				}
-				if (hit_count)
-					fb.at_unsafe(x, y) = draw::cvt(
+				if (!cache_valid) {
+					int region_count = 0, hit_count = 0;
+					for (int by = std::min<int>(binfo.bitmap_height - 1, y_bpos.round()); 
+							by <= std::min<int>(binfo.bitmap_height - 1, y_tail_bpos.round()); ++by) {
+						for (int bx = std::min<int>(binfo.bitmap_width - 1, x_bpos.round()); 
+							bx <= std::min<int>(binfo.bitmap_width - 1, x_tail_bpos.round()); ++bx) {
+
+							int bit_idx = by * binfo.bitmap_width + bx;
+							if (bitmap[bit_idx / 8] & (1 << (bit_idx % 8))) ++hit_count;
+							++region_count;
+						}
+					}
+					cache_color = draw::cvt(
 						(0_ccu).mix(filament, (hit_count*255)/region_count)
 					);
+					cache_color.r |= cache_code << 12;
+				}
+				fb.at_unsafe(x, y) = cache_color;
 			}
 
-			if (rotate_90) {
+			if constexpr (Rotate90) {
 				y_bpos += x_step;
 				y_tail_bpos += x_step;
 			} 
@@ -253,7 +314,7 @@ void screen::OctoprintScreen::fill_gcode_area(const bheap::TypedBlock<uint8_t *>
 				x_tail_bpos += x_step;
 			}
 		}
-		if (rotate_90) {
+		if constexpr (Rotate90) {
 			x_bpos -= y_step;
 			x_tail_bpos -= y_step;
 			y_bpos = 0;
@@ -266,4 +327,10 @@ void screen::OctoprintScreen::fill_gcode_area(const bheap::TypedBlock<uint8_t *>
 			x_tail_bpos = x_step;
 		}
 	}
+
+	has_valid_bitmap_drawn = true;
+	last_x0 = x0;
+	last_x1 = x1;
+	last_y0 = y0;
+	last_y1 = y1;
 }

@@ -75,6 +75,10 @@ namespace led {
 				return data[x + y*Width];
 			}
 
+			inline const color_t & _at(uint16_t x, uint16_t y) const {
+				return data[x + y*Width];
+			}
+
 			inline uint8_t _remap(uint16_t prev) {                                    
 				return std::pow((prev & 0xFFF) / 4095.0, (1/2.6)) * 255;
 			}                                                                        
