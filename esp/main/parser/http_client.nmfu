@@ -23,8 +23,13 @@ macro read_number(out target, match delimit) {
 parser {
     connection = OTHER;
     /.?\s*HTTP/;
-    wait " ";
 
+    case {
+        "/1.0" -> {connection = CLOSE;}
+        else -> {}
+    }
+
+    wait " ";
     // Get the response code
     read_number(result_code, " ");
 
