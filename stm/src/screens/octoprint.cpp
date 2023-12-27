@@ -228,10 +228,10 @@ void screen::OctoprintScreen::fill_gcode_area(const bheap::TypedBlock<uint8_t *>
 		for (int x = x0; x < x1; ++x) {
 			if (fb.on_screen(x, y)) {
 				int region_count = 0, hit_count = 0;
-				for (int by = std::min(binfo.bitmap_height - 1, y_bpos.round()); 
-						by <= std::min(binfo.bitmap_height - 1, y_tail_bpos.round()); ++by) {
-					for (int bx = std::min(binfo.bitmap_width - 1, x_bpos.round()); 
-						bx <= std::min(binfo.bitmap_width - 1, x_tail_bpos.round()); ++bx) {
+				for (int by = std::min<int>(binfo.bitmap_height - 1, y_bpos.round()); 
+						by <= std::min<int>(binfo.bitmap_height - 1, y_tail_bpos.round()); ++by) {
+					for (int bx = std::min<int>(binfo.bitmap_width - 1, x_bpos.round()); 
+						bx <= std::min<int>(binfo.bitmap_width - 1, x_tail_bpos.round()); ++bx) {
 
 						int bit_idx = by * binfo.bitmap_width + bx;
 						if (bitmap[bit_idx / 8] & (1 << (bit_idx % 8))) ++hit_count;
