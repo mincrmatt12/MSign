@@ -58,6 +58,20 @@ function OctoprintPage() {
 			</div>
 		</Form.Group>
 		<hr className="hr-gray" />
+
+		<Form.Group className="my-2" controlId="max_layer_ctrl">
+			<Form.Label>maximum layer height</Form.Label>
+			<InputGroup>
+				<FormControl type='text' value={_.get(cfg, 'octoprint.max_layer_height')} placeholder="0.5" onChange={(e) => {
+					updateCfg('octoprint.max_layer_height', floatInteract(e.target.value));
+				}} />
+				<InputGroup.Text>mm</InputGroup.Text>
+			</InputGroup>
+		</Form.Group>
+
+		<Form.Check checked={_.get(cfg, "octoprint.force_gcode_on_sd", false)} label="always download gcode to sd card" onChange={(e) => updateCfg("octoprint.force_gcode_on_sd", e.target.checked)} />
+
+		<hr className="hr-gray" />
 	</div>
 }
 
