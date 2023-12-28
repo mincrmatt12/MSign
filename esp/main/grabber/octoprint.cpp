@@ -236,7 +236,7 @@ namespace octoprint {
 				}
 				else if (stack_ptr == 3 && !strcmp(stack[1]->name, "progress")) {
 					if (!strcmp(stack[2]->name, "completion") && v.is_number()) {
-						pi.percent_done = v.as_number() * 100.f;
+						pi.percent_done = v.as_number();
 					}
 					else if (!strcmp(stack[2]->name, "filepos") && v.type == v.INT) {
 						filepos_now = v.int_val;
