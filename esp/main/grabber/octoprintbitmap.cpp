@@ -19,8 +19,9 @@ namespace octoprint {
 	struct GcodeMachineState {
 		constexpr inline static size_t BITMAP_SIZE = 4096;
 		constexpr inline static size_t BITMAP_BITS = BITMAP_SIZE * 8;
-		constexpr inline static int MIN_AXIS = 32;
-		constexpr inline static int MIN_AXIS_RECIP = BITMAP_SIZE / MIN_AXIS;
+		constexpr inline static int MIN_AXIS = 48;
+		constexpr inline static int MAX_AXIS = 350;
+		constexpr inline static int MAX_OUTER_MARGIN = 8;
 
 		struct Pos {
 			float x{}, y{}, z{}, e{};
@@ -130,6 +131,16 @@ namespace octoprint {
 		}
 
 		void line(int x0, int y0, int x1, int y1) {
+			// If line is out of range, ignore it
+			if (x0 < -MAX_OUTER_MARGIN || y0 < -MAX_OUTER_MARGIN || x0 >= draw_info.xdim + MAX_OUTER_MARGIN || y0 >= draw_info.ydim + MAX_OUTER_MARGIN) {
+				ESP_LOGW(TAG, "line is out of range: %d %d -> %d %d", x0, y0, x1, y1);
+				return;
+			}
+			if (x1 < -MAX_OUTER_MARGIN || y1 < -MAX_OUTER_MARGIN || x1 >= draw_info.xdim + MAX_OUTER_MARGIN || y1 >= draw_info.ydim + MAX_OUTER_MARGIN) {
+				ESP_LOGW(TAG, "line is out of range: %d %d -> %d %d", x0, y0, x1, y1);
+				return;
+			}
+
 			if (abs(y1 - y0) < abs(x1 - x0)) {
 				if (x0 > x1)
 					line_impl_low(x1, y1, x0, y0);
@@ -178,11 +189,16 @@ namespace octoprint {
 
 				if (x_size < MIN_AXIS) {
 					x_size = MIN_AXIS;
-					y_size = MIN_AXIS_RECIP;
+					if (y_size < MIN_AXIS) {
+						y_size = MIN_AXIS;
+					}
+					else {
+						y_size = std::min<int>(MAX_AXIS, MIN_AXIS / A);
+					}
 				}
 				else if (y_size < MIN_AXIS) {
 					y_size = MIN_AXIS;
-					x_size = MIN_AXIS_RECIP;
+					x_size = std::min<int>(MAX_AXIS, MIN_AXIS * A);
 				}
 
 				float A_real = (float)x_size / (float)y_size;
