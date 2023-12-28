@@ -225,10 +225,10 @@ namespace octoprint {
 			}
 
 			int scale_x(float x) const {
-				return ((x - minx) / sizex) * xdim;
+				return ((x - minx) / sizex) * (xdim - 1);
 			}
 			int scale_y(float y) const {
-				return ((y - miny) / sizey) * ydim;
+				return ((y - miny) / sizey) * (ydim - 1);
 			}
 			int bitindex(int x, int y) const {
 				if (x < 0 || x >= xdim) return -1;
