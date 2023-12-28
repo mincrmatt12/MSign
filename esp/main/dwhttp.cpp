@@ -838,6 +838,9 @@ int dwhttp::Download::content_length() const {
 bool dwhttp::Download::is_unknown_length() const {
 	return adapter->is_unknown_length();
 }
+void dwhttp::Download::stop() {
+	adapter->stop();
+}
 
 void dwhttp::close_connection(bool ssl) {
 	if (ssl) {
