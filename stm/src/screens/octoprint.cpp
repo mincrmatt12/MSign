@@ -85,7 +85,7 @@ void screen::OctoprintScreen::draw() {
 		char buf[32];
 		if (binfo && binfo->file_process_percent == binfo->PROCESSED_OK) {
 			snprintf(buf, sizeof buf, "%02d%%", pinfo->percent_done);
-			auto x = draw::outline_multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, 1, y, buf, 0x22ff22_cc, "done; ly ", 0x77_c);
+			auto x = draw::outline_multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, 1, y, buf, 0x22ff22_cc, " done; ly ", 0x77_c);
 			snprintf(buf, sizeof buf, "%d/%d (%d.%02d mm)", binfo->current_layer_number, pinfo->total_layer_count, binfo->current_layer_height / 100, binfo->current_layer_height % 100);
 			draw::outline_text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y, 0x2222ff_cc);
 			y += 7;
@@ -99,6 +99,9 @@ void screen::OctoprintScreen::draw() {
 			draw::format_relative_date(buf, sizeof buf, pinfo->estimated_print_done);
 			draw::outline_multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, 1, y, "est. ", 0x77_c, buf, 0x22ff22_cc);
 		}
+	}
+	else if (filename && pinfo->percent_done == 100) {
+		draw::outline_text(matrix.get_inactive_buffer(), "finished", font::lcdpixel_6::info, 1, y, 0x2222ff_cc);
 	}
 }
 
