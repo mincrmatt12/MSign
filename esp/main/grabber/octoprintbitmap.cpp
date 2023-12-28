@@ -264,21 +264,20 @@ namespace octoprint {
 		}
 	}
 
-	bool process_gcode(uint16_t &layer_count_out) {
-		FIL gcode_file{};
+	bool process_gcode(GcodeProvider& provider, uint16_t &layer_count_out) {
 		uint64_t gcode_size{};
 		uint8_t buf[FF_MIN_SS];
-
+		
 		GcodeParseProgressTracker pt;
+		pt.set_download_phase_flag(provider.has_download_phase());
 
-		if (f_open(&gcode_file, "/cache/printer/job.gcode", FA_READ) != FR_OK) {
-			ESP_LOGE(TAG, "Failed to open ./job.gcode");
+		if (!provider.restart()) {
 			pt.fail();
-
 			return false;
 		}
 
-		gcode_size = f_size(&gcode_file);
+		gcode_size = provider.gcode_size();
+		bool use_25_progress_base = provider.has_download_phase();
 
 		GcodeMachineState machine;
 		gcode_scan_state_t scanner;
@@ -287,36 +286,24 @@ namespace octoprint {
 		ESP_LOGD(TAG, "processing new gcode");
 
 		auto update_progress = [&]{
-			int8_t current_progress = ((uint64_t)scanner.c.file_pos * (machine.drawing ? 50 : 25)) / gcode_size;
+			int8_t current_progress = ((uint64_t)scanner.c.file_pos * (!use_25_progress_base || machine.drawing ? 50 : 25)) / gcode_size;
 			if (machine.drawing)
 				current_progress += 50;
-			else
+			else if (use_25_progress_base)
 				current_progress += 25;
 			pt.update(current_progress);
 		};
-
 
 		auto phase = [&]{
 			gcode_scan_start(&scanner);
 			UINT bytes_since_last_yield = 0;
 
 			// do the first pass of processing
-			while (!f_eof(&gcode_file)) {
-				UINT br;
+			while (!provider.is_done()) {
+				int br = provider.read(buf, sizeof buf);
 
-				int tries = 0;
-
-				while (++tries <= 3) {
-					if (auto code = f_read(&gcode_file, buf, FF_MIN_SS, &br); code != FR_OK) {
-						ESP_LOGW(TAG, "Failed to read ./job.gcode, trying again (code %d)", code);
-						vTaskDelay(pdMS_TO_TICKS(20));
-					}
-					else break;
-				}
-				if (tries > 3) {
-					ESP_LOGE(TAG, "Failed to read job.gcode, giving up.");
+				if (br <= 0) {
 					pt.fail();
-
 					return false;
 				}
 
@@ -348,26 +335,23 @@ namespace octoprint {
 
 		// 0 - 25% is used by the downloader to report the download percent;
 		// 25% - 50% is used by the first phase, 50 - 100% is used by the rest
-		pt.update(25);
+		pt.update(use_25_progress_base ? 25 : 0);
 		if (!phase())
 		{
-			f_close(&gcode_file);
+			pt.fail();
 			return false;
 		}
 		ESP_LOGD(TAG, "parsed layers ok");
 		machine.reset(true);
 
 		vTaskDelay(pdMS_TO_TICKS(25));
-
-		f_close(&gcode_file);
-		f_open(&gcode_file, "/cache/printer/job.gcode", FA_READ);
+		provider.restart();
 
 		if (!phase())
 		{
-			f_close(&gcode_file);
+			pt.fail();
 			return false;
 		}
-		f_close(&gcode_file);
 		ESP_LOGD(TAG, "drew bitmaps ok");
 
 		layer_count_out = machine.layer;
@@ -506,13 +490,13 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 				if (gstate->relative_g)
 				{
 					if (state->c.x_decimal >= 0) gstate->pos.x += get_decimal(state->c.x_int, state->c.x_decimal);
-					if (state->c.y_decimal >= 0) gstate->pos.y += get_decimal(state->c.y_int, state->c.y_decimal);
+					if (state->c.y_decimal >= 0) gstate->pos.y -= get_decimal(state->c.y_int, state->c.y_decimal);
 					if (state->c.z_decimal >= 0) gstate->pos.z += get_decimal(state->c.z_int, state->c.z_decimal);
 				}
 				else
 				{
 					if (state->c.x_decimal >= 0) gstate->pos.x = get_decimal(state->c.x_int, state->c.x_decimal);
-					if (state->c.y_decimal >= 0) gstate->pos.y = get_decimal(state->c.y_int, state->c.y_decimal);
+					if (state->c.y_decimal >= 0) gstate->pos.y = -get_decimal(state->c.y_int, state->c.y_decimal);
 					if (state->c.z_decimal >= 0) gstate->pos.z = get_decimal(state->c.z_int, state->c.z_decimal);
 				}
 				if (gstate->relative_e)
@@ -528,7 +512,7 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 				if (!did_extrude)
 					return;
 
-				if (gstate->pos.z > gstate->layerheight)
+				if (gstate->pos.z > gstate->layerheight || std::abs(gstate->layerheight - gstate->pos.z) > max_layer_height)
 				{
 					if (gstate->layer)
 						common_finished_layer(gstate, state);

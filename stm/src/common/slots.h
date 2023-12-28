@@ -305,6 +305,7 @@ namespace slots {
 		int16_t current_layer_height; // in 1/100ths of a mm
 		uint16_t current_layer_number;
 		int8_t file_process_percent; // -1 if not processing (not 100)
+		bool file_process_has_download_phase; // true if 0-25 is download, false if no download phase
 
 		constexpr inline static int8_t PROCESSED_OK = -1;
 		constexpr inline static int8_t PROCESSED_FAIL = -2;

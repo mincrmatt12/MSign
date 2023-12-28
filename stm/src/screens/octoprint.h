@@ -24,7 +24,7 @@ namespace screen {
 
 		void draw_disabled_background(const char *text);
 		void draw_background();
-		void draw_gcode_progressbar(int8_t progress);
+		void draw_gcode_progressbar(int8_t progress, bool has_download_phase);
 
 		template<bool Rotate90>
 		void fill_gcode_area_impl(const bheap::TypedBlock<uint8_t *>& bitmap, const slots::PrinterBitmapInfo& binfo, 

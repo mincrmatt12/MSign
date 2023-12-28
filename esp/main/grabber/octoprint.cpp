@@ -5,6 +5,7 @@
 #include <ff.h>
 #include <esp_log.h>
 #include <memory>
+#include <optional>
 #include "../wifitime.h"
 #include "sccfg.h"
 
@@ -95,43 +96,177 @@ namespace octoprint {
 		serial::interface.update_slot_range(slots::PRINTER_FILENAME, original_string + start, 0, end - start);
 	}
 
+	struct SDGcodeProvider final : GcodeProvider {
+		bool restart() override {
+			close();
+			if (f_open(&gcode_file, "/cache/printer/job.gcode", FA_READ) != FR_OK) {
+				ESP_LOGE(TAG, "Failed to open /job.gcode");
+				return false;
+			}
+			opened = true;
+			this->_is_done = f_eof(&gcode_file);
+
+			return true;
+		}
+
+		size_t gcode_size() const override { return f_size(&gcode_file); }
+
+		int read(uint8_t *buf, size_t maxlen) override {
+			UINT br = 0;
+
+			for (int tries = 0; tries < 3; ++tries) {
+				if (auto code = f_read(&gcode_file, buf, maxlen, &br); code != FR_OK) {
+					if (br > 0) {
+						this->_is_done = f_eof(&gcode_file);
+						return br;
+					}
+					else if (tries > 1)
+						ESP_LOGW(TAG, "Failed to read ./job.gcode, trying again (code %d)", code);
+					vTaskDelay(pdMS_TO_TICKS(20));
+				}
+				else {
+					this->_is_done = f_eof(&gcode_file);
+					return br;
+				}
+			}
+
+			this->_is_done = f_eof(&gcode_file);
+			return 0;
+		}
+
+		~SDGcodeProvider() { close(); }
+	private:
+		void close() {
+			if (opened) {
+				f_close(&gcode_file);
+			}
+			opened = false;
+		}
+
+		FIL gcode_file{};
+		bool opened = false;
+	};
+
+	struct HTTPGcodeProvider final : GcodeProvider {
+		HTTPGcodeProvider(OctoprintApiContext &ctx, const char * download_path) : download_path(download_path), ctx(ctx) {}
+
+		bool has_download_phase() const override { return false; }
+
+		bool restart() override {
+			if (active.has_value()) {
+				active.reset();
+			}
+
+			active = ctx.request(download_path);
+
+			if (!active->ok()) {
+				ESP_LOGE(TAG, "failed to open download for gcode");
+				return false;
+			}
+
+			remain = active->content_length();
+			_is_done = remain == 0;
+
+			return true;
+		}
+
+		size_t gcode_size() const override { return active->content_length(); }
+
+		int read(uint8_t *buf, size_t maxlen) override {
+			size_t len = (*active)(buf, std::min(maxlen, remain));
+			if (len <= 0) {
+				ESP_LOGE(TAG, "failed to download gcode");
+				return false;
+			}
+			remain -= len;
+			_is_done = remain == 0;
+			return len;
+		}
+
+		bool save_to_sd() {
+			restart();
+
+			FIL f;
+			GcodeParseProgressTracker pt;
+			pt.set_download_phase_flag(true);
+
+			if (f_open(&f, "/cache/printer/job.gcode", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+				ESP_LOGE(TAG, "failed to open job.gcode file");
+				return false;
+			}
+
+			uint8_t buf[512];
+			size_t pos = 0, total = gcode_size();
+
+			while (remain) {
+				int len = read(buf, sizeof buf);
+				if (!len) {
+					pt.fail();
+					f_close(&f);
+					return false;
+				}
+				UINT bw, total_bw = 0;
+				int tries = 0;
+				while (total_bw < len && tries < 3) {
+					if (f_write(&f, buf + total_bw, len - total_bw, &bw) != FR_OK) {
+						if (bw > 0) {
+							total_bw += bw;
+							continue;
+						}
+						else {
+							++tries;
+						}
+					}
+					else {
+						if (bw == 0)
+							tries = 3;
+						total_bw += bw;
+					}
+				}
+
+				if (total_bw < len) {
+					ESP_LOGE(TAG, "failed to write job.gcode to sd");
+					pt.fail();
+					f_close(&f);
+					return false;
+				}
+
+				pos += len;
+				pt.update(pos * 25 / total);
+			}
+
+			f_close(&f);
+			return true;
+		}
+	private:
+		std::optional<dwhttp::Download> active;
+		const char * download_path{};
+		OctoprintApiContext& ctx;
+		size_t remain = 0;
+	};
+
 	// download_path is freed by caller
 	bool download_current_gcode(const char * download_path, OctoprintApiContext& ctx) {
-		// Assumes file_disambig_time has been updated.
-		auto resp = ctx.request(download_path);
-		if (!resp.ok()) {
-			ESP_LOGE(TAG, "failed to open download for gcode");
-			return false;
-		}
+		if (host[0] == '_' || force_gcode_on_sd) {
+			// If we think downloading will occupy too much RAM, save the gcode to the SD card first.
 
-		GcodeParseProgressTracker pt;
-
-		uint8_t buf[512];
-		size_t remain = resp.content_length(), total = remain;
-		size_t pos = 0;
-
-		FIL f;
-		f_open(&f, "/cache/printer/job.gcode", FA_WRITE | FA_CREATE_ALWAYS);
-
-		while (remain) {
-			size_t len = resp(buf, std::min<size_t>(sizeof buf, remain));
-			if (!len) {
-				ESP_LOGE(TAG, "failed to dw gcode");
-				pt.fail();
+			{
+				HTTPGcodeProvider gp{ctx, download_path};
+				if (!gp.save_to_sd()) {
+					return false;
+				}
 			}
-			UINT bw;
-			f_write(&f, buf, len, &bw);
-			remain -= len;
-			pos += len;
 
-			pt.update(pos * 25 / total);
+			// Parse from that downloaded copy
+			SDGcodeProvider sp;
+			return process_gcode(sp, current_layer_count);
 		}
+		else {
+			HTTPGcodeProvider gp{ctx, download_path};
 
-		f_close(&f);
-		ctx.close(); // free memory associated with http before rendering gcode
-
-		// File is downloaded, parse it.
-		return process_gcode(current_layer_count);
+			// Parse directly from the web.
+			return process_gcode(gp, current_layer_count);
+		}
 	}
 
 	bool loop() {

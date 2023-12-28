@@ -246,7 +246,7 @@ void screen::OctoprintScreen::draw_disabled_background(const char *text) {
 	draw::text(matrix.get_inactive_buffer(), text, font::lato_bold_15::info, 64 - draw::text_size(text, font::lato_bold_15::info) / 2, 40, 0x3333ff_cc);
 }
 
-void screen::OctoprintScreen::draw_gcode_progressbar(int8_t progress) {
+void screen::OctoprintScreen::draw_gcode_progressbar(int8_t progress, bool has_download_phase) {
 	char text[32];
 	led::color_t bar_color;
 	int16_t bar_x_pos = 0;
@@ -266,7 +266,7 @@ void screen::OctoprintScreen::draw_gcode_progressbar(int8_t progress) {
 		bar_x_pos *= 128;
 		bar_x_pos /= 100;
 		bar_color = 0x33ff33_cc;
-		if (progress < 25)
+		if (progress < 25 && has_download_phase)
 			snprintf(text, sizeof text, "dl gcode (%02d%%)", (int)progress);
 		else if (progress < 50)
 			snprintf(text, sizeof text, "scan gcode (%02d%%)", (int)progress);
@@ -293,12 +293,12 @@ void screen::OctoprintScreen::draw_background() {
 	}
 
 	if (bii_blk->file_process_percent != slots::PrinterBitmapInfo::PROCESSED_OK) {
-		draw_gcode_progressbar(bii_blk->file_process_percent);
+		draw_gcode_progressbar(bii_blk->file_process_percent, bii_blk->file_process_has_download_phase);
 		return;
 	}
 
 	if (!bit_blk || bit_blk.datasize < ((bii_blk->bitmap_width * bii_blk->bitmap_height) / 8)) {
-		draw_gcode_progressbar(bii_blk->file_process_percent);
+		draw_gcode_progressbar(bii_blk->file_process_percent, bii_blk->file_process_has_download_phase);
 		return;
 	}
 
@@ -362,8 +362,8 @@ void screen::OctoprintScreen::fill_gcode_area_impl(const bheap::TypedBlock<uint8
 	// for normal, x goes along x axes, otherwise it goes along y axis (vise versa for y step).
 	// these reference different axes in the bitmap w.r.t Rotate90 -- x_step is the distance travelled along one motion in the
 	// screen x axis, it is a vector in either the bitmap's x/y direction depending on Rotate90.
-	fm::fixed_t x_step = (Rotate90 ? binfo.bitmap_height - 1 : binfo.bitmap_width - 1) / fm::fixed_t(x1 - x0);
-	fm::fixed_t y_step = (Rotate90 ? binfo.bitmap_width  - 1: binfo.bitmap_height - 1) / fm::fixed_t(y1 - y0);
+	fm::fixed_t x_step = fm::fixed_t(Rotate90 ? binfo.bitmap_height - 1 : binfo.bitmap_width - 1) / (x1 - x0);
+	fm::fixed_t y_step = fm::fixed_t(Rotate90 ? binfo.bitmap_width  - 1: binfo.bitmap_height - 1) / (y1 - y0);
 
 	// these are referenced to the bitmap -- x is the actual x coord (after rotation), sim. for y.
 	// _tail_bpos is the opposite end of a rectangle containing all pixels to sample.
