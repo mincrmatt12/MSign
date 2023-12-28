@@ -32,8 +32,8 @@ namespace draw {
 				bool chosen = (bitmap[(i * stride) + byte] & bit) != 0;
 				if (chosen) {
 					fb.at(x0, y0) = rgb;
-					if (j == 0 || !(bitmap[(i * stride) + (j + 1) / 8] & std::rotl(bit, 1))) fb.at(x0-1, y0) = 0;
-					if (j == width-1 || !(bitmap[(i * stride) + (j - 1) / 8] & std::rotr(bit, 1))) fb.at(x0+1, y0) = 0;
+					if (j == 0 || !(bitmap[(i * stride) + (j - 1) / 8] & std::rotl(bit, 1))) fb.at(x0-1, y0) = 0;
+					if (j == width-1 || !(bitmap[(i * stride) + (j + 1) / 8] & std::rotr(bit, 1))) fb.at(x0+1, y0) = 0;
 					if (i == 0 || !(bitmap[((i - 1) * stride) + j / 8] & bit)) fb.at(x0, y0-1) = 0;
 					if (i == height-1 || !(bitmap[((i + 1) * stride) + j / 8] & bit)) fb.at(x0, y0+1) = 0;
 				}
