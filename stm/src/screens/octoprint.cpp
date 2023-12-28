@@ -16,6 +16,128 @@ extern uint64_t rtc_time;
 extern tasks::Timekeeper timekeeper;
 extern tasks::DispMan dispman;
 
+namespace bitmap::octoprint {
+	// w=9, h=9, stride=2, color=147, 147, 147
+	const uint8_t printer_off[] = {
+		0b10000000,0b10000000,
+		0b10011100,0b10000000,
+		0b11110111,0b10000000,
+		0b10010100,0b10000000,
+		0b11110111,0b10000000,
+		0b10011100,0b10000000,
+		0b10001000,0b10000000,
+		0b10000000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_0[] = {
+		0b10000000,0b10000000,
+		0b10111000,0b10000000,
+		0b11101111,0b10000000,
+		0b10101000,0b10000000,
+		0b11101111,0b10000000,
+		0b10111000,0b10000000,
+		0b10010000,0b10000000,
+		0b10100000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_1[] = {
+		0b10000000,0b10000000,
+		0b10111000,0b10000000,
+		0b11101111,0b10000000,
+		0b10101000,0b10000000,
+		0b11101111,0b10000000,
+		0b10111000,0b10000000,
+		0b10010000,0b10000000,
+		0b10110000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_2[] = {
+		0b10000000,0b10000000,
+		0b10011100,0b10000000,
+		0b11110111,0b10000000,
+		0b10010100,0b10000000,
+		0b11110111,0b10000000,
+		0b10011100,0b10000000,
+		0b10001000,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_3[] = {
+		0b10000000,0b10000000,
+		0b10001110,0b10000000,
+		0b11111011,0b10000000,
+		0b10001010,0b10000000,
+		0b11111011,0b10000000,
+		0b10001110,0b10000000,
+		0b10000100,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_4[] = {
+		0b10001110,0b10000000,
+		0b11111011,0b10000000,
+		0b10001010,0b10000000,
+		0b11111011,0b10000000,
+		0b10001110,0b10000000,
+		0b10000100,0b10000000,
+		0b10000000,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_5[] = {
+		0b10001110,0b10000000,
+		0b11111011,0b10000000,
+		0b10001010,0b10000000,
+		0b11111011,0b10000000,
+		0b10001110,0b10000000,
+		0b10000100,0b10000000,
+		0b10000100,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_6[] = {
+		0b10011100,0b10000000,
+		0b11110111,0b10000000,
+		0b10010100,0b10000000,
+		0b11110111,0b10000000,
+		0b10011100,0b10000000,
+		0b10001000,0b10000000,
+		0b10001100,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+	// w=9, h=9, stride=2, color=34, 255, 34
+	const uint8_t printer_on_7[] = {
+		0b10111000,0b10000000,
+		0b11101111,0b10000000,
+		0b10101000,0b10000000,
+		0b11101111,0b10000000,
+		0b10111000,0b10000000,
+		0b10010000,0b10000000,
+		0b10011100,0b10000000,
+		0b10111000,0b10000000,
+		0b11111111,0b10000000
+	};
+
+	const uint8_t * const printer_on_frames[] = {
+		printer_on_0,
+		printer_on_1,
+		printer_on_2,
+		printer_on_3,
+		printer_on_4,
+		printer_on_5,
+		printer_on_6,
+		printer_on_7,
+	};
+}
+
 screen::OctoprintScreen::OctoprintScreen() {
 	servicer.set_temperature_all<
 		slots::PRINTER_INFO,
@@ -71,13 +193,23 @@ void screen::OctoprintScreen::draw() {
 		return;
 
 	// Draw printer state. TODO: possibly a fun icon?
-	int16_t y = 8;
+	int16_t y = 9;
 
-	draw::outline_multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, 1, y, *status, pinfo->status_code == slots::PrinterInfo::PRINTING ? 0x22ff22_cc : 0x77_c);
+	draw::outline_multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, 11, y, *status, pinfo->status_code == slots::PrinterInfo::PRINTING ? 0x22ff22_cc : 0x77_c);
 	y += 10;
 	if (filename) {
 		draw::outline_multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, 1, y, *filename, 0x2222ff_cc);
 		y += 8;
+	}
+
+	// Draw icon
+	{
+		auto frame = bitmap::octoprint::printer_off;
+		if (pinfo->status_code == slots::PrinterInfo::PRINTING) {
+			frame = bitmap::octoprint::printer_on_frames[(timekeeper.current_time % 1000) / 125];
+		}
+
+		draw::outline_bitmap(matrix.get_inactive_buffer(), frame, 9, 9, 2, 1, 1, pinfo->status_code == slots::PrinterInfo::PRINTING ? 0x11aa11_cc : 0x55_c);
 	}
 
 	if (pinfo->status_code == pinfo->PRINTING) {
