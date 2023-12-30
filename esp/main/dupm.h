@@ -4,6 +4,7 @@
 #include <FreeRTOS.h>
 #include <task.h>
 #include <queue.h>
+#include <semphr.h>
 #include <type_traits>
 #include "common/bheap.h"
 #include "common/heapsize.h"
@@ -81,6 +82,8 @@ namespace serial {
 
 		// Returns true if a) a packet is pending in and
 		// 				   b) the passed packet should be processed by us.
+		//
+		// This may block if the dupm is in the middle of working out which packets it needs to block on.
 		bool is_packet_in_pending(const uint8_t *packet_to_check);
 
 		// Actually process a packet, returning whether or not we actually parsed it.
@@ -128,15 +131,23 @@ namespace serial {
 			pending_packet_in = &f;
 			return wait_for_packet(timeout);
 		}
-
 		slots::PacketWrapper<>& wait_for_packet(TickType_t timeout);
 
 		void finished_with_last_packet(bool processed=true);
+		void hold_packets_until_wait() {
+			if (critical_wait_state_active)
+				return;
+			critical_wait_state_active = true;
+			xSemaphoreTake(critical_wait_state, portMAX_DELAY);
+		}
 
-		const PacketFilter *pending_packet_in;
+		const PacketFilter * volatile pending_packet_in;
 		uint8_t *pkt_buf;
 		bheap::Arena<ESP_HEAP_SIZE> arena;
-		bool sync_pending;
+		bool sync_pending{}, critical_wait_state_active{};
+
+		// This is a binary semaphore used to bound the state between sending a response-initiating packet and setting up the packet filter.
+		SemaphoreHandle_t critical_wait_state{};
 
 		// Handlers
 		void change_size_handler(DataUpdateRequest &dur);

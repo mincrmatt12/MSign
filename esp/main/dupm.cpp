@@ -7,6 +7,8 @@
 #include <utility>
 #include <numeric>
 
+#include <semphr.h>
+
 static const char * const TAG = "dupm";
 
 namespace serial {
@@ -37,6 +39,10 @@ namespace serial {
 			ESP_LOGE(TAG, "failed to create dur queue");
 			while (1) {;}
 		}
+		critical_wait_state = xSemaphoreCreateMutex();
+		if (!critical_wait_state) {
+			ESP_LOGE(TAG, "failed to create critical wait");
+		}
 	}
 
 	bool DataUpdateManager::queue_request(const DataUpdateRequest& req) {
@@ -44,9 +50,12 @@ namespace serial {
 	}
 
 	bool DataUpdateManager::is_packet_in_pending(const uint8_t *check_packet) {
-		if (!pending_packet_in) return false;
-		if (!pending_packet_in->wants(check_packet)) return false;
-		return true;
+		bool ignored = false;
+		xSemaphoreTake(critical_wait_state, portMAX_DELAY);
+			if (!pending_packet_in) ignored = true;
+			else if (!pending_packet_in->wants(check_packet)) ignored = true;
+		xSemaphoreGive(critical_wait_state);
+		return !ignored;
 	}
 
 	bool DataUpdateManager::process_input_packet(uint8_t *packet) {
@@ -73,8 +82,12 @@ wrong_bits:
 
 	slots::PacketWrapper<>& DataUpdateManager::wait_for_packet(TickType_t timeout) {
 		static slots::PacketWrapper<> nullp{};
-		uint32_t v;
-		if (!xTaskNotifyWait(0, 0xffff'ffff, &v, timeout)) {
+		if (critical_wait_state_active) {
+			critical_wait_state_active = false;
+			xTaskNotifyStateClear(nullptr);
+			xSemaphoreGive(critical_wait_state);
+		}
+		if (!xTaskNotifyWait(0, 0xffff'ffff, nullptr, timeout)) {
 			pending_packet_in = nullptr;
 			nullp.size = 0;
 			nullp.cmd_byte = 0;
@@ -294,6 +307,7 @@ block_ok:
 				bool end   = suboff + (255-6) >= length;
 				if (end) {
 					pkt.size = 6 + length - suboff;
+					hold_packets_until_wait();
 				}
 				pkt.put<uint16_t>((start << 15) | (end << 14) | (slotid & 0xfff), 0);
 				pkt.put<uint16_t>(suboff + offset, 2);
@@ -618,8 +632,10 @@ ok:
 
 				serial::interface.send_pkt(pkt);
 
+				hold_packets_until_wait();
 				// Wait for a corresponding ack
 				if (!wait_for_packet([&](const slots::PacketWrapper<0>& pw){return pw.cmd() == slots::protocol::ACK_DATA_RETRIEVE && memcmp(pkt.data(), pw.data(), 6) == 0;}, pdMS_TO_TICKS(200))) return false;
+				hold_packets_until_wait();
 				finished_with_last_packet();
 			}
 
@@ -643,12 +659,14 @@ ok:
 				}
 				// update data -- this sets dirty but that's fine, we'll account for it
 				arena.update_contents(slotid, offset, pkt.size - 6, pkt.data() + 6);
-				finished_with_last_packet();
 				// finish on end
 				if (sid_frame & (1 << 14)) {
+					finished_with_last_packet();
 					ESP_LOGD(TAG, "got update ok");
 					break;
 				}
+				hold_packets_until_wait();
+				finished_with_last_packet();
 			}
 
 			// Send an ACK
@@ -1065,9 +1083,12 @@ common_remote_use_end:
 
 			int tries = 0;
 retry_chsize:
+			hold_packets_until_wait();
 			serial::interface.send_pkt(pkt);
 			// Wait for an acknowledgement TODO proper retry logic here
-			if (!wait_for_packet([&](const slots::PacketWrapper<>& pw){return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;}, pdMS_TO_TICKS(1200))) {
+			if (!wait_for_packet([&](const slots::PacketWrapper<>& pw){
+						return pw.cmd() == slots::protocol::ACK_DATA_SET_SIZE && memcmp(pkt.data(), pw.data(), 4) == 0;
+				}, pdMS_TO_TICKS(1200))) {
 				ESP_LOGW(TAG, "timeout waiting for acksetsize");
 				if (tries < 2) {
 					++tries;
@@ -1165,6 +1186,7 @@ retry_allocation:
 
 			int tries = 0;
 retry_chsize2:
+			hold_packets_until_wait();
 			serial::interface.send_pkt(pkt);
 
 			// Wait for an acknowledgement TODO proper retry logic here
