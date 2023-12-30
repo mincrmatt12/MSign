@@ -199,6 +199,12 @@ namespace serial {
 				into += by;
 				return by;
 			}
+			void lose_space(size_t amount) {
+				if (unused_space < amount) {
+					return;
+				}
+				unused_space -= amount;
+			}
 
 			uint16_t hot() { return hot_remote + hot_ephemeral; }
 			uint16_t allocated_warm() { return warm_remote + allocated_warm_ephemeral; }

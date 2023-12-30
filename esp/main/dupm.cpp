@@ -157,6 +157,8 @@ block_ok:
 			
 			if (xQueueReceive(pending, &dur, sync_pending ? pdMS_TO_TICKS(50) : pdMS_TO_TICKS(1500)) == pdFALSE) {
 				send_pending_dirty_blocks();
+				if (arena.free_space(arena.FreeSpaceZeroSizeCanonical | arena.FreeSpaceHomogenizeable) > 128)
+					arena.defrag();
 				continue;
 			}
 
@@ -688,6 +690,13 @@ ok:
 		auto budget = StmMemoryBudgetInfo{};
 		uint32_t cs = 0;
 		budget.unused_space = STM_HEAP_SIZE - target_free_space_buffer;
+		// Filter out at least 4 bytes per slot
+		for (const auto &b : arena) {
+			if (!b) continue;
+			if (!(b.flags & b.FlagLast)) continue;
+
+			budget.lose_space(4);
+		}
 		// Place each block into the right section
 		for (const auto &b : arena) {
 			if (!b) continue;
@@ -695,27 +704,39 @@ ok:
 			if (b.location == bheap::Block::LocationRemote) {
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
-						if (&b != &arena.get(b.slotid)) continue;
-						cs = arena.contents_size(b.slotid); if (cs % 4) cs += 4 - (cs % 4);
-						budget.use_for(budget.hot_remote, 4 + cs);
+						budget.use_for(budget.hot_remote,  b.rounded_datasize());
+						if (&b == &arena.get(b.slotid)) 
+							for (auto other_block = b.next(); other_block; other_block = other_block->next()) {
+								if (other_block->location != b.location) budget.use_for(budget.hot_remote, 4);
+							}
 						break;
 					case bheap::Block::TemperatureWarm:
-						budget.use_for(budget.warm_remote, 4 + b.rounded_datasize());
+						budget.use_for(budget.warm_remote, b.rounded_datasize());
+						if (&b == &arena.get(b.slotid)) 
+							for (auto other_block = b.next(); other_block; other_block = other_block->next()) {
+								if (other_block->location != b.location) budget.use_for(budget.warm_remote, 4);
+							}
 						break;
 					default:
-						budget.use_for(budget.cold_remote, 4 + b.rounded_datasize());
+						budget.use_for(budget.cold_remote, b.rounded_datasize());
 						break;
 				}
 			}
 			else if (b.location == bheap::Block::LocationCanonical) {
 				switch (b.temperature) {
 					case bheap::Block::TemperatureHot:
-						if (&b != &arena.get(b.slotid)) continue;
-						cs = arena.contents_size(b.slotid); if (cs % 4) cs += 4 - (cs % 4);
-						budget.use_for(budget.hot_ephemeral, 4 + cs);
+						budget.use_for(budget.hot_ephemeral, b.rounded_datasize());
+						if (&b == &arena.get(b.slotid)) 
+							for (auto other_block = b.next(); other_block; other_block = other_block->next()) {
+								budget.use_for(budget.hot_ephemeral, 4);
+							}
 						break;
 					case bheap::Block::TemperatureWarm:
-						budget.use_for(budget.allocated_warm_ephemeral, 4 + b.rounded_datasize());
+						budget.use_for(budget.allocated_warm_ephemeral, b.rounded_datasize());
+						if (&b == &arena.get(b.slotid)) 
+							for (auto other_block = b.next(); other_block; other_block = other_block->next()) {
+								if (other_block->location != b.location) budget.use_for(budget.allocated_warm_ephemeral, 4);
+							}
 						break;
 					default:
 						break;
