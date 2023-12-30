@@ -1058,7 +1058,7 @@ finish_setting:
 				// If the remaining space in e is more than 4 (rounded to the nearest 4), we shrink the datasize, otherwise we delete the chunk entirely.
 				// After reclaiming we memmove
 
-				uint32_t remaining_new_alloc_space = *containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->datasize);
+				uint32_t remaining_new_alloc_space = *containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->rounded_datasize());
 				uint32_t reclaimable_space = next_empty->total_size();
 
 				uint32_t total_reclaimed = 0;
