@@ -94,7 +94,9 @@ void serial::SerialInterface::process_packet() {
 				dur.type = DataUpdateRequest::TypeSetTemp;
 				dur.d_temp.slotid = rx_pkt.at<uint16_t>(0);
 				dur.d_temp.newtemperature = rx_buf[5];
-				if (!dum.queue_request(dur)) {
+				// Prevent clogging up ongoing packet routing to the dupm if it's stuck
+				// processing a _different_ packet
+				if (!dum.queue_request(dur, 0)) {
 					ESP_LOGW(TAG, "dum busy?");
 				}
 			}
@@ -108,7 +110,9 @@ void serial::SerialInterface::process_packet() {
 				dur.d_dirty.slotid = rx_pkt.at<uint16_t>(0); 
 				dur.d_dirty.offset = rx_pkt.at<uint16_t>(2); 
 				dur.d_dirty.size = rx_pkt.at<uint16_t>(4);
-				if (!dum.queue_request(dur)) {
+				// Prevent clogging up ongoing packet routing to the dupm if it's stuck
+				// processing a _different_ packet
+				if (!dum.queue_request(dur, 0)) {
 					ESP_LOGW(TAG, "dum busy?");
 				}
 			}

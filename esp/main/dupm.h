@@ -74,7 +74,7 @@ namespace serial {
 
 	struct DataUpdateManager {
 		// Put a request into the queue.
-		bool queue_request(const DataUpdateRequest &req);
+		bool queue_request(const DataUpdateRequest &req, TickType_t timeout=pdMS_TO_TICKS(2500));
 
 		void run();
 

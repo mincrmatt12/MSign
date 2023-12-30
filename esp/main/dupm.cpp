@@ -45,8 +45,8 @@ namespace serial {
 		}
 	}
 
-	bool DataUpdateManager::queue_request(const DataUpdateRequest& req) {
-		return xQueueSend(pending, &req, pdMS_TO_TICKS(4000)) == pdPASS;
+	bool DataUpdateManager::queue_request(const DataUpdateRequest& req, TickType_t timeout) {
+		return xQueueSend(pending, &req, timeout) == pdPASS;
 	}
 
 	bool DataUpdateManager::is_packet_in_pending(const uint8_t *check_packet) {
