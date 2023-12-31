@@ -2,12 +2,10 @@
 #include "../draw.h"
 #include "../fonts/dejavu_10.h"
 #include "../fonts/lcdpixel_6.h"
-#include "../fonts/tahoma_9.h"
 #include "../common/bootcmd.h"
 #include "../common/ver.h"
 #include "../srv.h"
 #include "../ui.h"
-#include "../crash/main.h"
 #include "timekeeper.h"
 
 #ifdef USE_F2
@@ -410,7 +408,7 @@ namespace tasks {
 
 	void DispMan::do_tetris_mode() {
 		// start tetris screen
-		auto prev = swapper.transition(4);
+		auto prev = swapper.transition(5);
 		interact_mode = InteractTetris;
 
 		while (interact_mode != InteractNone) {
@@ -420,7 +418,7 @@ namespace tasks {
 
 			switch (interact_mode) {
 				case InteractTetris:
-					if (ui::buttons.held(ui::Buttons::MENU, pdMS_TO_TICKS(1000))) {
+					if (ui::buttons[ui::Buttons::MENU]) {
 						ms.selected = 0;
 						ms.submenu = MS::SubmenuTetris;
 						interact_mode = InteractTetrisMenu;

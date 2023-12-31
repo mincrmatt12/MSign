@@ -3,6 +3,7 @@
 
 #include "base.h"
 #include <stdint.h>
+#include <new>
 
 namespace screen::game {
 	struct TetrisPiece {
@@ -116,7 +117,7 @@ namespace screen::game {
 		void place_piece();
 		void pull_next_piece();
 		void start_piece();
-		void clear_lines(bool from_hard_drop=false);
+		void clear_lines();
 
 		void draw_board();
 		void draw_block(int16_t x, int16_t y, TetrisPiece::Color color, bool phantom=false);

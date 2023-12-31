@@ -263,7 +263,7 @@ namespace screen::game {
 	void Tetris::handle_buttons() {
 		// Handle harddrop first
 
-		if (ui::buttons[ui::Buttons::SEL] && timekeeper.current_time - drop_timeout > 120) {
+		if ((ui::buttons[ui::Buttons::DOWN] || ui::buttons[ui::Buttons::SEL]) && timekeeper.current_time - drop_timeout > 120) {
 			while (!board.collide(current)) ++current.y;
 			--current.y;
 			place_piece();
@@ -274,11 +274,11 @@ namespace screen::game {
 		// Move left/right
 		ActiveTetrisPiece next_pos = current;
 		
-		if (ui::buttons[ui::Buttons::PRV]) {
+		if (ui::buttons[ui::Buttons::LEFT]) {
 			next_pos.x -= 1;
 			das_timer = pdMS_TO_TICKS(250);
 		}
-		if (ui::buttons[ui::Buttons::NXT]) {
+		if (ui::buttons[ui::Buttons::RIGHT]) {
 			next_pos.x += 1;
 			das_timer = pdMS_TO_TICKS(250);
 		}
@@ -298,7 +298,7 @@ namespace screen::game {
 			start_piece();
 		}
 
-		if (ui::buttons[ui::Buttons::MENU]) {
+		if (ui::buttons[ui::Buttons::TAB] || ui::buttons[ui::Buttons::UP]) {
 			ActiveTetrisPiece rot_pos = current;
 			// rotate
 			rot_pos.rotation++;
@@ -329,7 +329,7 @@ namespace screen::game {
 		return true;
 	}
 
-	void Tetris::clear_lines(bool from_hard_drop) {
+	void Tetris::clear_lines() {
 		const static int line_points[] = {
 			0, 40, 100, 300, 1200, 1500
 		};
@@ -457,20 +457,20 @@ namespace screen::game {
 			}
 			else {
 				current = next_pos;
-				ticks_till_drop = current_level().gravity;
+				ticks_till_drop = ui::buttons.held(ui::Buttons::STICK) ? 4 : current_level().gravity;
 			}
 		}
 
 		// Repeated shifts
 		if (das_timer) {
 			int offs = 0;
-			if (ui::buttons.held(ui::Buttons::PRV, das_timer)) {
+			if (ui::buttons.held(ui::Buttons::LEFT, das_timer)) {
 				offs = -1;
 			}
-			else if (ui::buttons.held(ui::Buttons::NXT, das_timer)) {
+			else if (ui::buttons.held(ui::Buttons::RIGHT, das_timer)) {
 				offs = 1;
 			}
-			else if (!ui::buttons.held(ui::Buttons::PRV) && !ui::buttons.held(ui::Buttons::NXT)) {
+			else if (!ui::buttons.held(ui::Buttons::RIGHT) && !ui::buttons.held(ui::Buttons::LEFT)) {
 				das_timer = 0;
 			}
 
