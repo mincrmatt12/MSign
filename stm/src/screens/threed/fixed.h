@@ -24,6 +24,10 @@ namespace threed::m {
 			return intmath::round10(value, Mul);
 		}
 
+		constexpr int32_t fast_unsigned_round() const {
+			return (value + Mul / 2) / Mul;
+		}
+
 		constexpr int32_t ceil() const {
 			return intmath::ceil10(value, Mul);
 		}

@@ -6,6 +6,7 @@
 #include "../common/slots.h"
 #include "../common/bheap.h"
 #include "../color.h"
+#include "threed/fixed.h"
 
 namespace screen {
 	struct OctoprintScreen : public Screen {
@@ -16,6 +17,8 @@ namespace screen {
 
 		void draw();
 		void refresh();
+
+		bool interact();
 
 		inline static bool require_clearing() { return false; }
 	private:
@@ -42,6 +45,26 @@ namespace screen {
 
 		int last_x0, last_x1, last_y0, last_y1;
 		bool has_valid_bitmap_drawn = false;
+
+		// Pan/zoom
+
+		fm::fixed_t pan_x = 0, pan_y = 0;
+		int zoomlevel = 1;
+
+		bool hide_ui = false;
+
+		constexpr const static fm::fixed_t zoomlevels[] = {
+			1,
+			{3, 2},
+			{6, 4},
+			{18, 8},
+			{54, 16},
+			{162, 32},
+			{486, 64}
+		};
+		constexpr static inline int zoomlevel_count = sizeof(zoomlevels) / sizeof(fm::fixed_t);
+
+		inline const fm::fixed_t zoom() const { return zoomlevels[zoomlevel]; }
 	};
 }
 

@@ -186,13 +186,15 @@ void screen::OctoprintScreen::draw() {
 
 	draw_background();
 
+	if (dispman.interacting() && hide_ui)
+		return;
+
 	const auto& status = servicer[slots::PRINTER_STATUS];
 	const auto& filename = servicer[slots::PRINTER_FILENAME];
 
 	if (!status)
 		return;
 
-	// Draw printer state. TODO: possibly a fun icon?
 	int16_t y = 9;
 
 	draw::outline_multi_text(matrix.get_inactive_buffer(), font::tahoma_9::info, 11, y, *status, pinfo->status_code == slots::PrinterInfo::PRINTING ? 0x22ff22_cc : 0x77_c);
@@ -320,10 +322,6 @@ void screen::OctoprintScreen::draw_background() {
 	
 	fm::fixed_t onscreen_ratio = rotate_90 ? fm::fixed_t(bii_blk->bitmap_height) / bii_blk->bitmap_width : aspect_ratio;
 	int x_size = std::min<int>(128, rotate_90 ? bii_blk->bitmap_height : bii_blk->bitmap_width);
-	int x_min = 64 - x_size / 2;
-	int x_max = 64 + x_size / 2;
-	int y_min = (32 - (x_size / onscreen_ratio / 2)).round();	
-	int y_max = (32 + (x_size / onscreen_ratio / 2)).round();	
 
 	led::color_t filament_color;
 	{
@@ -333,24 +331,75 @@ void screen::OctoprintScreen::draw_background() {
 		filament_color.b = static_cast<uint16_t>(pinfo.filament_b) << 4;
 	}
 
-	if (onscreen_ratio > fm::fixed_t(195, 100) && onscreen_ratio < fm::fixed_t(208, 100)) {
-		// Do not scroll the bitmap region, just map it directly to the screen centred. Some clipping
-		// might occur.
-		fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
+	if (dispman.interacting()) {
+		x_size = (zoom() * x_size).round();
+		int x_min = (64 - x_size / 2 + pan_x * zoom()).round();
+		int x_max = x_min + x_size;
+		int y_size = (x_size / onscreen_ratio / 2).round();
+		int y_min = (32 - y_size + pan_y * zoom()).round();
+		int y_max = y_min + y_size + y_size;
+
+		if (y_max < 0 || y_min > 64 || x_min > 128 || x_max < 0)
+			matrix.get_inactive_buffer().clear();
+		else
+			fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
 	}
 	else {
-		// If scrolling is required, scroll up and down.
-		if (y_min < 0) {
-			int offset = 0; 
-			if (y_min < -16)
-				offset = draw::fastsin(timekeeper.current_time, 1500, 2 + -y_min);
-			else
-				offset = draw::fastsin(timekeeper.current_time, 2500, 2 + -y_min);
-			y_min += offset;
-			y_max += offset;
+		zoomlevel = 0;
+		pan_x = 0;
+		pan_y = 0;
+		int x_min = 64 - x_size / 2;
+		int x_max = 64 + x_size / 2;
+		int y_min = (32 - (x_size / onscreen_ratio / 2)).round();	
+		int y_max = (32 + (x_size / onscreen_ratio / 2)).round();	
+
+		if (onscreen_ratio > fm::fixed_t(195, 100) && onscreen_ratio < fm::fixed_t(208, 100)) {
+			// Do not scroll the bitmap region, just map it directly to the screen centred. Some clipping
+			// might occur.
+			fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
 		}
-		fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
+		else {
+			// If scrolling is required, scroll up and down.
+			if (y_min < 0) {
+				int offset = 0; 
+				if (y_min < -16)
+					offset = draw::fastsin(timekeeper.current_time, 1500, 2 + -y_min);
+				else
+					offset = draw::fastsin(timekeeper.current_time, 2500, 2 + -y_min);
+				y_min += offset;
+				y_max += offset;
+			}
+			fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
+		}
 	}
+}
+
+bool screen::OctoprintScreen::interact() {
+	if (ui::buttons[ui::Buttons::SEL] && zoomlevel != 0) {
+		--zoomlevel;
+	}
+	else if (ui::buttons[ui::Buttons::TAB] && zoomlevel != zoomlevel_count - 1) {
+		++zoomlevel;
+	}
+
+	fm::fixed_t amt = ui::buttons.frame_time();
+	amt /= 25;
+
+	if (ui::buttons.held(ui::Buttons::STICK)) amt *= 2;
+
+	if (auto horiz = ui::buttons[ui::Buttons::X]) {
+		pan_x += amt * fm::fixed_t(horiz, 127);
+	}
+	if (auto vert = ui::buttons[ui::Buttons::Y]) {
+		pan_y -= amt * fm::fixed_t(vert, 127);
+	}
+
+	if (ui::buttons[ui::Buttons::MENU])
+		hide_ui = !hide_ui;
+	else if (ui::buttons.held(ui::Buttons::MENU, pdMS_TO_TICKS(1000)))
+		pan_x = pan_y = 0;
+
+	return Screen::interact();
 }
 
 template<bool Rotate90>
@@ -405,40 +454,41 @@ void screen::OctoprintScreen::fill_gcode_area_impl(const bheap::TypedBlock<uint8
 	}
 
 	for (int y = y0; y < y1; ++y) {
-		for (int x = x0; x < x1; ++x) {
-			if (fb.on_screen(x, y)) {
-				if (has_valid_bitmap_drawn) {
-					int cache_x = x + cache_x_offset;
-					int cache_y = y + cache_y_offset;
-					if (last_fb.on_screen(cache_x, cache_y)) {
-						const auto& screen_color = last_fb.at(cache_x, cache_y);
-						if (screen_color.r >> 12 == cache_code) {
-							cache_color = screen_color;
-							cache_valid = true;
+		if (y >= 0 && y < 64)
+			for (int x = x0; x < x1; ++x) {
+				if (fb.on_screen(x, y)) {
+					if (has_valid_bitmap_drawn) {
+						int cache_x = x + cache_x_offset;
+						int cache_y = y + cache_y_offset;
+						if (last_fb.on_screen(cache_x, cache_y)) {
+							const auto& screen_color = last_fb.at(cache_x, cache_y);
+							if (screen_color.r >> 12 == cache_code) {
+								cache_color = screen_color;
+								cache_valid = true;
+							}
+							else cache_valid = false;
 						}
 						else cache_valid = false;
 					}
-					else cache_valid = false;
-				}
-				if (!cache_valid) {
-					int region_count = 0, hit_count = 0;
-					for (int by = std::min<int>(binfo.bitmap_height - 1, y_bpos.round()); 
-							by <= std::min<int>(binfo.bitmap_height - 1, y_tail_bpos.round()); ++by) {
-						for (int bx = std::min<int>(binfo.bitmap_width - 1, x_bpos.round()); 
-							bx <= std::min<int>(binfo.bitmap_width - 1, x_tail_bpos.round()); ++bx) {
+					if (!cache_valid) {
+						int region_count = 0, hit_count = 0;
+						for (int by = std::min<int>(binfo.bitmap_height - 1, y_bpos.fast_unsigned_round()); 
+								by <= std::min<int>(binfo.bitmap_height - 1, y_tail_bpos.fast_unsigned_round()); ++by) {
+							for (int bx = std::min<int>(binfo.bitmap_width - 1, x_bpos.fast_unsigned_round()); 
+								bx <= std::min<int>(binfo.bitmap_width - 1, x_tail_bpos.fast_unsigned_round()); ++bx) {
 
-							int bit_idx = by * binfo.bitmap_width + bx;
-							if (bitmap[bit_idx / 8] & (1 << (bit_idx % 8))) ++hit_count;
-							++region_count;
+								int bit_idx = by * binfo.bitmap_width + bx;
+								if (bitmap[bit_idx / 8] & (1 << (bit_idx % 8))) ++hit_count;
+								++region_count;
+							}
 						}
+						cache_color = draw::cvt(
+							(0_ccu).mix(filament, (hit_count*255)/region_count)
+						);
+						cache_color.r |= cache_code << 12;
 					}
-					cache_color = draw::cvt(
-						(0_ccu).mix(filament, (hit_count*255)/region_count)
-					);
-					cache_color.r |= cache_code << 12;
+					fb.at_unsafe(x, y) = cache_color;
 				}
-				fb.at_unsafe(x, y) = cache_color;
-			}
 
 			if constexpr (Rotate90) {
 				y_bpos += x_step;
