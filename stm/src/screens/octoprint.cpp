@@ -388,7 +388,7 @@ bool screen::OctoprintScreen::interact() {
 	if (ui::buttons.held(ui::Buttons::STICK)) amt *= 2;
 
 	if (auto horiz = ui::buttons[ui::Buttons::X]) {
-		pan_x += amt * fm::fixed_t(horiz, 127);
+		pan_x -= amt * fm::fixed_t(horiz, 127);
 	}
 	if (auto vert = ui::buttons[ui::Buttons::Y]) {
 		pan_y -= amt * fm::fixed_t(vert, 127);
