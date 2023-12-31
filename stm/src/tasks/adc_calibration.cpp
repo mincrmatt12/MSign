@@ -99,12 +99,12 @@ void tasks::DispMan::do_adc_calibration() {
 			draw::text(matrix.get_inactive_buffer(), titles2[phase], font::lcdpixel_6::info, 1, tcy, 0xff_c);
 			tcy += 6;
 		}
-		draw::text(matrix.get_inactive_buffer(), phase == VISUALIZE ? "[PWR] to save" : "[PWR] to continue", font::lcdpixel_6::info, 1, tcy, 0xff_c);
+		draw::text(matrix.get_inactive_buffer(), phase == VISUALIZE ? "[PWR] to save" : "[PWR] to continue", font::lcdpixel_6::info, 0, tcy, 0xff_c);
 		tcy += 6;
 
 		switch (phase) {
 			case CAPTURE_MIN_MAX:
-				draw::text(matrix.get_inactive_buffer(), "[MENU] to reset", font::lcdpixel_6::info, 1, tcy, 0xcc_c);
+				draw::text(matrix.get_inactive_buffer(), "[MENU] to reset", font::lcdpixel_6::info, 0, tcy, 0xcc_c);
 				if (ui::buttons[ui::buttons.MENU]) {
 					new_calibration.x.min = new_calibration.x.max = x;
 					new_calibration.y.min = new_calibration.y.max = y;
@@ -137,7 +137,7 @@ void tasks::DispMan::do_adc_calibration() {
 			case MOVE_CENTER:
 				break;
 			case CAPTURE_DEADZONE:
-				draw::text(matrix.get_inactive_buffer(), "[MENU] to reset", font::lcdpixel_6::info, 1, tcy, 0xcc_c);
+				draw::text(matrix.get_inactive_buffer(), "[MENU] to reset", font::lcdpixel_6::info, 0, tcy, 0xcc_c);
 				if (ui::buttons[ui::buttons.MENU]) {
 					new_calibration.x.deadzone = 0;
 					new_calibration.y.deadzone = 0;
@@ -152,7 +152,7 @@ void tasks::DispMan::do_adc_calibration() {
 				}
 				break;
 			case VISUALIZE:
-				draw::text(matrix.get_inactive_buffer(), "[MENU] to restart", font::lcdpixel_6::info, 1, tcy, 0xcc_c);
+				draw::text(matrix.get_inactive_buffer(), "[MENU] to restart", font::lcdpixel_6::info, 0, tcy, 0xcc_c);
 				if (ui::buttons[ui::buttons.MENU]) {
 					new_calibration = {
 						.x = {
@@ -183,6 +183,12 @@ void tasks::DispMan::do_adc_calibration() {
 				break;
 			}
 			else phase = (Phase)(phase + 1);
+		}
+
+		{
+			char buf[32];
+			snprintf(buf, 32, "x %04d y %04d", x, y);
+			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 1, 64 - 6, 0x77_c);
 		}
 
 		matrix.swap_buffers();
