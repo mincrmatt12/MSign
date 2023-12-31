@@ -23,7 +23,7 @@ os.ftruncate(shm_fd, shared_data.size)
 shm_buffer = mmap.mmap(shm_fd, shared_data.size)
 
 print("> mapped data")
-curdata = [0, 4096, 4096]
+curdata = [0, 2048, 2048]
 mousedata = None
 
 def update_dat():
@@ -31,7 +31,7 @@ def update_dat():
     if mousedata:
         for i in range(2):
             if mousedata[i] < 0: mousedata[i] = 0
-            if mousedata[i] > 8191: mousedata[i] = 8191
+            if mousedata[i] > 4095: mousedata[i] = 4095
         shared_data.pack_into(shm_buffer, 0, curdata[0], *mousedata)
         print("> wrote", curdata[0], *mousedata)
     else:
@@ -54,10 +54,10 @@ KEYMAP = {
 }
 
 VECTMAP = {
-    sdl2.SDLK_UP: [0, -4000],
-    sdl2.SDLK_DOWN: [0, 4000],
-    sdl2.SDLK_LEFT: [-4000, 0],
-    sdl2.SDLK_RIGHT: [4000, 0],
+    sdl2.SDLK_UP: [0, -2000],
+    sdl2.SDLK_DOWN: [0, 2000],
+    sdl2.SDLK_LEFT: [-2000, 0],
+    sdl2.SDLK_RIGHT: [2000, 0],
 }
 
 run = True
@@ -92,8 +92,8 @@ try:
             elif event.type == sdl2.SDL_MOUSEMOTION:
                 if mousedata:
                     wrt = True
-                    mousedata[0] = int(8191 * (event.motion.x / 100.0))
-                    mousedata[1] = int(8191 * (event.motion.y / 100.0))
+                    mousedata[0] = int(4095 * (event.motion.x / 100.0))
+                    mousedata[1] = int(4095 * (event.motion.y / 100.0))
             elif event.type == sdl2.SDL_MOUSEBUTTONUP:
                 if mousedata and event.button.button == sdl2.SDL_BUTTON_LEFT:
                     wrt = True
@@ -101,8 +101,8 @@ try:
             elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
                 if not mousedata and event.button.button == sdl2.SDL_BUTTON_LEFT:
                     wrt = True
-                    mousedata = [int(8191 * (event.motion.x / 100.0)),
-                                 int(8191 * (event.motion.y / 100.0))]
+                    mousedata = [int(4095 * (event.motion.x / 100.0)),
+                                 int(4095 * (event.motion.y / 100.0))]
         if wrt:
             update_dat()
         time.sleep(0.01)

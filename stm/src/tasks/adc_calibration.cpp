@@ -60,8 +60,8 @@ void tasks::DispMan::do_adc_calibration() {
 		ui::buttons.update();
 		// Draw current ADC position
 		{
-			uint16_t px = 64 + x / 128,
-					 py =      y / 128;
+			uint16_t px = 64 + x / 64,
+					 py =      y / 64;
 			draw::circle(matrix.get_inactive_buffer(), px-2, py-2, px+3, py+3, 0x2222ff_cc);
 		}
 		if (phase == VISUALIZE) {
@@ -72,22 +72,22 @@ void tasks::DispMan::do_adc_calibration() {
 		draw::outline(matrix.get_inactive_buffer(), 64, 0, 128, 64, 0xff_c);
 		if (phase == CAPTURE_MIN_MAX) {
 			draw::outline(matrix.get_inactive_buffer(), 
-				64 + new_calibration.x.min / 128,
-				     new_calibration.y.min / 128,
-				64 + new_calibration.x.max / 128,
-				     new_calibration.y.max / 128, 0x2222ff_cc);
+				64 + new_calibration.x.min / 64,
+				     new_calibration.y.min / 64,
+				64 + new_calibration.x.max / 64,
+				     new_calibration.y.max / 64, 0x2222ff_cc);
 		}
 		else if (phase == CAPTURE_DEADZONE) {
 			int centerx = new_calibration.x.min + new_calibration.x.max;
 			int centery = new_calibration.y.min + new_calibration.y.max;
-			centerx /= 256;
-			centery /= 256;
+			centerx /= 128;
+			centery /= 128;
 			centerx += 64;
 			draw::outline(matrix.get_inactive_buffer(),
-				centerx - new_calibration.x.deadzone / 128,
-				centery - new_calibration.y.deadzone / 128,
-				centerx + new_calibration.x.deadzone / 128,
-				centery + new_calibration.y.deadzone / 128, 0xff2222_cc);
+				centerx - new_calibration.x.deadzone / 64,
+				centery - new_calibration.y.deadzone / 64,
+				centerx + new_calibration.x.deadzone / 64,
+				centery + new_calibration.y.deadzone / 64, 0xff2222_cc);
 		}
 		// Show instructions + title
 		int tcy = 8;
