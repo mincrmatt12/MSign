@@ -24,14 +24,14 @@ ui::Buttons ui::buttons;
 namespace ui {
 	const uint32_t physical_button_masks[]{
 		/* [Buttons::MENU] = */ (1 << 7),
-		/* [Buttons::TAB] = */ (1 << 6),
+		/* [Buttons::TAB] = */ (1 << 9),
 		/* [Buttons::SEL] = */ (1 << 8),
 		/* [Buttons::POWER] = */ (1 << 0),
-		/* [Buttons::STICK] = */ (1 << 5)
+		/* [Buttons::STICK] = */ (1 << 10)
 	};
 
-	const inline int adc_x_pin = 10,
-		             adc_y_pin = 9;
+	const inline int adc_x_pin = 5,
+		             adc_y_pin = 6;
 }
 
 #ifndef SIM
@@ -58,12 +58,10 @@ void ui::Buttons::init() {
 	ADC1->CR2 = ADC_CR2_ADON | ADC_CR2_EOCS;
 
 	// Sample for 84 cycles to try and cancel out even more noise
-	ADC1->SMPR2 = ADC_SMPR2_SMP9_2;
-	ADC1->SMPR1 = ADC_SMPR1_SMP10_2;
+	ADC1->SMPR2 = ADC_SMPR2_SMP6_2 | ADC_SMPR2_SMP5_2;
 
-	// Sample channels for X & Y only
-	ADC1->SQR3 = (adc_x_pin << ADC_SQR3_SQ1_Pos) | (adc_y_pin << ADC_SQR3_SQ2_Pos);
-	ADC1->SQR1 = ADC_SQR1_L_0;
+	// Sample only a single channel at a time.
+	ADC1->SQR1 = 0;
 }
 
 void ui::Buttons::update() {
@@ -175,7 +173,7 @@ bool ui::Buttons::changed() const {
 	return current_held ^ last_held;
 }
 
-TickType_t ui::Buttons::frame_time() const {
+int ui::Buttons::frame_time() const {
 	return last_duration;
 }
 
@@ -189,10 +187,12 @@ void ui::Buttons::read_raw_adc(uint16_t &x, uint16_t &y) const {
 	}
 	adc_lock = true;
 	ADC1->SR   = ~ADC_SR_EOC;
+	ADC1->SQR3 = (adc_x_pin << ADC_SQR3_SQ1_Pos);
 	ADC1->CR2 |= ADC_CR2_SWSTART;
 	while (!(ADC1->SR & ADC_SR_EOC)) {;} // wait for x axis
 	ADC1->SR   = ~ADC_SR_EOC;
 	x = ADC1->DR;
+	ADC1->SQR3 = (adc_y_pin << ADC_SQR3_SQ1_Pos);
 	ADC1->CR2 |= ADC_CR2_SWSTART;
 	while (!(ADC1->SR & ADC_SR_EOC)) {;} // wait for x axis
 	ADC1->SR   = ~ADC_SR_EOC;
