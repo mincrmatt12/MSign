@@ -29,8 +29,8 @@ namespace ui {
 			DOWN = 128,
 			RIGHT = 256,
 
-			NXT = UP | RIGHT | TAB,
-			PRV = DOWN | LEFT
+			NXT = DOWN | RIGHT | TAB,
+			PRV = UP | LEFT
 		};
 
 		enum Axis {
