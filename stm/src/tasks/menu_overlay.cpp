@@ -234,6 +234,7 @@ void tasks::DispMan::do_menu_overlay() {
 		"enable div0 trp",
 		"servicer debug",
 		"version info",
+		"recalibrate adc",
 		"T E T R I S",
 		nullptr
 	};
@@ -335,6 +336,11 @@ void tasks::DispMan::do_menu_overlay() {
 				}
 				else if (ms.selected == 5) {
 					ms.selected = 0;
+					interact_mode = InteractAdcCalibration;
+					return;
+				}
+				else if (ms.selected == 6) {
+					ms.selected = 0;
 					ms.submenu = MS::SubmenuTetris;
 					interact_mode = InteractTetris;
 					return;
@@ -376,6 +382,7 @@ void tasks::DispMan::do_menu_overlay() {
 
 	if (ui::buttons[ui::Buttons::POWER]) {
 back:
+		ms.selected = 0;
 		switch (ms.submenu) {
 			case MS::SubmenuTetris:
 closetetris:

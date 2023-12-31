@@ -158,7 +158,7 @@ namespace crash {
 		LL_GPIO_InitTypeDef it{};
 
 		it.Mode = LL_GPIO_MODE_INPUT;
-		it.Pull = LL_GPIO_PULL_DOWN;
+		it.Pull = LL_GPIO_PULL_NO;
 		it.Speed = LL_GPIO_SPEED_FREQ_LOW;
 		it.Pin = (1 << ui::Buttons::POWER);
 

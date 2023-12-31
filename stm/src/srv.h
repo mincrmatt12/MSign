@@ -97,6 +97,12 @@ namespace srv {
 		// Ask ESP to refresh a specific grabber (dataset)
 		void refresh_grabber(slots::protocol::GrabberID which);
 
+		// Get the current ADC calibration (or return an error code)
+		slots::protocol::AdcCalibrationResult get_adc_calibration(slots::protocol::AdcCalibration& calibration_out);
+
+		// Set the current ADC calibration. Returns false if the request timed out.
+		bool set_adc_calibration(const slots::protocol::AdcCalibration& calibration);
+
 		// Reset system
 		[[noreturn]]
 		void reset();
@@ -138,6 +144,16 @@ namespace srv {
 				~TimeRequest() {magic = 0;}
 				operator bool() const {return magic == 0x1234abcd;}
 			};
+			struct CalibrationRequest {
+				TaskHandle_t notify;
+				slots::protocol::AdcCalibration& update_or_read_calibration;
+				// used to avoid writing into weird memory
+				volatile int magic = 0xca1b4a4e;
+				slots::protocol::AdcCalibrationResult result_write;
+
+				~CalibrationRequest() {magic = 0;}
+				operator bool() const {return magic == 0xca1b4a4e;}
+			};
 			// Does _not_ sync, intended for "groups" in flash -- see set_temperature_all's template version
 			struct MultiTempRequest {
 				uint16_t temperature : 2;
@@ -151,6 +167,7 @@ namespace srv {
 				};
 
 				TimeRequest * rx_req;
+				CalibrationRequest * calibrate;
 				MultiTempRequest mt_req;
 				slots::protocol::GrabberID refresh;
 				bool sleeping;
@@ -165,7 +182,9 @@ namespace srv {
 				TypeRefreshGrabber,
 				TypeSleepMode,
 				TypeReset,
-				TypeSync
+				TypeSync,
+				TypeGetCalibration,
+				TypeSetCalibration,
 			} type;
 		};
 	private:

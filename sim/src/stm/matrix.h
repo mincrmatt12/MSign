@@ -131,7 +131,10 @@ namespace led {
 					// We have finished clocking out a row, process buffer swaps
 					if (should_swap) {
 						active_buffer = !active_buffer;
-						if (notify_when_swapped) xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+						if (notify_when_swapped) {
+							xTaskNotifyFromISR(notify_when_swapped, 1, eSetValueWithOverwrite, NULL);
+							notify_when_swapped = nullptr;
+						}
 					}
 				}
 			}

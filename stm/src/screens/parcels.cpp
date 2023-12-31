@@ -252,17 +252,8 @@ bool screen::ParcelScreen::interact() {
 				subscreen = SubscreenSelecting;
 			}
 
-			if (ui::buttons[ui::Buttons::NXT]) {
-				parcel_entries_scroll += 128*8;
-			}
-			else if (ui::buttons.held(ui::Buttons::NXT, pdMS_TO_TICKS(500))) {
-				parcel_entries_scroll += ui::buttons.frame_time() * 8;
-			}
-			else if (ui::buttons[ui::Buttons::PRV]) {
-				parcel_entries_scroll -= 128*8;
-			}
-			else if (ui::buttons.held(ui::Buttons::PRV, pdMS_TO_TICKS(500))) {
-				parcel_entries_scroll -= ui::buttons.frame_time() * 8;
+			if (int dy = ui::buttons[ui::Buttons::Y]) {
+				parcel_entries_scroll += (dy * ui::buttons.frame_time()) / 20;
 			}
 
 			if (parcel_entries_scroll < 0) parcel_entries_scroll = 0;

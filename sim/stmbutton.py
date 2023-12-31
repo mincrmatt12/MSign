@@ -16,19 +16,27 @@ shm_fd = _posixshmem.shm_open("/msign_buttons", os.O_RDWR | os.O_CREAT | os.O_EX
 
 print("> created shm fd")
 
-shared_data = struct.Struct("H")
+shared_data = struct.Struct("HHH")
 os.ftruncate(shm_fd, shared_data.size)
 # map it
 
 shm_buffer = mmap.mmap(shm_fd, shared_data.size)
 
 print("> mapped data")
-curdata = [0]
+curdata = [0, 4096, 4096]
+mousedata = None
 
 def update_dat():
-    global curdata
-    shared_data.pack_into(shm_buffer, 0, *curdata)
-    print("> wrote", *curdata)
+    global curdata, mousedata
+    if mousedata:
+        for i in range(2):
+            if mousedata[i] < 0: mousedata[i] = 0
+            if mousedata[i] > 8191: mousedata[i] = 8191
+        shared_data.pack_into(shm_buffer, 0, curdata[0], *mousedata)
+        print("> wrote", curdata[0], *mousedata)
+    else:
+        shared_data.pack_into(shm_buffer, 0, *curdata)
+        print("> wrote", *curdata)
 
 update_dat()
 
@@ -39,10 +47,17 @@ window.show()
 
 KEYMAP = {
     sdl2.SDLK_p: 0, # power
-    sdl2.SDLK_RIGHT: 10, # nxt
-    sdl2.SDLK_LEFT: 9, # prv
     sdl2.SDLK_RETURN: 8, # sel
     sdl2.SDLK_m: 7, # menu
+    sdl2.SDLK_TAB: 6,
+    sdl2.SDLK_s: 5
+}
+
+VECTMAP = {
+    sdl2.SDLK_UP: [0, -4000],
+    sdl2.SDLK_DOWN: [0, 4000],
+    sdl2.SDLK_LEFT: [-4000, 0],
+    sdl2.SDLK_RIGHT: [4000, 0],
 }
 
 run = True
@@ -57,15 +72,37 @@ try:
             elif event.type == sdl2.SDL_KEYDOWN:
                 if event.key.repeat:
                     continue
-                if event.key.keysym.sym not in KEYMAP:
-                    continue
-                curdata[0] |= (1 << KEYMAP[event.key.keysym.sym])
                 wrt = True
+                if event.key.keysym.sym in KEYMAP:
+                    curdata[0] |= (1 << KEYMAP[event.key.keysym.sym])
+                elif event.key.keysym.sym in VECTMAP:
+                    curdata[1] += VECTMAP[event.key.keysym.sym][0]
+                    curdata[2] += VECTMAP[event.key.keysym.sym][1]
+                else:
+                    wrt = False
             elif event.type == sdl2.SDL_KEYUP:
-                if event.key.keysym.sym not in KEYMAP:
-                    continue
-                curdata[0] &= ~(1 << KEYMAP[event.key.keysym.sym])
                 wrt = True
+                if event.key.keysym.sym in KEYMAP:
+                    curdata[0] &= ~(1 << KEYMAP[event.key.keysym.sym])
+                elif event.key.keysym.sym in VECTMAP:
+                    curdata[1] -= VECTMAP[event.key.keysym.sym][0]
+                    curdata[2] -= VECTMAP[event.key.keysym.sym][1]
+                else:
+                    wrt = False
+            elif event.type == sdl2.SDL_MOUSEMOTION:
+                if mousedata:
+                    wrt = True
+                    mousedata[0] = int(8191 * (event.motion.x / 100.0))
+                    mousedata[1] = int(8191 * (event.motion.y / 100.0))
+            elif event.type == sdl2.SDL_MOUSEBUTTONUP:
+                if mousedata and event.button.button == sdl2.SDL_BUTTON_LEFT:
+                    wrt = True
+                    mousedata = None
+            elif event.type == sdl2.SDL_MOUSEBUTTONDOWN:
+                if not mousedata and event.button.button == sdl2.SDL_BUTTON_LEFT:
+                    wrt = True
+                    mousedata = [int(8191 * (event.motion.x / 100.0)),
+                                 int(8191 * (event.motion.y / 100.0))]
         if wrt:
             update_dat()
         time.sleep(0.01)

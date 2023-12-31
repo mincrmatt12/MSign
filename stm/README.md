@@ -90,6 +90,8 @@ is limited to around 8k in practice.
 | `CONSOLE_MSG` | `0x70` |
 | `REFRESH_GRABBER` | `0x80` |
 | `SLEEP_ENABLE` | `0x81` |
+| `UI_GET_CALIBRATION` | `0x90` |
+| `UI_SAVE_CALIBRATION` | `0x91` |
 
 ### Handshake
 
@@ -290,6 +292,37 @@ When in sleep mode, the following things occur:
 - all log output is prevented from reaching the serial port (to avoid blinking the led)
 - the screen is turned off
 - update frequency is made much slower
+
+### ADC calibration
+
+The ESP persists to the SD card the current calibration in a file. The calibration can be updated either manually on the SD card or by an interactive process on the STM whose results
+are also persisted to the SD card.
+
+The STM can request the current calibration with an empty `UI_GET_CALIBRATION` message. In response, the ESP sends a `UI_GET_CALIBRATION` of its own, formatted as
+
+```
+| 0x00 | 0x0000 | 0x0000 | 0x0000 | 0x0000 | 0x0000 | 0x0000 |
+  |      |                                                 |
+  |      ---------- calibration data as 6 16-bit words ----|
+  --- response code                                        
+```
+
+with the calibration data missing if the error code is not `0`. The error code can be one of:
+
+| Code | Meaning |
+| ---- | ------- |
+| `0x00` | OK |
+| `0x10` | No calibration data present |
+| `0x11` | No calibration data present and auto-configuration is disabled (i.e. ignore joystick) |
+
+The calibration data is made up of the following three values repeated twice, once for the x-axis and once for the y-axis:
+
+- minimum reading
+- maximum reading
+- deadzone width (total delta from (max + min)/2 allowed)
+
+The STM can upload new calibration using the `UI_SAVE_CALIBRATION` command, with a payload consisting of just the calibration data portion of the `UI_GET_CALIBRATION` response. Once the data is
+written to the SD card, the ESP responds with an empty `UI_SAVE_CALIBRATION` message.
 
 ### Other commands
 

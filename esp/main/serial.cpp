@@ -8,6 +8,9 @@
 #include <sys/time.h>
 
 #include "grabber/grab.h"
+#include "serial.cfg.h"
+
+#include "sd.h"
 
 serial::SerialInterface serial::interface;
 
@@ -130,6 +133,54 @@ void serial::SerialInterface::process_packet() {
 				// TODO: maybe make this just mark all things in the dum dirty and only reset if data is lost?
 				ESP_LOGW(TAG, "Got handshake init in main loop; resetting");
 				esp_restart();
+			}
+			break;
+
+		case UI_GET_CALIBRATION:
+			{
+				FIL f;
+				if (f_open(&f, "/adc.bin", FA_READ) != FR_OK) {
+					slots::PacketWrapper<1> resp;
+					resp.init(UI_GET_CALIBRATION);
+					resp.put<AdcCalibrationResult>(adc_enabled ? AdcCalibrationResult::MISSING : AdcCalibrationResult::MISSING_IGNORE, 0);
+					send_pkt(resp);
+				}
+				else {
+					slots::PacketWrapper<1 + sizeof(AdcCalibration)> resp;
+					resp.init(UI_GET_CALIBRATION);
+					UINT br;
+					if (f_read(&f, resp.data() + 1, sizeof(AdcCalibration), &br) != FR_OK || br != sizeof(AdcCalibration)) {
+						resp.put<AdcCalibrationResult>(adc_enabled ? AdcCalibrationResult::MISSING : AdcCalibrationResult::MISSING_IGNORE, 0);
+					}
+					else {
+						resp.put<AdcCalibrationResult>(AdcCalibrationResult::OK, 0);
+					}
+					f_close(&f);
+					send_pkt(resp);
+				}
+			}
+			break;
+
+		case UI_SAVE_CALIBRATION:
+			{
+				FIL f;
+				if (f_open(&f, "/adc.bin", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+					break;
+				}
+				UINT bw;
+				if (f_write(&f, rx_pkt.data(), sizeof(AdcCalibration), &bw) != FR_OK) {
+					f_close(&f);
+					break;
+				}
+				f_close(&f);
+			}
+			{
+				uint8_t resp[3] {
+					0xa6,
+					0,
+					slots::protocol::UI_SAVE_CALIBRATION
+				};
+				send_pkt(resp);
 			}
 			break;
 		

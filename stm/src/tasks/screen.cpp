@@ -241,6 +241,7 @@ namespace tasks {
 			if (servicer.is_sleeping()) do_sleep_mode();
 			// If tetris mode is scheduled, go to its handler
 			if (interact_mode == InteractTetris) do_tetris_mode();
+			else if (interact_mode == InteractAdcCalibration || ui::buttons.adc_state() == ui::buttons.ADC_UNCALIBRATED) do_adc_calibration();
 
 			// Draw active screen
 			if (swapper.require_clearing()) matrix.get_inactive_buffer().clear();

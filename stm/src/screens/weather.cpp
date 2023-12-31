@@ -1166,17 +1166,8 @@ bool screen::WeatherScreen::interact() {
 				break;
 			}
 		case BIG_HOURLY:
-			if (ui::buttons[ui::Buttons::NXT]) {
-				expanded_hrbar_scroll += 128*8;
-			}
-			else if (ui::buttons.held(ui::Buttons::NXT, pdMS_TO_TICKS(500))) {
-				expanded_hrbar_scroll += ui::buttons.frame_time() * 8;
-			}
-			else if (ui::buttons[ui::Buttons::PRV]) {
-				expanded_hrbar_scroll -= 128*8;
-			}
-			else if (ui::buttons.held(ui::Buttons::PRV, pdMS_TO_TICKS(500))) {
-				expanded_hrbar_scroll -= ui::buttons.frame_time() * 8;
+			if (int dy = ui::buttons[ui::Buttons::Y]) {
+				expanded_hrbar_scroll += (dy * ui::buttons.frame_time()) / 20;
 			}
 			else if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
 

@@ -197,6 +197,44 @@ void srv::Servicer::set_sleep_mode(bool enabled) {
 	immediately_process();
 }
 
+slots::protocol::AdcCalibrationResult srv::Servicer::get_adc_calibration(slots::protocol::AdcCalibration& calib_out) {
+	PendRequest::CalibrationRequest cr {
+		.notify = xTaskGetCurrentTaskHandle(),
+		.update_or_read_calibration = calib_out,
+		.result_write = slots::protocol::AdcCalibrationResult::TIMEOUT
+	};
+	PendRequest pr {
+		.calibrate = &cr,
+		.type = PendRequest::TypeGetCalibration
+	};
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(500)) == pdPASS) {
+		immediately_process();
+#ifdef SIM
+		xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+#else
+		xTaskNotifyWait(0, 0, NULL, pdMS_TO_TICKS(500));
+#endif
+	}
+	return cr.result_write;
+}
+
+bool srv::Servicer::set_adc_calibration(const slots::protocol::AdcCalibration& calibration) {
+	PendRequest::CalibrationRequest cr {
+		.notify = xTaskGetCurrentTaskHandle(),
+		.update_or_read_calibration = const_cast<slots::protocol::AdcCalibration&>(calibration),
+		.result_write = slots::protocol::AdcCalibrationResult::TIMEOUT
+	};
+	PendRequest pr {
+		.calibrate = &cr,
+		.type = PendRequest::TypeSetCalibration
+	};
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(5000)) == pdPASS) {
+		immediately_process();
+		xTaskNotifyWait(0, 0, NULL, pdMS_TO_TICKS(5000));
+	}
+	return cr.result_write != slots::protocol::AdcCalibrationResult::TIMEOUT;
+}
+
 void srv::Servicer::reset() {
 	PendRequest pr;
 	pr.type = PendRequest::TypeReset;
@@ -216,7 +254,7 @@ void srv::Servicer::set_temperature_group(uint32_t temperature, uint16_t amt, co
 		pr.sync_with = xTaskGetCurrentTaskHandle();
 		xQueueSendToBack(pending_requests, &pr, portMAX_DELAY);
 		immediately_process();
-		xTaskNotifyWait(0, 0, NULL, portMAX_DELAY);
+		xTaskNotifyWait(0xFFFF'FFFF, 0xFFFF'FFFF, NULL, portMAX_DELAY);
 	}
 	else {
 		immediately_process();
@@ -876,6 +914,34 @@ end_temp_request:
 					send();
 				}
 				break;
+			case UI_GET_CALIBRATION:
+				{
+					if (active_request.type != PendRequest::TypeGetCalibration || !*active_request.calibrate) {
+						xStreamBufferReceive(dma_rx_queue, msgbuf, msgbuf[1], portMAX_DELAY);
+						if (active_request.type == PendRequest::TypeGetCalibration) end_active_request();
+						continue;
+					}
+
+					if (!xStreamBufferReceive(dma_rx_queue, &active_request.calibrate->result_write, 1, portMAX_DELAY)) continue;
+					if (active_request.calibrate->result_write == slots::protocol::AdcCalibrationResult::OK) {
+						if (!xStreamBufferReceive(dma_rx_queue, &active_request.calibrate->update_or_read_calibration, sizeof(slots::protocol::AdcCalibration), portMAX_DELAY)) continue;
+					}
+
+					xTaskNotify(active_request.calibrate->notify, 1, eSetValueWithOverwrite);
+					end_active_request();
+				}
+				break;
+			case UI_SAVE_CALIBRATION:
+				{
+					if (active_request.type != PendRequest::TypeSetCalibration || !*active_request.calibrate) {
+						if (active_request.type == PendRequest::TypeSetCalibration) end_active_request();
+						continue;
+					}
+					active_request.calibrate->result_write = slots::protocol::AdcCalibrationResult::OK;
+					xTaskNotify(active_request.calibrate->notify, 1, eSetValueWithOverwrite);
+					end_active_request();
+				}
+				break;
 			default:
 				// unknown command. don't bother logging it though. just eat it up
 
@@ -1275,6 +1341,27 @@ bool srv::Servicer::start_pend_request(PendRequest &req) {
 			{
 				xTaskNotify(req.sync_with, 0xffff'ffff, eSetValueWithOverwrite);
 				return true;
+			}
+		case PendRequest::TypeGetCalibration:
+			{
+				if (!*req.calibrate) return true;
+				wait_for_not_sending();
+				dma_out_pkt.direction = dma_out_pkt.FromStm;
+				dma_out_pkt.cmd_byte = slots::protocol::UI_GET_CALIBRATION;
+				dma_out_pkt.size = 0;
+				send();
+				break;
+			}
+		case PendRequest::TypeSetCalibration:
+			{
+				if (!*req.calibrate) return true;
+				wait_for_not_sending();
+				dma_out_pkt.direction = dma_out_pkt.FromStm;
+				dma_out_pkt.cmd_byte = slots::protocol::UI_SAVE_CALIBRATION;
+				dma_out_pkt.size = sizeof(slots::protocol::AdcCalibration);
+				dma_out_pkt.put(req.calibrate->update_or_read_calibration, 0);
+				send();
+				break;
 			}
 		default:
 			return true;

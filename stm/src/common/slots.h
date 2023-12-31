@@ -17,8 +17,6 @@ namespace slots {
 		WEBUI_STATUS = 0x02,        // STRUCT; WebuiStatus, flag bitmask
 		ESP_VER_STR = 0x03,         // STRING; version string (as shown in webui) of the esp8266
 
-		VIRTUAL_BUTTONMAP = 0x10, 	// UINT16_T; bitmap, override of the data on GPIOA for the buttons
-
 		TTC_INFO = 0x20,			// STRUCT; TTCInfo
 		TTC_NAME_1 = 0x21,			// STRING; name of bus/tram in slot 1; polled
 		TTC_NAME_2 = 0x22,			// ''
@@ -350,7 +348,10 @@ namespace slots {
 			CONSOLE_MSG = 0x70,
 
 			REFRESH_GRABBER = 0x80,
-			SLEEP_ENABLE = 0x81
+			SLEEP_ENABLE = 0x81,
+
+			UI_GET_CALIBRATION = 0x90,
+			UI_SAVE_CALIBRATION = 0x91
 		};
 
 		enum struct TimeStatus : uint8_t {
@@ -409,6 +410,22 @@ namespace slots {
 			ALL = 0xfa,
 			NONE = 0xfb
 		};
+
+		struct AdcCalibration {
+			struct AxisCalibration {
+				uint16_t min, max, deadzone;
+			} x, y;
+		};
+
+		enum struct AdcCalibrationResult : uint8_t {
+			OK = 0,
+
+			MISSING = 0x10,
+			MISSING_IGNORE = 0x11,
+
+			// not sent over wire, used to report timeout error
+			TIMEOUT = 0xff
+		};
 	}
 
 	// PACKET WRAPPER
@@ -461,7 +478,7 @@ namespace slots {
 		uint8_t _data[ConstantSize];
 
 		inline void init(uint8_t cmd) {
-#if (defined(STM32F205xx) || defined(STM32F207xx))
+#if (defined(STM32F205xx) || defined(STM32F207xx) || defined(STM32F405xx))
 			direction = FromStm;
 #else
 			direction = FromEsp;

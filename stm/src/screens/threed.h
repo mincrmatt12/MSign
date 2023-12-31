@@ -197,11 +197,6 @@ namespace threed {
 		Vec3 camera_look, camera_look_target;
 		uint16_t interp_progress = 20000;
 		uint32_t last_update, last_new_data;
-
-		enum InteractMode : uint8_t {
-			MOVE_POS,
-			MOVE_LOOK
-		} im=MOVE_POS;
 	};
 
 	extern size_t tri_count;

@@ -46,7 +46,8 @@ namespace tasks {
 			InteractByScreen = 1,
 			InteractMenuOpen = 2,
 			InteractTetris = 3,
-			InteractTetrisMenu = 4
+			InteractTetrisMenu = 4,
+			InteractAdcCalibration = 5
 		} interact_mode = InteractNone;
 
 		// todo: put this in a union
@@ -99,6 +100,8 @@ namespace tasks {
 		void do_menu_overlay();
 		void do_sleep_mode();
 		void do_tetris_mode();
+
+		void do_adc_calibration();
 	};
 }
 

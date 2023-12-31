@@ -246,37 +246,38 @@ namespace threed {
 	}
 
 	bool Renderer::interact() {
-		Vec3 target{0};
-		m::fixed_t amt = ui::buttons.held(ui::Buttons::MENU) ? -m::fixed_t(4, 10): m::fixed_t(4, 10);
-		amt *= ui::buttons.frame_time();
+		m::fixed_t amt = ui::buttons.frame_time();
 		amt /= 1000;
-		if (ui::buttons.held(ui::Buttons::PRV)) target.x += amt;
-		if (ui::buttons.held(ui::Buttons::NXT)) target.z += amt;
-		if (ui::buttons.held(ui::Buttons::SEL)) target.y += amt;
 
 		Vec3 for_ = (current_look - current_pos).normalize();
-		if (im == MOVE_POS) {
-			Vec3 left_ = -(Vec3{0, 1, 0}.cross(for_));
-			current_pos += for_ * target.x + left_ * target.z;
-			current_pos.y += target.y;
-			current_look += for_ * target.x + left_ * target.z;
-			current_look.y += target.y;
+		const static Vec3 up_{0, 1, 0};
+		Vec3 side = for_.cross(up_);
+		Mat4 rotater;
+
+		if (auto horiz = ui::buttons[ui::Buttons::X]) {
+			rotater *= Mat4::rotate(up_, m::fixed_t{horiz, 100} * amt);
 		}
-		else {
-			for_.y = 0;
-			for_ = for_.normalize();
-			Vec3 left_ = -(Vec3{0, 1, 0}.cross(for_));
-			current_look += for_ * target.x + left_ * target.z;
-			current_look.y += target.y;
+		if (auto vert = ui::buttons[ui::Buttons::Y]) {
+			rotater *= Mat4::rotate(side, m::fixed_t{-vert, 100} * amt);
 		}
 
-		if (ui::buttons[ui::Buttons::POWER]) {
-			im = (im == MOVE_POS) ? MOVE_LOOK : MOVE_POS;
+		for_ = rotater * Vec4{for_, 0};
+
+		amt *= 2;
+
+		if (ui::buttons.held(ui::Buttons::STICK)) {
+			amt *= 2;
 		}
 
-		// draw label
-		draw::text(matrix.get_inactive_buffer(), im == MOVE_POS ? "move" : "look", font::tahoma_9::info, 1, 63, 0x5555ff_cc);
-		return false;
+		if (ui::buttons.held(ui::Buttons::TAB)) {
+			current_pos += for_ * amt;
+		}
+		else if (ui::buttons.held(ui::Buttons::SEL)) {
+			current_pos -= for_ * amt;
+		}
+
+		current_look = current_pos + for_;
+		return ui::buttons[ui::Buttons::POWER];
 	}
 
 	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {

@@ -112,7 +112,9 @@ pnames = {
     0x63: "UPDATE_STATUS",
     0x70: "CONSOLE_MSG",
     0x80: "REFRESH_GRABBER",
-    0x81: "SLEEP_ENABLE"
+    0x81: "SLEEP_ENABLE",
+    0x90: "UI_GET_CALIBRATION",
+    0x91: "UI_SAVE_CALIBRATION"
 }
 
 pktcolors = {
@@ -127,7 +129,8 @@ pktcolors = {
     "DATA_FULFILL": 45,
     "DATA_REQUEST": 101,
     "DATA_STORE": 196,
-    "DATA_RETRIEVE": 208
+    "DATA_RETRIEVE": 208,
+    "UI_": 166,
 }
 
 header_width = 5 + 2 + 2 + 2 + 2 + 20 + 2
@@ -312,6 +315,30 @@ def update_img_start(dat, from_esp):
     csum, sz, cnt = struct.unpack("<HIH", dat)
     print(f": image header of length {sz} in {cnt} chunks with checksum {csum:04x} ")
 
+calibstatuses = {
+    0x10: "Missing",
+    0x11: "MissingIgnore"
+}
+
+def format_calibration(dat):
+    xm, xM, xd, ym, yM, yd = struct.unpack("<HHHHHH", dat)
+    return f"x=(min {xm}, max {xM}, deadzone {xd}), y=(min {ym}, max {yM}, deadzone {yd})"
+
+def ui_get_calibration(dat, from_esp):
+    if not from_esp:
+        print(f": request for ADC calibration")
+    else:
+        if dat[0] == 0:
+            print(f": ADC calibration with {format_calibration(dat[1:])}")
+        else:
+            print(f": ADC calibration not present, reason {calibstatuses[dat[0]]}")
+
+def ui_save_calibration(dat, from_esp):
+    if from_esp:
+        print(f": ack of request to update ADC calibration")
+    else:
+        print(f": request to save new ADC calibration {format_calibration(dat)}")
+
 phandle = {
     0x20: data_temp,
     0x30: ack_data_temp,
@@ -330,7 +357,9 @@ phandle = {
     0x60: lambda x, y: update_statcmd(x, y, False),
     0x63: lambda x, y: update_statcmd(x, y, True),
     0x61: update_img_data,
-    0x62: update_img_start
+    0x62: update_img_start,
+    0x90: ui_get_calibration,
+    0x91: ui_save_calibration
 }
 
 last_pkt_time = None
