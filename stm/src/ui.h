@@ -63,7 +63,7 @@ namespace ui {
 
 		void reload_adc_calibration() { cur_adc_state = ADC_UNINIT; }
 
-		TickType_t frame_time() const;
+		int frame_time() const;
 
 		static int8_t adjust_adc_value(uint16_t raw, const slots::protocol::AdcCalibration::AxisCalibration& axis);
 	private:
