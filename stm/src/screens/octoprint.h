@@ -49,11 +49,13 @@ namespace screen {
 		// Pan/zoom
 
 		fm::fixed_t pan_x = 0, pan_y = 0;
-		int zoomlevel = 1;
+		int zoomlevel = 2;
 
 		bool hide_ui = false;
 
 		constexpr const static fm::fixed_t zoomlevels[] = {
+			{1, 4},
+			{1, 2},
 			1,
 			{3, 2},
 			{6, 4},

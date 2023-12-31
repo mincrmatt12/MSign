@@ -345,7 +345,7 @@ void screen::OctoprintScreen::draw_background() {
 			fill_gcode_area(bit_blk, *bii_blk, x_min, y_min, x_max, y_max, rotate_90, filament_color);
 	}
 	else {
-		zoomlevel = 0;
+		zoomlevel = 2;
 		pan_x = 0;
 		pan_y = 0;
 		int x_min = 64 - x_size / 2;
