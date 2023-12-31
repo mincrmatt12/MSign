@@ -86,10 +86,10 @@ void ui::Buttons::update() {
 		x_axis = adjust_adc_value(raw_x, adc_calibration.x);
 		y_axis = adjust_adc_value(raw_y, adc_calibration.y);
 
-		if (x_axis > 120) current_held |= RIGHT;
-		else if (x_axis < -120) current_held |= LEFT;
-		if (y_axis < -120) current_held |= UP;
-		else if (y_axis > 120) current_held |= DOWN;
+		if (x_axis > 100) current_held |= RIGHT;
+		else if (x_axis < -100) current_held |= LEFT;
+		if (y_axis < -100) current_held |= UP;
+		else if (y_axis > 100) current_held |= DOWN;
 	}
 	else if (cur_adc_state == ADC_UNINIT && servicer.ready()) {
 		switch (servicer.get_adc_calibration(adc_calibration)) {
