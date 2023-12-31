@@ -255,25 +255,28 @@ namespace threed {
 		Mat4 rotater;
 
 		if (auto horiz = ui::buttons[ui::Buttons::X]) {
-			rotater *= Mat4::rotate(up_, m::fixed_t{horiz, 100} * amt);
+			rotater *= Mat4::rotate(up_, m::fixed_t{horiz, 80} * amt);
 		}
 		if (auto vert = ui::buttons[ui::Buttons::Y]) {
-			rotater *= Mat4::rotate(side, m::fixed_t{-vert, 100} * amt);
+			rotater *= Mat4::rotate(side, m::fixed_t{-vert, 90} * amt);
 		}
 
 		for_ = rotater * Vec4{for_, 0};
-
-		amt *= 2;
+		amt *= m::fixed_t(3, 2);
 
 		if (ui::buttons.held(ui::Buttons::STICK)) {
-			amt *= 2;
+			amt *= -1;
 		}
 
-		if (ui::buttons.held(ui::Buttons::TAB)) {
+		if (ui::buttons.held(ui::Buttons::MENU)) {
 			current_pos += for_ * amt;
 		}
-		else if (ui::buttons.held(ui::Buttons::SEL)) {
-			current_pos -= for_ * amt;
+
+		if (ui::buttons.held(ui::Buttons::SEL)) {
+			current_pos += up_ * amt;
+		}
+		else if (ui::buttons.held(ui::Buttons::TAB)) {
+			current_pos -= up_ * amt;
 		}
 
 		current_look = current_pos + for_;

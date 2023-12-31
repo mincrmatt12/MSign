@@ -1167,7 +1167,7 @@ bool screen::WeatherScreen::interact() {
 			}
 		case BIG_HOURLY:
 			if (int dy = ui::buttons[ui::Buttons::Y]) {
-				expanded_hrbar_scroll += (dy * ui::buttons.frame_time()) / 20;
+				expanded_hrbar_scroll += (dy * ui::buttons.frame_time()) / 8;
 			}
 			else if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
 

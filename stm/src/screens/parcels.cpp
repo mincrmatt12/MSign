@@ -253,7 +253,7 @@ bool screen::ParcelScreen::interact() {
 			}
 
 			if (int dy = ui::buttons[ui::Buttons::Y]) {
-				parcel_entries_scroll += (dy * ui::buttons.frame_time()) / 20;
+				parcel_entries_scroll += (dy * ui::buttons.frame_time()) / 8;
 			}
 
 			if (parcel_entries_scroll < 0) parcel_entries_scroll = 0;
