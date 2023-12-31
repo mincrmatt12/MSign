@@ -333,7 +333,7 @@ namespace octoprint {
 					case GCODE_SCAN_OK:
 					case GCODE_SCAN_DONE:
 						update_progress();
-						continue;
+						break;
 					case GCODE_SCAN_FAIL:
 						ESP_LOGE(TAG, "Failed to parse ./job.gcode");
 						pt.fail();
