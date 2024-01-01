@@ -18,7 +18,7 @@
 #include <stream_buffer.h>
 #include <timers.h>
 
-#define nop asm volatile ("nop\n\t")
+#define nop asm volatile ("nop\n\t" ::: "memory")
 
 static const char* const TAG = "diskio_sd";
 
@@ -34,11 +34,45 @@ namespace sd {
 		} type = CardTypeUndefined;
 
 		uint64_t length = 0;
-		TickType_t timeout = 25;
+
+		const static int busy_attempts = 250 / 5;
+		const static TickType_t busy_wait_ticks = pdMS_TO_TICKS(5);
 
 		bool write_protect;
 		bool perm_write_protect;
 	} card;
+
+	struct BusyWaiter {
+		int at = 0;
+
+		// Returns true if busy wait loop can continue.
+		bool check_timeout(bool in_critical=false) {
+			if (at == 0) {
+				at = 1;
+				return true;
+			}
+			else {
+				if (at > Card::busy_attempts)
+					return false;
+				if (in_critical)
+					portEXIT_CRITICAL();
+				vTaskDelay(Card::busy_wait_ticks);
+				++at;
+				if (in_critical)
+					portENTER_CRITICAL();
+				return true;
+			}
+		}
+
+		operator bool() const {
+			return at > Card::busy_attempts;
+		}
+
+		// Returns true if timeout occured.
+		bool is_timed_out() const {
+			return operator bool();
+		}
+	};
 
 	// Helper class for bit definitions inside a struct
 	// You should use this class by placing it in a union with a member of size Total bits
@@ -57,11 +91,15 @@ namespace sd {
 		inline reg_bit& operator=(const access_type& other) {
 			// I have no idea why gcc thinks "argument" is unitialized given that nothing named that exists here, but uh ok.
 			// I think it's complaining about me using this somewhere else in the code and getting confused from inlining but uh no idea.
+#ifndef __clang__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) &= ~(((1U << LocalSize) - 1) << (Index % 8));
 			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) |= (static_cast<uint32_t>(other) << (Index % 8));
+#ifndef __clang__
 #pragma GCC diagnostic pop 
+#endif
 			return *this;
 		}
 		
@@ -242,7 +280,7 @@ namespace sd {
 		}
 
 		template<int num>
-		inline void sbit(bool bit) {
+		inline __attribute__((always_inline)) void sbit(bool bit) {
 			if (bit)
 				wrbit<num>();
 			else
@@ -250,7 +288,7 @@ namespace sd {
 		}
 
 		template<int num>
-		inline auto rbit() {
+		inline __attribute__((always_inline)) bool rbit() {
 			return (GPIO.in >> num) & 0x1;
 		}
 
@@ -278,58 +316,74 @@ namespace sd {
 		}
 
 		// Data goes MSB first
-
-		inline __attribute__((always_inline)) void rx_bit(uint8_t &to) {
-			// TIMING NOPS
-			nop;
-			nop;
-			nop;
-			// WRITE CLOCK HIGH
-			wrbit<CONFIG_SDCARD_CLK_IO>();
-			// SAMPLE BIT
-			to <<= 1;
-			to |= rbit<CONFIG_SDCARD_MISO_IO>();
-			// WRITE CLOCK LOW
-			clbit<CONFIG_SDCARD_CLK_IO>();
-		}
-
-		inline __attribute__((always_inline)) void tx_bit(uint8_t &from) {
-			// Data is sampled 
-
-			// WRITE BIT
-			sbit<CONFIG_SDCARD_MOSI_IO>(from & (1 << 7));
-			from <<= 1;
-			// WRITE CLOCK HIGH
-			wrbit<CONFIG_SDCARD_CLK_IO>();
-			// TIMING NOPS
-			nop;
-			nop;
-			nop;
-			// WRITE CLOCK LOW
-			clbit<CONFIG_SDCARD_CLK_IO>();
-		}
-
 		IRAM_ATTR void rx_byte(uint8_t& to) {
 			to = 0;
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
-			rx_bit(to);
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 7
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 6
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 5
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 4
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 3
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 2
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 1
+			to <<= 1;
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			to += (rbit<CONFIG_SDCARD_MISO_IO>()); // 0
+			wrbit<CONFIG_SDCARD_CLK_IO>();
+			clbit<CONFIG_SDCARD_CLK_IO>();
 		}
 
-		IRAM_ATTR void tx_byte(uint8_t  from) {
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
-			tx_bit(from);
+		IRAM_ATTR void tx_byte(uint32_t from) {
+			uint32_t fast = from & (1 << 7);
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 7
+			fast = from & (1 << 6);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 6
+			fast = from & (1 << 5);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 5
+			fast = from & (1 << 4);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 4
+			fast = from & (1 << 3);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 3
+			fast = from & (1 << 2);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 2
+			fast = from & (1 << 1);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 1
+			fast = from & (1 << 0);
+			clbit<CONFIG_SDCARD_CLK_IO>();
+			sbit<CONFIG_SDCARD_MOSI_IO>(fast);
+			wrbit<CONFIG_SDCARD_CLK_IO>();       // 0
+			clbit<CONFIG_SDCARD_CLK_IO>();
 		}
 
 		inline void reselect() {
@@ -407,7 +461,7 @@ namespace sd {
 	// Send a command to the SD.
 	//
 	template<bool B, typename Argument, typename Response>
-	command_status send_command(Argument argument, uint32_t index, Response& response, TickType_t timeout=2) {
+	command_status send_command(Argument argument, uint32_t index, Response& response) {
 		uint8_t command_out[6];
 
 		// Setup start bit + trans bit + index
@@ -431,6 +485,7 @@ namespace sd {
 		portENTER_CRITICAL();
 
 		for (int i = 0; i < 6; ++i) spi::tx_byte(command_out[i]);
+		spi::wrbit<CONFIG_SDCARD_MOSI_IO>();
 
 		portEXIT_CRITICAL();
 
@@ -438,17 +493,19 @@ namespace sd {
 		// Discard first byte (not MMC)
 		spi::rx_byte(*fillresp);
 
-		TickType_t t0 = xTaskGetTickCount();
+		BusyWaiter bsw;
 
 		*fillresp = 0xff;
 
 		// Wait for 1-8 fill bytes
-		while (*fillresp & 0x80) {
-			if (xTaskGetTickCount() > (t0 + timeout)) return command_status::TimeoutError;
+		while (*fillresp & 0x80 && bsw.check_timeout()) {
 			portENTER_CRITICAL();
 			spi::rx_byte(*fillresp);
 			portEXIT_CRITICAL();
 		}
+
+		if (bsw.is_timed_out())
+			return command_status::TimeoutError;
 
 		if (*fillresp & 0x80) {
 			// Timeout error
@@ -462,9 +519,9 @@ namespace sd {
 
 		if constexpr (B) {
 			uint8_t busy = 0;
-			TickType_t t0 = xTaskGetTickCount();
+			bsw = {};
 
-			while (!busy && xTaskGetTickCount() < (t0 + timeout)) {
+			while (busy != 0xFF && bsw.check_timeout()) {
 				portENTER_CRITICAL();
 				spi::rx_byte(busy);
 				portEXIT_CRITICAL();
@@ -477,9 +534,9 @@ namespace sd {
 	}
 
 	template<bool B=false, typename Argument=uint32_t>
-	inline command_status send_command(Argument argument, uint32_t index, TickType_t timeout=2) {
+	inline command_status send_command(Argument argument, uint32_t index) {
 		status_r1 x;
-		return send_command<B>(argument, index, x, timeout);
+		return send_command<B>(argument, index, x);
 	}
 
 	enum struct read_status {
@@ -494,10 +551,10 @@ namespace sd {
 	read_status single_read(uint8_t *buf, size_t length, bool inverted=false) {
 		// Wait for start block token
 
-		TickType_t t0 = xTaskGetTickCount();
+		BusyWaiter bsw;
 		uint8_t token = 0xff;
 
-		while (token == 0xff && xTaskGetTickCount() < (t0 + card.timeout)) {
+		while (token == 0xff && bsw.check_timeout()) {
 			portENTER_CRITICAL();
 			spi::rx_byte(token);
 			portEXIT_CRITICAL();
@@ -507,6 +564,7 @@ namespace sd {
 
 		// DATA_START_TOKEN
 		if (token != 0xFE) {
+			ESP_LOGE(TAG, "protocol error in single_read; wrong token %02x", token);
 			return read_status::ProtocolError;
 		}
 
@@ -525,6 +583,7 @@ namespace sd {
 		portEXIT_CRITICAL();
 
 		if (crc != crc_ccitt(buf, length)) {
+			ESP_LOGE(TAG, "CRC error in single_read");
 			return read_status::CRCError;
 		}
 
@@ -576,7 +635,8 @@ namespace sd {
 		status_r1 x;
 		if (length_in_sectors == 1) {
 			// Single read
-			if (send_command<false>(lba, 17, x, card.timeout) != command_status::Ok) {
+			if (send_command<false>(lba, 17, x) != command_status::Ok) {
+				ESP_LOGE(TAG, "Read setup timeout");
 				// Failed to send
 				return read_status::Timeout;
 			}
@@ -590,7 +650,8 @@ namespace sd {
 		}
 		else {
 			// Otherwise, use multi-read
-			if (send_command<false>(lba, 18, x, card.timeout) != command_status::Ok) {
+			if (send_command<false>(lba, 18, x) != command_status::Ok) {
+				ESP_LOGE(TAG, "Multi read setup timeout");
 				// Failed to send
 				return read_status::Timeout;
 			}
@@ -607,7 +668,8 @@ namespace sd {
 			}
 			
 			// Stop the transmission
-			if (send_command<true>(0, 12, x, card.timeout) != command_status::Ok) {
+			if (send_command<true>(0, 12, x) != command_status::Ok) {
+				ESP_LOGE(TAG, "Stop read setup timeout");
 				return read_status::Timeout;
 			}
 
@@ -618,13 +680,15 @@ namespace sd {
 
 	bool wait_for_not_busy() {
 		uint8_t x = 0;
-		TickType_t t0 = xTaskGetTickCount();
-		while (x != 0xff && xTaskGetTickCount() < (t0 + card.timeout)) {
+		BusyWaiter bsw;
+
+		spi::wrbit<CONFIG_SDCARD_MOSI_IO>();
+		while (x != 0xff && bsw.check_timeout()) {
 			portENTER_CRITICAL();
 			spi::rx_byte(x);
 			portEXIT_CRITICAL();
 		}
-		return x;
+		return x == 0xff;
 	}
 
 	write_status write(const uint8_t *buf, uint32_t lba, size_t length_in_sectors) {
@@ -632,23 +696,34 @@ namespace sd {
 		status_r1 x;
 		if (length_in_sectors == 1) {
 			// Send a single write
-			if (send_command<false>(lba, 24, x, card.timeout) != command_status::Ok) {
+			if (send_command<true>(lba, 24, x) != command_status::Ok) {
 				ESP_LOGE(TAG, "Timeout during CMD24");
 				return write_status::Timeout;
 			}
 			if (x.raw_data) {
-				if (x.address_error) return write_status::OutOfBounds;
-				else return write_status::ProtocolError;
+				if (x.address_error) {
+					ESP_LOGE(TAG, "Write out of bounds");
+					return write_status::OutOfBounds;
+				}
+				else {
+					ESP_LOGE(TAG, "Protocol error during write: %02x", x.raw_data);
+					return write_status::ProtocolError;
+				}
 			}
 			// Send out the block data
 			auto s = single_write(buf, 512, 0xFE);
 			// Wait for not busy
-			if (!wait_for_not_busy()) return write_status::Timeout;
+			if (!wait_for_not_busy()) {
+				ESP_LOGE(TAG, "Timeout waiting for write to finish");
+				return write_status::Timeout;
+			}
+			if (s != write_status::Ok) 
+				ESP_LOGE(TAG, "SD write failed: %02x", (int)s);
 			return s;
 		}
 		else {
 			// Send a multi write
-			if (send_command<false>(lba, 25, x, card.timeout) != command_status::Ok) {
+			if (send_command<true>(lba, 25, x) != command_status::Ok) {
 				ESP_LOGE(TAG, "Timeout during CMD25");
 				return write_status::Timeout;
 			}
@@ -674,11 +749,12 @@ namespace sd {
 			
 			// If we encountered an error, stop using CMD12
 			if (s != write_status::Ok) {
-				if (send_command<true>(0, 12, x, card.timeout) != command_status::Ok) {
+				if (send_command<true>(0, 12, x) != command_status::Ok) {
 					ESP_LOGE(TAG, "Timeout during cancel (%d)", (int)s);
 					return write_status::Timeout;
 				}
 
+				ESP_LOGE(TAG, "SD write failed: %02x", (int)s);
 				return s;
 			}
 			// Otherwise, send an end token
@@ -740,7 +816,7 @@ namespace sd {
 			uint8_t _;
 			spi::tx_byte(0xFD); // STOP_TRAN_TOKEN
 			// Receive a bunch of garbage
-			for (int i = 0; i < 520; ++i) spi::rx_byte(_);
+			for (int i = 0; i < 520; ++i) spi::tx_byte(0xff);
 		}
 
 		// Enable CRC checking
@@ -926,8 +1002,9 @@ extern "C" DRESULT disk_read(BYTE, BYTE* buff, LBA_t sector, UINT count) {
 	int tries = 0;
 	portENTER_CRITICAL();
 	sd::spi::select();
-	sd::spi::tx_byte(0xff);
 	portEXIT_CRITICAL();
+	if (!sd::wait_for_not_busy())
+		return RES_ERROR;
 retry:
 	auto x = sd::read(buff, sector, count);
 	ESP_LOGV(TAG, "read (%d/3) %d %d --> %d", tries, sector, count, (int)x);
@@ -959,8 +1036,9 @@ extern "C" DRESULT disk_write(BYTE, const BYTE* buff, LBA_t sector, UINT count) 
 	int tries = 0;
 	portENTER_CRITICAL();
 	sd::spi::select();
-	sd::spi::tx_byte(0xff);
 	portEXIT_CRITICAL();
+	if (!sd::wait_for_not_busy())
+		return RES_ERROR;
 retry:
 	auto x = sd::write(buff, sector, count);
 	ESP_LOGV(TAG, "write (%d/3) %d %d --> %d", tries, sector, count, (int)x);
