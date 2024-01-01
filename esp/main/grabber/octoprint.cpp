@@ -154,6 +154,7 @@ namespace octoprint {
 
 		bool restart() override {
 			if (active.has_value()) {
+				active->stop();
 				active.reset();
 			}
 
