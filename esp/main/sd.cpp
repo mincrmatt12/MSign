@@ -36,6 +36,7 @@ namespace sd {
 		uint64_t length = 0;
 
 		const static int busy_attempts = 250 / 5;
+		const static int attempts_per_burst = 256;
 		const static TickType_t busy_wait_ticks = pdMS_TO_TICKS(5);
 
 		bool write_protect;
@@ -43,29 +44,28 @@ namespace sd {
 	} card;
 
 	struct BusyWaiter {
-		int at = 0;
+		int at = 1;
 
 		// Returns true if busy wait loop can continue.
 		bool check_timeout(bool in_critical=false) {
-			if (at == 0) {
-				at = 1;
-				return true;
-			}
-			else {
-				if (at > Card::busy_attempts)
-					return false;
-				if (in_critical)
-					portEXIT_CRITICAL();
-				vTaskDelay(Card::busy_wait_ticks);
+			if (at % Card::attempts_per_burst != 0) {
 				++at;
-				if (in_critical)
-					portENTER_CRITICAL();
 				return true;
 			}
+			int at = this->at / Card::attempts_per_burst;
+			if (at > Card::busy_attempts)
+				return false;
+			if (in_critical)
+				portEXIT_CRITICAL();
+			vTaskDelay(Card::busy_wait_ticks);
+			++this->at;
+			if (in_critical)
+				portENTER_CRITICAL();
+			return true;
 		}
 
 		operator bool() const {
-			return at > Card::busy_attempts;
+			return at > Card::busy_attempts * Card::attempts_per_burst;
 		}
 
 		// Returns true if timeout occured.
