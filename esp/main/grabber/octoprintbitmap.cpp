@@ -16,6 +16,76 @@ static const char * TAG = "octoprintbitmap";
 #include <gcode_scan.h>
 
 namespace octoprint {
+	// Basic fixed-point wrapper, only supporting a few operations.
+	struct fixed_t {
+		const static inline int Fac = 65536;
+
+		fixed_t() : value{} {}
+		fixed_t(int raw, std::nullptr_t) : value(raw) {}
+		fixed_t(int nonraw) : value(nonraw * Fac) {}
+		fixed_t(float flt) : value(flt * Fac) {}
+		fixed_t(intmax_t real, int8_t decimal)
+		{
+			real *= Fac;
+			while (decimal--) real /= 10;
+			value = int(real);
+		}
+
+#define rel_op(x) inline bool operator x (fixed_t other) const { return value x other.value; } \
+			      inline bool operator x (int other)            const { return value x other * Fac; } \
+			      inline bool operator x (float other)          const { return value x other; } \
+
+		rel_op(<);
+		rel_op(<=);
+		rel_op(==);
+		rel_op(!=);
+		rel_op(>);
+		rel_op(>=);
+
+#undef rel_op
+
+#define arith_op(x) inline fixed_t  operator x (fixed_t other) const { return {value x other.value, nullptr}; } \
+					inline fixed_t &operator x ## = (fixed_t other)  { value x ## = other.value; return *this; }
+
+		arith_op(+);
+		arith_op(-);
+
+#undef arith_op
+
+#define int_op(x) inline fixed_t  operator x      (int other) const { return {value x other, nullptr}; } \
+				  inline fixed_t &operator x ## = (int other)  { value x ## = other; return *this; } \
+                  inline fixed_t  operator x      (float other) const { return {int(value x other), nullptr}; } \
+				  inline fixed_t &operator x ## = (float other)  { value x ## = other; return *this; }
+
+		int_op(*);
+		int_op(/);
+
+#undef int_op
+
+		inline fixed_t operator-() const { return {-value, nullptr}; }
+		inline fixed_t abs() const { return {std::abs(value), nullptr}; }
+
+		fixed_t operator*(fixed_t other) const {
+			intmax_t temp = value;
+			temp *= other.value;
+			return {static_cast<int>(temp / Fac), nullptr};
+		}
+		fixed_t operator/(fixed_t other) const {
+			intmax_t temp = value;
+			temp *= Fac;
+			temp /= other.value;
+			return {static_cast<int>(temp), nullptr};
+		}
+
+		explicit inline operator float() const { return (float)value / Fac; }
+		explicit operator int() const { 
+			return (value + (Fac / 2)) / Fac;
+		}
+
+	private:
+		int value;
+	};
+
 	struct GcodeMachineState {
 		constexpr inline static size_t BITMAP_SIZE = 4096;
 		constexpr inline static size_t BITMAP_BITS = BITMAP_SIZE * 8;
@@ -24,13 +94,13 @@ namespace octoprint {
 		constexpr inline static int MAX_OUTER_MARGIN = 8;
 
 		struct Pos {
-			float x{}, y{}, z{}, e{};
+			fixed_t x{}, y{}, z{}, e{};
 		} pos;
 
 		bool relative_e{}, relative_g{};
 		uint16_t layer{};
 
-		float layerheight{};
+		fixed_t layerheight{};
 		bool had_sd_error{};
 
 		FIL modelinfo{}, auxinfo{}; // auxinfo is bitmaps while drawing and index map while indexing
@@ -162,7 +232,7 @@ namespace octoprint {
 		}
 
 		struct LayerInfo {
-			float minx{}, miny{}, maxx{}, maxy{};
+			fixed_t minx{}, miny{}, maxx{}, maxy{};
 
 			LayerInfo() = default;
 			LayerInfo(const Pos& pos) {
@@ -182,7 +252,7 @@ namespace octoprint {
 			}
 		};
 		struct DrawInfo {
-			float minx{-1}, miny{-1}, sizex{0}, sizey{0};
+			fixed_t minx{-1}, miny{-1}, sizex{0}, sizey{0};
 			int16_t xdim{}, ydim{};
 
 			DrawInfo() = default;
@@ -190,7 +260,7 @@ namespace octoprint {
 				sizex = (recorded.maxx - recorded.minx);
 				sizey = (recorded.maxy - recorded.miny);
 
-				float A = sizex / sizey;
+				float A = float(sizex) / float(sizey);
 				int y_size = sqrtf(BITMAP_BITS / A);
 				int x_size = A * y_size;
 
@@ -209,8 +279,8 @@ namespace octoprint {
 				}
 
 				float A_real = (float)x_size / (float)y_size;
-				float ry = sizex / A_real;
-				float rx = A_real * sizey;
+				fixed_t ry = float(sizex) / A_real;
+				fixed_t rx = float(sizey) * A_real;
 
 				if (A_real != A) {
 					if (rx < sizex) {
@@ -225,17 +295,17 @@ namespace octoprint {
 					sizey = ry;
 				}
 
-				minx = (recorded.minx + recorded.maxx - sizex) / 2.f;
-				miny = (recorded.miny + recorded.maxy - sizey) / 2.f;
+				minx = (recorded.minx + recorded.maxx - sizex) / 2;
+				miny = (recorded.miny + recorded.maxy - sizey) / 2;
 				xdim = x_size;
 				ydim = y_size;
 			}
 
-			int scale_x(float x) const {
-				return ((x - minx) / sizex) * (xdim - 1);
+			int scale_x(fixed_t x) const {
+				return int(((x - minx) / sizex) * (xdim - 1));
 			}
-			int scale_y(float y) const {
-				return ((y - miny) / sizey) * (ydim - 1);
+			int scale_y(fixed_t y) const {
+				return int(((y - miny) / sizey) * (ydim - 1));
 			}
 			int bitindex(int x, int y) const {
 				if (x < 0 || x >= xdim) return -1;
@@ -251,12 +321,6 @@ namespace octoprint {
 
 		bool drawing = false;
 	};
-
-	float get_decimal(intmax_t real, int8_t fract) {
-		if (fract < 0)
-			return nanf("missing");
-		return ((float)real) / powf(10, fract);
-	}
 
 	void common_finished_layer(GcodeMachineState *gstate, gcode_scan_state_t *sstate, bool is_last=false) {
 		UINT bw = 0, total_bw = 0;
@@ -397,7 +461,7 @@ namespace octoprint {
 
 	void send_bitmap_for(uint32_t filepos) {
 		int layeridx = -1;
-		float layerheight;
+		fixed_t layerheight;
 		UINT br;
 
 		{
@@ -409,7 +473,7 @@ namespace octoprint {
 
 			struct BoffEntry {
 				uint32_t fpos;
-				float layerheight;
+				fixed_t layerheight;
 			};
 
 			if (filepos == RANDOM_FILEPOS) {
@@ -464,7 +528,7 @@ namespace octoprint {
 			inf.file_process_percent = inf.PROCESSED_OK;
 			inf.bitmap_width = di.xdim;
 			inf.bitmap_height = di.ydim;
-			inf.current_layer_height = layerheight * 100;
+			inf.current_layer_height = int(layerheight * 100);
 			inf.current_layer_number = layeridx + 1;
 
 			serial::interface.update_slot(slots::PRINTER_BITMAP_INFO, inf);
@@ -526,30 +590,30 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 				GcodeMachineState::Pos last = gstate->pos;
 				if (gstate->relative_g)
 				{
-					if (state->c.x_decimal >= 0) gstate->pos.x += get_decimal(state->c.x_int, state->c.x_decimal);
-					if (state->c.y_decimal >= 0) gstate->pos.y -= get_decimal(state->c.y_int, state->c.y_decimal);
-					if (state->c.z_decimal >= 0) gstate->pos.z += get_decimal(state->c.z_int, state->c.z_decimal);
+					if (state->c.x_decimal >= 0) gstate->pos.x += fixed_t(state->c.x_int, state->c.x_decimal);
+					if (state->c.y_decimal >= 0) gstate->pos.y -= fixed_t(state->c.y_int, state->c.y_decimal);
+					if (state->c.z_decimal >= 0) gstate->pos.z += fixed_t(state->c.z_int, state->c.z_decimal);
 				}
 				else
 				{
-					if (state->c.x_decimal >= 0) gstate->pos.x = get_decimal(state->c.x_int, state->c.x_decimal);
-					if (state->c.y_decimal >= 0) gstate->pos.y = -get_decimal(state->c.y_int, state->c.y_decimal);
-					if (state->c.z_decimal >= 0) gstate->pos.z = get_decimal(state->c.z_int, state->c.z_decimal);
+					if (state->c.x_decimal >= 0) gstate->pos.x = fixed_t(state->c.x_int, state->c.x_decimal);
+					if (state->c.y_decimal >= 0) gstate->pos.y = -fixed_t(state->c.y_int, state->c.y_decimal);
+					if (state->c.z_decimal >= 0) gstate->pos.z = fixed_t(state->c.z_int, state->c.z_decimal);
 				}
 				if (gstate->relative_e)
 				{
-					if (state->c.e_decimal >= 0) gstate->pos.e += get_decimal(state->c.e_int, state->c.e_decimal);
+					if (state->c.e_decimal >= 0) gstate->pos.e += fixed_t(state->c.e_int, state->c.e_decimal);
 				}
 				else
 				{
-					if (state->c.e_decimal >= 0) gstate->pos.e = get_decimal(state->c.e_int, state->c.e_decimal);
+					if (state->c.e_decimal >= 0) gstate->pos.e = fixed_t(state->c.e_int, state->c.e_decimal);
 				}
 
 				bool did_extrude = (last.x != gstate->pos.x || last.y != gstate->pos.y || last.z != gstate->pos.z) && last.e < gstate->pos.e;
 				if (!did_extrude)
 					return;
 
-				if (gstate->pos.z > gstate->layerheight || std::abs(gstate->layerheight - gstate->pos.z) > max_layer_height)
+				if (gstate->pos.z != gstate->layerheight && (gstate->pos.z > gstate->layerheight || (gstate->layerheight - gstate->pos.z).abs() > max_layer_height))
 				{
 					if (gstate->layer)
 						common_finished_layer(gstate, state);
