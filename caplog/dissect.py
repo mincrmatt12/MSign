@@ -81,7 +81,7 @@ else:
             header = read_exact(f, 3)
             while header[0] not in (0xa5, 0xa6):
                 print("??? : {:02x}".format(header[0]))
-                header[0:1] = header[1:2]
+                header[0:2] = header[1:3]
                 header[2] = read_exact(f, 1)[0]
             yield bytes(header + read_exact(f, header[1]+csum_trailer))
 
