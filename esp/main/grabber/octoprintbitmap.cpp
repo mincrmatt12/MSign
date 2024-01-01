@@ -36,9 +36,7 @@ namespace octoprint {
 		FIL modelinfo{}, auxinfo{}; // auxinfo is bitmaps while drawing and index map while indexing
 		std::unique_ptr<uint8_t[]> bitmap;
 
-		GcodeMachineState() {
-			reset(false);
-		}
+		GcodeMachineState() {}
 		~GcodeMachineState() {
 			f_close(&modelinfo);
 			f_close(&auxinfo);
@@ -71,12 +69,21 @@ namespace octoprint {
 				draw_info = DrawInfo{};
 
 				f_close(&auxinfo);
-				f_open(&auxinfo, "/cache/printer/bitmaps.bin", FA_CREATE_ALWAYS | FA_WRITE);
+				if (auto code = f_open(&auxinfo, "/cache/printer/bitmaps.bin", FA_CREATE_ALWAYS | FA_WRITE); code != FR_OK) {
+					ESP_LOGE(TAG, "failed to open bitmaps.bin for writing, code %d", code);
+					return false;
+				}
 				f_rewind(&modelinfo);
 			}
 			else {
-				f_open(&modelinfo, "/cache/printer/layers.bin", FA_WRITE | FA_CREATE_ALWAYS | FA_READ);
-				f_open(&auxinfo,   "/cache/printer/boffs.bin",  FA_WRITE | FA_CREATE_ALWAYS);
+				if (auto code = f_open(&modelinfo, "/cache/printer/layers.bin", FA_WRITE | FA_CREATE_ALWAYS | FA_READ); code != FR_OK) {
+					ESP_LOGE(TAG, "failed to open modelinfo for writing, code %d", code);
+					return false;
+				}
+				if (auto code = f_open(&auxinfo,   "/cache/printer/boffs.bin",  FA_WRITE | FA_CREATE_ALWAYS); code != FR_OK) {
+					ESP_LOGE(TAG, "failed to open boffs.bin for writing, code %d", code);
+					return false;
+				}
 				UINT bw;
 				uint32_t filpos{};
 				f_write(&auxinfo, &filpos, 4, &bw);
@@ -271,11 +278,18 @@ namespace octoprint {
 		else {
 			GcodeMachineState::DrawInfo new_dinfo(gstate->layer_info);
 
-			f_write(&gstate->modelinfo, &new_dinfo, sizeof(new_dinfo), &bw);
-			f_write(&gstate->auxinfo, &gstate->layerheight, 4, &bw);
-			if (!is_last)
+			if (f_write(&gstate->modelinfo, &new_dinfo, sizeof(new_dinfo), &bw) != FR_OK) {
+				ESP_LOGE(TAG, "failed to write modelinfo");
+				gstate->had_sd_error = true;
+			}
+			else if (f_write(&gstate->auxinfo, &gstate->layerheight, 4, &bw) != FR_OK) {
+				ESP_LOGE(TAG, "failed to write layerheight");
+				gstate->had_sd_error = true;
+			}
+			else if (!is_last && f_write(&gstate->auxinfo, &sstate->c.file_pos, 4, &bw) != FR_OK)
 			{
-				f_write(&gstate->auxinfo, &sstate->c.file_pos, 4, &bw);
+				ESP_LOGE(TAG, "failed to write layeroffset");
+				gstate->had_sd_error = true;
 			}
 		}
 	}
@@ -300,6 +314,10 @@ namespace octoprint {
 		scanner.userptr = &machine;
 
 		ESP_LOGD(TAG, "processing new gcode");
+		if (!machine.reset(false)) {
+			pt.fail();
+			return false;
+		}
 
 		auto update_progress = [&]{
 			int8_t current_progress = ((uint64_t)scanner.c.file_pos * (!use_25_progress_base || machine.drawing ? 50 : 25)) / gcode_size;
@@ -358,7 +376,10 @@ namespace octoprint {
 			return false;
 		}
 		ESP_LOGD(TAG, "parsed layers ok");
-		machine.reset(true);
+		if (!machine.reset(true)) {
+			pt.fail();
+			return false;
+		}
 
 		vTaskDelay(pdMS_TO_TICKS(25));
 		provider.restart();
