@@ -590,7 +590,7 @@ namespace parcels {
 						if (!strcmp(stack[6]->name, "from"))
 							parcel_info.estimated_delivery_from = wifi::from_iso8601(v.str_val, true, true);
 						if (!strcmp(stack[6]->name, "to"))
-							parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true);
+							parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true, true);
 					}
 					if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info with flags and move from-->to
 						if (parcel_info.estimated_delivery_from && parcel_info.estimated_delivery_to) {
