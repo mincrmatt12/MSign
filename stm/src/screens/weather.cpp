@@ -321,7 +321,7 @@ void screen::WeatherScreen::draw_currentstats() {
 	int16_t y = 3 + draw::fastsin(timekeeper.current_time, 1900, 3);
 	bool is_day = true;
 	
-	if (auto& weather_times = servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN)) {
+	if (auto& weather_times = servicer.slot<slots::WeatherDay>(slots::WEATHER_TIME_SUN)) {
 		uint64_t current = rtc_time % (86400ULL * 1000);
 		if (current > weather_times->sunrise && current < weather_times->sunset) is_day = true;
 		else is_day = false;
@@ -411,7 +411,7 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 	led::color_t col(127), hatch(127);
 	bool do_hatch = false;
 
-	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
+	const auto &times = *servicer.slot<slots::WeatherDay>(slots::WEATHER_TIME_SUN);
 	using enum slots::WeatherStateCode;
 
 	switch (code) {
@@ -587,7 +587,7 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 
 	slots::WeatherStateCode last = slots::WeatherStateCode::UNK;
 	auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
-	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
+	const auto &times = *servicer.slot<slots::WeatherDay>(slots::WEATHER_TIME_SUN);
 
 	struct tm timedat;
 	time_t now = rtc_time / 1000;

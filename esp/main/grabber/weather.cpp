@@ -19,47 +19,6 @@ namespace weather {
 		return (t * 100);
 	}
 
-	slots::WeatherStateCode from_api(int code) {
-		using WS = slots::WeatherStateCode;
-
-		switch (code) {
-			case 1000: return WS::CLEAR;
-			case 1001: return WS::CLOUDY;
-
-			case 1100: return WS::CLEAR;
-			case 1101: return WS::PARTLY_CLOUDY;
-			case 1102: return WS::MOSTLY_CLOUDY;
-
-			case 2000: return WS::FOG;
-			case 2100: return WS::LIGHT_FOG;
-
-			case 4000: return WS::DRIZZLE;
-			case 4001: return WS::RAIN;
-			case 4200: return WS::LIGHT_RAIN;
-			case 4201: return WS::HEAVY_RAIN;
-
-			case 5000: return WS::SNOW;
-			case 5001: return WS::FLURRIES;
-			case 5100: return WS::LIGHT_SNOW;
-			case 5101: return WS::HEAVY_SNOW;
-
-			case 6000: return WS::FREEZING_DRIZZLE;
-			case 6001: return WS::FREEZING_RAIN;
-			case 6200: return WS::FREEZING_LIGHT_RAIN;
-			case 6201: return WS::FREEZING_HEAVY_RAIN;
-
-			case 7000: return WS::ICE_PELLETS;
-			case 7101: return WS::HEAVY_ICE_PELLETS;
-			case 7102: return WS::LIGHT_ICE_PELLETS;
-
-			case 8000: return WS::THUNDERSTORM;
-
-			default: 
-				ESP_LOGW(TAG, "Unexpected weather code %d", code);
-				return WS::UNK;
-		}
-	}
-
 	bool common_process_precip(std::unique_ptr<slots::PrecipData []>& target, int index, int max, const char *key, const json::Value& v) {
 		if (strcmp(key, "precipitationProbability") == 0 && v.is_number() && v.as_number() > 0.f) {
 			if (!target) target.reset(new slots::PrecipData[max]{});
