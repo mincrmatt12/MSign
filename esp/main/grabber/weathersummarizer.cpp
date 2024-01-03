@@ -532,7 +532,7 @@ namespace weather {
 										as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
 								}
 								else
-									return snprintf(buf, buflen, "%s~%d minutes%s", for_prefix, minute_diff, for_suffix);
+									return snprintf(buf, buflen, "%s%d minutes%s", for_prefix, minute_diff, for_suffix);
 							}
 						}
 						break;
@@ -1059,7 +1059,7 @@ namespace weather {
 				append(snprintf(ptr, remain, " for "));
 				append(timespec_args[1].format_as(TimeSpec::FOR, timespec_args, 1, ptr, remain));
 				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing %s " : ", continuing %s ", chunks ? "on-and-off" : "intermittently"));
-				append(timespec_args[1].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
+				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				hourly_sidecar_index = -1;
 				result = SummaryResult::TotalSummary;
 				goto add_period;
