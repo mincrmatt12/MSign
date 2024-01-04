@@ -166,7 +166,7 @@ namespace weather {
 	}
 
 	bool PrecipitationSummarizer::Block::would_start_block(const slots::PrecipData &precipitation) {
-		return precipitation.kind != slots::PrecipData::PrecipType::NONE && precipitation.probability > 6;
+		return precipitation.kind != slots::PrecipData::PrecipType::NONE && precipitation.probability > 12;
 	}
 
 	void PrecipitationSummarizer::start_next_block(uint16_t index) {
