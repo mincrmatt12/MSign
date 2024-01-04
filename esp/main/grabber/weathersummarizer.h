@@ -61,7 +61,7 @@ namespace weather {
 				if (end == -1 && likely_count > fallback_threshold)
 					return true;
 				else
-					return (likely_count >= (end - start) / 2);
+					return (likely_count >= (end - start) / 4);
 			}
 
 			static bool would_start_block(const slots::PrecipData& precipitation);
@@ -143,26 +143,99 @@ namespace weather {
 		// Produce a summary contianing precipitation information. The summary is written to the provided buffer, which should ideally be relatively large as summaries
 		// that don't fit are truncated.
 		friend SummaryResult generate_summary(const PrecipitationSummarizer& minutely_summary, const PrecipitationSummarizer& hourly_summary, char * buf, size_t buflen);
+		friend struct TimeSpec;
 	};
+
+	SummaryResult generate_summary(const PrecipitationSummarizer& minutely_summary, const PrecipitationSummarizer& hourly_summary, char * buf, size_t buflen);
 
 	// Summarizes things that aren't precipitation-related over 36 hours.
 	class HourlyConditionSummarizer {
 		struct Wind {
 			// Earliest time strong wind was observed. Negative if not observed yet.
-			int16_t start = -1, peak;
+			int16_t earliest = -1, peak, latest;
 
 			// Strongest wind observed (if high enough we use this to augment the summary)
 			int16_t wind_speed, wind_gust_speed;
-		} wind{};
+		} wind{}; // wind is most intersting
 
-		struct Condition {
-			int16_t start = -1, end;
-		} fog{}, clear{}, cloud{};
+		struct Clear {
+			int16_t earliest = -1, count = 0;
+		} clear{};
 
+		struct Fog {
+			int16_t earliest = -1, latest;
+
+			slots::WeatherStateCode strongest_fog = slots::WeatherStateCode::LIGHT_FOG;
+		} fog{};
+
+		template<typename T>
+		static bool is_present(const T& cond_struct) {
+			return cond_struct.earliest != -1;
+		}
+
+		template<typename T>
+		static bool starting_later(const T& cond_struct) {
+			return cond_struct.earliest > 0;
+		}
+	public:
 		// Add a datapoint to the summary. Must be called with increasing indices with no gaps.
 		void append(uint16_t index, const SingleDatapoint& datapoint);
 
+		// Types of hourly summaries
+		enum HourlySummaryType {
+			WINDY_SOON,
+			WINDY_STOPPING,
+
+			EXTREMELY_WINDY_SOON,
+			EXTREMELY_WINDY_STOPPING,
+
+			FOG_CLEARING_UP,
+			FOG_LATER,
+			
+			CLOUDS_CLEARING,
+
+			CURRENT_CONDITIONS
+		};
+
+		HourlySummaryType current_summary_type(slots::WeatherStateCode current_code) const;
+
+		bool has_important_message(slots::WeatherStateCode current_code) const {
+			switch (current_summary_type(current_code)) {
+				case EXTREMELY_WINDY_STOPPING:
+				case WINDY_STOPPING:
+					return true;
+				default:
+					return false;
+			}
+		}
+
+		bool should_ignore_hourly_summary(slots::WeatherStateCode current_code) const {
+			if (current_summary_type(current_code) != CURRENT_CONDITIONS)
+				return false;
+			else switch (current_code) {
+				case slots::WeatherStateCode::DRIZZLE:
+				case slots::WeatherStateCode::LIGHT_RAIN:
+				case slots::WeatherStateCode::RAIN:
+				case slots::WeatherStateCode::HEAVY_RAIN:
+				case slots::WeatherStateCode::SNOW:
+				case slots::WeatherStateCode::FLURRIES:
+				case slots::WeatherStateCode::LIGHT_SNOW:
+				case slots::WeatherStateCode::HEAVY_SNOW:
+				case slots::WeatherStateCode::FREEZING_DRIZZLE:
+				case slots::WeatherStateCode::FREEZING_LIGHT_RAIN:
+				case slots::WeatherStateCode::FREEZING_RAIN:
+				case slots::WeatherStateCode::FREEZING_HEAVY_RAIN:
+				case slots::WeatherStateCode::LIGHT_ICE_PELLETS:
+				case slots::WeatherStateCode::ICE_PELLETS:
+				case slots::WeatherStateCode::HEAVY_ICE_PELLETS:
+				case slots::WeatherStateCode::THUNDERSTORM:
+					return true;
+				default:
+					return false;
+			}
+		}
+
 		// Produce a summary containing general hourly information.
-		void generate_summary(slots::WeatherStateCode current_code, SummaryResult prior_result, char *buf, size_t buflen);
+		void generate_summary(slots::WeatherStateCode current_code, SummaryResult prior_result, char *buf, size_t buflen) const;
 	};
 };

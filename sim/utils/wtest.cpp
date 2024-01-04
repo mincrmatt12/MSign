@@ -4,9 +4,11 @@
 
 int main() {
 	weather::PrecipitationSummarizer minute, hour;
+	weather::HourlyConditionSummarizer hour_total;
 	hour.is_hourly = true;
 	minute.is_hourly= false;
 	weather::SingleDatapoint datapoint;
+	slots::WeatherStateCode wsc;
 
 	int in_which_block = -1;
 
@@ -24,8 +26,12 @@ int main() {
 			if (in_which_block == 0) {
 				minute.append(stack[3]->index, datapoint);
 			}
-			else if (in_which_block == 1 && stack[3]->index < 36)
+			else if (in_which_block == 1 && stack[3]->index < 36) {
+				if (stack[3]->index == 0)
+					wsc = datapoint.weather_code;
 				hour.append(stack[3]->index, datapoint);
+				hour_total.append(stack[3]->index, datapoint);
+			}
 			datapoint = {};
 		}
 	}, true);
@@ -44,18 +50,30 @@ int main() {
 			return 2;
 	}
 
-	char buf[512]{};
+	char buf[512]{}, buf2[512]{};
 	auto code = generate_summary(minute, hour, buf, sizeof buf);
+	hour_total.generate_summary(wsc, code, buf2, sizeof buf2);
 
 	switch (code) {
 		case weather::SummaryResult::Empty:
-			printf("no summary\n");
+			printf("no precip summary\n");
+			printf("hour summary: %s\n", buf2);
 			return 1;
 		case weather::SummaryResult::TotalSummary:
 			printf("total summary: %s\n", buf);
+			if (hour_total.has_important_message(wsc)) {
+				printf("hour summary forced first\n");
+				printf("hour summary: %s\n", buf2);
+			}
 			break;
 		case weather::SummaryResult::PartialSummary:
 			printf("partial summary: %s\n", buf);
+			if (!hour_total.should_ignore_hourly_summary(wsc)) {
+				printf("hour summary: %s\n", buf2);
+				if (hour_total.has_important_message(wsc)) {
+					printf("hour summary goes first\n");
+				}
+			}
 			break;
 	}
 

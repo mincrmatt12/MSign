@@ -11,6 +11,7 @@
 
 #include <utility>
 #include <time.h>
+#include <ctype.h>
 
 const static char* const TAG = "weathersummarizer";
 
@@ -118,7 +119,7 @@ namespace weather {
 		if (category != slots::WeatherStateCode::CLEAR && category != slots::WeatherStateCode::LIGHT_FOG)
 			return;
 
-		if (wind_speed > 5500) // 55 km/h
+		if (wind_speed > 4500) // 55 km/h
 			weather_code = slots::WeatherStateCode::WINDY;
 	}
 
@@ -321,6 +322,255 @@ namespace weather {
 		}
 	}
 
+	constexpr static inline int MINUTE_INDICES_PER_HOUR = 60/5;
+	struct TimeSpec {
+		bool hourly = false;
+		bool ranged = false;
+		uint16_t earliest{}, latest{};
+
+		struct FromBegin {};
+		struct FromEnd   {};
+
+		TimeSpec() = default;
+		TimeSpec(const PrecipitationSummarizer::Block& blk, FromBegin, bool hourly = false) : hourly(hourly) {
+			if (blk.start == -2) {
+				ranged = false;
+				earliest = blk.left;
+			}
+			else if (blk.start - blk.left < 2) {
+				ranged = false;
+				earliest = blk.start;
+			}
+			else {
+				ranged = true;
+				earliest = blk.left;
+				latest = blk.start;
+			}
+		}
+		TimeSpec(const PrecipitationSummarizer::Block& blk, FromEnd, bool hourly = false) : hourly(hourly) {
+			if (blk.end == -2) {
+				ranged = false;
+				earliest = blk.right;
+			}
+			else if (blk.right == -1) {
+				if (blk.end == -1) {
+					ranged = false;
+					earliest = hourly ? 35 : 48;
+				}
+				else {
+					ranged = true;
+					earliest = blk.end;
+					latest = hourly ? 35 : 48;
+				}
+			}
+			else if (blk.right - blk.end < 2) {
+				ranged = false;
+				earliest = blk.end;
+			}
+			else {
+				ranged = true;
+				earliest = blk.end;
+				latest = blk.right;
+			}
+		}
+
+		bool is_now() const { return earliest == 0 && !ranged; }
+
+		enum Mode {
+			FOR,               // for (~7 minutes, 5-25 minutes, 3 hours)
+			UNTIL,             // starting/stopping, continuining/stopping <UNTIL_RELATIVE> (x minutes later, x hours later, this evening)
+			IN,                // starting <IN>, stopping <IN> 
+			LATER              // later <this morning>, <this evening> -- always uses LATER notation and never uses minutes.
+		};
+
+		enum RelativeHourDescription {
+			THIS_MORNING = 0,
+			THIS_AFTERNOON,
+			THIS_EVENING,
+			TONIGHT,
+			TOMMOROW_MORNING,
+			TOMMOROW_AFTERNOON,
+			TOMMOROW_EVENING,
+			TOMMOROW_NIGHT
+		};
+
+		int as_hours(uint16_t field) const {
+			if (hourly)
+				return field;
+			else
+				return field / MINUTE_INDICES_PER_HOUR;
+		}
+
+		int as_minutes(uint16_t field) const {
+			if (!hourly)
+				return field * 5;
+			else
+				return field * MINUTE_INDICES_PER_HOUR * 5;
+		}
+
+		int center() const {
+			return ranged ? int(earliest + latest) / 2 : earliest;
+		}
+
+		bool worth_showing_as_ranged() const {
+			if (hourly) {
+				return ranged && (latest - earliest) > 2;
+			}
+			else {
+				return ranged && (latest - earliest) > 3;
+			}
+		}
+
+		RelativeHourDescription describe_as_vague_time() const {
+			int center = this->center();
+			if (!hourly) {
+				center /= MINUTE_INDICES_PER_HOUR;
+			}
+
+			time_t t;
+			struct tm stm;
+
+			t = time(0);
+			localtime_r(&t, &stm);
+
+			if (stm.tm_hour + center > 23) {
+				stm.tm_hour += (center - 24);
+				if (stm.tm_hour < 4 || stm.tm_hour >= 22) {
+					return TOMMOROW_NIGHT;
+				}
+				else if (stm.tm_hour >= 4 && stm.tm_hour < 12) {
+					return TOMMOROW_MORNING;
+				}
+				else if (stm.tm_hour >= 12 && stm.tm_hour < 17) {
+					return TOMMOROW_AFTERNOON;
+				}
+				else
+					return TOMMOROW_EVENING;
+			}
+			else {
+				stm.tm_hour += center;
+				if (stm.tm_hour < 4 || stm.tm_hour >= 22) {
+					return TONIGHT;
+				}
+				else if (stm.tm_hour >= 4 && stm.tm_hour < 12) {
+					return THIS_MORNING;
+				}
+				else if (stm.tm_hour >= 12 && stm.tm_hour < 17) {
+					return THIS_AFTERNOON;
+				}
+				else
+					return THIS_EVENING;
+			}
+		}
+
+		// Append to buf a string describing the current point in time (or if mode == FOR, the duration between this
+		// time point and the previous one). All previous time points are examined to avoid saying something like "starting
+		// tonight, continuing until tonight" and instead come up with "starting tonight, continuing until later tonight."
+		//
+		// Note that that could probably be better phrased as just "tonight", and so there's a method to detect consolidation
+		// and just use the single time point description.
+		int format_as(Mode m, const TimeSpec previous[], size_t previous_amt, char * buf, size_t buflen, bool maximum_precision_hours=false) const {
+			static const char * const vague_descriptions[] = {
+				"this morning",
+				"this afternoon",
+				"this evening",
+				"tonight",
+				"tommorow morning",
+				"tommorow afternoon",
+				"tommorow evening",
+				"tommorow night"
+			};
+
+			const char * for_suffix = "", *for_prefix = "";
+			int minute_diff = as_minutes(center());
+
+			if (previous_amt)
+				minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
+
+			switch (m) {
+				case FOR:
+					{
+						// For is special as it is always following the word " for ". For times >= 18 hours, we use "the day", for times >= 2 hours we use hours,
+						// otherwise we use minutes.
+						
+						if (minute_diff > 18*60) {
+							return snprintf(buf, buflen, "the day");
+						}
+						
+					reuse_for:
+						bool use_ranged = previous_amt > 0 ? previous[previous_amt - 1].worth_showing_as_ranged() && worth_showing_as_ranged() : worth_showing_as_ranged();
+						
+						if (minute_diff >= 2*60 || maximum_precision_hours) {
+							if (use_ranged) {
+								if (previous_amt)
+									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix,
+										as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest),
+										as_hours(latest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].earliest), for_suffix);
+								else
+									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, as_hours(earliest), as_hours(latest), for_suffix);
+							}
+							else if (minute_diff + 30 >= 120)
+								return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
+							else 
+								return snprintf(buf, buflen, "%san hour%s", for_prefix, for_suffix);
+						}
+						else {
+							if (use_ranged) {
+								if (previous_amt)
+									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
+										as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest),
+										as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
+								else
+									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix, as_minutes(earliest), as_minutes(latest), for_suffix);
+							}
+							else if (minute_diff <= 5)
+								return snprintf(buf, buflen, "%s<5 minutes%s", for_prefix, for_suffix);
+							else
+								return snprintf(buf, buflen, "%s%d minutes%s", for_prefix, minute_diff, for_suffix);
+						}
+					}
+					break;
+				case IN:
+					{
+						// starting <IN>, stopping <IN>
+						//   in x minutes, in x hours, this evening, tommorow morning
+						if (minute_diff < 3*60) {
+							for_prefix = "in ";
+							goto reuse_for;
+						}
+				common_use_descriptor:
+						if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return is_same_string_for(x);}))
+							goto later;
+						else
+							return snprintf(buf, buflen, "%s", vague_descriptions[describe_as_vague_time()]);
+					}
+					break;
+				case UNTIL:
+					{
+						// until
+						//   x minutes later, x hours later, this evening, tommorow morning, later this evening, later this morning
+						if (minute_diff < 3*60) {
+							for_suffix = " later";
+							goto reuse_for;
+						}
+						goto common_use_descriptor;
+					}
+					break;
+				case LATER:
+				later:
+					return snprintf(buf, buflen, "later %s", vague_descriptions[describe_as_vague_time()]);
+			}
+
+			return 0;
+		}
+
+		// Returns true if the description of the time (in hourly mode) winds up as the same thing as a previous
+		// item (to avoid saying "starting tonight, continuing until tonight")
+		bool is_same_string_for(const TimeSpec &previous) const {
+			return previous.as_hours(previous.earliest) > 3 && as_hours(earliest) > 3 && describe_as_vague_time() == previous.describe_as_vague_time();
+		}
+	};
+
 	SummaryResult generate_summary(const PrecipitationSummarizer& minutely_summary, const PrecipitationSummarizer& hourly_summary, char * buf, size_t buflen) {
 		// Check if any rain is present at all
 		if (minutely_summary.empty() && hourly_summary.empty())
@@ -347,249 +597,7 @@ namespace weather {
 			SINGLE_THEN_INTERMITTENT, // <amountspec> starting <future timespec> for <duration timespec>, continuing intermittently/on-and-off <relative timespec>
 		} time_classification = UNSET;
 
-		constexpr static int MINUTE_INDICES_PER_HOUR = 60/5;
-
-		struct TimeSpec {
-			bool hourly = false;
-			bool ranged = false;
-			uint16_t earliest{}, latest{};
-
-			struct FromBegin {};
-			struct FromEnd   {};
-
-			TimeSpec() = default;
-			TimeSpec(const PrecipitationSummarizer::Block& blk, FromBegin, bool hourly = false) : hourly(hourly) {
-				if (blk.start == -2) {
-					ranged = false;
-					earliest = blk.left;
-				}
-				else if (blk.start - blk.left < 2) {
-					ranged = false;
-					earliest = blk.start;
-				}
-				else {
-					ranged = true;
-					earliest = blk.left;
-					latest = blk.start;
-				}
-			}
-			TimeSpec(const PrecipitationSummarizer::Block& blk, FromEnd, bool hourly = false) : hourly(hourly) {
-				if (blk.end == -2) {
-					ranged = false;
-					earliest = blk.right;
-				}
-				else if (blk.right == -1) {
-					if (blk.end == -1) {
-						ranged = false;
-						earliest = hourly ? 35 : 48;
-					}
-					else {
-						ranged = true;
-						earliest = blk.end;
-						latest = hourly ? 35 : 48;
-					}
-				}
-				else if (blk.right - blk.end < 2) {
-					ranged = false;
-					earliest = blk.end;
-				}
-				else {
-					ranged = true;
-					earliest = blk.end;
-					latest = blk.right;
-				}
-			}
-
-			bool is_now() const { return earliest == 0 && !ranged; }
-
-			enum Mode {
-				FOR,               // for (~7 minutes, 5-25 minutes, 3 hours)
-				UNTIL,             // starting/stopping, continuining/stopping <UNTIL_RELATIVE> (x minutes later, x hours later, this evening)
-				IN,                // starting <IN>, stopping <IN> 
-				LATER              // later <this morning>, <this evening> -- always uses LATER notation and never uses minutes.
-			};
-
-			enum RelativeHourDescription {
-				THIS_MORNING = 0,
-				THIS_AFTERNOON,
-				THIS_EVENING,
-				TONIGHT,
-				TOMMOROW_MORNING,
-				TOMMOROW_AFTERNOON,
-				TOMMOROW_EVENING,
-				TOMMOROW_NIGHT
-			};
-
-			int as_hours(uint16_t field) const {
-				if (hourly)
-					return field;
-				else
-					return field / MINUTE_INDICES_PER_HOUR;
-			}
-
-			int as_minutes(uint16_t field) const {
-				if (!hourly)
-					return field * 5;
-				else
-					return field * MINUTE_INDICES_PER_HOUR * 5;
-			}
-
-			int center() const {
-				return ranged ? int(earliest + latest) / 2 : earliest;
-			}
-
-			bool worth_showing_as_ranged() const {
-				if (hourly) {
-					return ranged && (latest - earliest) > 2;
-				}
-				else {
-					return ranged && (latest - earliest) > 3;
-				}
-			}
-
-			RelativeHourDescription describe_as_vague_time() const {
-				int center = this->center();
-				if (!hourly) {
-					center /= MINUTE_INDICES_PER_HOUR;
-				}
-
-				time_t t;
-				struct tm stm;
-
-				t = time(0);
-				localtime_r(&t, &stm);
-
-				if (stm.tm_hour + center > 23) {
-					stm.tm_hour += (center - 24);
-					if (stm.tm_hour < 4 || stm.tm_hour >= 22) {
-						return TOMMOROW_NIGHT;
-					}
-					else if (stm.tm_hour >= 4 && stm.tm_hour < 12) {
-						return TOMMOROW_MORNING;
-					}
-					else if (stm.tm_hour >= 12 && stm.tm_hour < 17) {
-						return TOMMOROW_AFTERNOON;
-					}
-					else
-						return TOMMOROW_EVENING;
-				}
-				else {
-					stm.tm_hour += center;
-					if (stm.tm_hour < 4 || stm.tm_hour >= 22) {
-						return TONIGHT;
-					}
-					else if (stm.tm_hour >= 4 && stm.tm_hour < 12) {
-						return THIS_MORNING;
-					}
-					else if (stm.tm_hour >= 12 && stm.tm_hour < 17) {
-						return THIS_AFTERNOON;
-					}
-					else
-						return THIS_EVENING;
-				}
-			}
-
-			// Append to buf a string describing the current point in time (or if mode == FOR, the duration between this
-			// time point and the previous one). All previous time points are examined to avoid saying something like "starting
-			// tonight, continuing until tonight" and instead come up with "starting tonight, continuing until later tonight."
-			//
-			// Note that that could probably be better phrased as just "tonight", and so there's a method to detect consolidation
-			// and just use the single time point description.
-			int format_as(Mode m, const TimeSpec previous[], size_t previous_amt, char * buf, size_t buflen) const {
-				static const char * const vague_descriptions[] = {
-					"this morning",
-					"this afternoon",
-					"this evening",
-					"tonight",
-					"tommorow morning",
-					"tommorow afternoon",
-					"tommorow evening",
-					"tommorow night"
-				};
-
-				const char * for_suffix = "", *for_prefix = "";
-				int minute_diff = as_minutes(center());
-
-				if (previous_amt)
-					minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
-
-				switch (m) {
-					case FOR:
-						{
-							// For is special as it is always following the word " for ". For times >= 18 hours, we use "the day", for times >= 2 hours we use hours,
-							// otherwise we use minutes.
-							
-							if (minute_diff > 18*60) {
-								return snprintf(buf, buflen, "the day");
-							}
-							
-						reuse_for:
-							bool use_ranged = previous_amt > 0 ? previous[previous_amt - 1].worth_showing_as_ranged() && worth_showing_as_ranged() : worth_showing_as_ranged();
-							
-							if (minute_diff >= 2*60) {
-								if (use_ranged) {
-									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix,
-										as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest),
-										as_hours(latest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].earliest), for_suffix);
-								}
-								else if (minute_diff + 30 >= 120)
-									return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
-								else 
-									return snprintf(buf, buflen, "%san hour%s", for_prefix, for_suffix);
-							}
-							else {
-								if (use_ranged) {
-									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
-										as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest),
-										as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
-								}
-								else if (minute_diff <= 5)
-									return snprintf(buf, buflen, "%s<5 minutes%s", for_prefix, for_suffix);
-								else
-									return snprintf(buf, buflen, "%s%d minutes%s", for_prefix, minute_diff, for_suffix);
-							}
-						}
-						break;
-					case IN:
-						{
-							// starting <IN>, stopping <IN>
-							//   in x minutes, in x hours, this evening, tommorow morning
-							if (minute_diff < 3*60) {
-								for_prefix = "in ";
-								goto reuse_for;
-							}
-					common_use_descriptor:
-							if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return is_same_string_for(x);}))
-								goto later;
-							else
-								return snprintf(buf, buflen, "%s", vague_descriptions[describe_as_vague_time()]);
-						}
-						break;
-					case UNTIL:
-						{
-							// until
-							//   x minutes later, x hours later, this evening, tommorow morning, later this evening, later this morning
-							if (minute_diff < 3*60) {
-								for_suffix = " later";
-								goto reuse_for;
-							}
-							goto common_use_descriptor;
-						}
-						break;
-					case LATER:
-					later:
-						return snprintf(buf, buflen, "later %s", vague_descriptions[describe_as_vague_time()]);
-				}
-
-				return 0;
-			}
-
-			// Returns true if the description of the time (in hourly mode) winds up as the same thing as a previous
-			// item (to avoid saying "starting tonight, continuing until tonight")
-			bool is_same_string_for(const TimeSpec &previous) const {
-				return previous.as_hours(previous.earliest) > 3 && as_hours(earliest) > 3 && describe_as_vague_time() == previous.describe_as_vague_time();
-			}
-		} timespec_args[4]{}; // exact timestamps of the 4 events (start/stop) referred to by the above formats.
+ 		TimeSpec timespec_args[4]{}; // exact timestamps of the 4 events (start/stop) referred to by the above formats.
 
 		bool use_possible_language[2]{}; // for each start-end pair in timespec_args, describe whether the underlying block
 										 // termed it "possible only"
@@ -1080,7 +1088,7 @@ namespace weather {
 				break;
 		}
 
-		if (hourly_sidecar_index != -1 && !use_hourly_amountspec) {
+		if (hourly_sidecar_index != -1 && !use_hourly_amountspec && hourly_summary.blocks[hourly_sidecar_index].is_likely(1)) {
 			result = SummaryResult::TotalSummary;
 
 			// Determine which condition to sidecar
@@ -1091,5 +1099,266 @@ namespace weather {
 		}
 
 		return result;
+	}
+
+	void HourlyConditionSummarizer::append(uint16_t index, const SingleDatapoint& datapoint) {
+		// Check for strong wind:
+		if (datapoint.wind_speed >= 4500 || datapoint.wind_gust >= 5500) {
+			wind.latest = index;
+			if (wind.earliest == -1) {
+				wind.earliest = index;
+			}
+			else if (datapoint.wind_speed <= wind.wind_speed && datapoint.wind_gust <= wind.wind_gust_speed) {
+				return;
+			}
+
+			wind.peak = index;
+			wind.wind_speed = datapoint.wind_speed;
+			wind.wind_gust_speed = datapoint.wind_gust;
+		}
+
+		// Check for clear & fog
+		switch (datapoint.weather_code) {
+			case slots::WeatherStateCode::CLEAR:
+				if (clear.earliest == -1)
+					clear.earliest = index;
+				clear.count++;
+				return;
+			case slots::WeatherStateCode::LIGHT_FOG:
+			case slots::WeatherStateCode::FOG:
+				fog.latest = index;
+				if (fog.earliest == -1)
+					fog.earliest = index;
+				if (fog.strongest_fog < datapoint.weather_code)
+					fog.strongest_fog = datapoint.weather_code;
+				return;
+			default:
+				return;
+		}
+	}
+
+	HourlyConditionSummarizer::HourlySummaryType HourlyConditionSummarizer::current_summary_type(slots::WeatherStateCode current_code) const {
+		// Wind is most important.
+		if (is_present(wind)) {
+			// Is the wind starting later?
+			bool wind_later = starting_later(wind);
+
+			if (wind.wind_speed > 7000 || wind.wind_gust_speed > 9000) {
+				return wind_later ? EXTREMELY_WINDY_SOON : EXTREMELY_WINDY_STOPPING;
+			}
+			else
+				return wind_later ? WINDY_SOON : WINDY_STOPPING;
+		}
+
+		// Otherwise if fog is present in the future, use that.
+		if (is_present(fog) && fog.latest - fog.earliest + 1 >= 2) {
+			return starting_later(fog) ? FOG_LATER : FOG_CLEARING_UP;
+		}
+		else switch (current_code) {
+			case slots::WeatherStateCode::PARTLY_CLOUDY:
+			case slots::WeatherStateCode::CLOUDY:
+			case slots::WeatherStateCode::MOSTLY_CLOUDY:
+				if (starting_later(clear) && clear.count > 2)
+					return CLOUDS_CLEARING;
+				[[fallthrough]];
+			default:
+				return CURRENT_CONDITIONS;
+		}
+	}
+
+	void HourlyConditionSummarizer::generate_summary(slots::WeatherStateCode current_code, SummaryResult prior_result, char *buf, size_t buflen) const {
+		size_t remain = buflen;
+		char * ptr = buf;
+
+		// Updates remain+ptr
+		auto append = [&](int len){
+			remain -= len;
+			ptr += len;
+		};
+
+		static const char * const fog_titles[2] = {
+			"Light fog",
+			"Fog"
+		};
+
+		switch (auto code = current_summary_type(current_code)) {
+			case WINDY_SOON:
+			case WINDY_STOPPING:
+				{
+					TimeSpec timespec{};
+					timespec.earliest = code == WINDY_SOON ? wind.earliest : wind.latest;
+					timespec.hourly = true;
+
+					append(snprintf(ptr, remain, code == WINDY_SOON ? "Very windy " : "Very windy conditions "));
+					if (prior_result == SummaryResult::Empty) {
+						append(snprintf(ptr, remain, "(up to %d km/h) ", wind.wind_speed / 100));
+					}
+					if (code == WINDY_STOPPING) {
+						if (timespec.earliest > 24) {
+							append(snprintf(ptr, remain, "for the day"));
+							break;
+						}
+						append(snprintf(ptr, remain, "stopping "));
+					}
+					append(timespec.format_as(TimeSpec::IN, &timespec, 0, ptr, remain, true));
+				}
+				break;
+			case EXTREMELY_WINDY_SOON:
+				{
+					TimeSpec starting_at{}, peaking_at{};
+					starting_at.earliest = wind.earliest;
+					starting_at.hourly = true;
+					peaking_at.earliest = wind.peak;
+					peaking_at.hourly = true;
+
+					append(snprintf(ptr, remain, "Dangerously windy "));
+					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+					if (prior_result == SummaryResult::Empty) {
+						if (peaking_at.is_same_string_for(starting_at)) {
+							append(snprintf(ptr, remain, " (up to %d km/h with gusts of %d km/h)", wind.wind_speed, wind.wind_gust_speed));
+						}
+						else {
+							append(snprintf(ptr, remain, ", peaking "));
+							append(peaking_at.format_as(TimeSpec::UNTIL, &starting_at, 1, ptr, remain, true));
+							append(snprintf(ptr, remain, " at %d km/h (with gusts of up to %d km/h)", wind.wind_speed, wind.wind_gust_speed));
+						}
+					}
+					else {
+						append(snprintf(ptr, remain, " (up to %d km/h)", wind.wind_speed));
+					}
+				}
+				break;
+			case EXTREMELY_WINDY_STOPPING:
+				{
+					TimeSpec stopping_at{};
+					stopping_at.earliest = wind.latest;
+					stopping_at.hourly = true;
+
+					append(snprintf(ptr, remain, "Dangerously windy conditions (up to %d km/h with gusts of %d km/h) ", wind.wind_speed, wind.wind_gust_speed));
+					if (stopping_at.earliest > 24) {
+						append(snprintf(ptr, remain, "for the day"));
+					}
+					else {
+						append(snprintf(ptr, remain, "stopping "));
+						append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain, true));
+					}
+				}
+				break;
+			case FOG_CLEARING_UP:
+				{
+					TimeSpec stopping_at{};
+					stopping_at.earliest = fog.latest;
+					stopping_at.hourly = true;
+
+					if (stopping_at.earliest > 24)
+						goto current_conditions;	
+
+					append(snprintf(ptr, remain, "%s clearing up ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
+					append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain, true));
+				}
+				break;
+			case FOG_LATER:
+				{
+					TimeSpec starting_at{};
+					starting_at.earliest = fog.earliest;
+					starting_at.hourly = true;
+
+					if (starting_at.earliest > 24)
+						goto current_conditions;	
+
+					append(snprintf(ptr, remain, "%s ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
+					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+				}
+				break;
+			case CLOUDS_CLEARING:
+			case CURRENT_CONDITIONS:
+			current_conditions:
+				// First, print the current condition title.
+				{
+					const char *title = "Unknown weather";
+					switch (current_code) {
+						case slots::WeatherStateCode::CLEAR:
+							title = "Clear"; break;
+						case slots::WeatherStateCode::PARTLY_CLOUDY:
+							title = "Partly cloudy"; break;
+						case slots::WeatherStateCode::CLOUDY:
+							title = "Cloudy"; break;
+						case slots::WeatherStateCode::MOSTLY_CLOUDY:
+							title = "Mostly cloudy"; break;
+						case slots::WeatherStateCode::DRIZZLE:
+							title = "Drizzle"; break;
+						case slots::WeatherStateCode::LIGHT_RAIN:
+							title = "Light rain"; break;
+						case slots::WeatherStateCode::RAIN:
+							title = "Rain"; break;
+						case slots::WeatherStateCode::HEAVY_RAIN:
+							title = "Heavy rain"; break;
+						case slots::WeatherStateCode::SNOW:
+							title = "Snow"; break;
+						case slots::WeatherStateCode::FLURRIES:
+							title = "Flurries"; break;
+						case slots::WeatherStateCode::LIGHT_SNOW:
+							title = "Light snow"; break;
+						case slots::WeatherStateCode::HEAVY_SNOW:
+							title = "Heavy snow"; break;
+						case slots::WeatherStateCode::FREEZING_DRIZZLE:
+							title = "Freezing drizzle"; break;
+						case slots::WeatherStateCode::FREEZING_LIGHT_RAIN:
+							title = "Freezing light rain"; break;
+						case slots::WeatherStateCode::FREEZING_RAIN:
+							title = "Freezing rain"; break;
+						case slots::WeatherStateCode::FREEZING_HEAVY_RAIN:
+							title = "Freezing heavy rain"; break;
+						case slots::WeatherStateCode::LIGHT_FOG:
+							title = "Lightly foggy"; break;
+						case slots::WeatherStateCode::FOG:
+							title = "Foggy"; break;
+						case slots::WeatherStateCode::LIGHT_ICE_PELLETS:
+							title = "Light ice pellets"; break;
+						case slots::WeatherStateCode::ICE_PELLETS:
+							title = "Ice pellets"; break;
+						case slots::WeatherStateCode::HEAVY_ICE_PELLETS:
+							title = "Heavy ice pellets"; break;
+						case slots::WeatherStateCode::THUNDERSTORM:
+							title = "Thunderstorms"; break;
+						case slots::WeatherStateCode::WINDY:
+							title = "Windy"; break;
+						default:
+							break;
+					}
+
+					if (prior_result != SummaryResult::Empty) {
+						int len = snprintf(ptr, remain, "Currently %s", title);
+						if (len > 10) {
+							ptr[10] = tolower(ptr[10]);
+						}
+						append(len);
+					}
+					else {
+						append(snprintf(ptr, remain, "%s", title));
+					}
+
+					if (code == CLOUDS_CLEARING && clear.earliest < 24) {
+						TimeSpec starting_at{};
+						starting_at.earliest = clear.earliest;
+						starting_at.hourly = true;
+
+						append(snprintf(ptr, remain, ", clearing up "));
+						append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+					}
+				}
+				break;
+		}
+
+		if (*ptr == ')') {
+			*ptr = '.';
+			append(snprintf(ptr, remain, ")"));
+		}
+		else if (*ptr == ' ') {
+			*ptr = '.';
+		}
+		else {
+			append(snprintf(ptr, remain, "."));
+		}
 	}
 }
