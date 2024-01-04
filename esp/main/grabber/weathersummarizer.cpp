@@ -56,6 +56,18 @@ namespace weather {
 		}
 	}
 
+	// Summarizer datapoints require:
+	// [
+	//   "rainIntensity", "snowIntensity", "sleetIntensity", "freezingRainIntensity",
+	//   "precipitationProbability",
+	//   "weatherCode",
+	//   "snowDepth",
+	//   "windSpeed",
+	//   "windGust",
+	//   "temperature",
+	//   "temperatureApparent"
+	// ]
+
 	void SingleDatapoint::load_from_json(const char *key, const json::Value &v) {
 		{
 			static const char * const names[] = {"rainIntensity", "snowIntensity", "sleetIntensity", "freezingRainIntensity"};
