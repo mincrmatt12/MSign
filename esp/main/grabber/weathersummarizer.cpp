@@ -543,6 +543,8 @@ namespace weather {
 										as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest),
 										as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
 								}
+								else if (minute_diff <= 5)
+									return snprintf(buf, buflen, "%s<5 minutes%s", for_prefix, for_suffix);
 								else
 									return snprintf(buf, buflen, "%s%d minutes%s", for_prefix, minute_diff, for_suffix);
 							}
