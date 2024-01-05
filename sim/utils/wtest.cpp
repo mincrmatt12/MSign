@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
 			datapoint.load_from_json(stack[5]->name, val);
 		}
 		else if (stack_ptr == 5 && !strcmp(stack[4]->name, "values") && val.type == val.OBJ) {
-			if (in_which_block == 0) {
+			if (in_which_block == 0 && stack[3]->index < 144) {
 				minute.append(stack[3]->index, datapoint);
 			}
 			else if (in_which_block == 1 && stack[3]->index < 36) {
