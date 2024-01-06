@@ -251,9 +251,10 @@ namespace crash::decode {
 		sps->resolved = resolved;
 
 		memset(resolved, 0, length * max_length_size);
-		if (backtrace[length - 1] > 0xffff'fff0) {
-			// Resolve it to a constant
-			snprintf(resolved[length - 1], max_length_size, "interrupt handler");
+		for (int i = 0; i < length; ++i) {
+			if (backtrace[i] > 0xffff'fff0)
+				// Resolve it to a constant
+				snprintf(resolved[i], max_length_size, "interrupt handler");
 		}
 
 		Deflate(+[](){
