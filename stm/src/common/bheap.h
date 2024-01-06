@@ -242,9 +242,9 @@ namespace bheap {
 		data_type operator*() {return data();}
 		const_data_type operator*() const {return data();}
 		template<typename Idx>
-		auto operator[](Idx idx) const {return (*(*this))[idx];}
+		decltype(auto) operator[](Idx idx) const {return (*(*this))[idx];}
 		template<typename Idx>
-		auto operator[](Idx idx) {return (*(*this))[idx];}
+		decltype(auto) operator[](Idx idx) {return (*(*this))[idx];}
 #endif
 
 		using Block::next;
