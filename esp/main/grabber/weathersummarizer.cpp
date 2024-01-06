@@ -603,6 +603,7 @@ namespace weather {
 			STARTING_INTERMITTENT, // Intermittent/on-and-off <force parens:amountspec> starting <future timespec>, continuing <end relative timespec>
 
 			SINGLE_THEN_INTERMITTENT, // <amountspec> starting <future timespec> for <duration timespec>, continuing intermittently/on-and-off <relative timespec>
+			STOPPING_THEN_INTERMITTENT, // <amountspec> stopping <future timespec>, continuing intermittently/on-and-off <relative timespec>
 		} time_classification = UNSET;
 
  		TimeSpec timespec_args[4]{}; // exact timestamps of the 4 events (start/stop) referred to by the above formats.
@@ -790,7 +791,10 @@ namespace weather {
 						chunks = true;
 						[[fallthrough]];
 					default:
-						time_classification = SINGLE_THEN_INTERMITTENT;
+						if (timespec_args[0].is_now())
+							time_classification = STOPPING_THEN_INTERMITTENT;
+						else
+							time_classification = SINGLE_THEN_INTERMITTENT;
 						break;
 				}
 				else if (indeterminate_end) {
@@ -810,24 +814,80 @@ namespace weather {
 		// Only process a non-sidecar hourly summary if there is no minutely data.
 		else if (!hourly_summary.empty()) {
 			use_hourly_amountspec = true;
-			timespec_args[0] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromBegin{}, true};
-			use_possible_language[0] = !hourly_summary.blocks[0].is_likely();
-			bool indeterminate_end = hourly_summary.blocks[0].right == -1;
-			if (!indeterminate_end) {
-				timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
-			}
 
-			if (indeterminate_end) {
-				if (timespec_args[0].is_now())
-					time_classification = CONTINUOUS;
-				else
-					time_classification = STARTING;
-			}
-			else {
-				if (timespec_args[0].is_now())
-					time_classification = STOPPING;
-				else
-					time_classification = SINGLE_FUTURE;
+			switch (hourly_summary.intermittent_flag) {
+				case PrecipitationSummarizer::CONTINUOUS:
+					{
+						int use_index = 0;
+
+						// For hourly summaries, we're generally more concerned with the "big picture": an unlikely short burst of precipitation
+						// is less interesting than a larger & later more likely burst. Prioritize as such.
+
+						if (hourly_summary.last_filled_block_index() == 1 && !hourly_summary.blocks[0].is_likely() && hourly_summary.blocks[0].right - hourly_summary.blocks[0].left <= 2) {
+							use_index = 1;
+						}
+
+						timespec_args[0] = TimeSpec{hourly_summary.blocks[use_index], TimeSpec::FromBegin{}, true};
+						use_possible_language[0] = !hourly_summary.blocks[use_index].is_likely();
+						bool indeterminate_end = hourly_summary.blocks[use_index].right == -1;
+						if (!indeterminate_end) {
+							timespec_args[1] = TimeSpec{hourly_summary.blocks[use_index], TimeSpec::FromEnd{}, true};
+						}
+
+						if (indeterminate_end) {
+							if (timespec_args[0].is_now())
+								time_classification = CONTINUOUS;
+							else
+								time_classification = STARTING;
+						}
+						else {
+							if (timespec_args[0].is_now())
+								time_classification = STOPPING;
+							else
+								time_classification = SINGLE_FUTURE;
+						}
+					}
+					break;
+				case PrecipitationSummarizer::CHUNKS_THEN_CONTINUOUS:
+					chunks = true;
+					[[fallthrough]];
+				case PrecipitationSummarizer::INTERMITTENT_THEN_CONTINUOUS:
+				case PrecipitationSummarizer::INTERMITTENT:
+					{
+						timespec_args[0] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromBegin{}, true};
+						use_possible_language[0] = !hourly_summary.blocks[0].is_likely();
+						bool indeterminate_end = hourly_summary.blocks[0].right == -1;
+						if (!indeterminate_end) {
+							timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
+						}
+
+						if (indeterminate_end || timespec_args[0].is_now()) {
+							time_classification = INTERMITTENT_STOPPING;
+						}
+						else {
+							time_classification = STARTING_INTERMITTENT;
+						}
+					}
+					break;
+				case PrecipitationSummarizer::CONTINUOUS_THEN_CHUNKS:
+					chunks = true;
+					[[fallthrough]];
+				case PrecipitationSummarizer::CONTINUOUS_THEN_INTERMITTENT:
+					{
+						timespec_args[0] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromBegin{}, true};
+						timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
+						use_possible_language[0] = !hourly_summary.blocks[0].is_likely();
+						timespec_args[2] = TimeSpec{hourly_summary.blocks[1], TimeSpec::FromBegin{}, true};
+						use_possible_language[1] = !hourly_summary.blocks[1].is_likely();
+
+						if (timespec_args[0].is_now())
+							time_classification = STOPPING_THEN_INTERMITTENT;
+						else
+							time_classification = SINGLE_THEN_INTERMITTENT;
+					}
+					break;
+				default:
+					break;
 			}
 		}
 
@@ -875,6 +935,7 @@ namespace weather {
 			case DOUBLE_FUTURE:
 			case DOUBLE_FUTURE_RESTART:
 			case SINGLE_THEN_INTERMITTENT:
+			case STOPPING_THEN_INTERMITTENT:
 				break;
 		}
 
@@ -1088,6 +1149,15 @@ namespace weather {
 				append(timespec_args[0].format_as(TimeSpec::IN, timespec_args, 0, ptr, remain));
 				append(snprintf(ptr, remain, " for "));
 				append(timespec_args[1].format_as(TimeSpec::FOR, timespec_args, 1, ptr, remain));
+				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing %s " : ", continuing %s ", chunks ? "on-and-off" : "intermittently"));
+				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
+				hourly_sidecar_index = -1;
+				result = SummaryResult::TotalSummary;
+				goto add_period;
+				break;
+			case STOPPING_THEN_INTERMITTENT:
+				append(snprintf(ptr, remain, " stopping "));
+				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 0, ptr, remain));
 				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing %s " : ", continuing %s ", chunks ? "on-and-off" : "intermittently"));
 				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				hourly_sidecar_index = -1;
