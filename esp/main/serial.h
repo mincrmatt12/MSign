@@ -72,6 +72,16 @@ namespace serial {
 			update_slot_partial(slotid, index * sizeof(T), &obj, sizeof(T), should_sync, should_mark_dirty);
 		}
 
+		// Update slotid as if it were an array of T[], setting T[index] = obj. sizeof(T) must be less than 11 so that the request
+		// does not require synchronization. By default, the slot is not marked dirty (pass should_mark_dirty=true to change this behaviour)
+		// and after updating some potentially large set of indices, trigger_slot_update should be called to push the entire change
+		// to the display.
+		template<typename T>
+		inline void update_slot_at_inline(uint16_t slotid, const T& obj, size_t index, bool should_mark_dirty=false) {
+			static_assert(sizeof(T) <= 11);
+			update_slot_partial(slotid, index * sizeof(T), &obj, sizeof(T), false, should_mark_dirty);
+		}
+
 		// Update many entries in slotid, setting T[index..index+quantity] = obj[0..quantity].
 		template<typename T>
 		inline void update_slot_range(uint16_t slotid, const T* obj, size_t index, size_t quantity, bool should_sync=true, bool should_mark_dirty=true) {
