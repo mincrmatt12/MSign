@@ -4,6 +4,7 @@
 #include "base.h"
 #include <stdint.h>
 #include "../common/slots.h"
+#include "../common/bheap.h"
 
 namespace screen {
 	struct WeatherScreen : public Screen {
@@ -28,7 +29,7 @@ namespace screen {
 		void draw_graph_xaxis(int16_t y, int16_t x0, int16_t y1, int min, bool interpret_as_hours=true);
 
 		void draw_graph_lines(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const int16_t * data, size_t amount, int32_t ymin, int32_t ymax, bool show_temp_colors=false);
-		void draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const slots::PrecipData * data, size_t amount, int32_t ymin, int32_t ymax);
+		void draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const bheap::TypedBlock<slots::PrecipData *>& precip_data, int desired_amount, int index_offset, int32_t ymin, int32_t ymax);
 
 		void draw_small_tempgraph();
 		void draw_small_precgraph();
@@ -49,6 +50,7 @@ namespace screen {
 			REAL_TEMP,
 
 			WIND,
+			GUST,
 
 			PRECIP_HOUR,
 			PRECIP_DAY,

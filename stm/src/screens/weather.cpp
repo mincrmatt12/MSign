@@ -245,7 +245,7 @@ void screen::WeatherScreen::prepare(bool) {
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
 		slots::WEATHER_MPREC_GRAPH,
-		slots::WEATHER_TIME_SUN
+		slots::WEATHER_DAYS
 	>(bheap::Block::TemperatureWarm);
 }
 
@@ -256,7 +256,7 @@ screen::WeatherScreen::WeatherScreen() {
 		slots::WEATHER_STATUS,
 		slots::WEATHER_TEMP_GRAPH,
 		slots::WEATHER_MPREC_GRAPH,
-		slots::WEATHER_TIME_SUN
+		slots::WEATHER_DAYS
 	>(bheap::Block::TemperatureHot);
 }
 
@@ -269,8 +269,9 @@ screen::WeatherScreen::~WeatherScreen() {
 		slots::WEATHER_MPREC_GRAPH,
 		slots::WEATHER_RTEMP_GRAPH,
 		slots::WEATHER_WIND_GRAPH,
+		slots::WEATHER_GUST_GRAPH,
 		slots::WEATHER_HPREC_GRAPH,
-		slots::WEATHER_TIME_SUN
+		slots::WEATHER_DAYS
 	>(bheap::Block::TemperatureCold);
 }
 
@@ -302,15 +303,6 @@ void screen::WeatherScreen::draw_currentstats() {
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lato_bold_15::info, 44 - text_size / 2, 12, {40_c, 40_c, 255_c});
 	}
 
-	snprintf(disp_buf, 16, "\xfe %d \xfd %d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp), intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
-	text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
-
-	snprintf(disp_buf, 16, "%d ", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ltemp));
-	auto nxt = draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 42 - text_size / 2, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
-
-	snprintf(disp_buf, 16, "%d", intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->htemp));
-	draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, nxt, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
-
 	{
 		auto v = intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp, (int16_t)10);
 		snprintf(disp_buf, 16, "%d.%d", v / 10, std::abs(v % 10));
@@ -321,10 +313,19 @@ void screen::WeatherScreen::draw_currentstats() {
 	int16_t y = 3 + draw::fastsin(timekeeper.current_time, 1900, 3);
 	bool is_day = true;
 	
-	if (auto& weather_times = servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN)) {
+	if (auto& weather_days = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS)) {
 		uint64_t current = rtc_time % (86400ULL * 1000);
-		if (current > weather_times->sunrise && current < weather_times->sunset) is_day = true;
+		if (current > weather_days[0].sunrise && current < weather_days[0].sunset) is_day = true;
 		else is_day = false;
+
+		snprintf(disp_buf, 16, "\xfe %d \xfd %d", intmath::round10(weather_days[0].low_temperature), intmath::round10(weather_days[0].high_temperature));
+		text_size = draw::text_size(disp_buf, font::dejavusans_10::info);
+
+		snprintf(disp_buf, 16, "%d ", intmath::round10(weather_days[0].low_temperature));
+		auto nxt = draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 42 - text_size / 2, 30, "\xfe ", 0x7f7ff0_cc, disp_buf, 127_c);
+
+		snprintf(disp_buf, 16, "%d", intmath::round10(weather_days[0].high_temperature));
+		draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, nxt, 30, "\xfd ", led::color_t{255_c, 127_c, 10_c}, disp_buf, led::color_t{127_c, 127_c, 127_c});
 	}
 
 	switch (servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->icon) {
@@ -369,6 +370,9 @@ void screen::WeatherScreen::draw_currentstats() {
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::thunder_base, 20, 20, 3, 1, y, 144_c);
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::thunder_bolt, 20, 20, 3, 1, y, {213_c, 244_c, 15_c});
 			break;
+		case slots::WeatherStateCode::WINDY:
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::wind, 20, 20, 3, 1, y, {118_c, 118_c, 118_c});
+			break;
 	}
 }
 
@@ -392,7 +396,7 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 	// bar takes 13 px vertically, starts at y = 53
 	
 	struct tm timedat;
-	time_t now = rtc_time / 1000;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
 	gmtime_r(&now, &timedat);
 	int first = timedat.tm_hour;
 
@@ -411,7 +415,7 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 	led::color_t col(127), hatch(127);
 	bool do_hatch = false;
 
-	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
+	const auto &times = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS)[0];
 	using enum slots::WeatherStateCode;
 
 	switch (code) {
@@ -532,11 +536,16 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 			hatch = 0xaaaaf2_cc;
 			do_hatch = true;
 			break;
-			break;
 		case THUNDERSTORM:
 			text_out = "Thunderstorms";
 			col = led::color_t(50_c);
 			hatch = 0xc8fa14_cc;
+			do_hatch = true;
+			break;
+		case WINDY:
+			text_out = "Windy";
+			col = led::color_t(100_c);
+			hatch = 0;
 			do_hatch = true;
 			break;
 		case UNK:
@@ -558,7 +567,7 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
     slots::WeatherStateCode code = (*servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY))[hour]; 
 	
 	struct tm timedat;
-	time_t now = rtc_time / 1000;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
 	gmtime_r(&now, &timedat);
 	hour = (timedat.tm_hour + hour) % 24;
 	int64_t hourstart = (int64_t)hour * (1000*60*60);
@@ -587,10 +596,10 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 
 	slots::WeatherStateCode last = slots::WeatherStateCode::UNK;
 	auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
-	const auto &times = *servicer.slot<slots::WeatherTimes>(slots::WEATHER_TIME_SUN);
+	const auto &times = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS)[0];
 
 	struct tm timedat;
-	time_t now = rtc_time / 1000;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
 	gmtime_r(&now, &timedat);
 
 	bool forcehourlabel = true;
@@ -731,6 +740,9 @@ void screen::WeatherScreen::draw_graph_xaxis(int16_t y, int16_t x0, int16_t x1, 
 			int x = x0 + 1 + (i*(x1 - x0 - 1)) / 6;
 			int val = ashours ? (start + i * 4) % 24 : (start + i * 10) % 60;
 
+			if (val < 0)
+				continue;
+
 			matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
 
 			char buf[10] = {0};
@@ -751,6 +763,9 @@ void screen::WeatherScreen::draw_graph_xaxis(int16_t y, int16_t x0, int16_t x1, 
 		for (int i = 0; i < 6; ++i) {
 			int x = x0 + 1 + (i*(x1 - x0 - 1)) / 4;
 			int val = ashours ? (start + i * 6) % 24 : (start + i * 15) % 60;
+
+			if (val < 0)
+				continue;
 			 
 			matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
 
@@ -774,7 +789,7 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 		end += x0;
 
 		int16_t iy0 = intmath::round10((int32_t(data[idx] - ymin) * space * 100) / (ymax - ymin));
-		int16_t iy1 = (idx == 23 ? iy0 : intmath::round10((int32_t(data[idx + 1] - ymin) * space * 100) / (ymax - ymin)));
+		int16_t iy1 = (idx >= amount - 1 ? iy0 : intmath::round10((int32_t(data[idx + 1] - ymin) * space * 100) / (ymax - ymin)));
 
 		iy0 = y1 - 1 - iy0;
 		iy1 = y1 - 1 - iy1;
@@ -804,22 +819,30 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 	}
 }
 
-void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const slots::PrecipData * data, size_t amount, int32_t ymin, int32_t ymax) {
+void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const bheap::TypedBlock<slots::PrecipData *>& precip_data, int amount, int index_offset, int32_t ymin, int32_t ymax) {
 	int32_t space = (y1 - y0);
+	int i0, i1, nx, px, x;
 
-	for (int x = x0; x < x1; ++x) {
-		auto i0 = ((x - x0) * amount) / (x1 - x0 - 1);
-		if (i0 >= amount) i0 = amount-1;
-		auto i1 = i0 + 1;
-		if (i1 >= amount) i1 = i0;
+	auto access_at = [&](int index) -> const slots::PrecipData& {
+		const static slots::PrecipData null{};
+		if (index < index_offset) return null;
+		if (index - index_offset >= precip_data.datasize / sizeof(slots::PrecipData)) return null;
+		return precip_data[index - index_offset];
+	};
 
-		int px = (i0 * (x1 - x0 - 1)) / amount;
-		int nx = (i1 * (x1 - x0 - 1)) / amount;
+	auto interp = [&](auto memptr) -> int {
+		if (i0 == i1) return access_at(i0).*memptr;
+		return access_at(i0).*memptr + (((int)(access_at(i1).*memptr) - (int)(access_at(i0).*memptr)) * (x - px - x0)) / (nx - px);
+	};
 
-		auto interp = [&](auto memptr) -> int {
-			if (i0 == i1) return data[i0].*memptr;
-			return data[i0].*memptr + (((int)(data[i1].*memptr) - (int)(data[i0].*memptr)) * (x - px - x0)) / (nx - px);
-		};
+	for (x = x0; x < x1; ++x) {
+		i0 = ((x - x0) * amount) / (x1 - x0 - 1);
+		if (i0 >= precip_data.datasize / sizeof(slots::PrecipData)) i0 = precip_data.datasize / sizeof(slots::PrecipData) - 1;
+		i1 = i0 + 1;
+		if (i1 >= precip_data.datasize / sizeof(slots::PrecipData)) i1 = i0;
+
+		px = (i0 * (x1 - x0 - 1)) / amount;
+		nx = (i1 * (x1 - x0 - 1)) / amount;
 
 		auto prob = interp(&slots::PrecipData::probability);
 
@@ -832,12 +855,12 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		pos = std::max<int16_t>(0, pos);
 
 		using enum slots::PrecipData::PrecipType;
-		slots::PrecipData::PrecipType draw_as = data[i0].kind;
+		slots::PrecipData::PrecipType draw_as = access_at(i0).kind;
 		
 		// If one of the types of precip is NONE, use the other, otherwise pick whichever is closer.
-		if (data[i0].kind == NONE && data[i1].kind == NONE) {continue;}
-		else if (data[i0].kind == NONE) {draw_as = data[i1].kind;}
-		else if (data[i1].kind != NONE && x - x0 - px > nx - x + x0) {draw_as = data[i1].kind;}
+		if (access_at(i0).kind == NONE && access_at(i1).kind == NONE) {continue;}
+		else if (access_at(i0).kind == NONE) {draw_as = access_at(i1).kind;}
+		else if (access_at(i1).kind != NONE && x - x0 - px > nx - x + x0) {draw_as = access_at(i1).kind;}
 		
 		switch (draw_as) {
 			case NONE:
@@ -868,7 +891,7 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 	}
 
 	struct tm timedat;
-	time_t now = rtc_time / 1000;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
 	gmtime_r(&now, &timedat);
 	int first = timedat.tm_hour;
 
@@ -879,16 +902,16 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 }
 
 void screen::WeatherScreen::draw_small_precgraph() {
-	const auto blk_precip = *servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH);
+	const auto& blk_precip = servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH);
 
 	uint8_t max_prob = 0;
 
 	int32_t min_ = 10, max_ = INT16_MIN;
-	for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
-		max_ = std::max<int32_t>(max_, blk_precip[i].amount);
-		max_prob = std::max(max_prob, blk_precip[i].probability);
+	for (const auto& precip : blk_precip) {
+		max_ = std::max<int32_t>(max_, precip.amount);
+		max_prob = std::max(max_prob, precip.probability);
 	}
-	max_ = std::max<int32_t>(max_, 60); // really little amounts of rain often have high stddev and that looks really stupid
+	max_ = std::max<int32_t>(max_, 60); // really little amounts of rain would look silly as just 0-0.001 so limit it a bit.
 
 	if (max_prob < 39) {
 		draw_small_tempgraph(); // if there's less than a 15% chance of rain, just draw the temperature graph
@@ -898,7 +921,7 @@ void screen::WeatherScreen::draw_small_precgraph() {
 	draw_graph_xaxis(24, 79, 128, 0, false);
 	draw_graph_yaxis(79, 0, 24, min_, max_, true);
 
-	draw_graph_precip(80, 0, 128, 24, blk_precip, 30, min_, max_);
+	draw_graph_precip(80, 0, 128, 24, blk_precip, 12, servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->minute_precip_offset, min_, max_);
 }
 
 void screen::WeatherScreen::draw_big_graphs() {
@@ -907,6 +930,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 		(graph == FEELS_TEMP && !servicer.slot(slots::WEATHER_TEMP_GRAPH)) ||
 		(graph == REAL_TEMP && !servicer.slot(slots::WEATHER_RTEMP_GRAPH)) ||
 		(graph == WIND && !servicer.slot(slots::WEATHER_WIND_GRAPH)) ||
+		(graph == GUST && !servicer.slot(slots::WEATHER_GUST_GRAPH)) ||
 		(graph == PRECIP_DAY && (!servicer.slot(slots::WEATHER_HPREC_GRAPH) || servicer.slot(slots::WEATHER_HPREC_GRAPH).datasize == 0)) ||
 		(graph == PRECIP_HOUR && (!servicer.slot(slots::WEATHER_MPREC_GRAPH) || servicer.slot(slots::WEATHER_MPREC_GRAPH).datasize == 0))
 	) {
@@ -926,11 +950,12 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 		// First, find the correct min/max + hour0/min0
 		struct tm timedat;
-		time_t now = rtc_time / 1000;
+		const auto& info = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO);
+		time_t now = info->updated_at / 1000;
 		gmtime_r(&now, &timedat);
 		
 		const int16_t * blk_16 = nullptr, *blk_alt_16 = nullptr;
-		const slots::PrecipData * blk_precip = nullptr;
+		const bheap::TypedBlock<slots::PrecipData *> * blk_precip = nullptr;
 
 		switch (graph) {
 			case FEELS_TEMP:
@@ -942,11 +967,18 @@ void screen::WeatherScreen::draw_big_graphs() {
 				if (servicer.slot(slots::WEATHER_TEMP_GRAPH)) blk_alt_16 = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
 				break;
 			case WIND:
-				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_WIND_GRAPH); break;
+				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_WIND_GRAPH);
+				if (servicer.slot(slots::WEATHER_GUST_GRAPH)) blk_alt_16 = *servicer.slot<int16_t *>(slots::WEATHER_GUST_GRAPH);
+				break;
+			case GUST:
+				blk_16 = *servicer.slot<int16_t *>(slots::WEATHER_GUST_GRAPH);
+				if (servicer.slot(slots::WEATHER_WIND_GRAPH)) blk_alt_16 = *servicer.slot<int16_t *>(slots::WEATHER_WIND_GRAPH);
+				break;
 			case PRECIP_HOUR:
-				blk_precip = *servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH); break;
+				blk_precip = &servicer.slot<slots::PrecipData *>(slots::WEATHER_MPREC_GRAPH); break;
+				break;
 			case PRECIP_DAY:
-				blk_precip = *servicer.slot<slots::PrecipData *>(slots::WEATHER_HPREC_GRAPH); break;
+				blk_precip = &servicer.slot<slots::PrecipData *>(slots::WEATHER_HPREC_GRAPH); break;
 				break;
 			default:
 				return;
@@ -955,14 +987,14 @@ void screen::WeatherScreen::draw_big_graphs() {
 		switch (graph) {
 			case FEELS_TEMP:
 			case REAL_TEMP:
+			case WIND:
+			case GUST:
 				if (blk_alt_16) {
 					for (uint8_t i = 0; i < 24; ++i) {
 						min_ = std::min<int32_t>(min_, blk_alt_16[i]);
 						max_ = std::max<int32_t>(max_, blk_alt_16[i]);
 					}
 				}
-				[[fallthrough]];
-			case WIND:
 				for (uint8_t i = 0; i < 24; ++i) {
 					min_ = std::min<int32_t>(min_, blk_16[i]);
 					max_ = std::max<int32_t>(max_, blk_16[i]);
@@ -971,8 +1003,8 @@ void screen::WeatherScreen::draw_big_graphs() {
 				break;
 			case PRECIP_HOUR:
 			case PRECIP_DAY:
-				for (uint8_t i = 0; i < (graph == PRECIP_DAY ? 24 : 30); ++i) {
-					max_ = std::max<int32_t>(max_, blk_precip[i].amount);
+				for (auto precip : *blk_precip) {
+					max_ = std::max<int32_t>(max_, precip.amount);
 				}
 				max_ = std::max<int32_t>(max_, 90); // really little amounts of rain often have high stddev and that looks really stupid
 				break;
@@ -989,10 +1021,10 @@ void screen::WeatherScreen::draw_big_graphs() {
 		draw_graph_yaxis(leftside, top, 64-8, min_, max_, blk_precip != nullptr);
 
 		if (blk_16) {
-			draw_graph_lines(leftside + 1, 0, 128, 64-8, blk_16, 24, min_, max_, graph != WIND);
+			draw_graph_lines(leftside + 1, 0, 128, 64-8, blk_16, 24, min_, max_, graph < WIND);
 		}
 		else {
-			draw_graph_precip(leftside + 1, top, 128, 64-8, blk_precip, (graph == PRECIP_DAY ? 24 : 30), min_, max_);
+			draw_graph_precip(leftside + 1, top, 128, 64-8, *blk_precip, (graph == PRECIP_DAY ? 24 : 12), (graph == PRECIP_DAY ? info->hour_precip_offset : info->minute_precip_offset), min_, max_);
 			// draw a precipitation bar
 
 			int ps = 32;
@@ -1019,6 +1051,9 @@ void screen::WeatherScreen::draw_big_graphs() {
 				break;
 			case WIND:
 				txt = "wind (km/h)";
+				break;
+			case GUST:
+				txt = "wind gusts (km/h)";
 				break;
 			case PRECIP_DAY:
 				txt = "precip (day, mm/h)";
@@ -1049,7 +1084,7 @@ void screen::WeatherScreen::draw() {
 			draw_currentstats();
 			draw_status();
 			draw_hourlybar_header();
-			if (servicer.slot(slots::WEATHER_ARRAY) && servicer.slot(slots::WEATHER_TIME_SUN)) {
+			if (servicer.slot(slots::WEATHER_ARRAY) && servicer.slot(slots::WEATHER_DAYS)) {
 				for (int i = 0; i < 24; ++i) {
 					draw_hourlybar(i);
 				}
@@ -1117,7 +1152,8 @@ bool screen::WeatherScreen::interact() {
 						servicer.set_temperature_all<
 							slots::WEATHER_RTEMP_GRAPH,
 							slots::WEATHER_HPREC_GRAPH,
-							slots::WEATHER_WIND_GRAPH
+							slots::WEATHER_WIND_GRAPH,
+							slots::WEATHER_GUST_GRAPH
 						>(bheap::Block::TemperatureWarm);
 						break;
 					}
@@ -1133,6 +1169,7 @@ bool screen::WeatherScreen::interact() {
 						default: break;
 						case REAL_TEMP: servicer.set_temperature(slots::WEATHER_RTEMP_GRAPH, temp); break;
 						case WIND: servicer.set_temperature(slots::WEATHER_WIND_GRAPH, temp); break;
+						case GUST: servicer.set_temperature(slots::WEATHER_GUST_GRAPH, temp); break;
 						case PRECIP_DAY: servicer.set_temperature(slots::WEATHER_HPREC_GRAPH, temp); break;
 					}
 				};
@@ -1141,7 +1178,8 @@ bool screen::WeatherScreen::interact() {
 					servicer.set_temperature_all<
 						slots::WEATHER_RTEMP_GRAPH,
 						slots::WEATHER_HPREC_GRAPH,
-						slots::WEATHER_WIND_GRAPH
+						slots::WEATHER_WIND_GRAPH,
+						slots::WEATHER_GUST_GRAPH
 					>(bheap::Block::TemperatureCold);
 					subscreen = MAIN;
 				}

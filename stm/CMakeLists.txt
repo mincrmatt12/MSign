@@ -159,6 +159,11 @@ target_compile_options(stm
 	-ffast-math
 )
 
+target_compile_options(stm_crash
+	PUBLIC
+	-O2
+)
+
 target_include_directories(stm_crash
 	PRIVATE
 	${CMAKE_CURRENT_LIST_DIR}/../vendor/TinyDeflate
