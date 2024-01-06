@@ -58,7 +58,7 @@ namespace crash::decode {
 		// for the CPU interrupt return mechanism (the saved chunk of registers)
 
 		if (PC == EXC_RETURN_THREAD_PSP) {
-			if (!(__get_CONTROL() & 1)) {  // currently using MSP, switch to PSP
+			if (!(__get_CONTROL() & 2)) {  // currently using MSP, switch to PSP
 				SP = __get_PSP();
 			}
 		}
