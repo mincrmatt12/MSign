@@ -45,6 +45,10 @@ namespace serial {
 		inline void update_slot(uint16_t slotid, const char *str, bool should_sync=true, bool should_mark_dirty=true) {
 			update_slot_raw(slotid, str, strlen(str) + 1, should_sync, should_mark_dirty); // include null terminator
 		}
+		// Replace a slot with a null-terminated string
+		inline void update_slot(uint16_t slotid, char *str, bool should_sync=true, bool should_mark_dirty=true) {
+			update_slot_raw(slotid, str, strlen(str) + 1, should_sync, should_mark_dirty); // include null terminator
+		}
 		// Replace a slot with an initializer-list of objects. No nosync version is provided since the init list
 		// is almost certainly going to need syncing.
 		template<typename T>
