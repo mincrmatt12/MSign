@@ -266,6 +266,7 @@ namespace weather {
 					if (hourly_overall_summarizer.should_ignore_hourly_summary(current_conditions.icon)) {
 						break;
 					}
+					mode = APPEND_HOUR_TO_BUF;
 					[[fallthrough]];
 				case SummaryResult::TotalSummary:
 					if (hourly_overall_summarizer.has_important_message(current_conditions.icon)) {
