@@ -513,12 +513,24 @@ namespace weather {
 						
 						if (minute_diff >= 2*60 || maximum_precision_hours) {
 							if (use_ranged) {
-								if (previous_amt)
-									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix,
-										as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest),
-										as_hours(latest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].earliest), for_suffix);
-								else
-									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, as_hours(earliest), as_hours(latest), for_suffix);
+								int hr_a, hr_b;
+								if (previous_amt) {
+									hr_a = as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest);
+									hr_b = as_hours(latest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].earliest);
+								}
+								else {
+									hr_a = as_hours(earliest);
+									hr_b = as_hours(latest);
+								}
+
+								if (hr_a == hr_b) {
+									int min_a = previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
+									int min_b = previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
+									return snprintf(buf, buflen, "%s%d:%02d-%d:%02d hours%s", for_prefix, min_a / 60, min_a % 60, min_b / 60, min_b % 60, for_suffix);
+								}
+								else {
+									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, hr_a, hr_b, for_suffix);
+								}
 							}
 							else if (minute_diff + 30 >= 120)
 								return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
