@@ -282,7 +282,7 @@ namespace weather {
 						int length = strlen(working_buf.get());
 						hourly_overall_summarizer.generate_summary(current_conditions.icon, code, working_buf.get(), size_of_buf);
 						serial::interface.allocate_slot_size(slots::WEATHER_STATUS, length + strlen(working_buf.get()) + 1);
-						serial::interface.update_slot_partial(slots::WEATHER_STATUS, length - 1, " ", 2, false, false); // Add a space.
+						serial::interface.update_slot_partial(slots::WEATHER_STATUS, length, " ", 2, false, false); // Add a space.
 						++length;
 						serial::interface.update_slot_partial(slots::WEATHER_STATUS, length, working_buf.get(), strlen(working_buf.get()) + 1, true, false); // Add rest of summary
 					}
