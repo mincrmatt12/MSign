@@ -526,7 +526,7 @@ namespace weather {
 								if (hr_a == hr_b) {
 									int min_a = previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
 									int min_b = previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
-									return snprintf(buf, buflen, "%s%d:%02d-%d:%02d hours%s", for_prefix, min_a / 60, min_a % 60, min_b / 60, min_b % 60, for_suffix);
+									return snprintf(buf, buflen, "%s%dh:%02dm-%dh:%02dm%s", for_prefix, min_a / 60, min_a % 60, min_b / 60, min_b % 60, for_suffix);
 								}
 								else {
 									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, hr_a, hr_b, for_suffix);
