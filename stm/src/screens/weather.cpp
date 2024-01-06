@@ -837,7 +837,7 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 
 	for (x = x0; x < x1; ++x) {
 		i0 = ((x - x0) * amount) / (x1 - x0 - 1);
-		while (i0 >= precip_data.datasize / sizeof(slots::PrecipData)) --i0;
+		if (i0 >= precip_data.datasize / sizeof(slots::PrecipData)) i0 = precip_data.datasize / sizeof(slots::PrecipData) - 1;
 		i1 = i0 + 1;
 		if (i1 >= precip_data.datasize / sizeof(slots::PrecipData)) i1 = i0;
 
