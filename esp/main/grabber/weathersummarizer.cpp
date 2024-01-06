@@ -483,10 +483,10 @@ namespace weather {
 				"this afternoon",
 				"this evening",
 				"tonight",
-				"tommorow morning",
-				"tommorow afternoon",
-				"tommorow evening",
-				"tommorow night"
+				"tomorrow morning",
+				"tomorrow afternoon",
+				"tomorrow evening",
+				"tomorrow night"
 			};
 
 			const char * for_suffix = "", *for_prefix = "";
@@ -541,7 +541,7 @@ namespace weather {
 				case IN:
 					{
 						// starting <IN>, stopping <IN>
-						//   in x minutes, in x hours, this evening, tommorow morning
+						//   in x minutes, in x hours, this evening, tomorrow morning
 						if (minute_diff < 3*60) {
 							for_prefix = "in ";
 							goto reuse_for;
@@ -556,7 +556,7 @@ namespace weather {
 				case UNTIL:
 					{
 						// until
-						//   x minutes later, x hours later, this evening, tommorow morning, later this evening, later this morning
+						//   x minutes later, x hours later, this evening, tomorrow morning, later this evening, later this morning
 						if (minute_diff < 3*60) {
 							for_suffix = " later";
 							goto reuse_for;
