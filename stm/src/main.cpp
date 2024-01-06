@@ -15,8 +15,11 @@
 #include <stdlib.h>
 
 matrix_type matrix __attribute__((section(".vram")));
-// Hackery to convince gcc to put this in the right section
+
+// Various GCC hackery to convince these functions to wind up in the right place in RAMFUNC
 template RAMFUNC void matrix_type::framebuffer_type::prepare_stream(uint16_t i, uint8_t pos, uint8_t * bs);
+template RAMFUNC void matrix_type::do_next();
+
 srv::Servicer servicer{};
 uint64_t rtc_time;
 
