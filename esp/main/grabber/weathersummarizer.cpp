@@ -164,6 +164,9 @@ namespace weather {
 			// Count likely precipitation.
 			if (precipitation.probability > /* 87% */ 220)
 				++likely_count;
+			// Put greater emphasis on really likely events
+			if (precipitation.probability > /* 94% */ 240)
+				likely_count += 2;
 		}
 		else {
 			// The block still extends past here, however it is now closed on the right for >50 precip

@@ -54,6 +54,8 @@ namespace weather {
 
 			// Counts indices within the start--end range that have probability above 87; if this makes up a sizeable
 			// part of that region, then the block is deemed likely, otherwise it is only describing possible precipitation.
+			//
+			// Probability above 95 counts as 3 entries here.
 			uint16_t likely_count;
 
 			// Add some precipitation data to the block. Returns true if the block is active following the append.
