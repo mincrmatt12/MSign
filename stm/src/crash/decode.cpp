@@ -2,6 +2,13 @@
 #include <string.h>
 #include <stdint.h>
 #include "decode.h"
+#ifndef STM32F405xx
+#include <stm32f2xx.h>
+#include <core_cm3.h>
+#else
+#include <stm32f4xx.h>
+#include <core_cm4.h>
+#endif
 
 // Definitions to match with external data
 
@@ -44,6 +51,24 @@ namespace crash::decode {
 			SP += -unwind_amt;
 			PC = LR;
 		}
+	}
+
+	void apply_isr_unwind_to(uint32_t &PC, uint32_t &LR, uint32_t &SP) {
+		// First, adjust SP to point to the start of the virtual stack frame
+		// for the CPU interrupt return mechanism (the saved chunk of registers)
+
+		if (PC == EXC_RETURN_THREAD_PSP) {
+			if (!(__get_CONTROL() & 1)) {  // currently using MSP, switch to PSP
+				SP = __get_PSP();
+			}
+		}
+
+		uint32_t *SP_at_isr = reinterpret_cast<uint32_t *>(SP);
+		PC = SP_at_isr[6];
+		LR = SP_at_isr[5];
+		// xPSR & STKALIGN
+		bool aligned = SP_at_isr[7] & (1 << 9);
+		SP = reinterpret_cast<uint32_t>(&SP_at_isr[8]) + aligned * 4;
 	}
 
 	// Sliding window backtrace parser
@@ -134,6 +159,13 @@ namespace crash::decode {
 						apply_unwind_to(btps->PC, btps->LR, btps->SP, btps->unwind_amt);
 						// Push the new PC to the backtrace
 						btps->backtrace[btps->bt_len++] = btps->PC % 2 == 0 ? btps->PC + 1 : btps->PC;
+
+						// Check if we have reached the top of an exception handler. If so, manually process the exception return
+						// mechanism as if it were some virtual frame.
+						if (btps->PC > 0xffff'fff0) {
+							apply_isr_unwind_to(btps->PC, btps->LR, btps->SP);
+							btps->backtrace[btps->bt_len++] = btps->PC % 2 == 0 ? btps->PC + 1 : btps->PC;
+						}
 
 						// Check if we have reached the end of the backtrace
 						// (are we past the end of stack / are we in an invalid addres)
