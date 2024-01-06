@@ -87,6 +87,9 @@ bool cfgpull::loop() {
 			resp.write("; esp_tickcount ");
 			snprintf(metrics_buf, sizeof metrics_buf, "%d", xTaskGetTickCount());
 			resp.write(metrics_buf);
+			resp.write("; grab_task_watermark ");
+			snprintf(metrics_buf, sizeof metrics_buf, "%d", (int)uxTaskGetStackHighWaterMark(NULL));
+			resp.write(metrics_buf);
 		}
 #endif
 
