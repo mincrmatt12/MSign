@@ -906,6 +906,13 @@ void screen::WeatherScreen::draw_small_precgraph() {
 
 	uint8_t max_prob = 0;
 
+	auto ind_offset = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->minute_precip_offset;
+
+	if (ind_offset >= 12) {
+		draw_small_tempgraph(); // if there's no rain within 60 minutes, just show the temperature graph
+		return;
+	}
+
 	int32_t min_ = 10, max_ = INT16_MIN;
 	for (const auto& precip : blk_precip) {
 		max_ = std::max<int32_t>(max_, precip.amount);
@@ -921,7 +928,7 @@ void screen::WeatherScreen::draw_small_precgraph() {
 	draw_graph_xaxis(24, 79, 128, 0, false);
 	draw_graph_yaxis(79, 0, 24, min_, max_, true);
 
-	draw_graph_precip(80, 0, 128, 24, blk_precip, 12, servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->minute_precip_offset, min_, max_);
+	draw_graph_precip(80, 0, 128, 24, blk_precip, 12, ind_offset, min_, max_);
 }
 
 void screen::WeatherScreen::draw_big_graphs() {
