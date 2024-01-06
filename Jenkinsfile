@@ -8,18 +8,6 @@ pipeline {
 	stages {
 		stage ("Build") {
 			parallel {
-				stage("Trigger webui") {
-					when {
-						beforeAgent true
-						anyOf {
-							changeset "espweb/**/*.*"
-							changeset "Jenkinsfile.web"
-						}
-					}
-					steps {
-						build job: "../SignCode-webui/${env.BRANCH_NAME}", wait: false
-					}
-				}
 				stage("Build STM") {
 					steps {
 						// build for board
