@@ -35,18 +35,19 @@ namespace slots {
 		TTC_TIME_5b = 0x3e,			// ''
 		TTC_ALERTSTR = 0x2a,        // STRING; current alerts
 
-		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo
-		WEATHER_STATUS = 0x45,		// STRING; weather status string
-		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateCode; list of ENUMS for the state per-hour
+		WEATHER_INFO = 0x44,		// STRUCT; WeatherInfo; current weather conditions
+		WEATHER_STATUS = 0x45,		// STRING; weather summary string
+		WEATHER_ARRAY = 0x46,       // ENUM[]; WeatherStateCode; list of ENUMS for the state per-hour (goes for next 5 days)
 
 		WEATHER_TEMP_GRAPH = 0x4a,  // INT16_T[]; feels like temp data per hour (/100)
 		WEATHER_RTEMP_GRAPH = 0x4b, // INT16_T[]; real temp data per hour (/100)
 		WEATHER_WIND_GRAPH = 0x4c,  // INT16_T[]; wind strength per hour (/100)
+		WEATHER_GUST_GRAPH = 0x4f,  // INT16_T[]; wind gust strength per hour (/100)
 
 		WEATHER_HPREC_GRAPH = 0x4d, // STRUCT[]; PrecipData, temp data per hour 
 		WEATHER_MPREC_GRAPH = 0x4e, // STRUCT[]; PrecipData, temp data per minute (decimated to every 2 minutes)
 
-		WEATHER_DAYS = 0x42,        // STRUCT[]; WeatherDay - time for sunrise/sunset, used to show the info for hourlybar
+		WEATHER_DAYS = 0x42,        // STRUCT[]; WeatherDay - 
 
 		MODEL_INFO = 0x900, 		// STRUCT; ModelInfo; number of triangles in the model
 		MODEL_DATA = 0x901,         // STRUCT[]; Tri; entire model data
@@ -157,10 +158,20 @@ namespace slots {
 	};
 
 	struct WeatherInfo {
-		// all temperatures are stored in centidegrees celsius
-		int16_t ctemp;
-		int16_t crtemp;
 		WeatherStateCode icon;
+		// percent from 0-255
+		uint8_t relative_humidity;
+		// C * 100
+		int16_t ctemp;
+		int16_t crtemp; // real temp
+		// 100m
+		int16_t visibility;
+		// set to current time when the weather data is updated.
+		uint64_t updated_at;
+		// km/h * 100
+		int16_t wind_speed, wind_gust;
+		// offsets describing where precip graphs were truncated
+		uint8_t minute_precip_offset, hour_precip_offset;
 	};
 
 	struct ScCfgTime {
@@ -205,8 +216,8 @@ namespace slots {
 	};
 
 	struct WeatherDay {
-		uint64_t sunrise;
-		uint64_t sunset;
+		uint32_t sunrise;
+		uint32_t sunset;
 
 		PrecipData precipitation;
 		int16_t low_temperature, high_temperature;

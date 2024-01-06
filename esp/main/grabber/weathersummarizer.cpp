@@ -61,12 +61,14 @@ namespace weather {
 	// [
 	//   "rainIntensity", "snowIntensity", "sleetIntensity", "freezingRainIntensity",
 	//   "precipitationProbability",
+	//   "humidity",
 	//   "weatherCode",
 	//   "snowDepth",
 	//   "windSpeed",
 	//   "windGust",
 	//   "temperature",
-	//   "temperatureApparent"
+	//   "temperatureApparent",
+	//   "visibility"
 	// ]
 
 	void SingleDatapoint::load_from_json(const char *key, const json::Value &v) {
@@ -90,6 +92,9 @@ namespace weather {
 		if (strcmp(key, "precipitationProbability") == 0 && v.is_number() && v.as_number() > 0.f) {
 			precipitation.probability = uint8_t(v.as_number() * 2.55f);
 		}
+		if (strcmp(key, "humidity") == 0 && v.is_number()) {
+			relative_humidity = uint8_t(v.as_number() * 2.55f);
+		}
 		else if (strcmp(key, "weatherCode") == 0 && v.type == json::Value::INT) {
 			weather_code = wsc_from_api(v.int_val);
 		}
@@ -107,6 +112,9 @@ namespace weather {
 		}
 		else if (strcmp(key, "temperatureApparent") == 0 && v.is_number()) {
 			apparent_temperature = v.as_number() * 100;
+		}
+		else if (strcmp(key, "visibility") == 0 && v.is_number()) {
+			visibility = v.as_number() * 10;
 		}
 	}
 

@@ -5,19 +5,24 @@
 
 namespace weather {
 	// Single data point from the JSON stream for minutely / hourly data.
+	//
+	// Units equivalent to slots::WeatherInfo
 	struct SingleDatapoint {
 		int16_t temperature, apparent_temperature;
-		slots::PrecipData precipitation;
+		slots::PrecipData precipitation{};
 		int16_t snow_depth{};
 
 		int16_t wind_speed, wind_gust;
 
 		slots::WeatherStateCode weather_code;
+		uint8_t relative_humidity;
+
+		int16_t visibility = -1;
 
 		// Incorporates data from a JSON callback
 		void load_from_json(const char *key, const json::Value &val);
 
-		// Updates weather code to include things like wind conditions.
+		// Updates weather code to include things like wind conditions & humidity.
 		void recalculate_weather_code();
 	};
 
@@ -137,6 +142,9 @@ namespace weather {
 		// Adjusts some thresholding regarding indices for 1 idx = 1hr vs 1 idx = 5minute
 		bool is_hourly = false;
 
+		PrecipitationSummarizer() = default;
+		PrecipitationSummarizer(bool is_hourly) : is_hourly(is_hourly) {}
+
 		// Add a datapoint to the summary. Must be called with increasing indices with no gaps.
 		void append(uint16_t index, const SingleDatapoint& datapoint);
 
@@ -183,18 +191,18 @@ namespace weather {
 
 		// Types of hourly summaries
 		enum HourlySummaryType {
-			WINDY_SOON,
-			WINDY_STOPPING,
+			WINDY_SOON, // "Very windy in 2 hours"
+			WINDY_STOPPING, // Very windy conditions stopping in 5 hours"
 
-			EXTREMELY_WINDY_SOON,
-			EXTREMELY_WINDY_STOPPING,
+			EXTREMELY_WINDY_SOON, // Dangerously windy in 5 hours
+			EXTREMELY_WINDY_STOPPING, // Dangerously windy conditions stopping this evening"
 
-			FOG_CLEARING_UP,
-			FOG_LATER,
+			FOG_CLEARING_UP, // Light fog clearing up in ~3 hours
+			FOG_LATER, // Foggy this evening
 			
-			CLOUDS_CLEARING,
+			CLOUDS_CLEARING, // Partly cloudy, clearing up in ~2 hours
 
-			CURRENT_CONDITIONS
+			CURRENT_CONDITIONS // Currently cloudy.
 		};
 
 		HourlySummaryType current_summary_type(slots::WeatherStateCode current_code) const;
