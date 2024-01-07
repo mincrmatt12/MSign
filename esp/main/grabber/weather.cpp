@@ -169,7 +169,7 @@ namespace weather {
 								}
 								if (stack[3]->index == 0) {
 									current_conditions.wind_speed = current_data.wind_speed;
-									current_conditions.wind_gust = current_data.wind_speed;
+									current_conditions.wind_gust = current_data.wind_gust;
 									current_conditions.visibility = current_data.visibility;
 									current_conditions.relative_humidity = current_data.relative_humidity;
 									current_conditions.ctemp = current_data.apparent_temperature;
