@@ -189,7 +189,7 @@ namespace srv {
 		};
 	private:
 		const bheap::Block& _slot(uint16_t slotid);
-		static bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> arena;
+		static bheap::Arena<STM_HEAP_SIZE, lru::Cache<16, 4>> arena;
 
 		// Called from ISR and populates queue.
 		void process_command() override;

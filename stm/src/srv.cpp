@@ -1502,7 +1502,7 @@ srv::Servicer::DebugInfo srv::Servicer::get_debug_information() {
 		.ping_is_in_flight = sent_ping,
 
 		.free_space_arena = arena.free_space(),
-		.free_space_cleanup_arena = arena.free_space(arena.FreeSpaceDefrag),
+		.free_space_cleanup_arena = arena.free_space(arena.FreeSpaceDefrag | arena.FreeSpaceEphemeral),
 		.used_hot_space_arena = STM_HEAP_SIZE - arena.free_space(arena.FreeSpaceCleanup | arena.FreeSpaceDefrag)
 	};
 }
@@ -1515,4 +1515,4 @@ extern "C" int __attribute__((used)) _write(int file, char* ptr, int len) {
 #ifdef USE_F4
 __attribute__((section(".ccmram")))
 #endif
-bheap::Arena<STM_HEAP_SIZE, lru::Cache<8, 5>> srv::Servicer::arena;
+bheap::Arena<STM_HEAP_SIZE, lru::Cache<16, 4>> srv::Servicer::arena;
