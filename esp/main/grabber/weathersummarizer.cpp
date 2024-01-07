@@ -529,10 +529,20 @@ namespace weather {
 								if (hr_a == hr_b) {
 									int min_a = previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
 									int min_b = previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
-									return snprintf(buf, buflen, "%s%dh:%02dm-%dh:%02dm%s", for_prefix, min_a / 60, min_a % 60, min_b / 60, min_b % 60, for_suffix);
+									if (min_a == 0)
+										return snprintf(buf, buflen, "%sup to %dh:%02dm%s", for_prefix, min_b / 60, min_b % 60, for_suffix);
+									else
+										return snprintf(buf, buflen, "%s%dh:%02dm-%dh:%02dm%s", for_prefix, min_a / 60, min_a % 60, min_b / 60, min_b % 60, for_suffix);
 								}
 								else {
-									return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, hr_a, hr_b, for_suffix);
+									if (hr_a == 0) {
+										if (hr_b == 1)
+											return snprintf(buf, buflen, "%sup to an hour%s", for_prefix, for_suffix);
+										else
+											return snprintf(buf, buflen, "%sup to %d hours%s", for_prefix, hr_b, for_suffix);
+									}
+									else
+										return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, hr_a, hr_b, for_suffix);
 								}
 							}
 							else if (minute_diff + 30 >= 120)
@@ -542,12 +552,23 @@ namespace weather {
 						}
 						else {
 							if (use_ranged) {
-								if (previous_amt)
-									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
-										as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest),
-										as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
-								else
-									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix, as_minutes(earliest), as_minutes(latest), for_suffix);
+								if (previous_amt) {
+									if (auto min_a = as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest); min_a != 0) {
+										return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
+											min_a,
+											as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
+									}
+									else {
+										return snprintf(buf, buflen, "%sup to %d minutes%s", for_prefix,
+											as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
+									}
+								}
+								else if (auto min_a = as_minutes(earliest); min_a != 0) {
+									return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix, min_a, as_minutes(latest), for_suffix);
+								}
+								else {
+									return snprintf(buf, buflen, "%sup to %d minutes%s", for_prefix, as_minutes(latest), for_suffix);
+								}
 							}
 							else if (minute_diff <= 5)
 								return snprintf(buf, buflen, "%s<5 minutes%s", for_prefix, for_suffix);
