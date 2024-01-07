@@ -1024,9 +1024,10 @@ finish_setting:
 		}
 
 		// Ensure there's an empty block of exactly new_alloc_space after the specified block (block->adjacent())
+	public:
 		bool make_space_after(Block& containing_block, uint32_t new_alloc_space) {
 			if (new_alloc_space % 4) new_alloc_space += 4 - (new_alloc_space % 4);
-			while (containing_block.adjacent()->slotid != Block::SlotEmpty || containing_block.adjacent()->datasize < new_alloc_space) {
+			while (containing_block.adjacent()->slotid != Block::SlotEmpty || containing_block.adjacent()->rounded_datasize() < new_alloc_space) {
 				// Operates as a loop:
 				// 	- find empty block
 				// 	- shift prior contents into it by units of 4
@@ -1072,6 +1073,7 @@ finish_setting:
 				else {
 					// Be slightly more intelligent, do the same as above but write a new block at the end.
 					Block old_empty = *next_empty;
+					old_empty.datasize = old_empty.rounded_datasize(); // Ensure out-of-sync empty blocks are rounded before we try to adjust their size.
 					ms_assert(old_empty.datasize >= remaining_new_alloc_space, "bad space");
 					old_empty.datasize -= remaining_new_alloc_space;
 
@@ -1095,6 +1097,7 @@ finish_setting:
 			containing_block.adjacent()->shrink(new_alloc_space);
 			return true;
 		}
+	private:
 
 		// Split a block into two equally labelled but separate chunks
 		bool split_block(Block& block, uint32_t offset_in_block) {
