@@ -277,7 +277,7 @@
 						flagstr = " / " + flagstr;
 					}
 
-					innercontents.push(<li>slot {blk.slotid.toString(16)} (<b>{blk.slotname}</b>) @ {blk.slotoffset.toString(16)}, len <b>{blk.datasize}</b> ({blk.datasize.toString(16)}){flagstr}</li>);
+					innercontents.push(<li>slot {blk.slotid.toString(16)} (<b>{blk.slotname}</b>) @ {blk.slotoffset.toString(16)}, len <b>{blk.datasize}</b> ({blk.datasize.toString(16)}){flagstr} / offset {blk.offset}</li>);
 					innercontents.push(<li>temperature <b>{blk.temperature}</b> / location <b>{blk.location}</b></li>);
 				}
 
@@ -291,7 +291,20 @@
 			}
 
 			function BlockBox(props) {
-				const records = props.records;
+				let records = props.records;
+				if (records !== undefined) {
+					let offset = 0;
+					for (let i = 0; i < records.blocks.length; ++i) {
+						records.blocks[i].offset = offset;
+						offset += 4;
+						if (records.blocks[i].location != "remote") {
+							offset += records.blocks[i].datasize;
+							if (offset % 4 != 0) {
+								offset += 4 - (offset % 4);
+							}
+						}
+					}
+				}
 
 				let elements = [];
 				if (records !== undefined) {
