@@ -446,10 +446,13 @@ namespace weather {
 
 			if (stm.tm_hour + center > 23) {
 				stm.tm_hour += (center - 24);
-				if (stm.tm_hour < 4 || stm.tm_hour >= 22) {
+				if (stm.tm_hour < 4) {
+					return TONIGHT; // use tonight for 2am this coming morning
+				}
+				else if (stm.tm_hour >= 22) {
 					return TOMMOROW_NIGHT;
 				}
-				else if (stm.tm_hour >= 4 && stm.tm_hour < 12) {
+				else if (stm.tm_hour < 12) {
 					return TOMMOROW_MORNING;
 				}
 				else if (stm.tm_hour >= 12 && stm.tm_hour < 17) {
@@ -563,6 +566,8 @@ namespace weather {
 						}
 				common_use_descriptor:
 						if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return is_same_string_for(x);}))
+							goto later;
+						else if (previous_amt == 1 && previous[0].is_now() && previous[0].describe_as_vague_time() == describe_as_vague_time())
 							goto later;
 						else
 							return snprintf(buf, buflen, "%s", vague_descriptions[describe_as_vague_time()]);
@@ -1101,7 +1106,7 @@ namespace weather {
 				//
 				// note that args[0] == now, so use args[1]
 				append(snprintf(ptr, remain, " stopping "));
-				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args + 1, 0, ptr, remain));
+				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 1, ptr, remain));
 				goto add_period;
 			case SINGLE_FUTURE:
 				// if timespecs are equivalent, condense to use "<amountspec> <future timespec>"
@@ -1123,9 +1128,9 @@ namespace weather {
 					goto stopping;
 				else {
 					append(snprintf(ptr, remain, " stopping "));
-					append(timespec_args[1].format_as(TimeSpec::IN, timespec_args + 1, 0, ptr, remain));
+					append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 1, ptr, remain));
 					append(snprintf(ptr, remain, ", continuing "));
-					append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args + 1, 1, ptr, remain));
+					append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				}
 				hourly_sidecar_index = -1; // Disallow a sidecar.
 				goto add_period;
@@ -1141,17 +1146,17 @@ namespace weather {
 				goto add_period;
 			case DOUBLE_FUTURE_RESTART:
 				append(snprintf(ptr, remain, " stopping "));
-				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args + 1, 0, ptr, remain));
+				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 1, ptr, remain));
 				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing " : ", continuing "));
-				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args + 1, 1, ptr, remain));
+				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				append(snprintf(ptr, remain, " for "));
-				append(timespec_args[3].format_as(TimeSpec::FOR, timespec_args + 1, 2, ptr, remain));
+				append(timespec_args[3].format_as(TimeSpec::FOR, timespec_args, 3, ptr, remain));
 				hourly_sidecar_index = -1; // Disallow a sidecar.
 				result = SummaryResult::TotalSummary;
 				goto add_period;
 			case INTERMITTENT_STOPPING:
 				append(snprintf(ptr, remain, " stopping "));
-				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args + 1, 0, ptr, remain));
+				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 1, ptr, remain));
 				goto add_period;
 			case STARTING_INTERMITTENT:
 				append(snprintf(ptr, remain, " starting "));
@@ -1172,7 +1177,7 @@ namespace weather {
 				break;
 			case STOPPING_THEN_INTERMITTENT:
 				append(snprintf(ptr, remain, " stopping "));
-				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 0, ptr, remain));
+				append(timespec_args[1].format_as(TimeSpec::IN, timespec_args, 1, ptr, remain));
 				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing %s " : ", continuing %s ", chunks ? "on-and-off" : "intermittently"));
 				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				hourly_sidecar_index = -1;
