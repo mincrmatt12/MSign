@@ -1092,10 +1092,10 @@ namespace weather {
 				if (amount_spec.kinds[1] != slots::PrecipData::NONE) {
 					if (quantifying && mpi == 1) {
 						if (quantify_range)
-							append(snprintf(ptr, remain, "%d-%d %s of %s", amount_spec.amount_mins[1] / 100, amount_spec.amount_maxs[1] / 100, condition_units[
+							append(snprintf(ptr, remain, " and %d-%d %s of %s", amount_spec.amount_mins[1] / 100, amount_spec.amount_maxs[1] / 100, condition_units[
 								amount_spec.kinds[1]], condition_names[amount_spec.kinds[1]][0]));
 						else
-							append(snprintf(ptr, remain, "%d %s of %s", amount_spec.amount_maxs[1] / 100, condition_units[
+							append(snprintf(ptr, remain, " and %d %s of %s", amount_spec.amount_maxs[1] / 100, condition_units[
 								amount_spec.kinds[1]], condition_names[amount_spec.kinds[1]][0]));
 					}
 					else {
