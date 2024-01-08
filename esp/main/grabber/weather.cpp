@@ -223,8 +223,6 @@ namespace weather {
 				}
 			});
 
-			serial::interface.delete_slot(slots::WEATHER_INFO);
-			serial::interface.delete_slot(slots::WEATHER_STATUS);
 			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * 5);
 			serial::interface.allocate_slot_size(slots::WEATHER_ARRAY, sizeof(slots::WeatherStateCode) * 24 * 5);
 			serial::interface.allocate_slot_size(slots::WEATHER_TEMP_GRAPH, sizeof(int16_t) * 24 * 5);
