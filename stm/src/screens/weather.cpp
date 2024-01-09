@@ -828,7 +828,6 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 	int xspace = (x1 - x0);
 
 	int16_t previous_pos = INT16_MIN;
-	--per_screen;
 
 	// Draw lines (assume x0/y0 are _inclusive_, i.e. not the axes)
 	
