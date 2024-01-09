@@ -1290,14 +1290,15 @@ bool screen::WeatherScreen::interact() {
 					if (graph_scroll_type == NO_SCROLL) {
 						show_graph_selector_timer = xTaskGetTickCount();
 					}
+					else {
+						show_graph_selector_timer = 0;
+					}
 				}
 
 				if (graph_scroll_type == SCROLL_WINDOW) {
 					if (auto horiz = ui::buttons[ui::Buttons::X]) {
-						expanded_graph_scroll += (horiz * ui::buttons.frame_time()) / 8;
+						expanded_graph_scroll += (horiz * ui::buttons.frame_time()) / 6;
 					}
-
-					show_graph_selector_timer = 0;
 				}
 				else if (graph_scroll_type == SCROLL_CURSOR) {
 					// todo
