@@ -10,6 +10,7 @@
 #include "../tasks/screen.h"
 
 #include "../draw.h"
+#include <limits.h>
 #include <time.h>
 
 #include <cmath>
@@ -735,93 +736,162 @@ void screen::WeatherScreen::draw_graph_xaxis(int16_t y, int16_t x0, int16_t x1, 
 
 	// min width for full hour text is 108 pixels
 	
-	if ((x1 - x0) > 56) {
-		for (int i = 0; i < 6; ++i) {
-			int x = x0 + 1 + (i*(x1 - x0 - 1)) / 6;
-			int val = ashours ? (start + i * 4) % 24 : (start + i * 10) % 60;
+	for (int i = 0; i < 6; ++i) {
+		int x = x0 + 1 + (i*(x1 - x0 - 1)) / 4;
+		int val = ashours ? (start + i * 6) % 24 : (start + i * 15) % 60;
 
-			if (val < 0)
-				continue;
+		if (val < 0)
+			continue;
+		 
+		matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
 
-			matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
+		char buf[10] = {0};
+		snprintf(buf, 10, "%02d", val);
 
-			char buf[10] = {0};
-			snprintf(buf, 10, "%02d", val);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+	}
+}
 
-			if (ashours && (x1 - x0) > 108) {
-				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, buf, 0x9dd3e3_cc, ":00", 120_c);
-			}
-			else if (!ashours && (x1 - x0) > 96) {
-				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, "+", 120_c, buf, 0x9dd3e3_cc, "m", 120_c);
-			}
-			else {
-				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
-			}
-		}
+void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t x1, int x_scroll, int max_scroll, bool ashours) {
+	// Draw the line
+	draw::rect(matrix.get_inactive_buffer(), x0, y, x1, y + 1, 50_c);
+
+	struct tm timedat;
+	auto updated_at = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at;
+	if (ashours) {
+		time_t now = updated_at / 1000;
+		gmtime_r(&now, &timedat);
+	}
+
+	int lsi = ashours ? timedat.tm_hour : intmath::round10<int>(updated_at - rtc_time, 60*1000);
+	int lsi_err = 0, lsi_offs;
+
+	if (ashours) {
+		// range from x1 - x0 is 24 hours, each lsi is 1 hour, lsi_err is 1/256 of lsi, we want
+		lsi_offs = 24 * 256 / (x1 - x0);
 	}
 	else {
-		for (int i = 0; i < 6; ++i) {
-			int x = x0 + 1 + (i*(x1 - x0 - 1)) / 4;
-			int val = ashours ? (start + i * 6) % 24 : (start + i * 15) % 60;
+		lsi_offs = 60 * 256 / (x1 - x0);
+	}
 
-			if (val < 0)
-				continue;
-			 
-			matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
+	lsi_err = x_scroll * lsi_offs;
 
-			char buf[10] = {0};
-			snprintf(buf, 10, "%02d", val);
+	auto accumulate = [&]{
+		lsi_err += lsi_offs;
+		while (lsi_err >= 256) {
+			++lsi;
+			if (ashours && lsi % 24 == 0) {
+				++timedat.tm_wday;
+				timedat.tm_wday %= 7;
+			}
+			lsi_err -= 256;
+		}
+	};
 
-			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+	accumulate();
+	char buf[32];
+
+	int last_label = INT_MIN;
+
+	for (int x = x0; x < x1; ++x, accumulate()) {
+		if (lsi % (ashours ? 6 : 12) == 0 && lsi != last_label) {
+			if (ashours) {
+				snprintf(buf, 32, "%02d:00", lsi % 24);
+				if (x - x0 + x_scroll + draw::text_size(buf, font::lcdpixel_6::info) > max_scroll)
+					return;
+				matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
+				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+				if (lsi % 24 == 0) {
+					strftime(buf, 32, "%a", &timedat);
+					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 120_c);
+				}
+			}
+			else {
+				snprintf(buf, 32, "+%02dm", lsi % 60);
+				if (x - x0 + x_scroll + draw::text_size(buf, font::lcdpixel_6::info) > max_scroll)
+					return;
+				matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
+				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+				if (lsi && lsi % 60 == 0) {
+					snprintf(buf, 32, "+%02dh", lsi / 60);
+					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 120_c);
+				}
+			}
+
+			last_label = lsi;
 		}
 	}
 }
 
-void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const int16_t * data, size_t amount, int32_t ymin, int32_t ymax, bool show_temp_colors) {
-	int32_t space = (y1 - y0);
+void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const int16_t * data, int per_screen, int total_amount, int32_t ymin, int32_t ymax, bool show_temp_colors, int x_scroll) {
+	int space = (y1 - y0);
+	int xspace = (x1 - x0);
+
+	int16_t previous_pos = INT16_MIN;
+	--per_screen;
 
 	// Draw lines (assume x0/y0 are _inclusive_, i.e. not the axes)
 	
-	for (int idx = 0; idx < amount; ++idx) {
-		int begin = idx * (x1 - x0) / amount;
-		int end = (idx + 1) * (x1 - x0) / amount;
-		begin += x0;
-		end += x0;
+	for (int x = x0, effx = x_scroll; x < x1; ++x, ++effx) {
+		int curindex =    (effx * per_screen) / xspace;
+		int curoffset = (effx * per_screen) % xspace;
 
-		int16_t iy0 = intmath::round10((int32_t(data[idx] - ymin) * space * 100) / (ymax - ymin));
-		int16_t iy1 = (idx >= amount - 1 ? iy0 : intmath::round10((int32_t(data[idx + 1] - ymin) * space * 100) / (ymax - ymin)));
+		if (curindex < 0)
+			continue;
+		if (curindex >= total_amount)
+			continue;
+		if (curindex == total_amount - 1)
+			curoffset = 0;
 
-		iy0 = y1 - 1 - iy0;
-		iy1 = y1 - 1 - iy1;
-		if (idx == 23) iy1 = iy0;
+		int16_t cval = data[curindex];
+		if (curoffset > 0) {
+			cval += int(data[curindex + 1] - data[curindex]) * curoffset / xspace;
+		}
 
-		auto cval = data[idx];
+		led::color_t clr = 255_c;
+
 		if (show_temp_colors) {
 			if (cval >= 1000 && cval < 1600) {
-				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, 255_c);
+				clr = 255_c;
 			}
 			else if (cval > -1000 && cval < 1000) {
-				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {100_c, 100_c, 240_c});
+				clr = {100_c, 100_c, 240_c};
 			}
 			else if (cval >= 1600 && cval < 2750) {
-				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {50_c, 240_c, 50_c});
+				clr = {50_c, 240_c, 50_c};
 			}
 			else if (cval >= 2750) {
-				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {250_c, 30_c, 30_c});
+				clr = {250_c, 30_c, 30_c};
 			}
 			else {
-				draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, {40_c, 40_c, 255_c});
+				clr = {40_c, 40_c, 255_c};
 			}
 		}
-		else {
-			draw::line(matrix.get_inactive_buffer(), begin, iy0, end, iy1, 255_c);
+							
+		int16_t now_y_pos = y1 - 1 - intmath::round10((int32_t(cval - ymin) * space * 100) / (ymax - ymin));
+
+		if (previous_pos == INT16_MIN || previous_pos == now_y_pos || previous_pos == now_y_pos + 1 || previous_pos + 1 == now_y_pos) {
+			matrix.get_inactive_buffer().at(x, now_y_pos) = clr;
 		}
+		else {
+			int16_t middle = (previous_pos + now_y_pos) / 2;
+			if (previous_pos < now_y_pos) {
+				draw::rect(matrix.get_inactive_buffer(), x - 1, previous_pos, x, middle, clr);
+				draw::rect(matrix.get_inactive_buffer(), x, middle, x + 1, now_y_pos + 1, clr);
+			}
+			else {
+				draw::rect(matrix.get_inactive_buffer(), x - 1, middle, x, previous_pos, clr);
+				draw::rect(matrix.get_inactive_buffer(), x, now_y_pos, x + 1, middle + 1, clr);
+			}
+		}
+
+		previous_pos = now_y_pos;
 	}
 }
 
-void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const bheap::TypedBlock<slots::PrecipData *>& precip_data, int amount, int index_offset, int32_t ymin, int32_t ymax) {
+void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const bheap::TypedBlock<slots::PrecipData *>& precip_data, int per_screen, int desired_amount, int index_offset, int32_t ymin, int32_t ymax, int x_scroll) {
 	int32_t space = (y1 - y0);
-	int i0, i1, nx, px, x;
+	int i0, i1, nx, px, x, effx;
 
 	auto access_at = [&](int index) -> const slots::PrecipData& {
 		const static slots::PrecipData null{};
@@ -835,14 +905,14 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 		return access_at(i0).*memptr + (((int)(access_at(i1).*memptr) - (int)(access_at(i0).*memptr)) * (x - px - x0)) / (nx - px);
 	};
 
-	for (x = x0; x < x1; ++x) {
-		i0 = ((x - x0) * amount) / (x1 - x0 - 1);
-		if (i0 >= amount) i0 = amount - 1;
+	for (x = x0, effx = x_scroll; x < x1; ++x, ++effx) {
+		i0 = (effx * per_screen) / (x1 - x0 - 1);
+		if (i0 >= desired_amount) i0 = desired_amount - 1;
 		i1 = i0 + 1;
-		if (i1 >= amount) i1 = i0;
+		if (i1 >= desired_amount) i1 = i0;
 
-		px = (i0 * (x1 - x0 - 1)) / amount;
-		nx = (i1 * (x1 - x0 - 1)) / amount;
+		px = (i0 * (x1 - x0 - 1)) / per_screen - x_scroll;
+		nx = (i1 * (x1 - x0 - 1)) / per_screen - x_scroll;
 
 		auto prob = interp(&slots::PrecipData::probability);
 
@@ -898,7 +968,7 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 	draw_graph_xaxis(24, 79, 128, first, true);
 	draw_graph_yaxis(79, 0, 24, min_, max_);
 
-	draw_graph_lines(80, 0, 128, 24, tempgraph_data, 24, min_, max_, true);
+	draw_graph_lines(80, 0, 128, 24, tempgraph_data, 24, 120, min_, max_, true);
 }
 
 void screen::WeatherScreen::draw_small_precgraph() {
@@ -906,7 +976,8 @@ void screen::WeatherScreen::draw_small_precgraph() {
 
 	uint8_t max_prob = 0;
 
-	auto ind_offset = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->minute_precip_offset;
+	const auto& info = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO);
+	auto ind_offset = info->minute_precip_offset;
 
 	if (ind_offset >= 12) {
 		draw_small_tempgraph(); // if there's no rain within 60 minutes, just show the temperature graph
@@ -925,10 +996,14 @@ void screen::WeatherScreen::draw_small_precgraph() {
 		return;
 	}
 
+	int minutes_behind = intmath::round10<int>(info->updated_at - rtc_time, 60*1000);
+
 	draw_graph_xaxis(24, 79, 128, 0, false);
 	draw_graph_yaxis(79, 0, 24, min_, max_, true);
 
-	draw_graph_precip(80, 0, 128, 24, blk_precip, 12, ind_offset, min_, max_);
+	int x_scroll = (-minutes_behind * (128 - 80)) / 60;
+
+	draw_graph_precip(80, 0, 128, 24, blk_precip, 12, 12, ind_offset, min_, max_, x_scroll);
 }
 
 void screen::WeatherScreen::draw_big_graphs() {
@@ -956,10 +1031,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 		int32_t min_ = INT16_MAX, max_ = INT16_MIN;
 
 		// First, find the correct min/max + hour0/min0
-		struct tm timedat;
 		const auto& info = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO);
-		time_t now = info->updated_at / 1000;
-		gmtime_r(&now, &timedat);
 		
 		const int16_t * blk_16 = nullptr, *blk_alt_16 = nullptr;
 		const bheap::TypedBlock<slots::PrecipData *> * blk_precip = nullptr;
@@ -997,12 +1069,12 @@ void screen::WeatherScreen::draw_big_graphs() {
 			case WIND:
 			case GUST:
 				if (blk_alt_16) {
-					for (uint8_t i = 0; i < 24; ++i) {
+					for (uint8_t i = 0; i < 120; ++i) {
 						min_ = std::min<int32_t>(min_, blk_alt_16[i]);
 						max_ = std::max<int32_t>(max_, blk_alt_16[i]);
 					}
 				}
-				for (uint8_t i = 0; i < 24; ++i) {
+				for (uint8_t i = 0; i < 120; ++i) {
 					min_ = std::min<int32_t>(min_, blk_16[i]);
 					max_ = std::max<int32_t>(max_, blk_16[i]);
 				}
@@ -1023,15 +1095,22 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 		int leftside = blk_precip == nullptr ? 14 : 17;
 		int top = blk_precip == nullptr ? 0 : 5;
+		int bottom = 64 - 14;
 
-		draw_graph_xaxis(64-8, leftside, 128, graph == PRECIP_HOUR ? 0 : timedat.tm_hour, graph != PRECIP_HOUR);
-		draw_graph_yaxis(leftside, top, 64-8, min_, max_, blk_precip != nullptr);
+		int screens = graph == PRECIP_HOUR ? 5 : 4;
+		int maxscroll = screens * (128 - leftside);
+
+		if (expanded_graph_scroll > maxscroll * 128)
+			expanded_graph_scroll = maxscroll * 128;
+
+		draw_graph_xaxis_full(bottom, leftside, 128, expanded_graph_scroll / 128, maxscroll + 128 - leftside, graph != PRECIP_HOUR);
+		draw_graph_yaxis(leftside, top, bottom, min_, max_, blk_precip != nullptr);
 
 		if (blk_16) {
-			draw_graph_lines(leftside + 1, 0, 128, 64-8, blk_16, 24, min_, max_, graph < WIND);
+			draw_graph_lines(leftside + 1, top, 128, bottom, blk_16, 24, 120, min_, max_, graph < WIND, expanded_graph_scroll / 128);
 		}
 		else {
-			draw_graph_precip(leftside + 1, top, 128, 64-8, *blk_precip, (graph == PRECIP_DAY ? 24 : 12), (graph == PRECIP_DAY ? info->hour_precip_offset : info->minute_precip_offset), min_, max_);
+			draw_graph_precip(leftside + 1, top, 128, bottom, *blk_precip, (graph == PRECIP_DAY ? 24 : 12), (graph == PRECIP_DAY ? 120 : 72), (graph == PRECIP_DAY ? info->hour_precip_offset : info->minute_precip_offset), min_, max_, expanded_graph_scroll / 128);
 			// draw a precipitation bar
 
 			int ps = 32;
@@ -1193,20 +1272,39 @@ bool screen::WeatherScreen::interact() {
 				else if (ui::buttons[ui::Buttons::SEL]) {
 					show_graph_selector_timer = xTaskGetTickCount();
 				}
-				else if (ui::buttons[ui::Buttons::NXT]) {
+				else if (graph_scroll_type == NO_SCROLL && ui::buttons[ui::Buttons::NXT] || ui::buttons[ui::Buttons::TAB]) {
 					show_graph_selector_timer = xTaskGetTickCount();
 					fix_temp(graph, bheap::Block::TemperatureWarm);
 					graph = (GraphType)(1 + (int)graph);
 					if (graph == MAX_GTYPE) graph = FEELS_TEMP;
 					fix_temp(graph, bheap::Block::TemperatureHot);
 				}
-				else if (ui::buttons[ui::Buttons::PRV]) {
+				else if (graph_scroll_type == NO_SCROLL && ui::buttons[ui::Buttons::PRV]) {
 					show_graph_selector_timer = xTaskGetTickCount();
 					fix_temp(graph, bheap::Block::TemperatureWarm);
 					if (graph == FEELS_TEMP) graph = PRECIP_DAY;
 					else graph = (GraphType)(-1 + (int)graph);
 					fix_temp(graph, bheap::Block::TemperatureHot);
 				}
+				else if (ui::buttons[ui::Buttons::STICK]) {
+					graph_scroll_type = (graph_scroll_type == NO_SCROLL) ? SCROLL_WINDOW : NO_SCROLL;
+					if (graph_scroll_type == NO_SCROLL) {
+						show_graph_selector_timer = xTaskGetTickCount();
+					}
+				}
+
+				if (graph_scroll_type == SCROLL_WINDOW) {
+					if (auto horiz = ui::buttons[ui::Buttons::X]) {
+						expanded_graph_scroll += (horiz * ui::buttons.frame_time()) / 8;
+					}
+
+					show_graph_selector_timer = 0;
+				}
+				else if (graph_scroll_type == SCROLL_CURSOR) {
+					// todo
+				}
+
+				if (expanded_graph_scroll < 0) expanded_graph_scroll = 0;
 
 				break;
 			}
