@@ -365,7 +365,7 @@ tapif_select(struct netif *netif)
 
 #else /* NO_SYS */
 
-int is_packet_ready = 0, was_packet_read = 0;
+volatile int is_packet_ready = 0, was_packet_read = 0;
 pthread_cond_t continue_reading_packet = PTHREAD_COND_INITIALIZER;
 pthread_mutex_t continue_reading_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -431,8 +431,9 @@ static void tapif_thread(void *arg) {
 	// This is a proper FreeRTOS thread with all the signalling crap.
 	while (1) {
 		// Wait a bit
-		vTaskDelay(20);
-		if (!is_packet_ready) continue;
+		if (!is_packet_ready) {
+			vTaskDelay(2);
+		}
 		// Process the packet
 		tapif_input((struct netif *)arg);
 		is_packet_ready = 0;
