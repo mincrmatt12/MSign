@@ -682,7 +682,7 @@ namespace weather {
 			};
 			auto after_range = [&](int hour) -> bool {
 				if (minutely_range_right == -1)
-					return false;
+					return hour >= 6;
 				else {
 					if (hour == -1)
 						return true;
