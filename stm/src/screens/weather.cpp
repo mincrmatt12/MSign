@@ -800,21 +800,23 @@ void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t
 				if (x - x0 + x_scroll + draw::text_size(buf, font::lcdpixel_6::info) > max_scroll)
 					return;
 				matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
-				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+				snprintf(buf, 32, "%02d", lsi % 24);
+				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, buf, 0x9dd3e3_cc, ":00", 120_c);
 				if (lsi % 24 == 0) {
 					strftime(buf, 32, "%a", &timedat);
-					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 120_c);
+					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 0xe39dd3_cc);
 				}
 			}
 			else {
 				snprintf(buf, 32, "+%02dm", lsi % 60);
 				if (x - x0 + x_scroll + draw::text_size(buf, font::lcdpixel_6::info) > max_scroll)
 					return;
+				snprintf(buf, 32, "%02d", lsi % 60);
 				matrix.get_inactive_buffer().at(x, y + 1) = led::color_t(95_c);
-				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 7, 120_c);
+				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, "+", 120_c, buf, 0x9dd3e3_cc, "m", 120_c);
 				if (lsi && lsi % 60 == 0) {
-					snprintf(buf, 32, "+%02dh", lsi / 60);
-					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 120_c);
+					snprintf(buf, 32, "%02d", lsi / 60);
+					draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 13, "+", 120_c, buf, 0xe39dd3_cc, "h", 120_c);
 				}
 			}
 
@@ -838,7 +840,7 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 		if (curindex < 0)
 			continue;
 		if (curindex >= total_amount)
-			continue;
+			curindex = total_amount - 1;
 		if (curindex == total_amount - 1)
 			curoffset = 0;
 
