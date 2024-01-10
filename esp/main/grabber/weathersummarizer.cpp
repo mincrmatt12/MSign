@@ -127,7 +127,7 @@ namespace weather {
 		if (category != slots::WeatherStateCode::CLEAR && category != slots::WeatherStateCode::LIGHT_FOG)
 			return;
 
-		if (wind_speed > 4500) // 55 km/h
+		if (wind_speed > 4000 || wind_gust > 5000) // 55 km/h
 			weather_code = slots::WeatherStateCode::WINDY;
 	}
 
