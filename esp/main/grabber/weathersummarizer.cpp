@@ -359,19 +359,19 @@ namespace weather {
 			}
 		}
 		TimeSpec(const PrecipitationSummarizer::Block& blk, FromEnd, bool hourly = false) : hourly(hourly) {
-			if (blk.end == -2) {
+			if (blk.end == -2 && blk.right != -1) {
 				ranged = false;
 				earliest = blk.right;
 			}
 			else if (blk.right == -1) {
 				if (blk.end == -1) {
 					ranged = false;
-					earliest = hourly ? 35 : 48;
+					earliest = hourly ? 35 : 72;
 				}
 				else {
 					ranged = true;
 					earliest = blk.end;
-					latest = hourly ? 35 : 48;
+					latest = hourly ? 35 : 72;
 				}
 			}
 			else if (blk.right - blk.end < 2) {
