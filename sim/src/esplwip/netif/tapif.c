@@ -433,6 +433,7 @@ static void tapif_thread(void *arg) {
 		// Wait a bit
 		if (!is_packet_ready) {
 			vTaskDelay(2);
+			continue;
 		}
 		// Process the packet
 		tapif_input((struct netif *)arg);
