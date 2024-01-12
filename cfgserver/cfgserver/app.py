@@ -156,11 +156,13 @@ def get_vers():
     return db.get_served_versions()
 
 @app.route("/a/newui", methods=["POST"])
+@auth.priv_required(auth.Priv.WRITE)
 def update_ui():
     db.update_webui_archive(request.files[next(iter(request.files.keys()))])
     return 'ok', 200
 
 @app.route("/a/updatefirm", methods=["POST"])
+@auth.priv_required(auth.Priv.WRITE)
 def update_firm():
     db.update_firm(request.files["stm"], request.files["esp"])
     return 'ok', 200
