@@ -26,7 +26,7 @@ lowfi_login_page = r"""
 </head>
 <body>
 <div class="container">
-    <form class="py-3" action="/login" method="post" enctype="application/x-ww-form-urlencoded">
+    <form class="py-3" action="/login" method="post" enctype="application/x-www-form-urlencoded">
         <div class="mb-2">
             <label for="userIn" class="form-label">username</label>
             <input type="text" class="form-control" id="userIn" name="user">
@@ -47,9 +47,9 @@ lowfi_login_page = r"""
 """
 
 metric_doc = {
-    "mem_free": ("Total memory free on ESP", "guage"),
-    "mem_free_dram": ("Total DRAM free on ESP", "guage"),
-    "bheap_space": ("Empty space in bheap", "guage")
+    "mem_free": ("Total memory free on ESP", "gauge"),
+    "mem_free_dram": ("Total DRAM free on ESP", "gauge"),
+    "bheap_space": ("Empty space in bheap", "gauge"),
 }
 
 metric_table = {}
