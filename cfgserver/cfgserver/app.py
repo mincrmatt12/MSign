@@ -50,6 +50,8 @@ metric_doc = {
     "mem_free": ("Total memory free on ESP", "gauge"),
     "mem_free_dram": ("Total DRAM free on ESP", "gauge"),
     "bheap_space": ("Empty space in bheap", "gauge"),
+    "esp_tickcount": ("xTaskGetTickCount on ESP8266 @ 250hz", "counter"),
+    "grab_task_watermark": ("Lowest amount of stack space on the grab task", "gauge")
 }
 
 metric_table = {}
