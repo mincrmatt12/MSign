@@ -4,11 +4,17 @@ import qrcode
 import os
 from flask import Flask, request, redirect, send_file, abort, Response
 from werkzeug.exceptions import Unauthorized
+from werkzeug.routing import BaseConverter
 from flask_login import current_user
 import tempfile
 import json
 import click
 import time
+
+class OnlyAlphanumeric(BaseConverter):
+    def __init__(self, url_map):
+        super().__init__(url_map)
+        self.regex = "[a-zA-Z0-9]+"
 
 lowfi_login_page = r"""
 <!DOCTYPE html>
@@ -50,6 +56,7 @@ metric_table = {}
 metric_last_sent = 0
 
 app = Flask(__name__)
+app.url_map.converters['alphanum'] = OnlyAlphanumeric
 
 @app.errorhandler(FileNotFoundError)
 def handle_bad_file(e):
@@ -82,7 +89,7 @@ def show_or_login():
             raise Unauthorized()
 
 @app.route("/")
-@app.route("/<_>")
+@app.route("/<alphanum:_>")
 def root(_=None):
     if current_user.is_anonymous:
         return redirect("/login")
@@ -90,18 +97,18 @@ def root(_=None):
     return send_file(db.get_webui_file("page.html"), mimetype="text/html")
 
 @app.route("/page.css")
-@app.route("/page.<_>.css")
+@app.route("/page.<alphanum:_>.css")
 def send_css(_=None):
     return send_file(db.get_webui_file("page.css"), mimetype="text/css")
 
 @app.route("/page.js")
-@app.route("/page.<_>.js")
+@app.route("/page.<alphanum:_>.js")
 @auth.priv_required(auth.Priv.READ)
 def send_js(_=None):
     return send_file(db.get_webui_file("page.js"), mimetype="application/javascript")
 
 @app.route("/vendor.js")
-@app.route("/vendor.<_>.js")
+@app.route("/vendor.<alphanum:_>.js")
 @auth.priv_required(auth.Priv.READ)
 def send_vjs(_=None):
     return send_file(db.get_webui_file("vendor.js"), mimetype="application/javascript")
