@@ -12,7 +12,7 @@ int main(int argc, char ** argv) {
 
 	int in_which_block = -1;
 
-	bool debug = argc > 2 && !strcmp(argv[1], "--debug");
+	bool debug = argc >= 2 && !strcmp(argv[1], "--debug");
 
 	json::JSONParser jp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& val) {
 		if (stack_ptr < 3) return;
