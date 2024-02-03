@@ -721,7 +721,17 @@ namespace weather {
 				case PrecipitationSummarizer::INTERMITTENT:
 				case PrecipitationSummarizer::INTERMITTENT_THEN_CONTINUOUS:
 				case PrecipitationSummarizer::CHUNKS_THEN_CONTINUOUS:
-					fuse_mode = NOT_FUSED;
+					switch (minutely_summary.intermittent_flag) {
+						case weather::PrecipitationSummarizer::INTERMITTENT:
+							if (hourly_summary.intermittent_flag == PrecipitationSummarizer::INTERMITTENT) break;
+							[[fallthrough]];
+						default:
+							fuse_mode = NOT_FUSED;
+							break;
+						case weather::PrecipitationSummarizer::CONTINUOUS_THEN_CHUNKS:
+						case weather::PrecipitationSummarizer::CONTINUOUS_THEN_INTERMITTENT:
+							break;
+					}
 					break;
 				default:
 					break;
