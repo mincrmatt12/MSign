@@ -714,6 +714,20 @@ namespace weather {
 			}
 		}
 
+		// Correct fuse mode if the hourly data is intermittent: we don't want to fuse into an intermittent region because
+		// we'll lose the intermittent flag and end up saying something like "rain stopping in a day"
+		if (fuse_mode > NOT_FUSED && fuse_mode < TOTALLY_SUBSUMED) {
+			switch (hourly_summary.intermittent_flag) {
+				case PrecipitationSummarizer::INTERMITTENT:
+				case PrecipitationSummarizer::INTERMITTENT_THEN_CONTINUOUS:
+				case PrecipitationSummarizer::CHUNKS_THEN_CONTINUOUS:
+					fuse_mode = NOT_FUSED;
+					break;
+				default:
+					break;
+			}
+		}
+
 		// Now, decide on which events to actually use. We support a maximum of three blocks being rendered into text at any time, and the last
 		// of those can only be taken from the unfused part of the hourly block. Work out where it is first.
 
