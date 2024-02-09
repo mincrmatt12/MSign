@@ -692,25 +692,27 @@ namespace weather {
 				}
 			};
 
-			if (!before_range(hourly_summary.blocks[0].right) && !after_range(hourly_summary.blocks[0].left)) {
-				if (after_range(hourly_summary.blocks[0].right))
-					fuse_mode = FUSE_FROM_FIRST;
+			if (minutely_range_right == -1 || minutely_range_right > 4 * MINUTE_INDICES_PER_HOUR) {
+				if (!before_range(hourly_summary.blocks[0].right) && !after_range(hourly_summary.blocks[0].left)) {
+					if (after_range(hourly_summary.blocks[0].right))
+						fuse_mode = FUSE_FROM_FIRST;
+					else
+						fuse_mode = TOTALLY_SUBSUMED;
+				}
 				else
-					fuse_mode = TOTALLY_SUBSUMED;
-			}
-			else
-				fuse_mode = NOT_FUSED;
+					fuse_mode = NOT_FUSED;
 
-			if (hourly_summary.last_filled_block_index() == 1) {
-				if (fuse_mode == FUSE_FROM_FIRST || fuse_mode == TOTALLY_SUBSUMED || fuse_mode == NOT_FUSED) {
-					if (!before_range(hourly_summary.blocks[1].right) && !after_range(hourly_summary.blocks[1].left)) {
-						if (after_range(hourly_summary.blocks[1].right))
-							fuse_mode = FUSE_SKIP_FIRST;
-						else
-							fuse_mode = TOTALLY_SUBSUMED;
-					}
-					else if (fuse_mode == TOTALLY_SUBSUMED) {
-						fuse_mode = FIRST_TOTALLY_SUBSUMED;
+				if (hourly_summary.last_filled_block_index() == 1) {
+					if (fuse_mode == FUSE_FROM_FIRST || fuse_mode == TOTALLY_SUBSUMED || fuse_mode == NOT_FUSED) {
+						if (!before_range(hourly_summary.blocks[1].right) && !after_range(hourly_summary.blocks[1].left)) {
+							if (after_range(hourly_summary.blocks[1].right))
+								fuse_mode = FUSE_SKIP_FIRST;
+							else
+								fuse_mode = TOTALLY_SUBSUMED;
+						}
+						else if (fuse_mode == TOTALLY_SUBSUMED) {
+							fuse_mode = FIRST_TOTALLY_SUBSUMED;
+						}
 					}
 				}
 			}
