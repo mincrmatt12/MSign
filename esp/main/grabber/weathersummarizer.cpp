@@ -514,7 +514,7 @@ namespace weather {
 					reuse_for:
 						bool use_ranged = previous_amt > 0 ? previous[previous_amt - 1].worth_showing_as_ranged() && worth_showing_as_ranged() : worth_showing_as_ranged();
 						
-						if (minute_diff >= 2*60 || maximum_precision_hours) {
+						if (minute_diff > 90 || maximum_precision_hours) {
 							if (use_ranged) {
 								int hr_a, hr_b;
 								if (previous_amt) {
@@ -526,7 +526,7 @@ namespace weather {
 									hr_b = as_hours(latest);
 								}
 
-								if (hr_a == hr_b) {
+								if (hr_a == hr_b || (hr_b < 4 && !maximum_precision_hours)) {
 									int min_a = previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
 									int min_b = previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
 									if (min_a == 0)
@@ -545,10 +545,14 @@ namespace weather {
 										return snprintf(buf, buflen, "%s%d-%d hours%s", for_prefix, hr_a, hr_b, for_suffix);
 								}
 							}
-							else if (minute_diff + 30 >= 120)
-								return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
-							else 
+							else if (minute_diff < 90)
 								return snprintf(buf, buflen, "%san hour%s", for_prefix, for_suffix);
+							else if (minute_diff >= 4*60 || maximum_precision_hours)
+								return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
+							else if (minute_diff % 60 == 0)
+								return snprintf(buf, buflen, "%s%d hours%s", for_prefix, minute_diff / 60, for_suffix);
+							else
+								return snprintf(buf, buflen, "%s%dh:%02dm%s", for_prefix, minute_diff / 60, minute_diff % 60, for_suffix);
 						}
 						else {
 							if (use_ranged) {
@@ -581,14 +585,12 @@ namespace weather {
 					{
 						// starting <IN>, stopping <IN>
 						//   in x minutes, in x hours, this evening, tomorrow morning
-						if (minute_diff < 3*60) {
+						if (minute_diff < 5*60) {
 							for_prefix = "in ";
 							goto reuse_for;
 						}
 				common_use_descriptor:
 						if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return is_same_string_for(x);}))
-							goto later;
-						else if (previous_amt == 1 && previous[0].is_now() && previous[0].describe_as_vague_time() == describe_as_vague_time())
 							goto later;
 						else
 							return snprintf(buf, buflen, "%s", vague_descriptions[describe_as_vague_time()]);
@@ -598,7 +600,7 @@ namespace weather {
 					{
 						// until
 						//   x minutes later, x hours later, this evening, tomorrow morning, later this evening, later this morning
-						if (minute_diff < 3*60) {
+						if (minute_diff < 5*60) {
 							for_suffix = " later";
 							goto reuse_for;
 						}
@@ -616,7 +618,7 @@ namespace weather {
 		// Returns true if the description of the time (in hourly mode) winds up as the same thing as a previous
 		// item (to avoid saying "starting tonight, continuing until tonight")
 		bool is_same_string_for(const TimeSpec &previous) const {
-			return previous.as_hours(previous.earliest) > 3 && as_hours(earliest) > 3 && describe_as_vague_time() == previous.describe_as_vague_time();
+			return describe_as_vague_time() == previous.describe_as_vague_time();
 		}
 	};
 
