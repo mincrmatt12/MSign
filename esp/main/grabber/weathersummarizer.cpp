@@ -483,7 +483,7 @@ namespace weather {
 		//
 		// Note that that could probably be better phrased as just "tonight", and so there's a method to detect consolidation
 		// and just use the single time point description.
-		int format_as(Mode m, const TimeSpec previous[], size_t previous_amt, char * buf, size_t buflen, bool maximum_precision_hours=false) const {
+		int format_as(Mode m, const TimeSpec previous[], size_t previous_amt, char * buf, size_t buflen) const {
 			static const char * const vague_descriptions[] = {
 				"this morning",
 				"this afternoon",
@@ -498,8 +498,9 @@ namespace weather {
 			const char * for_suffix = "", *for_prefix = "";
 			int minute_diff = as_minutes(center());
 
-			if (previous_amt)
+			if (previous_amt) {
 				minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
+			}
 
 			switch (m) {
 				case FOR:
@@ -514,7 +515,7 @@ namespace weather {
 					reuse_for:
 						bool use_ranged = previous_amt > 0 ? previous[previous_amt - 1].worth_showing_as_ranged() && worth_showing_as_ranged() : worth_showing_as_ranged();
 						
-						if (minute_diff > 90 || maximum_precision_hours) {
+						if (minute_diff > 90 || hourly) {
 							if (use_ranged) {
 								int hr_a, hr_b;
 								if (previous_amt) {
@@ -526,7 +527,7 @@ namespace weather {
 									hr_b = as_hours(latest);
 								}
 
-								if (hr_a == hr_b || (hr_b < 4 && !maximum_precision_hours)) {
+								if (hr_a == hr_b || (hr_b < 4 && !hourly)) {
 									int min_a = !previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
 									int min_b = !previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
 									if (min_a == 0)
@@ -547,7 +548,7 @@ namespace weather {
 							}
 							else if (minute_diff < 90)
 								return snprintf(buf, buflen, "%san hour%s", for_prefix, for_suffix);
-							else if (minute_diff >= 4*60 || maximum_precision_hours)
+							else if (minute_diff >= 4*60 || hourly)
 								return snprintf(buf, buflen, "%s~%d hours%s", for_prefix, (minute_diff + 30) / 60, for_suffix);
 							else if (minute_diff % 60 == 0)
 								return snprintf(buf, buflen, "%s%d hours%s", for_prefix, minute_diff / 60, for_suffix);
@@ -1363,7 +1364,7 @@ namespace weather {
 						}
 						append(snprintf(ptr, remain, "stopping "));
 					}
-					append(timespec.format_as(TimeSpec::IN, &timespec, 0, ptr, remain, true));
+					append(timespec.format_as(TimeSpec::IN, &timespec, 0, ptr, remain));
 				}
 				break;
 			case EXTREMELY_WINDY_SOON:
@@ -1375,14 +1376,14 @@ namespace weather {
 					peaking_at.hourly = true;
 
 					append(snprintf(ptr, remain, "Dangerously windy "));
-					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain));
 					if (prior_result == SummaryResult::Empty) {
 						if (peaking_at.is_same_string_for(&starting_at, 1)) {
 							append(snprintf(ptr, remain, " (up to %d km/h with gusts of %d km/h)", wind.wind_speed, wind.wind_gust_speed));
 						}
 						else {
 							append(snprintf(ptr, remain, ", peaking "));
-							append(peaking_at.format_as(TimeSpec::UNTIL, &starting_at, 1, ptr, remain, true));
+							append(peaking_at.format_as(TimeSpec::UNTIL, &starting_at, 1, ptr, remain));
 							append(snprintf(ptr, remain, " at %d km/h (with gusts of up to %d km/h)", wind.wind_speed, wind.wind_gust_speed));
 						}
 					}
@@ -1403,7 +1404,7 @@ namespace weather {
 					}
 					else {
 						append(snprintf(ptr, remain, "stopping "));
-						append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain, true));
+						append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain));
 					}
 				}
 				break;
@@ -1417,7 +1418,7 @@ namespace weather {
 						goto current_conditions;	
 
 					append(snprintf(ptr, remain, "%s clearing up ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
-					append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain, true));
+					append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain));
 				}
 				break;
 			case FOG_LATER:
@@ -1430,7 +1431,7 @@ namespace weather {
 						goto current_conditions;	
 
 					append(snprintf(ptr, remain, "%s ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
-					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain));
 				}
 				break;
 			case CLOUDS_CLEARING:
@@ -1507,7 +1508,7 @@ namespace weather {
 						starting_at.hourly = true;
 
 						append(snprintf(ptr, remain, ", clearing up "));
-						append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
+						append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain));
 					}
 				}
 				break;
