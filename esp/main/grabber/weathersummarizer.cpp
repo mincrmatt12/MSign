@@ -527,8 +527,8 @@ namespace weather {
 								}
 
 								if (hr_a == hr_b || (hr_b < 4 && !maximum_precision_hours)) {
-									int min_a = previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
-									int min_b = previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
+									int min_a = !previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
+									int min_b = !previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
 									if (min_a == 0)
 										return snprintf(buf, buflen, "%sup to %dh:%02dm%s", for_prefix, min_b / 60, min_b % 60, for_suffix);
 									else
