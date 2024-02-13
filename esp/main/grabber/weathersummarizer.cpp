@@ -590,7 +590,7 @@ namespace weather {
 							goto reuse_for;
 						}
 				common_use_descriptor:
-						if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return is_same_string_for(x);}))
+						if (std::any_of(previous, previous + previous_amt, [&](const TimeSpec& x){return describe_as_vague_time() == x.describe_as_vague_time();}))
 							goto later;
 						else
 							return snprintf(buf, buflen, "%s", vague_descriptions[describe_as_vague_time()]);
@@ -617,8 +617,24 @@ namespace weather {
 
 		// Returns true if the description of the time (in hourly mode) winds up as the same thing as a previous
 		// item (to avoid saying "starting tonight, continuing until tonight")
-		bool is_same_string_for(const TimeSpec &previous) const {
-			return describe_as_vague_time() == previous.describe_as_vague_time();
+		bool is_same_string_for(const TimeSpec previous[], size_t previous_amt) const {
+			if (previous_amt == 0)
+				return false;
+
+			if (!previous[previous_amt - 1].will_use_vague_time(previous, previous_amt - 1))
+				return false;
+
+			return describe_as_vague_time() == previous[previous_amt - 1].describe_as_vague_time();
+		}
+
+		// Returns true if the description will use the vague descriptoins
+		bool will_use_vague_time(const TimeSpec previous[], size_t previous_amt) const {
+			int minute_diff = as_minutes(center());
+
+			if (previous_amt)
+				minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
+
+			return minute_diff > 5*60;
 		}
 	};
 
@@ -1159,7 +1175,7 @@ namespace weather {
 				goto add_period;
 			case SINGLE_FUTURE:
 				// if timespecs are equivalent, condense to use "<amountspec> <future timespec>"
-				if (timespec_args[1].is_same_string_for(timespec_args[0])) {
+				if (timespec_args[1].is_same_string_for(timespec_args, 1)) {
 					append(snprintf(ptr, remain, " "));
 					append(timespec_args[0].format_as(TimeSpec::IN, timespec_args, 0, ptr, remain));
 				}
@@ -1173,7 +1189,7 @@ namespace weather {
 				goto add_period;
 			case SINGLE_FUTURE_RESTART:
 				// if timespecs are equivalent, condense to use "<amountspec> stoppping <future timespec>"
-				if (timespec_args[2].is_same_string_for(timespec_args[1]))
+				if (timespec_args[2].is_same_string_for(timespec_args + 1, 1))
 					goto stopping;
 				else {
 					append(snprintf(ptr, remain, " stopping "));
@@ -1361,7 +1377,7 @@ namespace weather {
 					append(snprintf(ptr, remain, "Dangerously windy "));
 					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain, true));
 					if (prior_result == SummaryResult::Empty) {
-						if (peaking_at.is_same_string_for(starting_at)) {
+						if (peaking_at.is_same_string_for(&starting_at, 1)) {
 							append(snprintf(ptr, remain, " (up to %d km/h with gusts of %d km/h)", wind.wind_speed, wind.wind_gust_speed));
 						}
 						else {
