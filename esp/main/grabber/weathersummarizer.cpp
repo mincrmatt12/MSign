@@ -733,6 +733,8 @@ namespace weather {
 			}
 		}
 
+		bool cancelled_fuse_from_intermittent = false;
+
 		// Correct fuse mode if the hourly data is intermittent: we don't want to fuse into an intermittent region because
 		// we'll lose the intermittent flag and end up saying something like "rain stopping in a day"
 		if (fuse_mode > NOT_FUSED && fuse_mode < TOTALLY_SUBSUMED) {
@@ -746,6 +748,7 @@ namespace weather {
 							[[fallthrough]];
 						default:
 							fuse_mode = NOT_FUSED;
+							cancelled_fuse_from_intermittent = true;
 							break;
 						case weather::PrecipitationSummarizer::CONTINUOUS_THEN_CHUNKS:
 						case weather::PrecipitationSummarizer::CONTINUOUS_THEN_INTERMITTENT:
@@ -866,6 +869,8 @@ namespace weather {
 						if ((!indeterminate_end && !fuse_mode) || timespec_args[0].is_now()) {
 							timespec_args[1] = timespec_args[3];
 							time_classification = INTERMITTENT_STOPPING;
+							if (cancelled_fuse_from_intermittent)
+								hourly_sidecar_index = -1;
 						}
 						else {
 							time_classification = STARTING_INTERMITTENT;
@@ -879,6 +884,8 @@ namespace weather {
 							time_classification = STOPPING_THEN_INTERMITTENT;
 						else
 							time_classification = SINGLE_THEN_INTERMITTENT;
+						if (cancelled_fuse_from_intermittent)
+							hourly_sidecar_index = -1;
 						break;
 				}
 				else if (indeterminate_end) {
@@ -1270,12 +1277,12 @@ namespace weather {
 			if (wind.earliest == -1) {
 				wind.earliest = index;
 			}
-			else if (datapoint.wind_speed <= wind.wind_speed && datapoint.wind_gust <= wind.wind_gust_speed) {
+			else if (datapoint.wind_gust <= wind.wind_gust_speed) {
 				return;
 			}
 
 			wind.peak = index;
-			wind.wind_speed = datapoint.wind_speed;
+			if (wind.wind_speed < datapoint.wind_speed) wind.wind_speed = datapoint.wind_speed;
 			wind.wind_gust_speed = datapoint.wind_gust;
 		}
 
@@ -1352,8 +1359,14 @@ namespace weather {
 					timespec.hourly = true;
 
 					append(snprintf(ptr, remain, code == WINDY_SOON ? "Very windy " : "Very windy conditions "));
-					if (prior_result == SummaryResult::Empty) {
-						append(snprintf(ptr, remain, "(up to %d km/h) ", wind.wind_speed / 100));
+					if (prior_result == SummaryResult::PartialSummary || (prior_result == SummaryResult::Empty && wind.wind_gust_speed < 5500)) {
+						if (wind.wind_speed > 4500)
+							append(snprintf(ptr, remain, "(up to %d km/h) ", wind.wind_speed / 100));
+						else
+							append(snprintf(ptr, remain, "(gusts of up to %d km/h) ", wind.wind_gust_speed / 100));
+					}
+					else if (prior_result == SummaryResult::Empty) {
+						append(snprintf(ptr, remain, "(up to %d km/h with gusts of up to %d km/h) ", wind.wind_speed / 100, wind.wind_gust_speed / 100));
 					}
 					if (code == WINDY_STOPPING) {
 						if (timespec.earliest > 24) {
@@ -1375,18 +1388,18 @@ namespace weather {
 
 					append(snprintf(ptr, remain, "Dangerously windy "));
 					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain));
-					if (prior_result == SummaryResult::Empty) {
+					if (prior_result != SummaryResult::TotalSummary) {
 						if (peaking_at.is_same_string_for(&starting_at, 1)) {
-							append(snprintf(ptr, remain, " (up to %d km/h with gusts of %d km/h)", wind.wind_speed, wind.wind_gust_speed));
+							append(snprintf(ptr, remain, " (up to %d km/h with gusts of %d km/h)", wind.wind_speed / 100, wind.wind_gust_speed / 100));
 						}
 						else {
 							append(snprintf(ptr, remain, ", peaking "));
 							append(peaking_at.format_as(TimeSpec::UNTIL, &starting_at, 1, ptr, remain));
-							append(snprintf(ptr, remain, " at %d km/h (with gusts of up to %d km/h)", wind.wind_speed, wind.wind_gust_speed));
+							append(snprintf(ptr, remain, " at %d km/h (with gusts of up to %d km/h)", wind.wind_speed / 100, wind.wind_gust_speed / 100));
 						}
 					}
 					else {
-						append(snprintf(ptr, remain, " (up to %d km/h)", wind.wind_speed));
+						append(snprintf(ptr, remain, " (up to %d km/h)", wind.wind_speed / 100));
 					}
 				}
 				break;
@@ -1396,7 +1409,7 @@ namespace weather {
 					stopping_at.earliest = wind.latest;
 					stopping_at.hourly = true;
 
-					append(snprintf(ptr, remain, "Dangerously windy conditions (up to %d km/h with gusts of %d km/h) ", wind.wind_speed, wind.wind_gust_speed));
+					append(snprintf(ptr, remain, "Dangerously windy conditions (up to %d km/h with gusts of %d km/h) ", wind.wind_speed / 100, wind.wind_gust_speed / 100));
 					if (stopping_at.earliest > 24) {
 						append(snprintf(ptr, remain, "for the day"));
 					}
