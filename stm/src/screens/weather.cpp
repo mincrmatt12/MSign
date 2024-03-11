@@ -1455,13 +1455,13 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 		snprintf(buf, sizeof buf, "%02d:%02d ", w_day.sunrise / 1000 / 60 / 60, (w_day.sunrise / 1000 / 60) % 60);
 
 		auto nxt = draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
-				draw::text(matrix.get_inactive_buffer(), "\xfe ", font::dejavusans_10::info, 13, y1 - 1, 0xaa_c),
+				draw::text(matrix.get_inactive_buffer(), "\xfd ", font::dejavusans_10::info, 13, y1 - 1, 0xaa_c),
 				y1 - 1, 0xff_c);
 
 		snprintf(buf, sizeof buf, "%02d:%02d", w_day.sunset / 1000 / 60 / 60, (w_day.sunset / 1000 / 60) % 60);
 
 		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
-				draw::text(matrix.get_inactive_buffer(), "\xfd ", font::dejavusans_10::info, nxt, y1 - 1, 0xaa_c),
+				draw::text(matrix.get_inactive_buffer(), "\xfe ", font::dejavusans_10::info, nxt, y1 - 1, 0xaa_c),
 				y1 - 1, 0xff_c);
 	}
 
