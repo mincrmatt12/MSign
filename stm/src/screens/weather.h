@@ -80,6 +80,9 @@ namespace screen {
 		TickType_t show_graph_selector_timer = 0;
 		int expanded_hrbar_scroll = 0;
 		int expanded_graph_scroll = 0;
+
+		int selected_fiveday = 0;
+		int16_t fiveday_prev_y = 0, fiveday_cur_y = 0, fiveday_next_y = 0, fiveday_height = 0;
 	};
 }
 
