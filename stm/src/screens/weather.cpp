@@ -408,7 +408,7 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 4 + i * 20, 38, 255_c);
 	}
-	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 39, 40, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
+	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 5, 39, 40, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
 	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, 51, 52, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
 }
 
@@ -1195,6 +1195,9 @@ void screen::WeatherScreen::draw() {
 	case BIG_GRAPH:
 		draw_big_graphs();
 		break;
+	case FIVEDAY_VIEW:
+		draw_fiveday();
+		break;
 	case BIG_HOURLY:
 		draw_big_hourlybar();
 		break;
@@ -1221,7 +1224,7 @@ bool screen::WeatherScreen::interact() {
 			}
 			else if (ui::buttons[ui::Buttons::PRV]) {
 				highlight = (Subscreen)((int)highlight - 1);
-				if (highlight == MAIN) highlight = BIG_HOURLY;
+				if (highlight == MAIN) highlight = FIVEDAY_VIEW;
 			}
 			else if (ui::buttons[ui::Buttons::SEL]) {
 				subscreen = highlight;
@@ -1328,4 +1331,103 @@ bool screen::WeatherScreen::interact() {
 
 void screen::WeatherScreen::refresh() {
 	servicer.refresh_grabber(slots::protocol::GrabberID::WEATHER);
+}
+
+int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots::WeatherDay day_data[], const slots::WeatherStateCode day_statuses[], int status_begin_hour, int status_end_hour) {
+	// Compute which day we're in
+	struct tm timedat;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
+	now += day*24*60*60;
+	gmtime_r(&now, &timedat);
+
+	// If this is day != 0, we have to adjust because all days != 0 start at midnight
+	if (day > 0) {
+		timedat.tm_hour = timedat.tm_min = timedat.tm_sec = 0;
+	}
+
+	// Format the <day of week>, <month day>
+	char buf[32];
+	strftime(buf, sizeof buf, "%A %b %d", &timedat);
+
+	const auto& w_day = day_data[day];
+
+	// Print left-aligned
+	draw::text(matrix.get_inactive_buffer(), buf, font::dejavusans_10::info, 1, y0 + 9, 0x33ff33_cc);
+	
+	// Compute the up/down arrows
+	{
+		snprintf(buf, 16, "\xfe %d \xfd %d", intmath::round10(w_day.low_temperature), intmath::round10(w_day.high_temperature));
+		auto text_size = draw::text_size(buf, font::dejavusans_10::info);
+
+		snprintf(buf, 16, "%d ", intmath::round10(w_day.low_temperature));
+		auto nxt = draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, 128 - text_size, y0 + 9, "\xfe ", 0x7f7ff0_cc, buf, 127_c);
+
+		snprintf(buf, 16, "%d", intmath::round10(w_day.high_temperature));
+		draw::multi_text(matrix.get_inactive_buffer(), font::dejavusans_10::info, nxt, y0 + 9, "\xfd ", led::color_t{255_c, 127_c, 10_c}, buf, led::color_t{127_c, 127_c, 127_c});
+	}
+
+	// End of text, top of hourlybar.
+	int y1 = y0 + 11;
+	
+	// If there's precipitation, show it:
+	//  - always show the amount + icon (icons TODO)
+	//  - if probability < 90%, show probability too
+	if (w_day.precipitation.kind != slots::PrecipData::NONE) {
+
+	}
+
+	// Now show sunrise/sunset (once we've determined the height of the
+	// precipitation data -- we align them both to the same bottom
+	// )
+	// TODO (needs icons)
+	
+	// Draw local hourlybar
+	
+	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 5, y1 + 6, y1 + 7, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
+	draw::multi_gradient_rect(matrix.get_inactive_buffer(), 4, y1 + 18, y1 + 19, 30_cu, 64, 0x384238_ccu, 124, 30_cu);
+
+	// Mask off left/right sides if not full day
+	draw::rect(matrix.get_inactive_buffer(), 4, y1 + 6, 4 + status_begin_hour * 5, y1 + 19, 0);
+	draw::rect(matrix.get_inactive_buffer(), 4 + (status_end_hour + 1) * 5, y1 + 6, 125, y1 + 19, 0);
+
+	// Add headers
+	for (int x = 4 + status_begin_hour * 5, hr = status_begin_hour; x + 8 <= 124; x += 20, hr += 4) {
+		snprintf(buf, 3, "%02d", hr);
+		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y1 + 5, 0xff_c);
+	}
+
+	// Fill segments
+	for (int i = 0, hr = status_begin_hour; hr <= status_end_hour; ++i, ++hr) {
+		const char* dummy;
+		fill_hourlybar(4 + hr * 5, y1 + 7, 9 + hr * 5, y1 + 18, day_statuses[i], dummy, hr * 1000*60*60);
+	}
+
+	return y1 + 20;
+}
+
+void screen::WeatherScreen::draw_fiveday() {
+	const auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
+	const auto &times = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS);
+
+	struct tm timedat;
+	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
+	gmtime_r(&now, &timedat);
+
+	int ptr = 0;
+	int16_t y = 0;
+
+	for (int i = 0; i < times.end() - times.begin(); ++i) {
+		int first_hr = 0, end_hr = 23;
+
+		if (i == 0) {
+			first_hr = timedat.tm_hour;
+		}
+		else if (i == times.end() - times.begin() - 1) {
+			end_hr = timedat.tm_hour;
+		}
+
+		y = draw_day_summary(y, i, times.data(), blk.data() + ptr, first_hr, end_hr);
+
+		ptr += (end_hr - first_hr) + 1;
+	}
 }
