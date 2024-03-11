@@ -219,8 +219,11 @@ namespace weather {
 					break;
 				}
 				else {
-					intermittent_flag = (blocks[1].left - blocks[0].right < (is_hourly ? 2 : 4)) ? 
-						INTERMITTENT_THEN_CONTINUOUS : CHUNKS_THEN_CONTINUOUS;
+					// If using hourly data, avoid small blocks immediately dumping precision.
+					if (!(is_hourly && blocks[1].left - blocks[0].right <= 2 && blocks[1].right - blocks[1].left <= 2)) {
+						intermittent_flag = (blocks[1].left - blocks[0].right < (is_hourly ? 2 : 4)) ? 
+							INTERMITTENT_THEN_CONTINUOUS : CHUNKS_THEN_CONTINUOUS;
+					}
 					goto intermittent_after;
 				}
 			case CONTINUOUS_THEN_INTERMITTENT:
@@ -719,7 +722,7 @@ namespace weather {
 				fuse_mode = NOT_FUSED;
 
 			if (hourly_summary.last_filled_block_index() == 1) {
-				if (fuse_mode == FUSE_FROM_FIRST || fuse_mode == TOTALLY_SUBSUMED || fuse_mode == NOT_FUSED) {
+				if (fuse_mode == TOTALLY_SUBSUMED || fuse_mode == NOT_FUSED) {
 					if (!before_range(hourly_summary.blocks[1].right) && !after_range(hourly_summary.blocks[1].left)) {
 						if (after_range(hourly_summary.blocks[1].right))
 							fuse_mode = FUSE_SKIP_FIRST;
