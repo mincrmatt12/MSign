@@ -109,6 +109,7 @@ namespace weather {
 		{
 			slots::WeatherDay current_day{};
 			SingleDatapoint current_data{};
+			int day_count = 0;
 
 			current_conditions.updated_at = wifi::get_localtime();
 
@@ -154,8 +155,9 @@ namespace weather {
 								// (this resolves maximum according to a blogpost)
 								current_day.precipitation = current_data.precipitation;
 
-								if (stack[3]->index < 5) {
+								if (stack[3]->index < 6) {
 									serial::interface.update_slot_at(slots::WEATHER_DAYS, current_day, stack[3]->index, true, false);
+									day_count = stack[3]->index + 1;
 								}
 							}
 							break;
@@ -223,7 +225,7 @@ namespace weather {
 				}
 			});
 
-			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * 5);
+			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * 6);
 			serial::interface.allocate_slot_size(slots::WEATHER_ARRAY, sizeof(slots::WeatherStateCode) * 24 * 5);
 			serial::interface.allocate_slot_size(slots::WEATHER_TEMP_GRAPH, sizeof(int16_t) * 24 * 5);
 			serial::interface.allocate_slot_size(slots::WEATHER_RTEMP_GRAPH, sizeof(int16_t) * 24 * 5);
@@ -234,6 +236,8 @@ namespace weather {
 				ESP_LOGD(TAG, "Json parse failed");
 				return true;
 			}
+
+			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * day_count);
 		}
 
 		serial::interface.trigger_slot_update(slots::WEATHER_DAYS);

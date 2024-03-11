@@ -42,9 +42,19 @@ namespace screen {
 
 		void draw_big_hourlybar();
 
+		// Draw a single widget in the day summary view. Shows:
+		//
+		// Thursday, May 19                          ↑ 10° ↓ 3°
+		// (sunrise) 7:34am (sunset) 6:12 pm        (icon) 50%
+		//                                                 10mm
+		int16_t draw_day_summary(int16_t y0, int day, const slots::WeatherDay day_data[], const slots::WeatherStateCode day_statuses[], int status_begin_hour, int status_end_hour);
+		void draw_fiveday();
+
 		enum Subscreen : uint8_t {
 			MAIN,
 			BIG_GRAPH,
+			FIVEDAY_VIEW,
+
 			BIG_HOURLY,
 
 			MAX_SUBSCREEN
@@ -70,6 +80,9 @@ namespace screen {
 		TickType_t show_graph_selector_timer = 0;
 		int expanded_hrbar_scroll = 0;
 		int expanded_graph_scroll = 0;
+
+		int selected_fiveday = 0;
+		int16_t fiveday_prev_y = 0, fiveday_cur_y = 0, fiveday_next_y = 0, fiveday_height = 0;
 	};
 }
 
