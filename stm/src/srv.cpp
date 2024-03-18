@@ -419,7 +419,10 @@ retry_handshake:
 		case ProtocolState::ESP_CRASHED:
 			{
 				handshake_state = EspCrashed;
-				while (true) {;}
+#ifndef SIM
+				__DSB();
+#endif
+				while (true) {vTaskDelay(portMAX_DELAY);}
 			};
 		case ProtocolState::UPDATE_STARTING:
 			{

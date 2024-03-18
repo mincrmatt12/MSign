@@ -95,7 +95,7 @@ extern "C" void app_main() {
 
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
-		serial::interface.run();
+		serial::interface.run((bool)ptr);
 	}, "srv", 2048 * STACK_MULT, (void*)had_crash, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;

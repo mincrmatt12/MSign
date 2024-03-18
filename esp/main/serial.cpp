@@ -234,7 +234,7 @@ void serial::SerialInterface::run(bool had_crash) {
 
 				send_pkt(buf_reply);
 
-				if (had_crash) while (1);
+				if (had_crash) while (1) vTaskDelay(portMAX_DELAY);
 				else continue;
 			}
 			else {

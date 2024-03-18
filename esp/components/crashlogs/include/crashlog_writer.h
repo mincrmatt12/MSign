@@ -11,6 +11,11 @@
 namespace crashlogs {
 	template<typename InnerIgnored>
 	void write_panic_frame(CrashBuffer<InnerIgnored>& buffer, void *frame, int wdt) {
+		// If there's already a log, keep it.
+		if (buffer.saved_log())
+			return;
+
+		// Otherwise start a new one
 		buffer.start_log();
 
 		XtExcFrame *exc_frame = static_cast<XtExcFrame *>(frame);

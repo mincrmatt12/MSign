@@ -51,6 +51,8 @@ namespace weather {
 	bool loop() {
 		if (!api_key) return true;
 
+		abort();
+
 		std::optional<dwhttp::Connection> dw;
 
 		{
