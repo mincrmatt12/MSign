@@ -16,6 +16,8 @@ namespace sd {
 
 	// Sets up FatFS with this.
 	InitStatus init();
+
+	void refresh_log_dir(const char *prefix="log");
 	void init_logger();
 
 	void log_putc(char c);

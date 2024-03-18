@@ -20,4 +20,9 @@ config DISABLE_CFGPULL
 	bool "Force disabling of auto-system update"
 	default n
 
+config ENABLE_CRASHLOGS
+	bool "Enable SD-card crash logs"
+	select ESP_PANIC_USER_REBOOT
+	default y
+
 endmenu

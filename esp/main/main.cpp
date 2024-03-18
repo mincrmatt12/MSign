@@ -25,6 +25,15 @@ const static char * const TAG = "app_main";
 #define STACK_MULT 1
 #endif
 
+int msign_putchar_preservicer(int c) {
+	sd::log_putc(c);
+#ifdef SIM
+	return fputc(c, stderr);
+#else
+	return putchar(c);
+#endif
+}
+
 int msign_putchar(int c) {
 	sd::log_putc(c);
 	if (serial::interface.is_sleeping()) return c;
@@ -74,8 +83,11 @@ extern "C" void app_main() {
 
 	// Install logger
 	sd::init_logger();
+	esp_log_set_putchar(msign_putchar_preservicer);
 
+	serial::process_stored_crashlogs();
 	serial::interface.init();
+
 	esp_log_set_putchar(msign_putchar);
 
 	// Create event handle early

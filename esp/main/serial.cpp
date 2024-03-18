@@ -1,8 +1,8 @@
 #include "serial.h"
 #include "esp_system.h"
+#include "sd.h"
 #include "wifitime.h"
 
-#include <algorithm>
 #include <ctime>
 #include <esp_log.h>
 #include <sys/time.h>
@@ -10,11 +10,20 @@
 #include "grabber/grab.h"
 #include "serial.cfg.h"
 
-#include "sd.h"
+#include <ff.h>
+
+#include <crashlog_storage.h>
 
 serial::SerialInterface serial::interface;
 
 static const char * const TAG = "servicer";
+
+// Data update manager: handles requests for data separately
+#ifndef SIM
+#include <esp_attr.h>
+__NOINIT_ATTR
+#endif
+crashlogs::CrashBuffer<serial::DataUpdateManager> dum;
 
 void serial::SerialInterface::process_packet() {
 	switch (rx_buf[2]) {
@@ -99,7 +108,7 @@ void serial::SerialInterface::process_packet() {
 				dur.d_temp.newtemperature = rx_buf[5];
 				// Prevent clogging up ongoing packet routing to the dupm if it's stuck
 				// processing a _different_ packet
-				if (!dum.queue_request(dur, 0)) {
+				if (!dum->queue_request(dur, 0)) {
 					ESP_LOGW(TAG, "dum busy?");
 				}
 			}
@@ -115,7 +124,7 @@ void serial::SerialInterface::process_packet() {
 				dur.d_dirty.size = rx_pkt.at<uint16_t>(4);
 				// Prevent clogging up ongoing packet routing to the dupm if it's stuck
 				// processing a _different_ packet
-				if (!dum.queue_request(dur, 0)) {
+				if (!dum->queue_request(dur, 0)) {
 					ESP_LOGW(TAG, "dum busy?");
 				}
 			}
@@ -267,8 +276,8 @@ void serial::SerialInterface::run() {
 		}
 
 		// Try to process with the data update manager
-		if (dum.is_packet_in_pending(rx_buf)) {
-			if (dum.process_input_packet(rx_buf)) continue;
+		if (dum->is_packet_in_pending(rx_buf)) {
+			if (dum->process_input_packet(rx_buf)) continue;
 		}
 
 		// Otherwise, process here.
@@ -317,7 +326,7 @@ void serial::SerialInterface::allocate_slot_size(uint16_t slotid, size_t size) {
 	dur.type = DataUpdateRequest::TypeChangeSize;
 	dur.d_chsize.slotid = slotid;
 	dur.d_chsize.size   = size;
-	dum.queue_request(dur);
+	dum->queue_request(dur);
 }
 
 size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
@@ -328,7 +337,7 @@ size_t serial::SerialInterface::current_slot_size(uint16_t slotid) {
 	dur.d_getsz.slotid = slotid;
 	dur.d_getsz.cursize_out = &result;
 
-	dum.queue_request(dur);
+	dum->queue_request(dur);
 	sync();
 	return result;
 }
@@ -337,7 +346,7 @@ void serial::SerialInterface::trigger_slot_update(uint16_t slotid) {
 	DataUpdateRequest dur;
 	dur.type = DataUpdateRequest::TypeTriggerUpdate;
 	dur.d_trigger.slotid = slotid;
-	dum.queue_request(dur);
+	dum->queue_request(dur);
 }
 
 void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offset, const void * ptr, size_t length, bool should_sync, bool should_mark_dirty) {
@@ -349,7 +358,7 @@ void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offs
 			dur.d_patch.length = length;
 			dur.d_patch.offset = offset;
 			dur.d_patch.slotid = slotid;
-			dum.queue_request(dur);
+			dum->queue_request(dur);
 		}
 
 		if (should_sync) {
@@ -363,7 +372,7 @@ void serial::SerialInterface::update_slot_partial(uint16_t slotid, uint16_t offs
 		dur.d_inline_patch.slotid = slotid;
 		dur.d_inline_patch.length = length;
 		dur.d_inline_patch.offset = offset;
-		dum.queue_request(dur);
+		dum->queue_request(dur);
 	}
 }
 
@@ -373,7 +382,7 @@ void serial::SerialInterface::sync() {
 		dur.type = DataUpdateRequest::TypeSync;
 		dur.d_sync.with = xTaskGetCurrentTaskHandle();
 		dur.d_sync.by = portMAX_DELAY; // todo
-		if (!dum.queue_request(dur)) {
+		if (!dum->queue_request(dur)) {
 			ESP_LOGW(TAG, "Failed to queue sync request");
 			vTaskDelay(1000);
 			return;
@@ -383,5 +392,41 @@ void serial::SerialInterface::sync() {
 }
 
 void serial::SerialInterface::init() {
-	dum.init();
+	dum.init_underlying();
+	dum->init();
 }
+
+void serial::process_stored_crashlogs() {
+	static const char * const TAG = "sdcrash";
+
+	if (const char * log_data = dum.saved_log()) {
+		size_t log_size = dum.saved_log_length();
+
+		sd::refresh_log_dir("crash");
+		f_unlink("/log/crash.0");
+
+		ESP_LOGE(TAG, "Found old crash log in memory, writing to SD");
+
+		FIL cra{}; 
+		if (f_open(&cra, "/log/crash.0", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+			ESP_LOGE(TAG, "Failed to open new crash log");
+			return;
+		}
+
+		UINT bw;
+		f_write(&cra, log_data, log_size, &bw);
+
+		f_sync(&cra);
+		f_close(&cra);
+	}
+}
+
+#if !defined(SIM) && defined(CONFIG_ENABLE_CRASHLOGS)
+
+#include <crashlog_writer.h>
+
+extern "C" void esp_custom_panic_handler(void *frame, int wdt) {
+	crashlogs::write_panic_frame(dum, frame, wdt);
+}
+
+#endif

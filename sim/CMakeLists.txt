@@ -311,7 +311,7 @@ target_link_libraries(esp_wpabufman esp_bearssl esp_freertos)
 
 add_executable(espsim ${TOTAL_ESP_SRCS})
 target_compile_options(espsim PRIVATE -DSIM)
-target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(espsim PRIVATE ${BINARY_PATH_RELATIVE}/espsrc ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_LIST_DIR}/../esp/components/crashlogs/include)
 add_dependencies(espsim copy_esp_src esp_parsers)
 
 target_link_libraries(espsim esp_freertos esp_lwip esp_bearssl esp_fatfs esp_b64 esp_wpabufman)

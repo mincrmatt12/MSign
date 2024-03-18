@@ -15,6 +15,9 @@
 #include <queue.h>
 
 namespace serial { 
+	// Must be called before init()
+	void process_stored_crashlogs();
+
 	struct SerialInterface final : private protocol::ProtocolImpl {
 		friend DataUpdateManager;
 
@@ -121,9 +124,9 @@ namespace serial {
 		void set_sleep_mode(bool mode);
 
 	private:
-		// Data update manager: handles requests for data separately
-		DataUpdateManager dum;
+		// The DataUpdateManager is a static variable in serial.cpp so that we can re-use it for storing crash logs.
 
+		// Reference to the servicer task
 		TaskHandle_t srv_task;
 
 		// Handle checking for loss of comms

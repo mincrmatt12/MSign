@@ -90,34 +90,37 @@ namespace sd {
 		f_close(&logfil);
 	}
 
-	void init_logger() {
+	void refresh_log_dir(const char *prefix) {
 		f_mkdir("/log");
-		{
-			// Try and rotate log files, storing up to 2 previous entries
-			DIR logdir; FILINFO fno;
-			int maxn = 0;
-			f_opendir(&logdir, "/log");
-			while (f_readdir(&logdir, &fno) == FR_OK && fno.fname[0] != 0) {
-				int num;
-				if (sscanf(fno.fname, "log.%d", &num) != 1) continue;
-				if (num > maxn) maxn = num;
+		// Try and rotate log files, storing up to 10 previous entries
+		DIR logdir; FILINFO fno;
+		int maxn = 0;
+		f_opendir(&logdir, "/log");
+		char scanstr[10]; snprintf(scanstr, sizeof scanstr, "%s.%%d", prefix);
+		while (f_readdir(&logdir, &fno) == FR_OK && fno.fname[0] != 0) {
+			int num;
+			if (sscanf(fno.fname, scanstr, &num) != 1) continue;
+			if (num > maxn) maxn = num;
+		}
+		f_closedir(&logdir);
+		// rename files
+		for (int i = maxn; i >= 0; --i) {
+			char oldname[32], newname[32];
+			snprintf(oldname, 32, "/log/%s.%d", prefix, i);
+			snprintf(newname, 32, "/log/%s.%d", prefix, i+1);
+			if (i > 10) {
+				ESP_LOGW("sdlog", "deleting old %s", oldname);
+				f_unlink(oldname);
 			}
-			f_closedir(&logdir);
-			// rename files
-			for (int i = maxn; i >= 0; --i) {
-				char oldname[32], newname[32];
-				snprintf(oldname, 32, "/log/log.%d", i);
-				snprintf(newname, 32, "/log/log.%d", i+1);
-				if (i > 10) {
-					ESP_LOGW("sdlog", "deleting old log %s", oldname);
-					f_unlink(oldname);
-				}
-				else {
-					ESP_LOGI("sdlog", "moving old log %s -> %s", oldname, newname);
-					f_rename(oldname, newname);
-				}
+			else {
+				ESP_LOGI("sdlog", "moving old %s -> %s", oldname, newname);
+				f_rename(oldname, newname);
 			}
 		}
+	}
+
+	void init_logger() {
+		refresh_log_dir();
 		f_unlink("/log/log.0");
 		// Start timer
 		auto tim = xTimerCreate("logf", pdMS_TO_TICKS(360), true, nullptr, flush_logs);
