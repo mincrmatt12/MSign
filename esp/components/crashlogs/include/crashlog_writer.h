@@ -53,7 +53,7 @@ namespace crashlogs {
 		panic_fmt_buffer = buffer.log_scratch_buffer(); \
 		if (panic_fmt_buffer.second > 0) { \
 			panic_string_size = snprintf(panic_fmt_buffer.first, panic_fmt_buffer.second, fmt, ##__VA_ARGS__); \
-			if (buffer.write_log(panic_fmt_buffer.first, panic_string_size + 1) == buffer.WriteBufferFull) return; \
+			if (buffer.write_log(panic_fmt_buffer.first, panic_string_size) == buffer.WriteBufferFull) return; \
 		}}
 
 		if (wdt)
