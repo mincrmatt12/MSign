@@ -16,7 +16,7 @@
 
 namespace serial { 
 	// Must be called before init()
-	void process_stored_crashlogs();
+	bool process_stored_crashlogs();
 
 	struct SerialInterface final : private protocol::ProtocolImpl {
 		friend DataUpdateManager;
@@ -25,7 +25,7 @@ namespace serial {
 		void init();
 
 		// Task entry point
-		void run();
+		void run(bool had_crash=false);
 
 		// Reset, informing the STM beforehand.
 		void reset();

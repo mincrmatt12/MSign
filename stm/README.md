@@ -67,6 +67,7 @@ is limited to around 8k in practice.
 | `HANDSHAKE_RESP` | `0x11` |
 | `HANDSHAKE_OK` | `0x12` |
 | `HANDSHAKE_UOK` | `0x13` |
+| `HANDSHAKE_CRASH` | `0x14` |
 | `DATA_TEMP` | `0x20` |
 | `DATA_FULFILL` | `0x21` |
 | `DATA_RETRIEVE` | `0x22` |
@@ -96,7 +97,8 @@ is limited to around 8k in practice.
 ### Handshake
 
 STM sends command `HANDSHAKE_INIT`, esp responds with `HANDSHAKE_RESP`, STM finishes with `HANDSHAKE_OK`. All handshake commands have payload size 0 and no payload.
-The command `HANDSHAKE_UOK` is sent to indicate that the STM should enter update mode.
+The command `HANDSHAKE_UOK` is sent to indicate that the STM should enter update mode. The command `HANDSHAKE_CRASH` is sent from the ESP in place of `HANDSHAKE_RESP` or
+`HANDSHAKE_UOK` if there is a pending crash report -- this status is cleared after a reset and the STM should not boot if it gets it.
 
 ### Slots
 

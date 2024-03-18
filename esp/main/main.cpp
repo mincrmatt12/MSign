@@ -85,7 +85,7 @@ extern "C" void app_main() {
 	sd::init_logger();
 	esp_log_set_putchar(msign_putchar_preservicer);
 
-	serial::process_stored_crashlogs();
+	bool had_crash = serial::process_stored_crashlogs();
 	serial::interface.init();
 
 	esp_log_set_putchar(msign_putchar);
@@ -95,8 +95,8 @@ extern "C" void app_main() {
 
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){
-		((serial::SerialInterface *)ptr)->run();
-	}, "srv", 2048 * STACK_MULT, &serial::interface, 9, NULL) != pdPASS) {
+		serial::interface.run();
+	}, "srv", 2048 * STACK_MULT, (void*)had_crash, 9, NULL) != pdPASS) {
 		ESP_LOGE(TAG, "Failed to create srv");
 		return;
 	}

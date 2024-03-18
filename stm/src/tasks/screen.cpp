@@ -66,6 +66,9 @@ namespace tasks {
 					draw::text(fb, "UPD INIT", font::lcdpixel_6::info, 0, 35, 0x2828ff_cc);
 				}
 				break;
+			case 4:
+				draw::text(fb, "ESP CRASH", font::lcdpixel_6::info, 0, 28, 0xff4444_cc);
+				break;
 			default:
 				break;
 		}
@@ -184,7 +187,7 @@ namespace tasks {
 
 			// Init esp comms
 			while (!servicer.ready()) {
-				show_test_pattern(1, matrix.get_inactive_buffer());
+				show_test_pattern(servicer.crashed() ? 4 : 1, matrix.get_inactive_buffer());
 				matrix.swap_buffers();
 			}
 

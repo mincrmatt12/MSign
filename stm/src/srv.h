@@ -34,7 +34,8 @@ namespace srv {
 		// Init HW & RTOS stuff.
 		void init();
 		bool ready(); // is the esp talking?
-		bool updating() {return is_updating;} // are we in update mode?
+		bool updating() const {return handshake_state == EspUpdating;} // are we in update mode?
+		bool crashed() const  {return handshake_state == EspCrashed;}  // did the esp crash?
 
 		using ProtocolImpl::dma_finish;
 
@@ -224,7 +225,11 @@ namespace srv {
 		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
 
 		// Are we currently doing an update? If so, we _won't_ process _any_ data requests.
-		bool is_updating = false;
+		volatile enum : uint8_t {
+			EspNormal,
+			EspUpdating,
+			EspCrashed
+		} handshake_state = EspNormal;
 		uint8_t update_state = 0;
 
 		// status shown on screen

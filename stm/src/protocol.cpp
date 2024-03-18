@@ -48,6 +48,10 @@ void srv::ProtocolImpl::dma_finish(bool incoming) {
 				state = ProtocolState::UPDATE_STARTING;
 				return;
 			}
+			else if (dma_buffer[0] == 0xa6 && dma_buffer[1] == 0x00 && dma_buffer[2] == 0x14) {
+				state = ProtocolState::ESP_CRASHED;
+				return;
+			}
 			else {
 				NVIC_SystemReset();
 			}

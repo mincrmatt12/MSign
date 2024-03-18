@@ -368,7 +368,7 @@ void srv::Servicer::do_handshake() {
 		update_state = USTATE_WAITING_FOR_FINISH;
 		update_chunks_remaining = 0; // used separately
 		send();
-		is_updating = true;
+		handshake_state = EspUpdating;
 		start_recv(); // start receieving packets, will implicitly setup the state correctly. return to main loop to go to actual logic
 		return;
 	}
@@ -416,6 +416,11 @@ retry_handshake:
 				start_recv();
 				return;
 			}
+		case ProtocolState::ESP_CRASHED:
+			{
+				handshake_state = EspCrashed;
+				while (true) {;}
+			};
 		case ProtocolState::UPDATE_STARTING:
 			{
 				// Before entering the update mode, switch baudrate
@@ -428,7 +433,7 @@ retry_handshake:
 				dma_out_buffer[3] = 0x10; // UPDATE_STATUS; cmd=update mode entered
 
 				send();
-				is_updating = true; // Mark update mode.
+				handshake_state = EspUpdating; // Mark update mode.
 				start_recv(); // Begin recieveing messages
 			}
 			return;
@@ -447,7 +452,7 @@ void srv::Servicer::run() {
 	do_handshake();
 
 	// If in update mode, go to the update logic handlers
-	if (this->is_updating) {
+	if (this->updating()) {
 		while (true)
 			do_update_logic();
 	}

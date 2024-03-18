@@ -202,7 +202,7 @@ void serial::SerialInterface::process_packet() {
 	}
 }
 
-void serial::SerialInterface::run() {
+void serial::SerialInterface::run(bool had_crash) {
 	srv_task = xTaskGetCurrentTaskHandle();
 	// Initialize the protocol
 	init_hw();
@@ -229,11 +229,13 @@ void serial::SerialInterface::run() {
 				uint8_t buf_reply[3] = {
 					0xa6,
 					0x00,
-					slots::protocol::HANDSHAKE_RESP
+					had_crash ? slots::protocol::HANDSHAKE_CRASH : slots::protocol::HANDSHAKE_RESP
 				};
 
 				send_pkt(buf_reply);
-				continue;
+
+				if (had_crash) while (1);
+				else continue;
 			}
 			else {
 				if (cmd == slots::protocol::HANDSHAKE_INIT) continue;
@@ -396,7 +398,7 @@ void serial::SerialInterface::init() {
 	dum->init();
 }
 
-void serial::process_stored_crashlogs() {
+bool serial::process_stored_crashlogs() {
 	static const char * const TAG = "sdcrash";
 
 	if (const char * log_data = dum.saved_log()) {
@@ -410,7 +412,7 @@ void serial::process_stored_crashlogs() {
 		FIL cra{}; 
 		if (f_open(&cra, "/log/crash.0", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
 			ESP_LOGE(TAG, "Failed to open new crash log");
-			return;
+			return true;
 		}
 
 		UINT bw;
@@ -418,7 +420,13 @@ void serial::process_stored_crashlogs() {
 
 		f_sync(&cra);
 		f_close(&cra);
+
+		dum.drop_log();
+
+		return true;
 	}
+
+	return false;
 }
 
 #if !defined(SIM) && defined(CONFIG_ENABLE_CRASHLOGS)

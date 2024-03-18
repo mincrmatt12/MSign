@@ -90,6 +90,7 @@ pnames = {
     0x11: "HANDSHAKE_RESP",
     0x12: "HANDSHAKE_OK",
     0x13: "HANDSHAKE_UOK",
+    0x14: "HANDSHAKE_CRASH",
     0x20: "DATA_TEMP",
     0x21: "DATA_FULFILL",
     0x22: "DATA_RETRIEVE",

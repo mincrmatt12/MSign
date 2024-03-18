@@ -29,9 +29,14 @@ namespace crashlogs {
 				return 0;
 		}
 
+		// Destroys the crash log (if any exists).
+		void drop_log() {
+			memset(underlying_raw, 0, sizeof underlying_raw);
+		}
+
 		// Destroys the crash log (if any exists) and initializes the Inner type.
 		void init_underlying() {
-			memset(underlying_raw, 0, sizeof underlying_raw);
+			drop_log();
 			new (&underlying) Inner{};
 		}
 
