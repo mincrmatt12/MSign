@@ -178,6 +178,8 @@ namespace tasks {
 
 			while (!servicer.ready()) {
 				matrix.swap_buffers();
+				if (servicer.crashed())
+					goto when_crashed;
 			}
 		}
 		else {
@@ -187,6 +189,7 @@ namespace tasks {
 
 			// Init esp comms
 			while (!servicer.ready()) {
+when_crashed:
 				show_test_pattern(servicer.crashed() ? 4 : 1, matrix.get_inactive_buffer());
 				matrix.swap_buffers();
 			}
