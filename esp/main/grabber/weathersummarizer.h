@@ -65,8 +65,8 @@ namespace weather {
 				if (start == -2)
 					return false;
 
-				if (end == -1 && likely_count > fallback_threshold)
-					return true;
+				if (end == -1)
+					return likely_count > fallback_threshold;
 				else
 					return (likely_count >= (end - start) / 4);
 			}
