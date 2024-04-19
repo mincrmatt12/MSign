@@ -1049,14 +1049,10 @@ finish_setting:
 				//
 				// We want to swap cb->adjacent() with the empty block, effectively (or insert it, etc.)
 				//
-				// The total space we can reclaim is new_alloc_space, minus the header.
-				// If cb->adjacent() is empty, the space we have to reclaim is new_alloc_space - cb->adjacent()->datasize
-				// otherwise, we have to reclaim the entire new_alloc_space + 4.
+				// new_alloc_space is datasize of desired block, so we need 4 + new_alloc_space in front of cb;
+				// if cb->adjacent() is not empty we need that entire space, otherwise we need new_alloc_space - current_space extra bytes.
 				//
-				// The total space we can reclaim from e = 4 + its size.
-				// 
-				// If the remaining space in e is more than 4 (rounded to the nearest 4), we shrink the datasize, otherwise we delete the chunk entirely.
-				// After reclaiming we memmove
+				// The total space we can reclaim from e = 4 + its size -- i.e. e.total_size().
 
 				uint32_t remaining_new_alloc_space = *containing_block.adjacent() ? new_alloc_space + 4 : (new_alloc_space - containing_block.adjacent()->rounded_datasize());
 				uint32_t reclaimable_space = next_empty->total_size();
@@ -1064,7 +1060,7 @@ finish_setting:
 				uint32_t total_reclaimed = 0;
 
 				// If we reclaim the entire thing...
-				if (reclaimable_space - 4 <= remaining_new_alloc_space) {
+				if (reclaimable_space <= remaining_new_alloc_space) {
 					// Just do a boring memmove
 					memmove(((uint8_t *)move_region_start) + reclaimable_space, move_region_start, reinterpret_cast<uintptr_t>(next_empty) - reinterpret_cast<uintptr_t>(move_region_start));
 					total_reclaimed = reclaimable_space;
@@ -1106,16 +1102,17 @@ finish_setting:
 				// Create an empty empty block after the remote block (which will turn into the second remote)
 				if (!make_space_after(block, 0)) return false;
 				block.shrink(offset_in_block);
-				goto copy_data;
 			}
-
-			// Create an empty space after the block with enough space to fit the block's contents after offset_in_block + 4 bytes + alignment including the null space
-			{
+			// Otherwise, create an empty space after the block with enough space to fit the block's contents after offset_in_block + 4 bytes + alignment including the null space
+			else {
+				// We need to shift at least 4 bytes for the header...
 				uint32_t shift_required = 4;
+				// And if we're going to truncate at a point that is not a multiple of 4, there is some padding too.
 				if (offset_in_block % 4) {
 					shift_required += 4 - (offset_in_block % 4);
 				}
 
+				// We require an empty with size == new_length
 				uint32_t space_required = shift_required - (block.rounded_datasize() - block.datasize);
 				if (new_length % 4) {
 					space_required += 4 - (new_length % 4);
@@ -1132,7 +1129,6 @@ finish_setting:
 				block.shrink(offset_in_block);
 			}
 
-copy_data:
 			// Copy other header details.
 			block.adjacent()->slotid = block.slotid;
 			block.adjacent()->location = block.location;
