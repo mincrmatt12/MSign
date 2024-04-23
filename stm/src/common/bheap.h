@@ -935,7 +935,7 @@ finish_setting:
 
 		// Get the first block of that SlotID as a TypedBlock
 		template<typename T>
-		inline const TypedBlock<T>& get(uint32_t slotid) {return get(slotid).template as<T>();}
+		inline const TypedBlock<T>& get(uint32_t slotid) const {return get(slotid).template as<T>();}
 		template<typename T>
 		inline TypedBlock<T>& get(uint32_t slotid) {return get(slotid).template as<T>();}
 
