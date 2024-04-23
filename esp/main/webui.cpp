@@ -13,6 +13,7 @@
 #include <b64/cencode.h>
 #include <lwip/sockets.h>
 #include <esp_system.h>
+#include <memory>
 
 #ifndef SIM
 #include "esp_ota_ops.h"
@@ -107,18 +108,26 @@ namespace webui {
 	}
 
 	void stream_file(FIL* f) {
-		char sendbuf[128];
+		std::unique_ptr<char[]> sendbuf;
+		size_t buflen = 2048;
+		if (sendbuf.reset(new (std::nothrow) char[2048]); !sendbuf) {
+			buflen = 1024;
+			if (sendbuf.reset(new (std::nothrow) char[1024]); !sendbuf) {
+				buflen = 512;
+				sendbuf.reset(new char[512]);
+			}
+		}
 		print_to_client("Content-Length: ");
-		snprintf(sendbuf, 128, "%u\r\n\r\n", f_size(f));
-		print_to_client(sendbuf);
+		snprintf(sendbuf.get(), buflen, "%u\r\n\r\n", f_size(f));
+		print_to_client(sendbuf.get());
 
 		while (!f_eof(f)) {
 			UINT chunkSize;
-			if (f_read(f, sendbuf, 128, &chunkSize)) {
+			if (f_read(f, sendbuf.get(), buflen, &chunkSize)) {
 				ESP_LOGE(TAG, "failed to read from file");
 				return;
 			}
-			if (lwip_send(client_sock, sendbuf, chunkSize, 0) < 0) {
+			if (lwip_send(client_sock, sendbuf.get(), chunkSize, 0) < 0) {
 				ESP_LOGE(TAG, "client closed conn/fail");
 				return;
 			}
