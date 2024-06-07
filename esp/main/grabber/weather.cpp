@@ -147,7 +147,7 @@ namespace weather {
 
 				if (stack_ptr == 5) {
 					// If we've processed an entire datapoint, process it.
-					current_data.recalculate_weather_code();
+					current_data.recalculate_weather_code(current_timeline == FIVEMINUTELY && stack[3]->index < 2);
 					switch (current_timeline) {
 						case DAILY:
 							{

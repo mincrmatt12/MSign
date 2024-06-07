@@ -23,7 +23,10 @@ namespace weather {
 		void load_from_json(const char *key, const json::Value &val);
 
 		// Updates weather code to include things like wind conditions & humidity.
-		void recalculate_weather_code();
+		//
+		// Additionally, overrides probability on precipitation based on the weather status code if describing current
+		// conditions or those in <10 minutes.
+		void recalculate_weather_code(bool within_10_minutes);
 	};
 
 	// Data points for full days are stored in WeatherDay objects directly.

@@ -118,17 +118,31 @@ namespace weather {
 		}
 	}
 
-	void SingleDatapoint::recalculate_weather_code() {
+	void SingleDatapoint::recalculate_weather_code(bool within_10_minutes) {
 		// TODO: add humidity detection
 
 		slots::WeatherStateCode category = static_cast<slots::WeatherStateCode>(uint8_t(weather_code) & 0xf0);
 
-		// Only augment conditions that are less interesting than high wind / humidity.
-		if (category != slots::WeatherStateCode::CLEAR && category != slots::WeatherStateCode::LIGHT_FOG)
-			return;
-
-		if (wind_speed > 4000 || wind_gust > 5000) // 55 km/h
-			weather_code = slots::WeatherStateCode::WINDY;
+		switch (category)
+		{
+			// Only perform WINDY detection on clear/light_fog
+			case slots::WeatherStateCode::CLEAR:
+			case slots::WeatherStateCode::LIGHT_FOG:
+				if (wind_speed > 4000 || wind_gust > 5000) // 55 km/h
+					weather_code = slots::WeatherStateCode::WINDY;
+				break;
+			// Augment precipitation data if close to current conditions.
+			case slots::WeatherStateCode::DRIZZLE:
+			case slots::WeatherStateCode::FREEZING_DRIZZLE:
+			case slots::WeatherStateCode::SNOW:
+			case slots::WeatherStateCode::LIGHT_ICE_PELLETS:
+			case slots::WeatherStateCode::THUNDERSTORM:
+				if (precipitation.kind != slots::PrecipData::NONE && precipitation.probability < 127 && within_10_minutes)
+					precipitation.probability = 127;
+				break;
+			default:
+				return;
+		}
 	}
 
 	bool PrecipitationSummarizer::Block::append(uint16_t index, const slots::PrecipData& precipitation) {
