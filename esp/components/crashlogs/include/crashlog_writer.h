@@ -85,7 +85,7 @@ namespace crashlogs {
 				}
 				PANIC("\n");
 			}
-			PANIC("EXCVADDR: 0x%08x\n", exc_frame->excvaddr);
+			PANIC("EXCVADDR: 0x%08x\n", *(uint32_t *)&exc_frame->excvaddr);
 		}
 
 		PANIC("\nBacktrace: %p:%p ", i_pc, i_sp);
