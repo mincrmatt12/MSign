@@ -167,7 +167,7 @@ namespace weather {
 		// this will ensure they remain marked properly.
 		right = -1;
 
-		if (precipitation.probability > /* 50% */ 127) {
+		if (precipitation.probability >= /* 50% */ 127) {
 			// This is the start of "real precipitation".
 
 			if (start == -2)
@@ -208,7 +208,7 @@ namespace weather {
 				block_is_active = true;
 				return;
 			}
-			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3) {
+			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].is_likely()) {
 				// If the previous block is too short, destroy it and replace it with this one.
 				--block_index;
 				blocks[block_index] = {};
