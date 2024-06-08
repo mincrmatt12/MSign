@@ -710,11 +710,20 @@ namespace weather {
 		if (!hourly_summary.empty() && !minutely_summary.empty()) {
 			int16_t minutely_range_left = minutely_summary.blocks[0].left;
 			int16_t minutely_range_right = minutely_summary.blocks[minutely_summary.last_filled_block_index()].right;
+			int16_t minute_offset;
+			{
+				time_t t;
+				struct tm stm;
+
+				t = time(0);
+				localtime_r(&t, &stm);
+				minute_offset = static_cast<int16_t>(stm.tm_min) / 5;
+			}
 
 			auto before_range = [&](int hour) -> bool {
 				if (hour == -1)
 					return false;
-				return hour * MINUTE_INDICES_PER_HOUR < minutely_range_left;
+				return (hour * MINUTE_INDICES_PER_HOUR) - minute_offset < minutely_range_left;
 			};
 			auto after_range = [&](int hour) -> bool {
 				if (minutely_range_right == -1)
@@ -722,7 +731,7 @@ namespace weather {
 				else {
 					if (hour == -1)
 						return true;
-					return (hour - 1) * MINUTE_INDICES_PER_HOUR > minutely_range_right;
+					return (hour * MINUTE_INDICES_PER_HOUR) - minute_offset - 1 > minutely_range_right;
 				}
 			};
 
