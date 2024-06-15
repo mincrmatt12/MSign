@@ -117,12 +117,14 @@ function ParcelEntry({data, updateData}) {
 				</Form.Group>
 			</Col>
 			<Col md>
-				<Form.Group controlId="tc">
+				<Form.Group controlId="fc">
 					<Form.Label>final carrier</Form.Label>
 					<CarrierChooser code={data["final_carrier_id"] ?? 0} updateCode={(v) => {updateData(["final_carrier_id"], v)}} />
 				</Form.Group>
 			</Col>
 		</Row>
+
+		<Form.Check checked={data["translate_messages"] ?? true} label="translate messages" onChange={(e) => updateData(["translate_messages"], e.target.checked)} />
 
 		</Card.Body>
 	</Card>;
