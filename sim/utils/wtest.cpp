@@ -25,7 +25,7 @@ int main(int argc, char ** argv) {
 			datapoint.load_from_json(stack[5]->name, val);
 		}
 		else if (stack_ptr == 5 && !strcmp(stack[4]->name, "values") && val.type == val.OBJ) {
-			datapoint.recalculate_weather_code();
+			datapoint.recalculate_weather_code(in_which_block == 0 && stack[3]->index < 2);
 			if (in_which_block == 0 && stack[3]->index < 120) {
 				if (stack[3]->index == 0)
 					wsc = datapoint.weather_code;
