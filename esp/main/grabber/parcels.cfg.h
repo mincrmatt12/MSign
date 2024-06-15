@@ -18,6 +18,9 @@ namespace parcels {
 
 		//!cfg: holds .additional_param
 		config::string_t additional_param {};
+
+		//!cfg: holds .translate_messages
+		bool translate_messages = true;
 	};
 
 	//!cfg: holds .parcels.trackers!size, default 0

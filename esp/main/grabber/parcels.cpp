@@ -215,6 +215,7 @@ namespace parcels {
 					// record autodetection results if found
 					if (tracker_configs[match].carrier_id == 0) tracker_configs[match].carrier_id = carrier_code;
 					if (tracker_configs[match].final_carrier_id == 0) tracker_configs[match].final_carrier_id = final_carrier_code;
+					if (!tracker_configs[match].translate_messages) lang_ok = true;
 
 					bool cfg_ok = lang_ok && (tracker_configs[match].additional_param == nullptr || !strcmp(tracker_configs[match].additional_param, recorded_param));
 					bool carrier_ok = tracker_configs[match].carrier_id == carrier_code && tracker_configs[match].final_carrier_id == final_carrier_code;
@@ -298,7 +299,8 @@ namespace parcels {
 				comma = true;
 				request.write(tracker_configs[i].tracking_number);
 				ESP_LOGI(TAG, " - id %d; no: %s", i, tracker_configs[i].tracking_number.get());
-				request.write(R"(", "lang": "en")");
+				if (tracker_configs[i].translate_messages)
+					request.write(R"(", "lang": "en")");
 				if (tracker_configs[i].carrier_id != 0) {
 					snprintf(buf, sizeof buf, R"(, "carrier": %d)", tracker_configs[i].carrier_id);
 					request.write(buf);
@@ -367,9 +369,16 @@ namespace parcels {
 				comma = true;
 				request.write(tracker_configs[i].tracking_number);
 				ESP_LOGI(TAG, " - id %d; no: %s", i, tracker_configs[i].tracking_number.get());
-				request.write(R"(", "items": {"lang": "en")");
+				bool inner_comma = true;
+				if (tracker_configs[i].translate_messages) {
+					request.write(R"(", "items": {"lang": "en")");
+				}
+				else {
+					request.write(R"(", "items": {)");
+					inner_comma = false;
+				}
 				if (tracker_configs[i].additional_param) {
-					request.write(R"(, "param": ")");
+					request.write(inner_comma ? R"(, "param": ")" : R"("param": ")");
 					request.write(tracker_configs[i].additional_param);
 					request.write("\"");
 				}
@@ -583,7 +592,7 @@ namespace parcels {
 			else if (!strcmp(stack[3]->name, "track_info")) {
 				if (p_idx < 0) return;
 				const auto& dynamic_info = parcel_dynamic_infos[p_idx];
-				bool use_localized = dynamic_info.state == ParcelDynamicInfo::READY;
+				bool use_localized = dynamic_info.state == ParcelDynamicInfo::READY && tracker_configs[p_idx].translate_messages;
 
 				if (stack_ptr >= 6 && !strcmp(stack[4]->name, "time_metrics") && !strcmp(stack[5]->name, "estimated_delivery_date")) {
 					if (stack_ptr == 7 && v.type == json::Value::STR) { // record timestamps
