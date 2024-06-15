@@ -407,6 +407,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 				if (ei.status.flags & slots::ParcelStatusLine::HAS_NEW_CARRIER && do_space) {
 					fb.at(1, y-1) = fb.at(3, y-1) = 0x40_c;
 					y += 2;
+					parcel_entries_size += 2;
 				}
 				
 				// draw the entry
