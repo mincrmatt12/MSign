@@ -319,27 +319,33 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	// Draw nonscrolling text
 	if (psl.flags & psl.HAS_LOCATION && psl.location_offset < heap_size) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
+		auto sz = draw::text_size(heap + psl.location_offset, font::lcdpixel_6::info);
+		if (sz > 120) {
+			// Scroll text
+			dual_line = true;
+		}
 		if (onscreen) {
-			auto sz = draw::text_size(heap + psl.location_offset, font::lcdpixel_6::info);
-			if (sz > 120) {
-				// Scroll text
-				dual_line = true;
+			if (dual_line) {
 				draw::text(matrix.get_inactive_buffer(), heap + psl.location_offset, font::lcdpixel_6::info, 5 + draw::scroll(timekeeper.current_time / 10, sz, 123), end_y + 5, 0x5555ff_cc);
 			}
 			else {
 				location_end_x = draw::text(matrix.get_inactive_buffer(), heap + psl.location_offset, font::lcdpixel_6::info, 5, end_y + 5, 0x5555ff_cc);
 			}
 		}
+		else if (!dual_line)
+		{
+			location_end_x = 5 + sz;
+		}
 		second_line = true;
 	}
 	if (psl.flags & psl.HAS_UPDATED_TIME) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
+		char buf[32]; draw::format_relative_date(buf, 32, updated_time);
+		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
+		if (location_end_x > 127 - sz - 6) {
+			dual_line = true;
+		}
 		if (onscreen) {
-			char buf[32]; draw::format_relative_date(buf, 32, updated_time);
-			auto sz = draw::text_size(buf, font::lcdpixel_6::info);
-			if (dual_line || location_end_x > 127 - sz - 6) {
-				dual_line = true;
-			}
 			draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, dual_line ? end_y + 11 : end_y + 5, 0xaa_c);
 		}
 		second_line = true;
