@@ -301,6 +301,8 @@ namespace parcels {
 				ESP_LOGI(TAG, " - id %d; no: %s", i, tracker_configs[i].tracking_number.get());
 				if (tracker_configs[i].translate_messages)
 					request.write(R"(", "lang": "en")");
+				else
+					request.write("\"");
 				if (tracker_configs[i].carrier_id != 0) {
 					snprintf(buf, sizeof buf, R"(, "carrier": %d)", tracker_configs[i].carrier_id);
 					request.write(buf);
