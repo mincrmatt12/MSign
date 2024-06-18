@@ -272,18 +272,26 @@ namespace slots {
 	
 		enum StatusIcon : uint8_t {
 			UNK = 0,
+			PRE_TRANSIT = 1,
 
-			PRE_TRANSIT = 0x10,
-			IN_TRANSIT  = 0x11,
-			OUT_FOR_DELIVERY = 0x12,
+			IN_TRANSIT = 0x10,
+			PICKED_UP  = 0x11,
+			IN_TRANSIT_DEPARTED = 0x12,
+			IN_TRANSIT_ARRIVED  = 0x13,
+			CUSTOMS_PROCESS = 0x14,
+			CUSTOMS_RELEASED = 0x15,
+			OUT_FOR_DELIVERY = 0x16,
+			IN_TRANSIT_DELAYED = 0x17,
 
 			DELIVERED = 0x20,
-			FAILED_TO_DELIVER = 0x21,
-			READY_FOR_PICKUP = 0x22,
+			READY_FOR_PICKUP = 0x21,
 
 			RETURN_TO_SENDER = 0x30,
-			GENERAL_ERROR = 0x31,
-			CANCELLED = 0x32
+			CANCELLED = 0x31,
+			CUSTOMS_NEEDS_INFO = 0x32,
+			OTHER_EXCEPTION = 0x33,
+
+			ERROR = 0x40
 		} status_icon;
 
 		uint64_t updated_time;   // when was the last status received

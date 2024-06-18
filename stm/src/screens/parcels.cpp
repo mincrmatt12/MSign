@@ -17,18 +17,59 @@ namespace bitmap::parcels {
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t cancelled[] = {
 		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00001010,0b00000000,
 		0b00000100,0b00000000,
-		0b00001000,0b10000000,
-		0b00010001,0b00000000,
-		0b00101110,0b00000000,
-		0b01001010,0b01000000,
-		0b00001110,0b10000000,
-		0b00010001,0b00000000,
-		0b00100010,0b00000000,
+		0b00001010,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t customs_info[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00001100,0b00000000,
+		0b00000010,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00000100,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t customs_inprogress[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00011001,0b10000000,
+		0b00100110,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t customs_release[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00101111,0b10000000,
+		0b00000000,0b00000000,
+		0b00000001,0b00000000,
+		0b00001010,0b00000000,
 		0b00000100,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t delivered[] = {
 		0b00000000,0b00000000,
@@ -43,22 +84,76 @@ namespace bitmap::parcels {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t exception[] = {
+		0b00000000,0b00000000,
+		0b00000100,0b00000000,
+		0b00000100,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t general_error[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00010001,0b00000000,
+		0b00001010,0b00000000,
+		0b00000100,0b00000000,
+		0b00001010,0b00000000,
+		0b00010001,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t in_transit_arrive[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00011000,0b00000000,
+		0b00000101,0b00000000,
+		0b00000011,0b00000000,
+		0b00000111,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t in_transit_depart[] = {
+		0b00000000,0b00000000,
+		0b00000000,0b00000000,
+		0b00000111,0b00000000,
+		0b00000011,0b00000000,
+		0b00000101,0b00000000,
+		0b00011000,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000
+	};
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t in_transit[] = {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000,
 		0b00000000,0b00000000,
 		0b00000000,0b10000000,
-		0b00111000,0b11000000,
-		0b00101011,0b11100000,
-		0b00111000,0b11000000,
+		0b01110000,0b11000000,
+		0b01010111,0b11100000,
+		0b01110000,0b11000000,
 		0b00000000,0b10000000,
 		0b00000000,0b00000000,
 		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t out_for_delivery[] = {
 		0b00000000,0b00000000,
@@ -73,22 +168,20 @@ namespace bitmap::parcels {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
-	const uint8_t error[] = {
+	const uint8_t picked_up[] = {
 		0b00000000,0b00000000,
-		0b00000000,0b00000000,
-		0b00001010,0b00000000,
 		0b00000100,0b00000000,
-		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00011111,0b00000000,
+		0b00000100,0b00000000,
+		0b00000100,0b00000000,
 		0b00000000,0b00000000,
 		0b00001110,0b00000000,
 		0b00001010,0b00000000,
 		0b00001110,0b00000000,
-		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t pre_transit[] = {
 		0b00000000,0b00000000,
@@ -103,7 +196,6 @@ namespace bitmap::parcels {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t ready_for_pickup[] = {
 		0b00000000,0b00000000,
@@ -118,7 +210,6 @@ namespace bitmap::parcels {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000
 	};
-
 	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t return_to_sender[] = {
 		0b00000000,0b00000000,
@@ -455,7 +546,19 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			iconcolorbase = 0x99_c;
 			break;
 		case slots::ParcelInfo::IN_TRANSIT:
+		case slots::ParcelInfo::PICKED_UP:
+		case slots::ParcelInfo::IN_TRANSIT_DEPARTED:
+		case slots::ParcelInfo::IN_TRANSIT_ARRIVED:
 			iconcolorbase = 0x4579f5_cc;
+			break;
+		case slots::ParcelInfo::CUSTOMS_PROCESS:
+			iconcolorbase = 0xbb00ff_cc;
+			break;
+		case slots::ParcelInfo::CUSTOMS_RELEASED:
+			iconcolorbase = 0x3cfa7e_cc;
+			break;
+		case slots::ParcelInfo::IN_TRANSIT_DELAYED:
+			iconcolorbase = 0xc7b300_cc;
 			break;
 		case slots::ParcelInfo::OUT_FOR_DELIVERY:
 			iconcolorbase = 0xd8f51d_cc;
@@ -467,13 +570,18 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			iconcolorbase = 0x0b9665_cc;
 			break;
 		case slots::ParcelInfo::RETURN_TO_SENDER:
-		case slots::ParcelInfo::FAILED_TO_DELIVER:
 			iconcolorbase = 0xff4444_cc;
 			break;
-		case slots::ParcelInfo::GENERAL_ERROR:
+		case slots::ParcelInfo::ERROR:
 			iconcolorbase = 0xff7777_cc;
 			break;
-
+		case slots::ParcelInfo::CANCELLED:
+			iconcolorbase = 0xfa9b9b_cc;
+			break;
+		case slots::ParcelInfo::CUSTOMS_NEEDS_INFO:
+		case slots::ParcelInfo::OTHER_EXCEPTION:
+			iconcolorbase = 0xff6f00_cc;
+			break;
 		default:
 			break;
 	}
@@ -492,8 +600,24 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			case slots::ParcelInfo::PRE_TRANSIT:
 				icon = pre_transit;
 				break;
+			case slots::ParcelInfo::PICKED_UP:
+				icon = picked_up;
+				break;
+			case slots::ParcelInfo::IN_TRANSIT_ARRIVED:
+				icon = in_transit_arrive;
+				break;
+			case slots::ParcelInfo::IN_TRANSIT_DEPARTED:
+				icon = in_transit_depart;
+				break;
+			case slots::ParcelInfo::IN_TRANSIT_DELAYED:
 			case slots::ParcelInfo::IN_TRANSIT:
 				icon = in_transit;
+				break;
+			case slots::ParcelInfo::CUSTOMS_PROCESS:
+				icon = customs_inprogress;
+				break;
+			case slots::ParcelInfo::CUSTOMS_RELEASED:
+				icon = customs_release;
 				break;
 			case slots::ParcelInfo::OUT_FOR_DELIVERY:
 				icon = out_for_delivery;
@@ -507,12 +631,17 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			case slots::ParcelInfo::RETURN_TO_SENDER:
 				icon = return_to_sender;
 				break;
-			case slots::ParcelInfo::GENERAL_ERROR:
-			case slots::ParcelInfo::FAILED_TO_DELIVER:
-				icon = error;
+			case slots::ParcelInfo::ERROR:
+				icon = general_error;
+				break;
+			case slots::ParcelInfo::OTHER_EXCEPTION:
+				icon = exception;
 				break;
 			case slots::ParcelInfo::CANCELLED:
 				icon = cancelled;
+				break;
+			case slots::ParcelInfo::CUSTOMS_NEEDS_INFO:
+				icon = customs_info;
 				break;
 			default:
 				return iconcolorbase;
@@ -556,15 +685,13 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 				case slots::ParcelInfo::PRE_TRANSIT:
 					bulbpos = 12;
 					break;
-				case slots::ParcelInfo::IN_TRANSIT:
-					bulbpos = 64;
+				case slots::ParcelInfo::PICKED_UP:
+					bulbpos = 20;
 					break;
 				case slots::ParcelInfo::OUT_FOR_DELIVERY:
 					bulbpos = 120;
 					break;
-				case slots::ParcelInfo::FAILED_TO_DELIVER:
 				case slots::ParcelInfo::READY_FOR_PICKUP:
-				case slots::ParcelInfo::GENERAL_ERROR:
 				case slots::ParcelInfo::CANCELLED:
 				case slots::ParcelInfo::DELIVERED:
 				case slots::ParcelInfo::RETURN_TO_SENDER:

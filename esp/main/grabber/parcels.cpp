@@ -73,18 +73,25 @@ namespace parcels {
 
 		if (false) {}
 		START("InfoReceived", PRE_TRANSIT);
-		EXACT("InTransit_CustomsRequiringInformation", GENERAL_ERROR); // todo icon
+		EXACT("InTransit_CustomsProcessing", CUSTOMS_PROCESS);
+		EXACT("InTransit_CustomsReleased", CUSTOMS_RELEASED);
+		EXACT("InTransit_CustomsRequiringInformation", CUSTOMS_NEEDS_INFO);
+		EXACT("InTransit_PickedUp", PICKED_UP);
+		EXACT("InTransit_Departure", IN_TRANSIT_DEPARTED);
+		EXACT("InTransit_Arrival", IN_TRANSIT_ARRIVED);
 		START("InTransit", IN_TRANSIT);
 		START("OutForDelivery", OUT_FOR_DELIVERY);
-		START("DeliveryFailure", FAILED_TO_DELIVER);
-		EXACT("NotFound_InvalidCode", GENERAL_ERROR);
+		START("DeliveryFailure", ERROR);
+		EXACT("NotFound_InvalidCode", ERROR);
 		START("Delivered", DELIVERED);
 		START("AvailableForPickup", READY_FOR_PICKUP);
 		EXACT("Exception_Returned", RETURN_TO_SENDER);
 		EXACT("Exception_Returning", RETURN_TO_SENDER);
 		EXACT("Exception_Cancel", CANCELLED);
-		EXACT("Exception_Delayed", IN_TRANSIT);
-		START("Exception", GENERAL_ERROR);
+		EXACT("Exception_Delayed", IN_TRANSIT_DELAYED);
+		EXACT("Exception_Lost", ERROR);
+		EXACT("Exception_Destroyed", ERROR);
+		START("Exception", OTHER_EXCEPTION);
 
 #undef START
 #undef EXACT
