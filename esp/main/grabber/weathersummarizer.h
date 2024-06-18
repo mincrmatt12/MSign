@@ -223,7 +223,7 @@ namespace weather {
 		}
 
 		bool should_ignore_hourly_summary(slots::WeatherStateCode current_code) const {
-			if (current_summary_type(current_code) == CURRENT_CONDITIONS)
+			if (current_summary_type(current_code) != CURRENT_CONDITIONS)
 				return false;
 			else switch (current_code) {
 				case slots::WeatherStateCode::DRIZZLE:
