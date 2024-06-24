@@ -750,8 +750,8 @@ reachedend:
 
 			send_static_response(200, "OK", gotcount == 2 ? "Updating stm+esp" : "Updating stm only");
 			lwip_shutdown(client_sock, SHUT_RDWR);
-			lwip_close(client_sock);
 			vTaskDelay(pdMS_TO_TICKS(500));
+			lwip_close(client_sock);
 			serial::interface.reset();
 		}
 		else if (strcasecmp(tgt, "reboot") == 0) {
