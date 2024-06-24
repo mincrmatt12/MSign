@@ -472,7 +472,7 @@ void screen::ParcelScreen::draw_loading() {
 }
 
 void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
-	if (!servicer.slot(slots::PARCEL_STATUS_SHORT) || (!(parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) && (!servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS) || !servicer.slot(slots::PARCEL_CARRIER_NAMES)))) {
+	if (((parcel.status.flags & parcel.status.HAS_STATUS) && !servicer.slot(slots::PARCEL_STATUS_SHORT)) || (!(parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) && (!servicer.slot(slots::PARCEL_STATUS_LONG) || !servicer.slot(slots::PARCEL_EXTRA_INFOS) || !servicer.slot(slots::PARCEL_CARRIER_NAMES)))) {
 		draw_loading();
 		return;
 	}
@@ -653,7 +653,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 }
 
 int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::ParcelInfo& parcel) {
-	if (!servicer[slots::PARCEL_NAMES] || !servicer[slots::PARCEL_STATUS_SHORT]) return 0; // show loading or something
+	if (!servicer[slots::PARCEL_NAMES]) return 0; // show loading or something
 	// expects lock to be held
 	auto statuses = *servicer[slots::PARCEL_STATUS_SHORT];
 
