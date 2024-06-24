@@ -529,8 +529,8 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	else {
 		// No parcel entries, just draw a "no updates"
 		const char * txt = "no updates yet";
-		int pos = 64 - draw::text_size(txt, font::tahoma_9::info);
-		int y_pos = header_height + (64 - header_height) / 2 + 2;
+		int pos = 64 - draw::text_size(txt, font::tahoma_9::info) / 2;
+		int y_pos = header_height + (64 - header_height) / 2 + 1;
 		draw::text(matrix.get_inactive_buffer(), txt, font::tahoma_9::info, pos, y_pos, 0x88_c);
 	}
 	// Mask out header area
