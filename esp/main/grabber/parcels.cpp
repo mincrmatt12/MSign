@@ -82,7 +82,7 @@ namespace parcels {
 		START("InTransit", IN_TRANSIT);
 		START("OutForDelivery", OUT_FOR_DELIVERY);
 		START("DeliveryFailure", ERROR);
-		EXACT("NotFound_InvalidCode", ERROR);
+		START("NotFound", ERROR);
 		START("Delivered", DELIVERED);
 		START("AvailableForPickup", READY_FOR_PICKUP);
 		EXACT("Exception_Returned", RETURN_TO_SENDER);
