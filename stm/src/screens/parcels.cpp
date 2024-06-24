@@ -486,7 +486,10 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -5;
 	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 18 : 12;
 
-	{
+	if ((parcel.status.flags & 
+				// If EXTRA_INFO_MISSING is set and none of the status/location/updated_time are set, show the backup screen
+				(parcel.status.EXTRA_INFO_MISSING | parcel.status.HAS_STATUS | parcel.status.HAS_LOCATION | parcel.status.HAS_UPDATED_TIME))
+			!= parcel.status.EXTRA_INFO_MISSING) {
 		int16_t y = header_height - parcel_entries_scroll/128;
 		auto& fb = matrix.get_inactive_buffer();
 
@@ -522,6 +525,13 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 		}
 
 		fb.at(1, y) = fb.at(3, y) = 0x40_c;
+	}
+	else {
+		// No parcel entries, just draw a "no updates"
+		const char * txt = "no updates yet";
+		int pos = 64 - draw::text_size(txt, font::tahoma_9::info);
+		int y_pos = header_height + (64 - header_height) / 2 + 2;
+		draw::text(matrix.get_inactive_buffer(), txt, font::tahoma_9::info, pos, y_pos, 0x88_c);
 	}
 	// Mask out header area
 	draw::rect(matrix.get_inactive_buffer(), 0, 0, 128, header_height, 0);
