@@ -21,6 +21,9 @@ namespace parcels {
 
 		//!cfg: holds .translate_messages
 		bool translate_messages = true;
+
+		//!cfg: holds .raw_timestamp
+		bool raw_timestamp = false;
 	};
 
 	//!cfg: holds .parcels.trackers!size, default 0

@@ -167,6 +167,12 @@ namespace parcels {
 			return nullptr;
 	}
 
+	uint64_t update_timestamp_on(bool use_local_time, json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
+		if (stack_ptr != 1 || v.type != json::Value::STR) return 0;
+		if (strcmp(stack[0]->name, use_local_time ? "time_iso" : "time_utc")) return 0;
+ 		return wifi::from_iso8601(v.str_val, use_local_time);
+	}
+
 	static_assert(std::is_trivially_destructible_v<LocationBuf>);
 
 	constexpr inline size_t max_single_entry_textcount = 600;
@@ -602,6 +608,10 @@ namespace parcels {
 				if (p_idx < 0) return;
 				const auto& dynamic_info = parcel_dynamic_infos[p_idx];
 				bool use_localized = dynamic_info.state == ParcelDynamicInfo::READY && tracker_configs[p_idx].translate_messages;
+				bool use_local_time = tracker_configs[p_idx].raw_timestamp;
+
+				if (use_local_time)
+					parcel_info.status.flags |= slots::ParcelStatusLine::UPDATED_TIME_IS_LOCAL_TIME;
 
 				if (stack_ptr >= 6 && !strcmp(stack[4]->name, "time_metrics") && !strcmp(stack[5]->name, "estimated_delivery_date")) {
 					if (stack_ptr == 7 && v.type == json::Value::STR) { // record timestamps
@@ -642,8 +652,8 @@ namespace parcels {
 						}
 						// Other metadata
 						else if (stack_ptr == 6) {
-							if (!strcmp(stack[5]->name, "time_utc") && v.type == v.STR) {
-								parcel_info.updated_time = wifi::from_iso8601(v.str_val);
+							if (auto new_ts = update_timestamp_on(use_local_time, stack + 5, stack_ptr - 5, v)) {
+								parcel_info.updated_time = new_ts;
 								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 							}
 							else if (!strcmp(stack[5]->name, "sub_status") && v.type == v.STR) {
@@ -699,8 +709,8 @@ namespace parcels {
 								current_epi.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
 							}
 							else if (stack_ptr == 8) {
-								if (!strcmp(stack[7]->name, "time_utc") && v.type == v.STR) {
-									current_epi.updated_time = wifi::from_iso8601(v.str_val);
+								if (auto new_ts = update_timestamp_on(use_local_time, stack + 7, stack_ptr - 7, v)) {
+									current_epi.updated_time = new_ts;
 									current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 								}
 							}
