@@ -24,8 +24,8 @@ namespace screen {
 		void draw_loading();
 
 		led::color_t draw_parcel_name(int16_t y, const slots::ParcelInfo& psl);
-
-		int16_t draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name);
+		int16_t draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name, bool local_time);
+		void format_relative_or_local(char *buf, size_t len, uint64_t updated_time, bool local_time);
 
 		// Scroll tracker for parcels
 		constexpr static draw::PageScrollHelper::Params scroll_params = {

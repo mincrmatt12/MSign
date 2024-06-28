@@ -260,7 +260,9 @@ namespace slots {
 			HAS_UPDATED_TIME = 16,   
 			EXTRA_INFO_TRUNCATED = 32, // cannot be set on ExtraParcelInfoEntry
 			EXTRA_INFO_MISSING   = 64, // ''
-			HAS_NEW_CARRIER = 128,     // cannot be set on ParcelInfo
+
+			HAS_NEW_CARRIER = 128,             // cannot be set on ParcelInfo
+			UPDATED_TIME_IS_LOCAL_TIME = 128,  // cannot be set on ExtraParcelInfoEntry
 		};
 
 		uint8_t flags;

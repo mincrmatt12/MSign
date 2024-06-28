@@ -6,6 +6,7 @@
 #include "../fonts/lcdpixel_6.h"
 #include "../tasks/screen.h"
 #include "../tasks/timekeeper.h"
+#include <ctime>
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -357,7 +358,19 @@ bool screen::ParcelScreen::interact() {
 	return false;
 }
 
-int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name) {
+void screen::ParcelScreen::format_relative_or_local(char *buf, size_t len, uint64_t updated_time, bool local_time) {
+	if (local_time) {
+		struct tm res;
+		time_t t = updated_time / 1000;
+		gmtime_r(&t, &res);
+		strftime(buf, len, "%b %d, %H:%M", &res);
+	}
+	else {
+		draw::format_relative_date(buf, len, updated_time);
+	}
+}
+
+int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name, bool local_time) {
 	/* 
 	 * 01234567
 	 *   *  T
@@ -431,7 +444,8 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	}
 	if (psl.flags & psl.HAS_UPDATED_TIME) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
-		char buf[32]; draw::format_relative_date(buf, 32, updated_time);
+		char buf[32]; 
+		format_relative_or_local(buf, sizeof buf, updated_time, local_time);
 		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
 		if (location_end_x > 127 - sz - 6) {
 			dual_line = true;
@@ -486,6 +500,9 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -5;
 	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 18 : 12;
 
+	// Check the parcel-level flag for using the alternate time representation
+	bool use_local_time = (parcel.status.flags & parcel.status.UPDATED_TIME_IS_LOCAL_TIME);
+
 	if ((parcel.status.flags & 
 				// If EXTRA_INFO_MISSING is set and none of the status/location/updated_time are set, show the backup screen
 				(parcel.status.EXTRA_INFO_MISSING | parcel.status.HAS_STATUS | parcel.status.HAS_LOCATION | parcel.status.HAS_UPDATED_TIME))
@@ -495,7 +512,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 
 		// draw initial location
 		if (parcel.status.flags & parcel.status.EXTRA_INFO_MISSING) {
-			auto sz = draw_long_parcel_entry(y, parcel.status, statuses, servicer[slots::PARCEL_STATUS_SHORT].datasize, parcel.updated_time, nullptr);
+			auto sz = draw_long_parcel_entry(y, parcel.status, statuses, servicer[slots::PARCEL_STATUS_SHORT].datasize, parcel.updated_time, nullptr, use_local_time);
 			y += sz;
 			parcel_entries_size += sz;
 		}
@@ -511,7 +528,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 				}
 				
 				// draw the entry
-				auto sz = draw_long_parcel_entry(y, ei.status, statuses_long, servicer[slots::PARCEL_STATUS_LONG].datasize, ei.updated_time, ei.new_subcarrier_offset > carriers_size ? nullptr : carriers + ei.new_subcarrier_offset);
+				auto sz = draw_long_parcel_entry(y, ei.status, statuses_long, servicer[slots::PARCEL_STATUS_LONG].datasize, ei.updated_time, ei.new_subcarrier_offset > carriers_size ? nullptr : carriers + ei.new_subcarrier_offset, use_local_time);
 				y += sz;
 				parcel_entries_size += sz;
 				do_space = true;
@@ -750,7 +767,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 	// draw updated time
 	if (parcel.status.flags & parcel.status.HAS_UPDATED_TIME) {
 		char buf[32];
-		draw::format_relative_date(buf, 32, parcel.updated_time);
+		format_relative_or_local(buf, sizeof buf, parcel.updated_time, parcel.status.flags & parcel.status.UPDATED_TIME_IS_LOCAL_TIME);
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - draw::text_size(buf, font::lcdpixel_6::info), y + 5, 0xaa_c);
 		y += 6; height += 6;
 	}
