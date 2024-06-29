@@ -72,6 +72,11 @@ namespace slots {
 		SCCFG_TIMING = 0xb1,     	// STRUCT[]; ScCfgTime, how long to enable a certain screen 
 	};
 
+	// Various helper typedefs - used to notate things like timestamps
+	
+	using millis_timestamp = uint64_t; // millisecond timestamp in local time
+	using byte_percent = uint8_t; // 0-255 percentage
+
 #pragma pack (push, 1)
 	struct WebuiStatus {
 		uint16_t flags;
@@ -160,14 +165,14 @@ namespace slots {
 	struct WeatherInfo {
 		WeatherStateCode icon;
 		// percent from 0-255
-		uint8_t relative_humidity;
+		byte_percent relative_humidity;
 		// C * 100
 		int16_t ctemp;
 		int16_t crtemp; // real temp
 		// 100m
 		int16_t visibility;
 		// set to current time when the weather data is updated.
-		uint64_t updated_at;
+		millis_timestamp updated_at;
 		// km/h * 100
 		int16_t wind_speed, wind_gust;
 		// offsets describing where precip graphs were truncated
@@ -210,7 +215,7 @@ namespace slots {
 			FREEZING_RAIN,
 			SLEET
 		} kind;
-		uint8_t probability; // from 0-255 as 0.0-1.0
+		byte_percent probability; // from 0-255 as 0.0-1.0
 		int16_t amount; // mm / hr * 100
 						// or mm total for WeatherDay
 	};
@@ -296,16 +301,16 @@ namespace slots {
 			ERROR = 0x40
 		} status_icon;
 
-		uint64_t updated_time;   // when was the last status received
-		uint64_t estimated_delivery_from; // earliest time package is expected to arrive.
-		uint64_t estimated_delivery_to;   // latest time package is expected to arrive. if HAS_EST_DELIVERY_RANGE is unset, only this is populated.
+		millis_timestamp updated_time;   // when was the last status received
+		millis_timestamp estimated_delivery_from; // earliest time package is expected to arrive.
+		millis_timestamp estimated_delivery_to;   // latest time package is expected to arrive. if HAS_EST_DELIVERY_RANGE is unset, only this is populated.
 	};
 
 	struct ExtraParcelInfoEntry {
 		ParcelStatusLine status; // refd into PARCEL_STATUS_LONG
 		uint8_t for_parcel; // which parcel is this an entry for
 		uint16_t new_subcarrier_offset; // refd into PARCEL_CARRIER_NAMES
-		uint64_t updated_time;
+		millis_timestamp updated_time;
 	};
 
 	struct PrinterInfo {
@@ -320,7 +325,7 @@ namespace slots {
 		uint16_t total_layer_count;
 		uint8_t filament_r, filament_g, filament_b;
 		uint8_t pad;
-		uint64_t estimated_print_done; // timestamp of estimated print completion
+		millis_timestamp estimated_print_done; // timestamp of estimated print completion
 	};
 
 	struct PrinterBitmapInfo {

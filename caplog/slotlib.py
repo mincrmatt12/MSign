@@ -2,7 +2,9 @@ from pygccxml import utils
 from pygccxml import declarations
 from pygccxml import parser
 import re
+import time
 import os
+
 from slotlib_inner import SlotType, SlotTypeArray, SlotTypeString, DeclaredMember, DeclaredMemberStruct, SlotTypeBits
 
 def snake_to_camel(text):
@@ -48,7 +50,7 @@ def _create_member_list(struct_info):
         if declarations.is_class(i.decl_type):
             new_type_members.append(DeclaredMemberStruct(i.name, _create_member_list(i.decl_type.declaration)))
         else:
-            new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield=bitfield, enumer=enumer))
+            new_type_members.append(DeclaredMember(i.name, _convert_opaque_to_token(i.decl_type), bitfield=bitfield, enumer=enumer, special_hook=_lookup_special_printer(i.decl_type)))
     return new_type_members
 
 def _convert_opaque_to_token(x):
@@ -117,6 +119,16 @@ global_namespace = declarations.get_global_namespace(declarations_in_file)
 slots_namespace = global_namespace.namespace("slots")
 dataid_enum = slots_namespace.enumeration("DataID")
 previous_match = None
+special_printers = {
+    slots_namespace.typedef("millis_timestamp"): lambda t: f"{t} ({time.asctime(time.gmtime(t // 1000))} +{t % 1000}ms)",
+    slots_namespace.typedef("byte_percent"): lambda t: f"{t} ({t / 2.55:.1f}%)"
+}
+
+def _lookup_special_printer(x):
+    if not isinstance(x, declarations.declarated_t):
+        return None
+
+    return special_printers.get(x.declaration)
 
 def _handle_struct(entryname, struct_name):
     struct_info = slots_namespace.class_(struct_name)

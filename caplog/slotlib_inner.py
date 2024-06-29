@@ -33,7 +33,7 @@ class DeclaredMemberStruct:
         return f"DeclaredMemberStruct({self.name!r}, {self.members!r})"
 
 class DeclaredMember:
-    def __init__(self, name, typetoken, bitfield=None, enumer=None):
+    def __init__(self, name, typetoken, bitfield=None, enumer=None, special_hook=None):
         self.name = name
         self.typetoken = typetoken
         if bitfield and len(self.typetoken) > 1:
@@ -47,6 +47,8 @@ class DeclaredMember:
 
         self.data = None
         self.rawdata = None
+
+        self.special_hook = special_hook
 
     def __repr__(self):
         enumer = {y: x for x, y in self.enumer.items()} if self.enumer else None
@@ -99,7 +101,10 @@ class DeclaredMember:
             elif not self.is_floating_point():
                 width = struct.calcsize(self.typetoken) * 2
 
-                return "{name}: {val:0{hexwidth}x} ({val})".format(name=self.name, val=self.data, hexwidth=width)
+                if self.special_hook is not None:
+                    return "{name}: {val}".format(name=self.name, val=self.special_hook(self.data))
+                else:
+                    return "{name}: {val:0{hexwidth}x} ({val})".format(name=self.name, val=self.data, hexwidth=width)
             else:
                 return "{name}: {val}{typetoken}".format(name=self.name, val=self.data, typetoken=self.typetoken[0])
         elif self.is_bitfield():
@@ -120,7 +125,10 @@ class DeclaredMember:
             else:
                 if not self.is_floating_point():
                     width = struct.calcsize(self.typetoken[0]) * 2
-                    return "{}: {}".format(self.name, ", ".join("{val:0{width}x} ({val})".format(width=width, val=x) for x in self.data))
+                    if self.special_hook is None:
+                        return "{}: {}".format(self.name, ", ".join("{val:0{width}x} ({val})".format(width=width, val=x) for x in self.data))
+                    else:
+                        return "{}: {}".format(self.name, ", ".join(self.special_hook(x) for x in self.data))
                 else:
                     return "{}: {}".format(self.name, ", ".join(str(x) for x in self.data))
 
