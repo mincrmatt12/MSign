@@ -154,6 +154,8 @@ namespace weather {
 								// Pull the precipitation data out of the general datapoint
 								// (this resolves maximum according to a blogpost)
 								current_day.precipitation = current_data.precipitation;
+								if (current_day.precipitation.kind == slots::PrecipData::SNOW)
+									current_day.precipitation.amount = current_data.snow_depth;
 
 								if (stack[3]->index < 6) {
 									serial::interface.update_slot_at(slots::WEATHER_DAYS, current_day, stack[3]->index, true, false);
