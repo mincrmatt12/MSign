@@ -1775,15 +1775,7 @@ void screen::WeatherScreen::draw_fiveday() {
 		if (i == 0) {
 			first_hr = timedat.tm_hour;
 		}
-		else if (i == times.end() - times.begin() - 1) {
-			end_hr = timedat.tm_hour - 1;
-		}
-
-		if (end_hr < 0) {
-			if (selected_fiveday == i)
-				selected_fiveday = 0;
-			break;
-		}
+		end_hr = std::min(23, blk.datasize - ptr - 1);
 
 		int16_t prev_y = y;
 		y = draw_day_summary(y, i, times.data(), blk.data() + ptr, first_hr, end_hr);

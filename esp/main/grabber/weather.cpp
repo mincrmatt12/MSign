@@ -109,7 +109,8 @@ namespace weather {
 		{
 			slots::WeatherDay current_day{};
 			SingleDatapoint current_data{};
-			int day_count = 0;
+
+			bool day_offset = false;
 
 			current_conditions.updated_at = wifi::get_localtime();
 
@@ -142,6 +143,19 @@ namespace weather {
 					return;
 				}
 
+				if (stack_ptr == 5 && current_timeline == DAILY && stack[3]->index == 0 && !strcmp(stack[4]->name, "startTime") && v.type == v.STR) {
+					time_t t;
+					struct tm stm;
+
+					t = time(0);
+					localtime_r(&t, &stm);
+					stm.tm_hour = stm.tm_min = stm.tm_sec = 0;
+					if (wifi::timegm(&stm) > wifi::from_iso8601(v.str_val) / 1000) {
+						day_offset = true;
+					}
+					return;
+				}
+
 				if (stack_ptr < 5 || strcmp(stack[4]->name, "values") || !stack[3]->is_array())
 					return;
 
@@ -157,9 +171,8 @@ namespace weather {
 								if (current_day.precipitation.kind == slots::PrecipData::SNOW)
 									current_day.precipitation.amount = current_data.snow_depth;
 
-								if (stack[3]->index < 6) {
-									serial::interface.update_slot_at(slots::WEATHER_DAYS, current_day, stack[3]->index, true, false);
-									day_count = stack[3]->index + 1;
+								if (stack[3]->index < 6 && (!day_offset || stack[3]->index != 0)) {
+									serial::interface.update_slot_at(slots::WEATHER_DAYS, current_day, stack[3]->index - int(day_offset), true, false);
 								}
 							}
 							break;
@@ -239,7 +252,7 @@ namespace weather {
 				return true;
 			}
 
-			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * day_count);
+			serial::interface.allocate_slot_size(slots::WEATHER_DAYS, sizeof(slots::WeatherDay) * (day_offset ? 5 : 6));
 		}
 
 		serial::interface.trigger_slot_update(slots::WEATHER_DAYS);
