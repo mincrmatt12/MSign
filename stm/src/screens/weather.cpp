@@ -237,6 +237,122 @@ const uint8_t thunder_bolt[] = {
 	0b00000000,0b00000000,0b00000000
 };
 
+// w=20, h=20, stride=3, color=235, 235, 235
+const uint8_t partly_cloudy_cloud[] = {
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000111,0b10000000,0b00000000,
+	0b00011000,0b01100000,0b00000000,
+	0b00100000,0b00010000,0b00000000,
+	0b01000000,0b00001000,0b00000000,
+	0b01000000,0b00001011,0b11000000,
+	0b01000000,0b00000100,0b00100000,
+	0b01000000,0b00001000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b00100000,0b00000000,0b01000000,
+	0b00011111,0b11111111,0b10000000,
+	0b00000000,0b00000000,0b00000000
+};
+// w=20, h=20, stride=3, color=26, 78, 79
+const uint8_t partly_cloudy_night[] = {
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000001,0b11000000,
+	0b00000000,0b00000110,0b00100000,
+	0b00000000,0b00001000,0b01000000,
+	0b00000000,0b00010000,0b10000000,
+	0b00000000,0b00010001,0b00000000,
+	0b00000000,0b00010001,0b00000000,
+	0b00000000,0b00100010,0b00000000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000
+};
+// w=20, h=20, stride=3, color=202, 252, 17
+const uint8_t partly_cloudy_sun[] = {
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00100000,0b00000000,
+	0b00010000,0b00100000,0b01000000,
+	0b00001000,0b00100000,0b10000000,
+	0b00000100,0b00000001,0b00000000,
+	0b00000000,0b11111000,0b00000000,
+	0b00000001,0b00000100,0b00000000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000010,0b11100000,
+	0b00000000,0b00000010,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000
+};
+// w=20, h=20, stride=3, color=43, 202, 255
+const uint8_t ice_pellets[] = {
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000111,0b10000000,0b00000000,
+	0b00011000,0b01100000,0b00000000,
+	0b00100000,0b00010000,0b00000000,
+	0b01000000,0b00001000,0b00000000,
+	0b01000000,0b00001011,0b11000000,
+	0b01000000,0b00000100,0b00100000,
+	0b01000000,0b00001000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b00100001,0b00000000,0b01000000,
+	0b00011010,0b10000100,0b10000000,
+	0b00000001,0b00001010,0b00000000,
+	0b00000000,0b01000100,0b00000000,
+	0b00000000,0b10100000,0b00000000,
+	0b00000000,0b01001000,0b00000000,
+	0b00000000,0b00010100,0b00000000,
+	0b00000000,0b00001000,0b00000000,
+	0b00000000,0b00000000,0b00000000
+};
+// w=20, h=20, stride=3, color=43, 202, 255
+const uint8_t freezing_rain[] = {
+	0b00000000,0b00000000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00000111,0b10000000,0b00000000,
+	0b00011000,0b01100000,0b00000000,
+	0b00100000,0b00010000,0b00000000,
+	0b01000000,0b00001000,0b00000000,
+	0b01000000,0b00001011,0b11000000,
+	0b01000000,0b00000100,0b00100000,
+	0b01000000,0b00001000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b01000000,0b00000000,0b00100000,
+	0b00100010,0b01001000,0b01000000,
+	0b00011010,0b01001011,0b10000000,
+	0b00000010,0b01001000,0b00000000,
+	0b00000000,0b00000000,0b00000000,
+	0b00001111,0b11111110,0b00000000,
+	0b00111111,0b11111111,0b10000000,
+	0b00100001,0b00010000,0b10000000,
+	0b00100000,0b00010000,0b00000000,
+	0b00000000,0b00000000,0b00000000
+};
+
 namespace sunrise {
 // w=11, h=9, stride=2, color=255, 255, 255
 const uint8_t rays[] = {
@@ -264,6 +380,58 @@ const uint8_t sun[] = {
 	0b01111111,0b11000000
 };
 }
+
+namespace precip {
+// w=9, h=9, stride=2, color=73, 187, 246
+const uint8_t freezing_rain[] = {
+	0b00000000,0b00000000,
+	0b00010001,0b00000000,
+	0b00100010,0b00000000,
+	0b01000100,0b00000000,
+	0b00000000,0b00000000,
+	0b11111111,0b10000000,
+	0b01111111,0b00000000,
+	0b01010101,0b00000000,
+	0b01000100,0b00000000
+};
+// w=9, h=9, stride=2, color=73, 187, 246
+const uint8_t ice_pellets[] = {
+	0b00000000,0b00000000,
+	0b01000000,0b00000000,
+	0b10100000,0b00000000,
+	0b01000001,0b00000000,
+	0b00000010,0b10000000,
+	0b00000001,0b00000000,
+	0b00010000,0b00000000,
+	0b00101000,0b00000000,
+	0b00010000,0b00000000
+};
+// w=9, h=9, stride=2, color=14, 115, 255
+const uint8_t rain[] = {
+	0b00001000,0b00000000,
+	0b00010100,0b00000000,
+	0b00010100,0b00000000,
+	0b00100010,0b00000000,
+	0b00100010,0b00000000,
+	0b01000001,0b00000000,
+	0b01000001,0b00000000,
+	0b00100010,0b00000000,
+	0b00011100,0b00000000
+};
+// w=9, h=9, stride=2, color=121, 255, 255
+const uint8_t snow[] = {
+	0b00010100,0b00000000,
+	0b01011101,0b00000000,
+	0b11001001,0b10000000,
+	0b00101010,0b00000000,
+	0b01111111,0b00000000,
+	0b00101010,0b00000000,
+	0b11001001,0b10000000,
+	0b01011101,0b00000000,
+	0b00010100,0b00000000
+};
+};
+
 }
 
 void screen::WeatherScreen::prepare(bool) {
@@ -364,9 +532,15 @@ void screen::WeatherScreen::draw_currentstats() {
 			else draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::night, 20, 20, 3, 1, y, {79_c, 78_c, 79_c});
 			break;
 		case slots::WeatherStateCode::PARTLY_CLOUDY:
+			if (is_day)
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::partly_cloudy_sun, 20, 20, 3, 1, y, {220_c, 250_c, 0});
+			else
+				draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::partly_cloudy_night, 20, 20, 3, 1, y, 79_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::partly_cloudy_cloud, 20, 20, 3, 1, y, is_day ? 245_c : 110_c);
+			break;
 		case slots::WeatherStateCode::MOSTLY_CLOUDY:
 		case slots::WeatherStateCode::CLOUDY:
-			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, is_day ? 245_c : 79_c);
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::cloudy, 20, 20, 3, 1, y, is_day ? 205_c : 79_c);
 			break;
 		case slots::WeatherStateCode::DRIZZLE:
 		case slots::WeatherStateCode::LIGHT_RAIN:
@@ -384,7 +558,8 @@ void screen::WeatherScreen::draw_currentstats() {
 		case slots::WeatherStateCode::FREEZING_LIGHT_RAIN:
 		case slots::WeatherStateCode::FREEZING_RAIN:
 		case slots::WeatherStateCode::FREEZING_HEAVY_RAIN:
-			break; // todo freezing rain
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::freezing_rain, 20, 20, 3, 1, y, {50_c, 202_c, 255_c});
+			break; 
 		case slots::WeatherStateCode::LIGHT_FOG:
 		case slots::WeatherStateCode::FOG:
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::fog, 20, 20, 3, 1, y, {118_c, 118_c, 118_c});
@@ -392,7 +567,7 @@ void screen::WeatherScreen::draw_currentstats() {
 		case slots::WeatherStateCode::LIGHT_ICE_PELLETS:
 		case slots::WeatherStateCode::ICE_PELLETS:
 		case slots::WeatherStateCode::HEAVY_ICE_PELLETS:
-			// todo ice pellets
+			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::ice_pellets, 20, 20, 3, 1, y, {50_c, 202_c, 255_c});
 			break;
 		case slots::WeatherStateCode::THUNDERSTORM:
 			draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::thunder_base, 20, 20, 3, 1, y, 144_c);
@@ -1438,31 +1613,94 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 
 	// End of text, top of hourlybar.
 	int y1 = y0 + 20;
-	
-	// If there's precipitation, show it:
-	//  - always show the amount + icon (icons TODO)
-	//  - if probability < 90%, show probability too
-	if (w_day.precipitation.kind != slots::PrecipData::NONE) {
-
-	}
 
 	// Now show sunrise/sunset (once we've determined the height of the
 	// precipitation data -- we align them both to the same bottom
 	// )
 	draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::sunrise::sun, 11, 9, 2, 1, y1 - 9, 0xf2aa00_cc);
 	draw::bitmap(matrix.get_inactive_buffer(), bitmap::weather::sunrise::rays, 11, 9, 2, 1, y1 - 9, 0xee_c);
-	{
-		snprintf(buf, sizeof buf, "%02d:%02d ", w_day.sunrise / 1000 / 60 / 60, (w_day.sunrise / 1000 / 60) % 60);
+	snprintf(buf, sizeof buf, "%02d:%02d ", w_day.sunrise / 1000 / 60 / 60, (w_day.sunrise / 1000 / 60) % 60);
 
-		auto nxt = draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
-				draw::text(matrix.get_inactive_buffer(), "\xfd ", font::dejavusans_10::info, 13, y1 - 1, 0xaa_c),
-				y1 - 1, 0xff_c);
+	auto sun_line_x = draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
+			draw::text(matrix.get_inactive_buffer(), "\xfd ", font::dejavusans_10::info, 13, y1 - 1, 0xaa_c),
+			y1 - 1, 0xff_c);
 
-		snprintf(buf, sizeof buf, "%02d:%02d", w_day.sunset / 1000 / 60 / 60, (w_day.sunset / 1000 / 60) % 60);
+	snprintf(buf, sizeof buf, "%02d:%02d", w_day.sunset / 1000 / 60 / 60, (w_day.sunset / 1000 / 60) % 60);
 
-		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
-				draw::text(matrix.get_inactive_buffer(), "\xfe ", font::dejavusans_10::info, nxt, y1 - 1, 0xaa_c),
-				y1 - 1, 0xff_c);
+	draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 
+			draw::text(matrix.get_inactive_buffer(), "\xfe ", font::dejavusans_10::info, sun_line_x, y1 - 1, 0xaa_c),
+			y1 - 1, 0xff_c);
+	
+	// If there's precipitation, show it:
+	//  - always show the amount + icon (icons TODO)
+	//  - if probability < 90%, show probability too
+	if (w_day.precipitation.kind != slots::PrecipData::NONE) {
+		const auto& precip = w_day.precipitation;
+		y1 += 10;
+
+		if (precip.kind != precip.SNOW) {
+			if (precip.amount < 10)
+				snprintf(buf, sizeof buf, "<0.1 mm/hr");
+			else if (precip.amount < 1000)
+				snprintf(buf, sizeof buf, "%d.%d mm/hr", precip.amount / 100, (precip.amount / 10) % 10);
+			else if (precip.amount < 10000)
+				snprintf(buf, sizeof buf, "%d mm/hr", precip.amount / 100);
+			else
+				snprintf(buf, sizeof buf, "%d cm/hr", precip.amount / 1000);
+		}
+		else {
+			if (precip.amount < 100)
+				snprintf(buf, sizeof buf, "%d mm", intmath::round10<int>(precip.amount, 10));
+			else if (precip.amount < 1000)
+				snprintf(buf, sizeof buf, "%d.%d cm", precip.amount / 100, (precip.amount / 10) % 10);
+			else
+				snprintf(buf, sizeof buf, "%d cm", precip.amount / 100);
+		}
+
+		led::color_t icon_color;
+		const uint8_t * icon_bitmap;
+
+		auto line_y = y1 - 1, icon_y = y1 - 9;
+
+		switch (precip.kind) {
+			using namespace bitmap::weather::precip;
+			case slots::PrecipData::RAIN:
+				icon_color = {43_cu, 182_cu, 255_cu};
+				icon_bitmap = rain;
+				break;
+			case slots::PrecipData::SNOW:
+				icon_color = 0xff_cu;
+				icon_bitmap = rain;
+				break;
+			case slots::PrecipData::FREEZING_RAIN:
+				icon_color = {50_cu, 202_cu, 255_cu};
+				icon_bitmap = freezing_rain;
+				break;
+			case slots::PrecipData::SLEET:
+				icon_color = {50_cu, 202_cu, 255_cu};
+				icon_bitmap = ice_pellets;
+				break;
+			default:
+				break;
+		}
+
+		// Draw POP
+
+		if (precip.probability < 229) {
+			y1 += 6;
+
+			line_y = y1 - 7;
+			icon_y = y1 - 12;
+
+			char pbuf[8];
+			snprintf(pbuf, sizeof pbuf, "%d%%", (precip.probability * 100) / 255);
+			draw::text(matrix.get_inactive_buffer(), pbuf, font::lcdpixel_6::info, 11, y1 - 1, 
+					draw::cvt((0x77_ccu).mix((0_ccu).mix(icon_color, 220), precip.probability)));
+		}
+
+		icon_color = draw::cvt(icon_color);
+		draw::text(matrix.get_inactive_buffer(), buf, font::tahoma_9::info, 11, line_y, 0xff_c);
+		draw::bitmap(matrix.get_inactive_buffer(), icon_bitmap, 9, 9, 2, 1, icon_y, icon_color);
 	}
 
 	++y1;
