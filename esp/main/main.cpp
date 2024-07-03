@@ -92,6 +92,7 @@ extern "C" void app_main() {
 
 	// Create event handle early
 	wifi::events = xEventGroupCreate();
+	xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
 
 	// Start up the servicer
 	if (xTaskCreate([](void *ptr){

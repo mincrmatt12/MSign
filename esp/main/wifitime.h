@@ -22,6 +22,7 @@ namespace wifi {
 		StmConnected = 4,  // set when stm is connected
 		GrabRequested = 8, // set to wakeup grabber for refreshing
 		GrabTaskStop = 16, // if set, grab task should not be running (when unset, grab task is unmasked)
+		GrabTaskDead = 32, // set when the grab task is stopped
 	};
 }
 

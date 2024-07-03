@@ -382,6 +382,13 @@ reachedend:
 					}
 				}
 				f_close(&f);
+
+				// Kill off the grab task
+				xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
+				// Wait for it to be killed
+				if ((xEventGroupWaitBits(wifi::events, wifi::GrabTaskDead, 0, true, pdMS_TO_TICKS(5000)) & wifi::GrabTaskDead) == 0)
+					ESP_LOGW(TAG, "failed to stop grab task in time, loading new config anyways");
+
 				f_unlink("0:/config.json.old");
 				f_rename("0:/config.json", "0:/config.json.old");
 				f_rename("0:/config.json.tmp", "0:/config.json");
@@ -399,6 +406,8 @@ reachedend:
 					// Send a handy dandy 204
 					send_static_response(204, "No Content", "");
 				}
+
+				xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
 			}
 			else goto invmethod;
 		}

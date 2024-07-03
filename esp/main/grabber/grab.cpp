@@ -49,7 +49,7 @@ namespace grabber {
 	}
 
 	constexpr TickType_t max_delay_between_runs = get_max_delay();
-	slots::protocol::GrabberID refresh_for = slots::protocol::GrabberID::NONE;
+	volatile slots::protocol::GrabberID refresh_for = slots::protocol::GrabberID::NONE;
 
 	void refresh(slots::protocol::GrabberID gid) {
 		if (refresh_for != slots::protocol::GrabberID::NONE) {
@@ -87,6 +87,9 @@ namespace grabber {
 		// Wait for wifi
 		stoppable(wifi::WifiConnected);
 		stoppable(wifi::StmConnected);
+
+		// Mark the grab task as no longer dead
+		xEventGroupClearBits(wifi::events, wifi::GrabTaskDead);
 
 		// Init all grabbers
 		reload_all();
@@ -134,7 +137,8 @@ namespace grabber {
 exit:
 		dwhttp::close_connection(false);
 		dwhttp::close_connection(true);
-		ESP_LOGI("grab", "killing done grab task!");
+		ESP_LOGI("grab", "grab task exiting due to request");
+		xEventGroupSetBits(wifi::events, wifi::GrabTaskDead);
 		grabber_task = nullptr;
 		vTaskDelete(NULL);
 		while (1) {vTaskDelay(portMAX_DELAY);}
