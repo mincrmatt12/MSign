@@ -731,7 +731,7 @@ namespace weather {
 				else {
 					if (hour == -1)
 						return true;
-					return (hour * MINUTE_INDICES_PER_HOUR) - minute_offset - 1 > minutely_range_right;
+					return (hour * MINUTE_INDICES_PER_HOUR) - minute_offset - MINUTE_INDICES_PER_HOUR > minutely_range_right;
 				}
 			};
 
