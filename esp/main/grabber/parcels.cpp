@@ -68,10 +68,9 @@ namespace parcels {
 	}
 
 	slots::ParcelInfo::StatusIcon get_icon_enum(const char * text) {
-#define START(pat, match) else if (!strncmp(pat, text, strlen(pat))) return slots::ParcelInfo::match
-#define EXACT(pat, match) else if (!strcmp(pat, text)) return slots::ParcelInfo::match
+#define START(pat, match) if (!strncmp(pat, text, strlen(pat))) return slots::ParcelInfo::match
+#define EXACT(pat, match) if (!strcmp(pat, text)) return slots::ParcelInfo::match
 
-		if (false) {}
 		START("InfoReceived", PRE_TRANSIT);
 		EXACT("InTransit_CustomsProcessing", CUSTOMS_PROCESS);
 		EXACT("InTransit_CustomsReleased", CUSTOMS_RELEASED);
@@ -175,7 +174,7 @@ namespace parcels {
 
 	static_assert(std::is_trivially_destructible_v<LocationBuf>);
 
-	constexpr inline size_t max_single_entry_textcount = 600;
+	constexpr inline size_t max_total_entry_textcount = 4000;
 
 	void authorize_request(dwhttp::Connection& conn, bool as_json=true) {
 		if (conn.state() == dwhttp::Connection::SEND_HEADERS) {
@@ -565,6 +564,8 @@ namespace parcels {
 		else {
 			max_allocated_epis /= sizeof(slots::ExtraParcelInfoEntry);
 		}
+
+		size_t max_single_entry_textcount = max_total_entry_textcount / parcel_count;
 
 		int num_packages = 0;
 		int epis_for_current = 0;
