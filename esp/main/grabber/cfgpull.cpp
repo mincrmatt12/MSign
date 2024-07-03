@@ -235,6 +235,7 @@ bool cfgpull::loop() {
 		// new config installed ok
 		ESP_LOGI(TAG, "new config pulled succesfully");
 		grabber::reload_all();
+		grabber::refresh(slots::protocol::GrabberID::ALL);
 	}
 
 	if (new_system) {
