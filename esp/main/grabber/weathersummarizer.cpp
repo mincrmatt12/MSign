@@ -192,10 +192,10 @@ namespace weather {
 		return precipitation.kind != slots::PrecipData::PrecipType::NONE && precipitation.probability > 12;
 	}
 
-	void PrecipitationSummarizer::start_next_block(uint16_t index) {
+	bool PrecipitationSummarizer::start_next_block(uint16_t index) {
 		// If a block is currently active, just append into it.
 		if (block_is_active)
-			return;
+			return true;
 
 		// Otherwise, if there is a previous block, check if it ended relatively soon before now.
 		if (block_index > 0 && !is_hourly) {
@@ -203,14 +203,14 @@ namespace weather {
 				// Re-use that block.
 				--block_index;
 				block_is_active = true;
-				return;
+				return true;
 			}
 			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].likely_flag) {
 				// If the previous block is too short, destroy it and replace it with this one.
 				--block_index;
 				blocks[block_index] = {};
 				block_is_active = true;
-				return;
+				return true;
 			}
 		}
 
@@ -218,12 +218,18 @@ namespace weather {
 		// Otherwise, if there is space for another block, add into it.
 		if (block_index < 2) {
 			block_is_active = true;
-			return;
+			return true;
 		}
 
 		// Otherwise, block index is at 2. We have to determine how to describe the intermittent precipitation.
 		switch (intermittent_flag) {
 			case CONTINUOUS:
+				// For hourly blocks, avoid converting into intermittent (and instead just give up)
+				// if the new block is more than 20 hours into the future
+				if (is_hourly && index > 20) {
+					return false;
+				}
+
 				// There are just two sections of continuous rain; decide which one is closer.
 				if (index - blocks[1].right < blocks[1].left - blocks[0].right) {
 					intermittent_flag = (index - blocks[1].right < (is_hourly ? 2 : 4)) ? CONTINUOUS_THEN_INTERMITTENT : CONTINUOUS_THEN_CHUNKS;
@@ -247,13 +253,15 @@ namespace weather {
 				intermittent_flag = INTERMITTENT;
 			intermittent_after:
 				blocks[0].end = blocks[1].end;
-				blocks[0].right = blocks[1].right;
+				if (blocks[1].right != -2)
+					blocks[0].right = blocks[1].right;
 				blocks[1] = {};
 				break;
 		}
 
 		block_index = 1;
 		block_is_active = true;
+		return true;
 	}
 
 	void PrecipitationSummarizer::Amount::append(const SingleDatapoint& datapoint) {
@@ -332,6 +340,10 @@ namespace weather {
 	}
 
 	void PrecipitationSummarizer::append(uint16_t index, const SingleDatapoint& datapoint) {
+		// If we aborted summarizing due to enough precipitation data having been read, abort now
+		// to ensure consistency between amount and time ranges
+		if (dead) return;
+
 		// Update the tally of precipitation types.
 		amount.append(datapoint);
 
@@ -342,7 +354,10 @@ namespace weather {
 				++block_index;
 		}
 		else if (Block::would_start_block(datapoint.precipitation)) {
-			start_next_block(index);
+			if (!start_next_block(index)) {
+				dead = true;
+				return;
+			}
 			blocks[block_index].append(index, datapoint.precipitation);
 		}
 	}
@@ -403,6 +418,7 @@ namespace weather {
 
 		enum Mode {
 			FOR,               // for (~7 minutes, 5-25 minutes, 3 hours)
+			FOR_LAST,          // for the rest of the day
 			UNTIL,             // starting/stopping, continuining/stopping <UNTIL_RELATIVE> (x minutes later, x hours later, this evening)
 			IN,                // starting <IN>, stopping <IN> 
 			LATER              // later <this morning>, <this evening> -- always uses LATER notation and never uses minutes.
@@ -518,12 +534,13 @@ namespace weather {
 
 			switch (m) {
 				case FOR:
+				case FOR_LAST:
 					{
 						// For is special as it is always following the word " for ". For times >= 18 hours, we use "the day", for times >= 2 hours we use hours,
 						// otherwise we use minutes.
 						
 						if (minute_diff > 18*60) {
-							return snprintf(buf, buflen, "the day");
+							return snprintf(buf, buflen, m == FOR ? "the day" : "the rest of the day");
 						}
 						
 					reuse_for:
@@ -1244,7 +1261,7 @@ namespace weather {
 				append(snprintf(ptr, remain, use_possible_language[1] && !use_possible_language[0] ? ", possibly continuing " : ", continuing "));
 				append(timespec_args[2].format_as(TimeSpec::UNTIL, timespec_args, 2, ptr, remain));
 				append(snprintf(ptr, remain, " for "));
-				append(timespec_args[3].format_as(TimeSpec::FOR, timespec_args, 3, ptr, remain));
+				append(timespec_args[3].format_as(TimeSpec::FOR_LAST, timespec_args, 3, ptr, remain));
 				hourly_sidecar_index = -1; // Disallow a sidecar.
 				result = SummaryResult::TotalSummary;
 				goto add_period;

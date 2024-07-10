@@ -88,7 +88,7 @@ namespace weather {
 
 		// Ensure block_index points to a free block to append into. If the gap between the last block is small, a new block
 		// is not started and block_index continues to point to an old block.
-		void start_next_block(uint16_t index);
+		bool start_next_block(uint16_t index);
 
 		int last_filled_block_index() const {
 			if (block_is_active)
@@ -136,6 +136,7 @@ namespace weather {
 	public:
 		// Adjusts some thresholding regarding indices for 1 idx = 1hr vs 1 idx = 5minute
 		bool is_hourly = false;
+		bool dead = false;
 
 		PrecipitationSummarizer() = default;
 		PrecipitationSummarizer(bool is_hourly) : is_hourly(is_hourly) {}
