@@ -59,20 +59,10 @@ namespace weather {
 			// part of that region, then the block is deemed likely, otherwise it is only describing possible precipitation.
 			//
 			// Probability above 95 counts as 3 entries here.
-			uint16_t likely_count;
+			bool likely_flag = false;
 
 			// Add some precipitation data to the block. Returns true if the block is active following the append.
 			bool append(uint16_t index, const slots::PrecipData& precipitation);
-
-			bool is_likely(uint16_t fallback_threshold=3) const {
-				if (start == -2)
-					return false;
-
-				if (end == -1)
-					return likely_count > fallback_threshold;
-				else
-					return (likely_count >= (end - start) / 4);
-			}
 
 			static bool would_start_block(const slots::PrecipData& precipitation);
 		} blocks[2]{}; // There are at most 2 blocks. In general, we try to maintain enough information to describe

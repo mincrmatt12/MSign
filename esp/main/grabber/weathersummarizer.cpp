@@ -177,10 +177,7 @@ namespace weather {
 
 			// Count likely precipitation.
 			if (precipitation.probability > /* 87% */ 220)
-				++likely_count;
-			// Put greater emphasis on really likely events
-			if (precipitation.probability > /* 94% */ 240)
-				likely_count += 2;
+				likely_flag = true;
 		}
 		else {
 			// The block still extends past here, however it is now closed on the right for >50 precip
@@ -208,7 +205,7 @@ namespace weather {
 				block_is_active = true;
 				return;
 			}
-			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].is_likely()) {
+			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].likely_flag) {
 				// If the previous block is too short, destroy it and replace it with this one.
 				--block_index;
 				blocks[block_index] = {};
@@ -817,7 +814,7 @@ namespace weather {
 		if (!minutely_summary.empty()) {
 			// At least one minutely block.
 			timespec_args[0] = TimeSpec{minutely_summary.blocks[0], TimeSpec::FromBegin{}};
-			use_possible_language[0] = !minutely_summary.blocks[0].is_likely();
+			use_possible_language[0] = !minutely_summary.blocks[0].likely_flag;
 			bool indeterminate_end = minutely_summary.blocks[0].right == -1;
 			// Was the end of the block adjusted by fusing? Only consider this is the only event.
 			if (minutely_summary.last_filled_block_index() == 0) {
@@ -829,14 +826,14 @@ namespace weather {
 						break;
 					case FUSE_SKIP_FIRST:
 						indeterminate_end = hourly_summary.blocks[1].right == -1;
-						use_possible_language[0] &= !hourly_summary.blocks[1].is_likely();
+						use_possible_language[0] &= !hourly_summary.blocks[1].likely_flag;
 						if (indeterminate_end)
 							break;
 						timespec_args[1] = TimeSpec{hourly_summary.blocks[1], TimeSpec::FromEnd{}, true};
 						break;
 					case FUSE_FROM_FIRST:
 						indeterminate_end = hourly_summary.blocks[0].right == -1;
-						use_possible_language[0] &= !hourly_summary.blocks[0].is_likely();
+						use_possible_language[0] &= !hourly_summary.blocks[0].likely_flag;
 						if (indeterminate_end)
 							break;
 						timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
@@ -865,7 +862,7 @@ namespace weather {
 			if (minutely_summary.last_filled_block_index() == 1) {
 				// At least one minutely block.
 				timespec_args[2] = TimeSpec{minutely_summary.blocks[1], TimeSpec::FromBegin{}};
-				use_possible_language[1] = !minutely_summary.blocks[1].is_likely();
+				use_possible_language[1] = !minutely_summary.blocks[1].likely_flag;
 				indeterminate_end = minutely_summary.blocks[1].right == -1;
 				// Was the end of the block adjusted by fusing?
 				switch (fuse_mode) {
@@ -874,12 +871,12 @@ namespace weather {
 						break;
 					case FUSE_SKIP_FIRST:
 						indeterminate_end = hourly_summary.blocks[1].right == -1;
-						use_possible_language[1] &= !hourly_summary.blocks[1].is_likely();
+						use_possible_language[1] &= !hourly_summary.blocks[1].likely_flag;
 						timespec_args[3] = TimeSpec{hourly_summary.blocks[1], TimeSpec::FromEnd{}, true};
 						break;
 					case FUSE_FROM_FIRST:
 						indeterminate_end = hourly_summary.blocks[0].right == -1;
-						use_possible_language[1] &= !hourly_summary.blocks[0].is_likely();
+						use_possible_language[1] &= !hourly_summary.blocks[0].likely_flag;
 						timespec_args[3] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
 						break;
 				}
@@ -940,12 +937,12 @@ namespace weather {
 						// For hourly summaries, we're generally more concerned with the "big picture": an unlikely short burst of precipitation
 						// is less interesting than a larger & later more likely burst. Prioritize as such.
 
-						if (hourly_summary.last_filled_block_index() == 1 && !hourly_summary.blocks[0].is_likely() && hourly_summary.blocks[0].right - hourly_summary.blocks[0].left <= 2) {
+						if (hourly_summary.last_filled_block_index() == 1 && !hourly_summary.blocks[0].likely_flag && hourly_summary.blocks[0].right - hourly_summary.blocks[0].left <= 2) {
 							use_index = 1;
 						}
 
 						timespec_args[0] = TimeSpec{hourly_summary.blocks[use_index], TimeSpec::FromBegin{}, true};
-						use_possible_language[0] = !hourly_summary.blocks[use_index].is_likely();
+						use_possible_language[0] = !hourly_summary.blocks[use_index].likely_flag;
 						bool indeterminate_end = hourly_summary.blocks[use_index].right == -1;
 						if (!indeterminate_end) {
 							timespec_args[1] = TimeSpec{hourly_summary.blocks[use_index], TimeSpec::FromEnd{}, true};
@@ -972,7 +969,7 @@ namespace weather {
 				case PrecipitationSummarizer::INTERMITTENT:
 					{
 						timespec_args[0] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromBegin{}, true};
-						use_possible_language[0] = !hourly_summary.blocks[0].is_likely();
+						use_possible_language[0] = !hourly_summary.blocks[0].likely_flag;
 						bool indeterminate_end = hourly_summary.blocks[0].right == -1;
 						if (!indeterminate_end) {
 							timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
@@ -993,9 +990,9 @@ namespace weather {
 					{
 						timespec_args[0] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromBegin{}, true};
 						timespec_args[1] = TimeSpec{hourly_summary.blocks[0], TimeSpec::FromEnd{}, true};
-						use_possible_language[0] = !hourly_summary.blocks[0].is_likely();
+						use_possible_language[0] = !hourly_summary.blocks[0].likely_flag;
 						timespec_args[2] = TimeSpec{hourly_summary.blocks[1], TimeSpec::FromBegin{}, true};
-						use_possible_language[1] = !hourly_summary.blocks[1].is_likely();
+						use_possible_language[1] = !hourly_summary.blocks[1].likely_flag;
 
 						if (timespec_args[0].is_now())
 							time_classification = STOPPING_THEN_INTERMITTENT;
@@ -1283,7 +1280,7 @@ namespace weather {
 				break;
 		}
 
-		if (hourly_sidecar_index != -1 && !use_hourly_amountspec && hourly_summary.blocks[hourly_sidecar_index].is_likely(1)) {
+		if (hourly_sidecar_index != -1 && !use_hourly_amountspec && hourly_summary.blocks[hourly_sidecar_index].likely_flag) {
 			result = SummaryResult::TotalSummary;
 
 			// Determine which condition to sidecar
