@@ -264,7 +264,7 @@ namespace weather {
 		return true;
 	}
 
-	void PrecipitationSummarizer::Amount::append(const SingleDatapoint& datapoint) {
+	void PrecipitationSummarizer::Amount::append(const SingleDatapoint& datapoint, bool is_hourly) {
 		if (!Block::would_start_block(datapoint.precipitation))
 			return;
 
@@ -307,7 +307,9 @@ namespace weather {
 
 		if (kinds[idx_to_use] != datapoint.precipitation.kind) {
 			// We're initializing a new weather condition type, reset min/max.
-			amount_mins[idx_to_use] = amount_maxs[idx_to_use] = raw_amount;
+			amount_mins[idx_to_use] = amount_maxs[idx_to_use] = amount_lasts[idx_to_use] = raw_amount;
+			amount_same_counts[idx_to_use] = 0;
+			amount_mins_old[idx_to_use] = true;
 			if (kinds[idx_to_use] != slots::PrecipData::NONE) {
 				// We're overwriting a previously used type of precpitation, account for it in
 				// the mixed_count
@@ -322,7 +324,24 @@ namespace weather {
 		else {
 			// If there is already data in the slot, just update min/max & increase the count.
 			++detected_counts[idx_to_use];
-			amount_mins[idx_to_use] = std::min(amount_mins[idx_to_use], raw_amount);
+
+			auto delta = std::exchange(amount_lasts[idx_to_use], raw_amount) - raw_amount;
+			if (std::abs(delta) < 150) {
+				if (amount_same_counts[idx_to_use] < (is_hourly ? 2 : 4)) {
+					++amount_same_counts[idx_to_use];
+				}
+				if (amount_same_counts[idx_to_use] >= (is_hourly ? 2 : 4) && raw_amount > 300) {
+					if (std::exchange(amount_mins_old[idx_to_use], false) == true)
+						amount_mins[idx_to_use] = raw_amount;
+					else
+						amount_mins[idx_to_use] = std::min(amount_mins[idx_to_use], raw_amount);
+				}
+			}
+			else
+				amount_same_counts[idx_to_use] = 0;
+
+			if (amount_mins_old[idx_to_use])
+				amount_mins[idx_to_use] = std::min(amount_mins[idx_to_use], raw_amount);
 			amount_maxs[idx_to_use] = std::max(amount_maxs[idx_to_use], raw_amount);
 		}
 
@@ -336,6 +355,9 @@ namespace weather {
 			std::swap(detected_counts[0], detected_counts[1]);
 			std::swap(amount_mins[0], amount_mins[1]);
 			std::swap(amount_maxs[0], amount_maxs[1]);
+			std::swap(amount_lasts[0], amount_lasts[1]);
+			std::swap(amount_same_counts[0], amount_same_counts[1]);
+			std::swap(amount_mins_old[0], amount_mins_old[1]);
 		}
 	}
 
@@ -345,7 +367,7 @@ namespace weather {
 		if (dead) return;
 
 		// Update the tally of precipitation types.
-		amount.append(datapoint);
+		amount.append(datapoint, is_hourly);
 
 		// If a block of precipitation is active, continue appending into it.
 		if (block_is_active) {

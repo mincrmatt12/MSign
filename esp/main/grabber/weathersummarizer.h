@@ -108,6 +108,8 @@ namespace weather {
 			// Amount of precipitation for the corresponding type in kinds. mm/hr*100 for everything but snow which is
 			// total snow on ground in mm.
 			int16_t amount_mins[2], amount_maxs[2];
+			// Keeps track of "soft min".
+			int16_t amount_lasts[2]; uint8_t amount_same_counts[2]; bool amount_mins_old[2]{true, true};
 
 			// Number of times we've seen each of the precipitation types in kinds[]
 			int16_t detected_counts[2];
@@ -123,7 +125,7 @@ namespace weather {
 			int16_t total_count{};
 
 			// Add some weather data to the amount tracker.
-			void append(const SingleDatapoint& datapoint);
+			void append(const SingleDatapoint& datapoint, bool is_hourly);
 
 			int most_prevalent_index() const {
 				if (kinds[0] != slots::PrecipData::NONE && kinds[1] != slots::PrecipData::NONE) {
