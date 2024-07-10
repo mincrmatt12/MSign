@@ -45,7 +45,7 @@ namespace parcels {
 	}
 
 	void set_parcels_count(size_t length) {
-		for (unsigned i = 0; i < length; ++i) {
+		for (unsigned i = 0; i < 6; ++i) {
 			if (i < length) parcel_dynamic_infos[i].state = ParcelDynamicInfo::UNKNOWN;
 			else            parcel_dynamic_infos[i].state = ParcelDynamicInfo::MISSING;
 		}
