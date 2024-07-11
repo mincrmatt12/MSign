@@ -326,11 +326,11 @@ namespace weather {
 			++detected_counts[idx_to_use];
 
 			auto delta = std::exchange(amount_lasts[idx_to_use], raw_amount) - raw_amount;
-			if (std::abs(delta) < 150) {
-				if (amount_same_counts[idx_to_use] < (is_hourly ? 2 : 4)) {
+			if (std::abs(delta) < (is_hourly ? 100 : 45)) {
+				if (amount_same_counts[idx_to_use] < (is_hourly ? 2 : 3)) {
 					++amount_same_counts[idx_to_use];
 				}
-				if (amount_same_counts[idx_to_use] >= (is_hourly ? 2 : 4) && raw_amount > 300) {
+				if (amount_same_counts[idx_to_use] >= (is_hourly ? 2 : 3) && raw_amount > 300) {
 					if (std::exchange(amount_mins_old[idx_to_use], false) == true)
 						amount_mins[idx_to_use] = raw_amount;
 					else
