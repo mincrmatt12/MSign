@@ -348,10 +348,10 @@ bool screen::ParcelScreen::interact() {
 				parcel_entries_scroll += (dy * ui::buttons.frame_time()) / 8;
 			}
 
-			if (parcel_entries_scroll < 0) parcel_entries_scroll = 0;
-			if (parcel_entries_scroll && (18 + parcel_entries_size - parcel_entries_scroll/128 < 64)) {
+			if (parcel_entries_scroll > 0 && (18 + parcel_entries_size - parcel_entries_scroll/128 < 64)) {
 				parcel_entries_scroll = (18 + parcel_entries_size - 64)*128;
 			}
+			if (parcel_entries_scroll < 0) parcel_entries_scroll = 0;
 			
 			break;
 	}
