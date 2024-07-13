@@ -254,7 +254,7 @@ namespace crash::decode {
 		for (int i = 0; i < length; ++i) {
 			if (backtrace[i] > 0xffff'fff0)
 				// Resolve it to a constant
-				snprintf(resolved[i], max_length_size, "interrupt handler");
+				strncpy(resolved[i], "interrupt handler", max_length_size);
 		}
 
 		Deflate(+[](){
@@ -281,10 +281,10 @@ namespace crash::decode {
 							if (sps->prevaddr != 0) {
 								for (int i = 0; i < sps->bt_len; ++i) {
 									if ((sps->resolved[i][0] == 0 && sps->backtrace[i] == sps->curraddr) || (sps->backtrace[i] % 2 == 0 && sps->backtrace[i] + 1 == sps->curraddr)) {
-										strcpy(sps->resolved[i], sps->currname);
+										strncpy(sps->resolved[i], sps->currname, max_length_size);
 									}
 									else if (sps->resolved[i][0] == 0 && sps->backtrace[i] < sps->curraddr) {
-										strcpy(sps->resolved[i], sps->prevname);
+										strncpy(sps->resolved[i], sps->prevname, max_length_size);
 									}
 								}
 							}
