@@ -42,11 +42,22 @@ find_package(Python 3 COMPONENTS Interpreter)
 
 # Add libraries for the vendored libs
 
+set(cube_ll_drivers
+	dma.c
+	gpio.c
+	pwr.c
+	rcc.c
+	rng.c
+	rtc.c
+	tim.c
+	usart.c
+	utils.c)
+
 # hal
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
-	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_*.c)
+	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
 else()
-	file(GLOB cube_ll_srcs ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_*.c)
+	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
 endif()
 
 add_library(cube_ll OBJECT ${cube_ll_srcs})
@@ -154,13 +165,13 @@ target_link_libraries(stm
 )
 
 target_compile_options(stm
-	PUBLIC
+	PRIVATE
 	-O3
 	-ffast-math
 )
 
 target_compile_options(stm_crash
-	PUBLIC
+	PRIVATE
 	-O2
 )
 

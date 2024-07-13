@@ -5,13 +5,11 @@
 
 #ifdef USE_F2
 #include <stm32f2xx.h>
-#include <stm32f2xx_hal.h>
 #include <stm32f2xx_ll_usart.h>
 #include <stm32f2xx_ll_bus.h>
 #endif
 #ifdef USE_F4
 #include <stm32f4xx.h>
-#include <stm32f4xx_hal.h>
 #include <stm32f4xx_ll_usart.h>
 #include <stm32f4xx_ll_bus.h>
 #endif
@@ -68,34 +66,34 @@ void nvic::init() {
 	memcpy((void *)ram_isr_table, (const void *)g_pfnVectors, sizeof g_pfnVectors);
 	SCB->VTOR = (uint32_t)(ram_isr_table);
 	__enable_fault_irq();
+	
+	NVIC_SetPriorityGrouping(3); // 7 - 4 implemented = 3 PRIGROUP
 
-	NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-
-	NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,0));
+	NVIC_SetPriority(DMA2_Stream5_IRQn, 2);
 	NVIC_EnableIRQ(DMA2_Stream5_IRQn);
 
-	NVIC_SetPriority(TIM4_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),2,1)); 
+	NVIC_SetPriority(TIM4_IRQn, 2); 
 	NVIC_EnableIRQ(TIM4_IRQn);
 
-	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6,0));
+	NVIC_SetPriority(NVIC_SRV_TX_IRQ_NAME, 6);
 	NVIC_EnableIRQ(NVIC_SRV_TX_IRQ_NAME);
 
-	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),5,0));
+	NVIC_SetPriority(NVIC_SRV_RX_IRQ_NAME, 5);
 	NVIC_EnableIRQ(NVIC_SRV_RX_IRQ_NAME);
 
-	NVIC_SetPriority(ESP_USART_IRQ_NAME, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),6,0));
+	NVIC_SetPriority(ESP_USART_IRQ_NAME, 6);
 	NVIC_EnableIRQ(ESP_USART_IRQ_NAME);
 
-	NVIC_SetPriority(UsageFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_SetPriority(UsageFault_IRQn, 3);
 	NVIC_EnableIRQ(UsageFault_IRQn);
 
-	NVIC_SetPriority(BusFault_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_SetPriority(BusFault_IRQn, 3);
 	NVIC_EnableIRQ(BusFault_IRQn);
 
-	NVIC_SetPriority(MemoryManagement_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),3,0));
+	NVIC_SetPriority(MemoryManagement_IRQn, 3);
 	NVIC_EnableIRQ(MemoryManagement_IRQn);
 
-	NVIC_SetPriority(EXTI0_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),4,0));
+	NVIC_SetPriority(EXTI0_IRQn, 4);
 	NVIC_EnableIRQ(EXTI0_IRQn);
 
 	SCB->SHCSR |= SCB_SHCSR_BUSFAULTENA_Msk | SCB_SHCSR_USGFAULTENA_Msk | SCB_SHCSR_MEMFAULTENA_Msk;
