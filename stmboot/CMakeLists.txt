@@ -25,6 +25,7 @@ find_program(openocd_executable openocd)
 add_executable(stmboot
 	src/main.c
 	src/startup.s
+	src/memset.c
 	
 	src/common/bootcmd.c
 )
@@ -69,11 +70,6 @@ target_link_options(stmboot PRIVATE
 	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/boot.ld
 	-Wl,--nmagic
 	-fno-builtin
-	--specs=nano.specs
-)
-
-target_link_libraries(stmboot
-	c
 )
 
 if (EXISTS ${openocd_executable})

@@ -6,7 +6,7 @@
 #endif
 #include "common/bootcmd.h"
 #include <stdbool.h>
-#include "string.h"
+#include "memset.h"
 
 // BOOTLOADER REVISION CONSTANT
 const char BL_REV[4] = {'2', 'c', 0, 0};
