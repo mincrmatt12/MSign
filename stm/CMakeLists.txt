@@ -254,4 +254,7 @@ else()
 	message(STATUS "Disabling upload target due to no OpenOCD")
 endif()
 
-add_custom_target(stm.bin ALL DEPENDS stm COMMAND ${OBJCOPY_EXECUTABLE} -Obinary $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.bin)
+add_custom_target(stm_bin ALL DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/stm.bin)
+add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/stm.bin 
+	COMMAND ${OBJCOPY_EXECUTABLE} -Obinary $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.bin
+	DEPENDS stm)
