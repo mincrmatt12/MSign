@@ -142,15 +142,15 @@ file(GLOB stm_libc_srcs
 
 list(REMOVE_ITEM stm_srcs ${stm_crash_srcs})
 list(REMOVE_ITEM stm_srcs ${stm_libc_srcs})
+list(REMOVE_ITEM stm_libc_srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/printf.c)
 
 add_library(minlibc STATIC ${stm_libc_srcs})
+add_library(minlibc_printf OBJECT ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/printf.c)
 
-target_link_libraries(minlibc gcc)
+target_link_libraries(minlibc gcc minlibc_printf)
 # ensure definitions of libc methods don't try to use themselves recursively
 target_compile_options(minlibc PRIVATE -fno-builtin)
 set_property(TARGET minlibc PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
-# but still build snprintf with LTO
-set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/printf.c PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 target_include_directories(minlibc SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/include)
 

@@ -29,13 +29,13 @@ namespace mint {
 	}
 
 	const char * tm::abbrev_month() const {
-		const char * const month_names =
+		static const char * const month_names =
 			"Jan\0Feb\0Mar\0Apr\0May\0Jun\0Jul\0Aug\0Sep\0Oct\0Nov\0Dec";
 		return month_names + (tm_mon - 1)*4;
 	}
 
 	const char * tm::abbrev_weekday() const {
-		const char * const wday_names =
+		static const char * const wday_names =
 			"Sun\0Mon\0Tue\0Wed\0Thu\0Fri\0Sat";
 		return wday_names + tm_wday * 4;
 	}
