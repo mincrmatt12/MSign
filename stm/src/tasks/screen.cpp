@@ -365,8 +365,8 @@ when_crashed:
 			// Fade out
 			for (int j = 0; j < 128; ++j) {
 				for (int k = 0; k < 64; ++k) {
-					matrix.get_inactive_buffer().at(j, k).set_spare(0);
-					matrix.get_inactive_buffer().at(j, k) = matrix.get_inactive_buffer().at(j, k).mix(0, i * 255 / 10);
+					matrix.get_inactive_buffer().at_unsafe(j, k).set_spare(0);
+					matrix.get_inactive_buffer().at_unsafe(j, k) = matrix.get_inactive_buffer().at_unsafe(j, k).mix(0, i * 255 / 10);
 				}
 			}
 			// swap buffers

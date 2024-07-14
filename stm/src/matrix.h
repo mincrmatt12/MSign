@@ -93,25 +93,50 @@ namespace led {
 			}
 		}
 
-		inline color_t & at(uint16_t x, uint16_t y) {
+	private:
+
+		class or_oob_ref {
+			friend FrameBuffer;
+			color_t *ref{};
+
+			or_oob_ref() = default;
+			or_oob_ref(color_t& ref) : ref(&ref) {}
+			or_oob_ref(const or_oob_ref&) = delete;
+			or_oob_ref(or_oob_ref&&) = delete;
+			or_oob_ref& operator=(const or_oob_ref&) = delete;
+			or_oob_ref& operator=(or_oob_ref&&) = delete;
+		public:
+			~or_oob_ref() = default;
+			inline color_t operator=(color_t change) {
+				if (ref) *ref = change;
+				return change;
+			}
+			operator color_t() const {
+				if (ref) return *ref;
+				return {};
+			}
+		};
+
+	public:
+		inline or_oob_ref at(uint16_t x, uint16_t y) {
 			if (on_screen(x, y)) {
 				return Storage::_at(data, x, y);
 			}
-			return junk;
+			return {};
 		}
 
 		inline color_t & at_unsafe(uint16_t x, uint16_t y) {
 			return Storage::_at(data, x, y);
 		}
 
-		inline const color_t & at(uint16_t x, uint16_t y) const {
+		inline color_t at(uint16_t x, uint16_t y) const {
 			if (on_screen(x, y)) {
 				return Storage::_at(data, x, y);
 			}
-			return junk;
+			return {};
 		}
 
-		inline const color_t & at_unsafe(uint16_t x, uint16_t y) const {
+		inline color_t at_unsafe(uint16_t x, uint16_t y) const {
 			return Storage::_at(data, x, y);
 		}
 
@@ -126,8 +151,6 @@ namespace led {
 
 	protected:
 		alignas(uint32_t) color_t data[Width*Height];
-
-		color_t junk; // used as failsafe for read/write out of bounds
 
 	private:
 		template<unsigned Pos>
