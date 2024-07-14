@@ -11,8 +11,6 @@
 // strange parse error - put this last...
 
 #include "draw.h"
-#include <cstring>
-#include <stdlib.h>
 
 matrix_type matrix __attribute__((section(".vram")));
 

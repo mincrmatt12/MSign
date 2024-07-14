@@ -9,7 +9,7 @@
 #include "srvd.h"
 #include "../srv.h"
 #include <alloca.h>
-#include <cstdio>
+#include <stdio.h>
 
 #ifdef USE_F2
 #include <stm32f2xx_ll_cortex.h>
@@ -147,7 +147,7 @@ namespace crash {
 		NVIC_DisableIRQ(DMA2_Stream5_IRQn);
 		NVIC_DisableIRQ(TIM1_BRK_TIM9_IRQn);
 		// Zero our BSS
-		bzero(&_svram, &_ecbss - &_svram);
+		memset(&_svram, 0, &_ecbss - &_svram);
 		// Load our constant data
 		memcpy(&_scdata, &_scidata, &_ecdata - &_scdata);
 

@@ -6,7 +6,8 @@
 #include "../fonts/lcdpixel_6.h"
 #include "../tasks/screen.h"
 #include "../tasks/timekeeper.h"
-#include <ctime>
+#include "../mintime.h"
+#include <stdio.h>
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -360,10 +361,8 @@ bool screen::ParcelScreen::interact() {
 
 void screen::ParcelScreen::format_relative_or_local(char *buf, size_t len, uint64_t updated_time, bool local_time) {
 	if (local_time) {
-		struct tm res;
-		time_t t = updated_time / 1000;
-		gmtime_r(&t, &res);
-		strftime(buf, len, "%b %d, %H:%M", &res);
+		mint::tm res{updated_time};
+		snprintf(buf, len, "%s %d, %02d:%02d", res.abbrev_month(), res.tm_day, res.tm_hour, res.tm_min);
 	}
 	else {
 		draw::format_relative_date(buf, len, updated_time);

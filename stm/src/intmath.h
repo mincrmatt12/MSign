@@ -1,7 +1,7 @@
 #ifndef INTMATH_H
 #define INTMATH_H
 
-#include <stdint.h>
+#include <concepts>
 #include <type_traits>
 
 namespace intmath {
@@ -12,7 +12,7 @@ namespace intmath {
 	//         |    \-------\
 	//         |            |
 	//         \-- = 4.53 * 100
-	template<typename T>
+	template<std::integral T>
 	constexpr T round10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
@@ -27,7 +27,7 @@ namespace intmath {
 	}
 
 	// Same as round10, except rounds to lowest. Multiply by pos again to keep fixedpoint.
-	template<typename T>
+	template<std::integral T>
 	constexpr T floor10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
@@ -40,7 +40,7 @@ namespace intmath {
 	}
 
 	// Same as round10, except rounds to lowest. Multiply by pos again to keep fixedpoint.
-	template<typename T>
+	template<std::integral T>
 	constexpr T ceil10(T v, T pos=100) {
 		if constexpr (std::is_signed_v<T>) {
 			T res = v / pos, rem = v % pos;
@@ -50,6 +50,12 @@ namespace intmath {
 		else {
 			return ((v + (pos - 1)) / pos);
 		}
+	}
+
+	// Fill back in std::abs as we build without libm
+	template<std::signed_integral T>
+	constexpr T abs(T v) {
+		return (v < 0) ? -v : v;
 	}
 }
 

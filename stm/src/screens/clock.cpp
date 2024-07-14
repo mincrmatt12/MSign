@@ -1,10 +1,11 @@
 #include "clock.h"
 #include "../rng.h"
-#include <stdio.h>
-#include <time.h>
+#include "../mintime.h"
 
 #include "../fonts/dejavu_12.h"
 #include "../draw.h"
+
+#include <stdio.h>
 
 extern uint64_t rtc_time;
 extern matrix_type matrix;
@@ -16,10 +17,8 @@ screen::ClockScreen::ClockScreen() {
 }
 
 void screen::ClockScreen::draw() {
-	struct tm timedat;
-	time_t now = rtc_time / 1000;
 	char buf[6];
-	gmtime_r(&now, &timedat);
+	auto timedat = mint::now();
 
 	snprintf(buf, 6, "%02d:%02d", timedat.tm_hour, timedat.tm_min);
 

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <type_traits>
 #include <iterator>
+#include <alloca.h>
 
 #include "lru.h"
 

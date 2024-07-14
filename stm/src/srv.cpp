@@ -9,12 +9,12 @@
 #include "pins.h"
 #include "nvic.h"
 #include <algorithm>
-#include <unistd.h>
-#include <stdio.h>
 #include <utility>
 #include "tasks/screen.h"
 
 #include <semphr.h>
+
+#include <stdio.h>
 
 #if defined(USE_F2) || defined(SIM)
 #include <stm32f2xx_ll_usart.h>
@@ -277,7 +277,7 @@ const bheap::Block& srv::Servicer::_slot(uint16_t slotid) {
 	return arena.get(slotid);
 }
 
-void srv::Servicer::try_cleanup_heap(ssize_t need_space) {
+void srv::Servicer::try_cleanup_heap(ptrdiff_t need_space) {
 	// Do periodic/required cleanup:
 	//
 	// This function returns true if it sent a packet.
@@ -720,8 +720,8 @@ end_temp_request:
 							suboffset += total_size, sendoffset += total_size
 						) {
 							// Calculate total size
-							total_size = std::min<ssize_t>(total_size, (start + len) - sendoffset);
-							total_size = std::min<ssize_t>(total_size, b->datasize - suboffset);
+							total_size = std::min<ptrdiff_t>(total_size, (start + len) - sendoffset);
+							total_size = std::min<ptrdiff_t>(total_size, b->datasize - suboffset);
 
 							//if (!total_size) break;
 
@@ -790,7 +790,7 @@ end_temp_request:
 										move_update_errcode = slots::protocol::DataStoreFulfillResult::NotEnoughSpace_TryAgain;
 
 										// Compute how much new space is needed
-										ssize_t current_allocated_space = 0;
+										ptrdiff_t current_allocated_space = 0;
 										for (auto *b = &arena.get(sid_frame, offset); b && arena.block_offset(*b) < (offset + total_upd_len); b = b->next()) {
 											if (b->location != bheap::Block::LocationRemote) {
 												auto inner_off = arena.block_offset(*b);

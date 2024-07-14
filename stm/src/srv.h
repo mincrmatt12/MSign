@@ -2,7 +2,6 @@
 #define SRV_H
 
 #include <stdint.h>
-#include <type_traits>
 #include "common/slots.h"
 #include "protocol.h"
 #include "common/bheap.h"
@@ -220,7 +219,7 @@ namespace srv {
 		void do_handshake();
 
 		// full_cleanup is whether or not to allow doing anything that could evict packets (but still allow locking/invalidating the cache)
-		void try_cleanup_heap(ssize_t space_to_clear); // returns done
+		void try_cleanup_heap(ptrdiff_t space_to_clear); // returns done
 		void check_connection_ping(); // verify we're still connected with last_transmission
 		void send_data_requests(); // send DATA_REQUEST for all "dirty" remote blocks.
 

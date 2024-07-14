@@ -1,8 +1,9 @@
 #include "draw.h"
 #include "tasks/timekeeper.h"
-#include <ctime>
-#include <stdio.h>
 #include <bit>
+#include <stdio.h>
+#include "intmath.h"
+#include "mintime.h"
 
 extern tasks::Timekeeper timekeeper;
 extern uint64_t rtc_time;
@@ -284,7 +285,7 @@ namespace draw {
 	}
 
 	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
-		if (std::abs(y1 - y0) < std::abs(x1 - x0)) {
+		if (intmath::abs(y1 - y0) < intmath::abs(x1 - x0)) {
 			if (x0 > x1)
 				detail::line_impl_low(fb, x1, y1, x0, y0, rgb);
 			else
@@ -429,7 +430,7 @@ namespace draw {
 		bool ago = date < rtc_time;
 		int64_t howfar = date;
 		howfar -= rtc_time;
-		howfar = std::abs(howfar);
+		howfar = intmath::abs(howfar);
 		howfar /= 1000;  // only precise to seconds
 		
 		if (howfar == 0) {
@@ -476,10 +477,8 @@ namespace draw {
 		}
 		
 		// otherwise, just show day
-		struct tm timedat;
-		time_t then = date / 1000;
-		gmtime_r(&then, &timedat);
-		strftime(buf, buflen, "%b %d", &timedat);
+		mint::tm timedat{date};
+		snprintf(buf, buflen, "%s %d", timedat.abbrev_month(), timedat.tm_day);
 	}
 }
 

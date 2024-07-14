@@ -12,8 +12,6 @@
 #include <stm32f4xx_ll_bus.h>
 #endif
 
-#include <cmath>
-
 void rng::init() {
 	LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_RNG);
 

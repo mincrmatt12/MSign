@@ -21,6 +21,7 @@
 #include "fonts/lcdpixel_6.h"
 
 #include <FreeRTOS.h>
+#include <stdio.h>
 
 extern matrix_type matrix;
 extern srv::Servicer servicer;

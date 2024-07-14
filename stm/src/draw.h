@@ -2,7 +2,6 @@
 #define DRAW_H
 
 #include "matrix.h"
-#include <cstdlib>
 
 #ifndef SIM
 typedef led::Matrix<led::FrameBuffer<128, 64, led::FourPanelSnake>> matrix_type;

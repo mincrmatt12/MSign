@@ -3,6 +3,7 @@
 #include "pins.h"
 #include "srv.h"
 #include <numeric>
+#include <algorithm>
 
 #ifndef SIM
 

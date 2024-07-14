@@ -8,6 +8,8 @@
 #include "../draw.h"
 #include "timekeeper.h"
 
+#include <stdio.h>
+
 extern srv::Servicer servicer;
 extern matrix_type matrix;
 extern tasks::Timekeeper timekeeper;
@@ -118,8 +120,8 @@ void tasks::DispMan::do_adc_calibration() {
 				break;
 			case CAPTURE_DOWN:
 				{
-					int dy1 = std::abs((int)new_calibration.y.min - (int)y);
-					int dy2 = std::abs((int)new_calibration.y.max - (int)y);
+					int dy1 = intmath::abs((int)new_calibration.y.min - (int)y);
+					int dy2 = intmath::abs((int)new_calibration.y.max - (int)y);
 
 					if (dy2 > dy1)
 						std::swap(new_calibration.y.min, new_calibration.y.max);
@@ -127,8 +129,8 @@ void tasks::DispMan::do_adc_calibration() {
 				break;
 			case CAPTURE_LEFT:
 				{
-					int dx1 = std::abs((int)new_calibration.x.min - (int)x);
-					int dx2 = std::abs((int)new_calibration.x.max - (int)x);
+					int dx1 = intmath::abs((int)new_calibration.x.min - (int)x);
+					int dx2 = intmath::abs((int)new_calibration.x.max - (int)x);
 
 					if (dx2 < dx1)
 						std::swap(new_calibration.x.min, new_calibration.x.max);
@@ -144,10 +146,10 @@ void tasks::DispMan::do_adc_calibration() {
 				}
 				else {
 					new_calibration.x.deadzone = std::max<uint16_t>(
-						std::abs(((int)new_calibration.x.min + (int)new_calibration.x.max) / 2 - x), new_calibration.x.deadzone
+						intmath::abs(((int)new_calibration.x.min + (int)new_calibration.x.max) / 2 - x), new_calibration.x.deadzone
 					);
 					new_calibration.y.deadzone = std::max<uint16_t>(
-						std::abs(((int)new_calibration.y.min + (int)new_calibration.y.max) / 2 - y), new_calibration.y.deadzone
+						intmath::abs(((int)new_calibration.y.min + (int)new_calibration.y.max) / 2 - y), new_calibration.y.deadzone
 					);
 				}
 				break;

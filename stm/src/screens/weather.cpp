@@ -10,10 +10,13 @@
 #include "../tasks/screen.h"
 
 #include "../draw.h"
-#include <limits.h>
-#include <time.h>
+#include "../mintime.h"
 
-#include <cmath>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
+#include <optional>
+
 extern uint64_t rtc_time;
 extern tasks::Timekeeper timekeeper;
 extern matrix_type matrix;
@@ -476,7 +479,7 @@ void screen::WeatherScreen::draw_currentstats() {
 	auto ctemp = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->ctemp;
 	{
 		auto v = intmath::round10(ctemp, (int16_t)10);
-		snprintf(disp_buf, 16, "%d.%d", v / 10, std::abs(v % 10));
+		snprintf(disp_buf, 16, "%d.%d", v / 10, intmath::abs(v % 10));
 	}
 
 	uint16_t text_size;
@@ -501,7 +504,7 @@ void screen::WeatherScreen::draw_currentstats() {
 
 	{
 		auto v = intmath::round10(servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->crtemp, (int16_t)10);
-		snprintf(disp_buf, 16, "%d.%d", v / 10, std::abs(v % 10));
+		snprintf(disp_buf, 16, "%d.%d", v / 10, intmath::abs(v % 10));
 		text_size = draw::text_size(disp_buf, font::lcdpixel_6::info);
 		draw::text(matrix.get_inactive_buffer(), disp_buf, font::lcdpixel_6::info, 44 - text_size / 2, 20, 127_c);
 	}
@@ -598,9 +601,7 @@ void screen::WeatherScreen::draw_hourlybar_header() {
 	// bar starts at x = 4, ends at x = 124, every 5 steps = 1 thing
 	// bar takes 13 px vertically, starts at y = 53
 	
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 	int first = timedat.tm_hour;
 
 	for (int i = 0; i < 24 / 4; ++i) {
@@ -769,9 +770,7 @@ void screen::WeatherScreen::draw_hourlybar(uint8_t hour) {
 
     slots::WeatherStateCode code = (*servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY))[hour]; 
 	
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 	hour = (timedat.tm_hour + hour) % 24;
 	int64_t hourstart = (int64_t)hour * (1000*60*60);
 
@@ -801,9 +800,7 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 	auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
 	const auto &times = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS)[0];
 
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 
 	bool forcehourlabel = true;
 
@@ -890,7 +887,7 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 			char buf[10];
 
 			if (hour != 0 && effhour == 0) {
-				strftime(buf, 10, "%a", &timedat);
+				strncpy(buf, timedat.abbrev_weekday(), sizeof buf);
 				int x = leftside - draw::text_size(buf, font::lcdpixel_6::info);
 				draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, labely + 5, 0xe39dd3_cc);
 				labely += 6;
@@ -935,7 +932,7 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 		char buf[10] = {0};
 		if (decimals) {
 			auto v = intmath::round10<int32_t>(ymin + value, 10);
-			snprintf(buf, 10, "%d.%d", v / 10, std::abs(v % 10));
+			snprintf(buf, 10, "%d.%d", v / 10, intmath::abs(v % 10));
 		}
 		else {
 			snprintf(buf, 10, "%d", intmath::round10(ymin + value));
@@ -975,14 +972,13 @@ void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t
 	// Draw the line
 	draw::rect(matrix.get_inactive_buffer(), x0, y, x1, y + 1, 50_c);
 
-	struct tm timedat;
+	std::optional<mint::tm> timedat;
 	auto updated_at = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at;
 	if (ashours) {
-		time_t now = updated_at / 1000;
-		gmtime_r(&now, &timedat);
+		timedat = mint::tm{updated_at};
 	}
 
-	int lsi = ashours ? timedat.tm_hour : intmath::round10<int>(updated_at - rtc_time, 60*1000);
+	int lsi = ashours ? timedat->tm_hour : intmath::round10<int>(updated_at - rtc_time, 60*1000);
 	int lsi_err = 0, lsi_offs;
 
 	if (ashours) {
@@ -1000,8 +996,8 @@ void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t
 		while (lsi_err >= 256) {
 			++lsi;
 			if (ashours && lsi % 24 == 0) {
-				++timedat.tm_wday;
-				timedat.tm_wday %= 7;
+				++timedat->tm_wday;
+				timedat->tm_wday %= 7;
 			}
 			lsi_err -= 256;
 		}
@@ -1022,12 +1018,12 @@ void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t
 				snprintf(buf, 32, "%02d", lsi % 24);
 				draw::multi_text(matrix.get_inactive_buffer(), font::lcdpixel_6::info, x, y + 7, buf, 0x9dd3e3_cc, ":00", 120_c);
 				if (lsi % 24 == 0) {
-					strftime(buf, 32, "%a", &timedat);
+					strncpy(buf, timedat->abbrev_weekday(), sizeof buf);
 					draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, x, y + 13, 0xe39dd3_cc);
 				}
 			}
 			else {
-				snprintf(buf, 32, "+%02dm", lsi % 60);
+				snprintf(buf, 32, "%+03dm", lsi % 60);
 				if (x - x0 + x_scroll + draw::text_size(buf, font::lcdpixel_6::info) > max_scroll)
 					return;
 				snprintf(buf, 32, "%02d", lsi % 60);
@@ -1180,9 +1176,7 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 		max_ = std::max<int32_t>(max_, tempgraph_data[i]);
 	}
 
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 	int first = timedat.tm_hour;
 
 	draw_graph_xaxis(24, 79, 128, first, true);
@@ -1553,9 +1547,7 @@ bool screen::WeatherScreen::interact() {
 			else if (ui::buttons[ui::Buttons::POWER]) subscreen = MAIN;
 			else if (ui::buttons[ui::Buttons::SEL]) {
 				srv::ServicerLockGuard g(servicer);
-				time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-				struct tm timedat;
-				gmtime_r(&now, &timedat);
+				mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 
 				if (selected_fiveday != 0) {
 					expanded_hrbar_scroll = (5 + (24 * (selected_fiveday - 1) + (24 - timedat.tm_hour)) * 10 - 15) * 128;
@@ -1580,10 +1572,7 @@ void screen::WeatherScreen::refresh() {
 
 int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots::WeatherDay day_data[], const slots::WeatherStateCode day_statuses[], int status_begin_hour, int status_end_hour) {
 	// Compute which day we're in
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	now += day*24*60*60;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at + day*(24*60*60*1000)};
 
 	// If this is day != 0, we have to adjust because all days != 0 start at midnight
 	if (day > 0) {
@@ -1592,7 +1581,7 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 
 	// Format the <day of week>, <month day>
 	char buf[32];
-	strftime(buf, sizeof buf, "%a, %b %d", &timedat);
+	snprintf(buf, sizeof buf, "%s, %s %d", timedat.abbrev_weekday(), timedat.abbrev_month(), timedat.tm_day);
 
 	const auto& w_day = day_data[day];
 
@@ -1738,9 +1727,7 @@ void screen::WeatherScreen::draw_fiveday() {
 	const auto& blk = servicer.slot<slots::WeatherStateCode *>(slots::WEATHER_ARRAY);
 	const auto &times = servicer.slot<slots::WeatherDay *>(slots::WEATHER_DAYS);
 
-	struct tm timedat;
-	time_t now = servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at / 1000;
-	gmtime_r(&now, &timedat);
+	mint::tm timedat{servicer.slot<slots::WeatherInfo>(slots::WEATHER_INFO)->updated_at};
 
 	int ptr = 0;
 	int16_t y = -fiveday_cur_y, relative_pos = 0;

@@ -8,7 +8,7 @@
 #include "../draw.h"
 #include "../tasks/screen.h"
 
-#include <bit>
+#include <stdio.h>
 
 namespace bitmap {
 	const uint8_t bus[] = { // really shitty bus
@@ -237,7 +237,7 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 	draw::rect(matrix.get_inactive_buffer(), 0, y + 7, 128, y + 8, 50_c);
 
 	// draw blade if necessary
-	if (dircode != 0 && !isspace(dircode)) {
+	if (dircode != 0 && dircode != ' ') {
 		char str[2] = {dircode, 0};
 		// draw bg 
 		draw::rect(matrix.get_inactive_buffer(), 128 - 6, y, 128, y + 7, 0x00556f_cc);

@@ -2,7 +2,6 @@
 #include "../fonts/latob_15.h"
 #include "../fonts/lcdpixel_6.h"
 #include "../fonts/tahoma_9.h"
-#include "../common/bootcmd.h"
 #include "../srv.h"
 #include "../ui.h"
 #include "../crash/main.h"
@@ -11,6 +10,7 @@
 #include <numeric>
 #include "../rng.h"
 #include "../tasks/timekeeper.h"
+#include <stdio.h>
 
 extern srv::Servicer servicer;
 extern matrix_type matrix;
@@ -539,7 +539,7 @@ namespace screen::game {
 		if (!alive) return;
 
 		char buf[16];
-		snprintf(buf, 16, "+%d", score_amt);
+		snprintf(buf, 16, "%+d", score_amt);
 
 		int16_t x_shift = draw::text_size(buf, font::lcdpixel_6::info) + 3;
 		int16_t x = board_start_x - x_shift;

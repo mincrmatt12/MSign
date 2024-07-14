@@ -102,7 +102,6 @@ elseif (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	)
 endif()
 
-
 set(freertos_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/FreeRTOS)
 
 # rtos
@@ -137,7 +136,23 @@ file(GLOB_RECURSE stm_crash_srcs
 	${CMAKE_CURRENT_SOURCE_DIR}/src/crash/*.s
 )
 
+file(GLOB stm_libc_srcs
+	${CMAKE_CURRENT_SOURCE_DIR}/src/libc/*.c
+)
+
 list(REMOVE_ITEM stm_srcs ${stm_crash_srcs})
+list(REMOVE_ITEM stm_srcs ${stm_libc_srcs})
+
+add_library(minlibc STATIC ${stm_libc_srcs})
+
+target_link_libraries(minlibc gcc)
+# ensure definitions of libc methods don't try to use themselves recursively
+target_compile_options(minlibc PRIVATE -fno-builtin)
+set_property(TARGET minlibc PROPERTY INTERPROCEDURAL_OPTIMIZATION FALSE)
+# but still build snprintf with LTO
+set_property(SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/printf.c PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+
+target_include_directories(minlibc SYSTEM PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/libc/include)
 
 add_library(stm_crash STATIC ${stm_crash_srcs})
 
@@ -146,6 +161,7 @@ add_executable(stm ${stm_srcs})
 target_link_libraries(stm_crash
 	cube_ll
 	freertos
+	minlibc
 )
 
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
@@ -161,7 +177,7 @@ target_link_libraries(stm
 	freertos
 	stm_crash
 
-	c m gcc
+	minlibc
 )
 
 target_compile_options(stm
@@ -208,7 +224,6 @@ target_link_options(stm
 	-Wl,--nmagic
 	-Wl,-Map=stm.map
 	$<$<BOOL:${USE_NO_WARN_RWX}>:-Wl,--no-warn-rwx-segment>
-	--specs=nano.specs
 )
 
 # add debug generation code

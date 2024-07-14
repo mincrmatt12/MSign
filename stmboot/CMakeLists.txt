@@ -4,6 +4,10 @@ project(msign-stmboot C ASM)
 
 set(CMAKE_CXX_STANDARD 17)
 
+add_compile_options(
+	-fno-builtin
+)
+
 # specify target
 set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign'")
 set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
@@ -63,13 +67,11 @@ endif()
 
 target_compile_options(stmboot PRIVATE
 	$<IF:$<C_COMPILER_ID:Clang>,-Oz,-Os>
-	-ffreestanding
 )
 
 target_link_options(stmboot PRIVATE
 	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/boot.ld
 	-Wl,--nmagic
-	-fno-builtin
 )
 
 if (EXISTS ${openocd_executable})

@@ -10,6 +10,8 @@
 #include "../common/slots.h"
 #include "threed/fixed.h"
 
+#include <stdio.h>
+
 extern srv::Servicer servicer;
 extern matrix_type matrix;
 extern uint64_t rtc_time;

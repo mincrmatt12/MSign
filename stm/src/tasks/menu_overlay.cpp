@@ -6,6 +6,8 @@
 
 #include "../fonts/tahoma_9.h"
 #include "timekeeper.h"
+
+#include <stdio.h>
 #include "../common/ver.h"
 
 #ifndef MSIGN_GIT_REV

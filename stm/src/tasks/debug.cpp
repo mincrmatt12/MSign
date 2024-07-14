@@ -1,8 +1,5 @@
 #include "debug.h"
 #include "screen.h"
-#include "../srv.h"
-#include <string.h>
-#include <stdio.h>
 #include <FreeRTOS.h>
 #include <task.h>
 
