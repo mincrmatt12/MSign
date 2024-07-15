@@ -84,8 +84,10 @@ namespace sd {
 		static_assert(LocalSize < 32, "Local size must be less than 32 bits");
 		static_assert(Index < Total, "Index must be inside struct");
 
+		using ReadLocalType = std::conditional_t<Total - Index >= 32, uint32_t, std::conditional_t<Total - Index >= 16, uint16_t, uint8_t>>;
+
 		inline operator access_type() const {
-			return static_cast<access_type>((*(reinterpret_cast<const uint32_t *>(data + (Index / 8))) >> (Index % 8)) & ((1U << LocalSize) - 1));
+			return static_cast<access_type>((*(reinterpret_cast<const ReadLocalType *>(data + (Index / 8))) >> (Index % 8)) & ((1U << LocalSize) - 1));
 		}
 
 		inline reg_bit& operator=(const access_type& other) {
@@ -95,8 +97,8 @@ namespace sd {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 #endif
-			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) &= ~(((1U << LocalSize) - 1) << (Index % 8));
-			*(reinterpret_cast<uint32_t *>(data + (Index / 8))) |= (static_cast<uint32_t>(other) << (Index % 8));
+			*(reinterpret_cast<ReadLocalType *>(data + (Index / 8))) &= ~(((1U << LocalSize) - 1) << (Index % 8));
+			*(reinterpret_cast<ReadLocalType *>(data + (Index / 8))) |= (static_cast<ReadLocalType>(other) << (Index % 8));
 #ifndef __clang__
 #pragma GCC diagnostic pop 
 #endif
@@ -470,7 +472,8 @@ namespace sd {
 		if constexpr (!std::is_empty<Argument>::value) {
 			static_assert(sizeof(Argument) == 4, "argument must be a 32-bit value");
 
-			uint32_t argument_u32 = *reinterpret_cast<uint32_t *>(&argument);
+			uint32_t argument_u32;
+			memcpy(&argument_u32, &argument, 4);
 
 			command_out[1] = argument_u32 >> 24;
 			command_out[2] = argument_u32 >> 16;
@@ -813,7 +816,6 @@ namespace sd {
 		// Finish multi-block write if necessary
 		if (!(x.idle)) {
 			ESP_LOGI(TAG, "Stopping stale write");
-			uint8_t _;
 			spi::tx_byte(0xFD); // STOP_TRAN_TOKEN
 			// Receive a bunch of garbage
 			for (int i = 0; i < 520; ++i) spi::tx_byte(0xff);
