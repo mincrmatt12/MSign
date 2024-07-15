@@ -1,1 +1,0 @@
-../stm/toolchain-clang.cmake
