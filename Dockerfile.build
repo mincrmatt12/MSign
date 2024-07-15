@@ -1,36 +1,30 @@
-# download / extract toolchains
-FROM debian:bookworm as toolchains
-
-WORKDIR /opt/toolchains
-
-ADD https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz arm.tar.xz
-ADD https://dl.espressif.com/dl/xtensa-lx106-elf-gcc8_4_0-esp-2020r3-linux-amd64.tar.gz esp.tar.gz
-
-RUN apt-get update && apt-get install -y tar xz-utils
-RUN tar xf arm.tar.xz && tar xf esp.tar.gz
-
 # actual image
-FROM python:3.12-bookworm
-
-# make directories
-WORKDIR /opt/work
+FROM debian:trixie
 
 # copy toolchains
 WORKDIR /opt/toolchaintemp
-COPY --from=toolchains /opt/toolchains/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi arm
-COPY --from=toolchains /opt/toolchains/xtensa-lx106-elf esp
-RUN cp -r arm/* /usr/local && cp -r esp/* /usr/local && rm -rf arm esp
 
 # system dependencies
 RUN apt-get update && apt-get install -y \
 	cmake ninja-build git \
 	curl wget \
 	libncurses-dev build-essential flex bison gperf \
-	gcc make castxml
+	gcc make castxml tar xz-utils gcc-xtensa-lx106 \
+	python3 python3-pip python-is-python3
+
+ADD https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz arm.tar.xz
+
+RUN tar -xf arm.tar.xz -C /usr/local --strip-components=1 arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi
+
+ADD http://static.mm12.xyz/newlib-libstdc++-xtensa-lx106-elf-13.2.0.tar.xz xtensa.tar.xz
+
+RUN tar -xf xtensa.tar.xz -C /
+
+WORKDIR /opt/pydeps
 
 # copy python deps
 ADD requirements.txt py-requirements.txt
 ADD vendor/ESP8266_RTOS_SDK/requirements.txt py-requirements2.txt
 
 # python dependencies
-RUN sed -i 's/>=2.1.4,<35/>=41.0/' py-requirements2.txt && python -m pip install -r py-requirements2.txt -r py-requirements.txt
+RUN python -m pip install --break-system-packages -r py-requirements2.txt -r py-requirements.txt
