@@ -490,11 +490,11 @@ namespace dwhttp {
 			virtual bool   parse_response_headers() = 0;
 			virtual void   stop() = 0;
 
-			inline const int& result_code() const {
+			inline int result_code() const {
 				return state.c.result_code;
 			}
 
-			inline const int& content_length() const {
+			inline int content_length() const {
 				return state.c.content_length;
 			}
 

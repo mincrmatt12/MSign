@@ -372,7 +372,7 @@ reachedend:
 
 				FIL f; f_open(&f, "0:/config.json.tmp", FA_CREATE_ALWAYS | FA_WRITE);
 				for (int i = 0; i < reqstate->c.content_length; i += 64) {
-					int len = read_from_req_body(buf, std::min(64, reqstate->c.content_length - i));
+					int len = read_from_req_body(buf, std::min<int>(64, reqstate->c.content_length - i));
 					UINT bw;
 					if (f_write(&f, buf, len, &bw)) {
 						ESP_LOGW(TAG, "Failed to dw config");
