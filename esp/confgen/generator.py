@@ -1024,7 +1024,6 @@ def generate_header(output):
     for i in sys.argv[1:-1]:
         output.add('#include "{}"'.format(os.path.abspath(i)))
     output.add()
-    output.add('#pragma GCC diagnostic ignored "-Wbraced-scalar-init"')
     output.add('#pragma GCC diagnostic ignored "-Wunused-label"')
     output.add("const static char * const TAG = \"configparse\";")
 
