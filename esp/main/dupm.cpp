@@ -1203,7 +1203,7 @@ retry_allocation:
 			slots::PacketWrapper<4> pkt;
 			pkt.init(slots::protocol::DATA_SET_SIZE);
 			pkt.put(dur.d_chsize.slotid, 0);
-			pkt.put(original_size, 2);
+			pkt.put<uint16_t>(original_size, 2);
 
 			int tries = 0;
 retry_chsize2:
