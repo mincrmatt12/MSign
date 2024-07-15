@@ -1,0 +1,5 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "Vishay_DCDC")(type "KiCad")(uri "${KIPRJMOD}/Vishay_DCDC.kicad_sym")(options "")(descr ""))
+  (lib (name "TI_EFuse")(type "KiCad")(uri "${KIPRJMOD}/TI_EFuse.kicad_sym")(options "")(descr ""))
+)
