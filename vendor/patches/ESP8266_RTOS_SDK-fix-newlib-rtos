@@ -1,0 +1,13 @@
+Fix newlib impure_ptr declaration missing in FreeRTOS implementation
+Index: vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/portmacro.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/portmacro.h
++++ vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/portmacro.h
+@@ -43,6 +43,7 @@ extern "C" {
+ 
+ #if defined(configUSE_NEWLIB_REENTRANT) && configUSE_NEWLIB_REENTRANT == 1
+ #include "esp_newlib.h"
++#define _impure_ptr _global_impure_ptr
+ 
+ #undef _REENT_INIT_PTR
+ #define _REENT_INIT_PTR(p) esp_reent_init(p)

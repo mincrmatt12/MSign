@@ -1,0 +1,14 @@
+Increase the min version for cryptography so it can
+be built along with the espweb sources
+Index: vendor/ESP8266_RTOS_SDK/requirements.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/requirements.txt
++++ vendor/ESP8266_RTOS_SDK/requirements.txt
+@@ -8,6 +8,6 @@ setuptools
+ click>=5.0
+ pyserial>=3.0
+ future>=0.15.2
+-cryptography>=2.1.4,<35
++cryptography>=41.0
+ pyparsing>=2.0.3,<2.4.0
+ pyelftools>=0.22

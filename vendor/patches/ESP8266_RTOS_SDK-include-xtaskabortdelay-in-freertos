@@ -1,0 +1,17 @@
+Enable xTaskAbortDelay in ESP8266 freertos build, as
+well as eTaskGetState
+Index: vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
++++ vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/include/freertos/FreeRTOSConfig.h
+@@ -103,6 +103,10 @@ to exclude the API function. */
+ #define INCLUDE_vTaskDelayUntil			1
+ #define INCLUDE_vTaskDelay				1
+ 
++// for msign:
++#define INCLUDE_xTaskAbortDelay         1
++#define INCLUDE_eTaskGetState           1
++
+ /*set the #define for debug info*/
+ #define INCLUDE_xTaskGetCurrentTaskHandle 1
+ #define INCLUDE_uxTaskGetStackHighWaterMark 1

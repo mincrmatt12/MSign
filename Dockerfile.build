@@ -10,7 +10,7 @@ RUN apt-get update && apt-get install -y \
 	curl wget \
 	libncurses-dev build-essential flex bison gperf \
 	gcc make castxml tar xz-utils gcc-xtensa-lx106 \
-	python3 python3-pip python-is-python3
+	python3 python3-pip python-is-python3 quilt
 
 ADD https://developer.arm.com/-/media/Files/downloads/gnu/13.3.rel1/binrel/arm-gnu-toolchain-13.3.rel1-x86_64-arm-none-eabi.tar.xz arm.tar.xz
 

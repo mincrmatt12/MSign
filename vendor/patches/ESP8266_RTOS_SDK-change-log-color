@@ -1,0 +1,15 @@
+Changes the output color for INFO message in ESP_LOG
+to use blue instead of green (making it easier to see)
+Index: vendor/ESP8266_RTOS_SDK/components/log/log.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/log/log.c
++++ vendor/ESP8266_RTOS_SDK/components/log/log.c
+@@ -42,7 +42,7 @@ static const uint32_t s_log_color[ESP_LO
+     0,  //  ESP_LOG_NONE
+     31, //  ESP_LOG_ERROR
+     33, //  ESP_LOG_WARN
+-    32, //  ESP_LOG_INFO
++    34, //  ESP_LOG_INFO
+     0,  //  ESP_LOG_DEBUG
+     0,  //  ESP_LOG_VERBOSE
+ };

@@ -1,0 +1,10 @@
+ESP8266_RTOS_SDK-change-log-color
+ESP8266_RTOS_SDK-fix-newlib-rtos
+ESP8266_RTOS_SDK-remove-wpa3
+ESP8266_RTOS_SDK-remove-mbedtls
+ESP8266_RTOS_SDK-include-xtaskabortdelay-in-freertos
+ESP8266_RTOS_SDK-external-wpa-tls
+ESP8266_RTOS_SDK-update-crypto-requirements
+ESP8266_RTOS_SDK-fix-long-vector-calls
+ESP8266_RTOS_SDK-add-user-panic-handler
+ESP8266_RTOS_SDK-update-to-gcc-13

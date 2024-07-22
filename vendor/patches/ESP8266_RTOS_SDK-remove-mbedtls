@@ -1,0 +1,61 @@
+Allow building without mbedtls
+Index: vendor/ESP8266_RTOS_SDK/components/bootloader_support/CMakeLists.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/bootloader_support/CMakeLists.txt
++++ vendor/ESP8266_RTOS_SDK/components/bootloader_support/CMakeLists.txt
+@@ -8,7 +8,10 @@ else()
+     set(COMPONENT_ADD_INCLUDEDIRS "include")
+     set(COMPONENT_PRIV_INCLUDEDIRS "include_priv")
+     set(COMPONENT_REQUIRES)
+-    set(COMPONENT_PRIV_REQUIRES spi_flash mbedtls)
++    set(COMPONENT_PRIV_REQUIRES spi_flash)
++	if (CONFIG_SSL_USING_MBEDTLS)
++		set(COMPONENT_PRIV_REQUIRES spi_flash mbedtls)
++	endif()
+ endif()
+ 
+ register_component()
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
+@@ -79,6 +79,7 @@ set(srcs "port/os_xtensa.c"
+ 
+ if(CONFIG_WPA_MBEDTLS_CRYPTO)
+     set(tls_src "src/crypto/tls_mbedtls.c")
++	set(tls_dep mbedtls)
+ else()
+     set(tls_src
+     "src/tls/asn1.c"
+@@ -99,6 +100,7 @@ else()
+     "src/tls/tlsv1_server_write.c"
+     "src/tls/x509v3.c"
+     )
++	set(tls_dep "")
+ endif()
+ 
+ if (CONFIG_WPA_11KV_SUPPORT)
+@@ -118,7 +120,7 @@ endif()
+ idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
+                     INCLUDE_DIRS include port/include include/esp_supplicant
+                     PRIV_INCLUDE_DIRS src
+-                    PRIV_REQUIRES mbedtls freertos heap newlib)
++					PRIV_REQUIRES freertos heap newlib ${tls_dep})
+ 
+ set_source_files_properties(
+     src/crypto/crypto_ops.c
+Index: vendor/ESP8266_RTOS_SDK/components/nvs_flash/CMakeLists.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/nvs_flash/CMakeLists.txt
++++ vendor/ESP8266_RTOS_SDK/components/nvs_flash/CMakeLists.txt
+@@ -35,8 +35,8 @@ if(${target} STREQUAL "linux")
+     target_compile_options(${COMPONENT_LIB} PUBLIC "-DLINUX_TARGET")
+ else()
+     # TODO: this is a workaround until IDF-2085 is fixed
+-    idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
+-    target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
++	#idf_component_get_property(mbedtls_lib mbedtls COMPONENT_LIB)
++	#target_link_libraries(${COMPONENT_LIB} PUBLIC ${mbedtls_lib})
+ endif()
+ 
+ if(CONFIG_NVS_ENCRYPTION)

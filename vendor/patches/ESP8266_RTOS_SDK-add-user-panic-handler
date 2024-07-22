@@ -1,0 +1,130 @@
+Index: vendor/ESP8266_RTOS_SDK/components/esp8266/Kconfig
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/Kconfig
++++ vendor/ESP8266_RTOS_SDK/components/esp8266/Kconfig
+@@ -153,6 +153,12 @@ config ESP_PANIC_GDBSTUB
+         of the crash.
+ 
+         The UART's baudrate should be 115200 or others which can be recognized by xtensa GDB.
++
++config ESP_PANIC_USER_REBOOT
++	bool "Call user esp_custom_panic_handler then reboot"
++	help
++		Calls esp_custom_panic_handler and if it returns, immediately resets.
++
+ endchoice
+ 
+ config RESET_REASON
+Index: vendor/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
++++ vendor/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
+@@ -117,20 +117,6 @@ SECTIONS
+     . = ALIGN(4);
+   } > dram0_0_seg
+ 
+-  /*This section holds data that should not be initialized at power up.
+-    The section located in Internal SRAM memory region. The macro _NOINIT
+-    can be used as attribute to place data into this section.
+-    See the esp_attr.h file for more information.
+-  */
+-  .noinit (NOLOAD):
+-  {
+-    . = ALIGN(4);
+-    _noinit_start = ABSOLUTE(.);
+-    *(.noinit .noinit.*)
+-    . = ALIGN(4) ;
+-    _noinit_end = ABSOLUTE(.);
+-  } > dram0_0_seg
+-
+   /* Shared RAM */
+   .dram0.bss (NOLOAD) :
+   {
+@@ -155,6 +141,20 @@ SECTIONS
+     _bss_end = ABSOLUTE(.);
+   } > dram0_0_seg
+ 
++  /*This section holds data that should not be initialized at power up.
++    The section located in Internal SRAM memory region. The macro _NOINIT
++    can be used as attribute to place data into this section.
++    See the esp_attr.h file for more information.
++  */
++  .noinit (NOLOAD):
++  {
++    . = ALIGN(4);
++    _noinit_start = ABSOLUTE(.);
++    *(.noinit .noinit.*)
++    . = ALIGN(4) ;
++    _noinit_end = ABSOLUTE(.);
++  } > dram0_0_seg
++
+   ASSERT(((_bss_end - ORIGIN(dram0_0_seg)) <= LENGTH(dram0_0_seg)),
+           "DRAM segment data does not fit.")
+ 
+Index: vendor/ESP8266_RTOS_SDK/components/esp_gdbstub/esp8266/gdbstub_esp8266.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp_gdbstub/esp8266/gdbstub_esp8266.c
++++ vendor/ESP8266_RTOS_SDK/components/esp_gdbstub/esp8266/gdbstub_esp8266.c
+@@ -21,6 +21,7 @@
+ 
+ void esp_gdbstub_target_init(void)
+ {
++   CLEAR_PERI_REG_MASK(UART_SWAP_REG, 0x4);
+ }
+ 
+ int esp_gdbstub_getchar(void)
+Index: vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/panic.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/freertos/port/esp8266/panic.c
++++ vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/panic.c
+@@ -32,13 +32,13 @@
+ 
+ #define PANIC(_fmt, ...)    ets_printf(_fmt, ##__VA_ARGS__)
+ 
+-#if defined(CONFIG_ESP_PANIC_SILENT_REBOOT) || defined(CONFIG_ESP_PANIC_PRINT_REBOOT)
++#if defined(CONFIG_ESP_PANIC_SILENT_REBOOT) || defined(CONFIG_ESP_PANIC_PRINT_REBOOT) || defined(CONFIG_ESP_PANIC_USER_REBOOT)
+ #define ESP_PANIC_REBOOT
+ #else
+ #undef ESP_PANIC_REBOOT
+ #endif
+ 
+-#if defined(CONFIG_ESP_PANIC_SILENT_REBOOT)
++#if defined(CONFIG_ESP_PANIC_SILENT_REBOOT) || defined(CONFIG_ESP_PANIC_USER_REBOOT)
+ #undef ESP_PANIC_PRINT
+ #else
+ #define ESP_PANIC_PRINT
+@@ -166,6 +166,10 @@ void panicHandler(void *frame, int wdt)
+     }
+ 
+     panic_frame(frame);
++#elif defined(CONFIG_ESP_PANIC_USER_REBOOT)
++	extern void esp_custom_panic_handler(void *frame, int wdt);
++	
++	esp_custom_panic_handler(frame, wdt);
+ #endif
+ 
+ #ifdef ESP_PANIC_REBOOT
+Index: vendor/ESP8266_RTOS_SDK/components/heap/port/esp8266/esp_heap_init.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/heap/port/esp8266/esp_heap_init.c
++++ vendor/ESP8266_RTOS_SDK/components/heap/port/esp8266/esp_heap_init.c
+@@ -36,7 +36,7 @@ size_t IRAM_ATTR heap_caps_get_dram_free
+  */
+ void heap_caps_init(void)
+ {
+-    extern char _bss_end;
++    extern char _noinit_end;
+     size_t heap_region_num = 0;
+ 
+ #ifndef CONFIG_HEAP_DISABLE_IRAM
+@@ -51,8 +51,8 @@ void heap_caps_init(void)
+     }
+ #endif
+ 
+-    g_heap_region[heap_region_num].start_addr = (uint8_t *)&_bss_end;
+-    g_heap_region[heap_region_num].total_size = ((size_t)(0x40000000 - (uint32_t)&_bss_end));
++    g_heap_region[heap_region_num].start_addr = (uint8_t *)&_noinit_end;
++    g_heap_region[heap_region_num].total_size = ((size_t)(0x40000000 - (uint32_t)&_noinit_end));
+     g_heap_region[heap_region_num].caps = MALLOC_CAP_8BIT | MALLOC_CAP_32BIT | MALLOC_CAP_DMA;
+     heap_region_num++;
+ 

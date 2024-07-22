@@ -1,0 +1,243 @@
+Update the SDK to build against GCC 13
+Index: vendor/ESP8266_RTOS_SDK/components/bootloader_support/include/esp_image_format.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/bootloader_support/include/esp_image_format.h
++++ vendor/ESP8266_RTOS_SDK/components/bootloader_support/include/esp_image_format.h
+@@ -37,7 +37,7 @@ typedef enum {
+ } esp_image_spi_mode_t;
+ 
+ /* SPI flash clock frequency */
+-enum {
++typedef enum {
+     ESP_IMAGE_SPI_SPEED_40M,
+     ESP_IMAGE_SPI_SPEED_26M,
+     ESP_IMAGE_SPI_SPEED_20M,
+Index: vendor/ESP8266_RTOS_SDK/components/esp8266/driver/uart.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/driver/uart.c
++++ vendor/ESP8266_RTOS_SDK/components/esp8266/driver/uart.c
+@@ -421,10 +421,6 @@ static void uart_intr_service(void *arg)
+     // read status to get interrupt status for UART0-1
+     uint32_t uart_intr_status = UART[uart_num]->int_st.val;
+ 
+-    if (uart_isr_func == NULL) {
+-        return;
+-    }
+-
+     do {
+         uart_intr_status = UART[uart_num]->int_st.val;
+         if (uart_intr_status != 0) {
+Index: vendor/ESP8266_RTOS_SDK/components/esp8266/include/esp_libc.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/include/esp_libc.h
++++ vendor/ESP8266_RTOS_SDK/components/esp8266/include/esp_libc.h
+@@ -38,8 +38,6 @@
+ extern "C" {
+ #endif
+ 
+-int32_t os_get_random(unsigned char *buf, size_t len);
+-
+ /**
+   * @brief  put a character to uart or other devices, similar with putc.
+   *
+Index: vendor/ESP8266_RTOS_SDK/components/esp8266/source/system_api.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/source/system_api.c
++++ vendor/ESP8266_RTOS_SDK/components/esp8266/source/system_api.c
+@@ -398,7 +398,7 @@ uint32_t esp_get_old_sysconf_addr(void)
+ 
+ void os_update_cpu_frequency(uint32_t ticks_per_us)
+ {
+-    extern uint32_t _xt_tick_divisor;
++    extern unsigned _xt_tick_divisor;
+ 
+     if (REG_READ(DPORT_CTL_REG) & DPORT_CTL_DOUBLE_CLK) {
+         g_esp_ticks_per_us = CPU_CLK_FREQ * 2 / 1000000;
+Index: vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/port.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/freertos/port/esp8266/port.c
++++ vendor/ESP8266_RTOS_SDK/components/freertos/port/esp8266/port.c
+@@ -55,9 +55,9 @@
+ 
+ extern uint8_t NMIIrqIsOn;
+ 
+-uint32_t cpu_sr;
++unsigned cpu_sr;
+ 
+-uint32_t _xt_tick_divisor;
++unsigned _xt_tick_divisor;
+ 
+ /* Each task maintains its own interrupt status in the critical nesting
+ variable. */
+Index: vendor/ESP8266_RTOS_SDK/components/nvs_flash/src/intrusive_list.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/nvs_flash/src/intrusive_list.h
++++ vendor/ESP8266_RTOS_SDK/components/nvs_flash/src/intrusive_list.h
+@@ -16,6 +16,7 @@
+ 
+ #include <cassert>
+ #include <unordered_map>
++#include <stddef.h>
+ 
+ template <typename T>
+ class intrusive_list;
+Index: vendor/ESP8266_RTOS_SDK/components/spi_flash/include/esp_partition.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/spi_flash/include/esp_partition.h
++++ vendor/ESP8266_RTOS_SDK/components/spi_flash/include/esp_partition.h
+@@ -255,7 +255,7 @@ esp_err_t esp_partition_write(const esp_
+  *         or one of error codes from lower-level flash driver.
+  */
+ esp_err_t esp_partition_erase_range(const esp_partition_t* partition,
+-                                    uint32_t start_addr, uint32_t size);
++                                    size_t start_addr, size_t size);
+ 
+ #ifdef CONFIG_ENABLE_FLASH_MMAP
+ /**
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
+@@ -30,6 +30,7 @@
+ 
+ #include "utils/ext_password.h"
+ #include "wpatls/tls.h"
++#define EAP_DEFINE_GLOBALS
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_config.h"
+ #include "eap_peer/eap.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.h
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.h
+@@ -19,25 +19,29 @@ struct eap_method_type {
+ 	EapType method;
+ };
+ 
+-u8 *g_wpa_anonymous_identity;
+-int g_wpa_anonymous_identity_len;
+-u8 *g_wpa_username;
+-int g_wpa_username_len;
+-const u8 *g_wpa_client_cert;
+-int g_wpa_client_cert_len;
+-const u8 *g_wpa_private_key;
+-int g_wpa_private_key_len;
+-const u8 *g_wpa_private_key_passwd;
+-int g_wpa_private_key_passwd_len;
++#ifndef EAP_DEFINE_GLOBALS
++#define EAP_DEFINE_GLOBALS extern
++#endif
+ 
+-const u8 *g_wpa_ca_cert;
+-int g_wpa_ca_cert_len;
++EAP_DEFINE_GLOBALS u8 *g_wpa_anonymous_identity;
++EAP_DEFINE_GLOBALS int g_wpa_anonymous_identity_len;
++EAP_DEFINE_GLOBALS u8 *g_wpa_username;
++EAP_DEFINE_GLOBALS int g_wpa_username_len;
++EAP_DEFINE_GLOBALS const u8 *g_wpa_client_cert;
++EAP_DEFINE_GLOBALS int g_wpa_client_cert_len;
++EAP_DEFINE_GLOBALS const u8 *g_wpa_private_key;
++EAP_DEFINE_GLOBALS int g_wpa_private_key_len;
++EAP_DEFINE_GLOBALS const u8 *g_wpa_private_key_passwd;
++EAP_DEFINE_GLOBALS int g_wpa_private_key_passwd_len;
+ 
+-u8 *g_wpa_password;
+-int g_wpa_password_len;
++EAP_DEFINE_GLOBALS const u8 *g_wpa_ca_cert;
++EAP_DEFINE_GLOBALS int g_wpa_ca_cert_len;
+ 
+-u8 *g_wpa_new_password;
+-int g_wpa_new_password_len;
++EAP_DEFINE_GLOBALS u8 *g_wpa_password;
++EAP_DEFINE_GLOBALS int g_wpa_password_len;
++
++EAP_DEFINE_GLOBALS u8 *g_wpa_new_password;
++EAP_DEFINE_GLOBALS int g_wpa_new_password_len;
+ 
+ const u8 * eap_get_eapKeyData(struct eap_sm *sm, size_t *len);
+ void eap_deinit_prev_method(struct eap_sm *sm, const char *txt);
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wps.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wps.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wps.c
+@@ -2014,7 +2014,7 @@ int wps_check_wifi_mode(void)
+     return ESP_OK;
+ }
+ 
+-int esp_wifi_wps_enable(const esp_wps_config_t *config)
++esp_err_t esp_wifi_wps_enable(const esp_wps_config_t *config)
+ {
+     int ret;
+ 
+@@ -2099,7 +2099,7 @@ int wifi_wps_disable_internal(void)
+     return ESP_OK;
+ }
+ 
+-int esp_wifi_wps_disable(void)
++esp_err_t esp_wifi_wps_disable(void)
+ {
+     int ret = 0;
+ 
+@@ -2141,7 +2141,7 @@ int esp_wifi_wps_disable(void)
+     return ESP_OK;
+ }
+ 
+-int esp_wifi_wps_start(int timeout_ms)
++esp_err_t esp_wifi_wps_start(int timeout_ms)
+ {
+     if (ESP_OK != wps_check_wifi_mode()) {
+         return ESP_ERR_WIFI_MODE;
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.h
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.h
+@@ -134,7 +134,7 @@ int wpa_michael_mic_failure(u16 isunicas
+ 
+ wifi_cipher_type_t cipher_type_map_supp_to_public(uint32_t wpa_cipher);
+ 
+-uint32_t cipher_type_map_supp_to_public(wifi_cipher_type_t cipher);
++uint32_t cipher_type_map_public_to_supp(wifi_cipher_type_t cipher);
+ 
+ void wpa_sta_clear_curr_pmksa(void);
+ 
+Index: vendor/ESP8266_RTOS_SDK/requirements.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/requirements.txt
++++ vendor/ESP8266_RTOS_SDK/requirements.txt
+@@ -8,6 +8,6 @@ setuptools
+ click>=5.0
+ pyserial>=3.0
+ future>=0.15.2
+-cryptography>=41.0
+-pyparsing>=2.0.3,<2.4.0
++#cryptography~=36.0
++pyparsing>=2.0.3
+ pyelftools>=0.22
+Index: vendor/ESP8266_RTOS_SDK/tools/cmake/project.cmake
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/tools/cmake/project.cmake
++++ vendor/ESP8266_RTOS_SDK/tools/cmake/project.cmake
+@@ -399,7 +399,7 @@ macro(project project_name)
+     target_link_libraries(${project_elf} ${build_components})
+ 
+     set(mapfile "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.map")
+-    target_link_libraries(${project_elf} "-Wl,--cref -Wl,--Map=${mapfile} -Wl,--start-group")
++	target_link_libraries(${project_elf} "-Wl,--cref -Wl,--Map=${mapfile} -Wl,--start-group")
+ 
+     set_property(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}" APPEND PROPERTY
+         ADDITIONAL_MAKE_CLEAN_FILES
+Index: vendor/ESP8266_RTOS_SDK/tools/cmake/toolchain-esp8266.cmake
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/tools/cmake/toolchain-esp8266.cmake
++++ vendor/ESP8266_RTOS_SDK/tools/cmake/toolchain-esp8266.cmake
+@@ -4,8 +4,8 @@ set(CMAKE_C_COMPILER xtensa-lx106-elf-gc
+ set(CMAKE_CXX_COMPILER xtensa-lx106-elf-g++)
+ set(CMAKE_ASM_COMPILER xtensa-lx106-elf-gcc)
+ 
+-set(CMAKE_C_FLAGS "-mlongcalls -Wno-frame-address" CACHE STRING "C Compiler Base Flags")
+-set(CMAKE_CXX_FLAGS "-mlongcalls -Wno-frame-address" CACHE STRING "C++ Compiler Base Flags")
++set(CMAKE_C_FLAGS "-mlongcalls -Wno-frame-address -Wno-format" CACHE STRING "C Compiler Base Flags")
++set(CMAKE_CXX_FLAGS "-mlongcalls -Wno-frame-address -Wno-format" CACHE STRING "C++ Compiler Base Flags")
+ 
+ # Can be removed after gcc 5.2.0 support is removed (ref GCC_NOT_5_2_0)
+ set(CMAKE_EXE_LINKER_FLAGS "-nostdlib -Wl,--gc-sections" CACHE STRING "Linker Base Flags")

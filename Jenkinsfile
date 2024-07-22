@@ -34,8 +34,8 @@ pipeline {
 				}
 				stage("Build ESP") {
 					steps {
-						dir("vendor/ESP8266_RTOS_SDK") {
-							sh "git apply ../ESP8266_RTOS_SDK.patch"
+						dir("vendor") {
+							sh 'quilt push -a'
 						}
 						dir("esp/build") {
 							sh ". ../idf_export.sh; cmake .. -GNinja; ninja"

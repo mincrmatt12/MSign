@@ -1,0 +1,1920 @@
+Add support to wpa_supplicant for an out-of-sdk implementation
+of tls for WPA2-enterprise support. We use this to replace mbedtls
+and avoid linking in two tls implementations where possible.
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/CMakeLists.txt
+@@ -5,42 +5,7 @@ set(srcs "port/os_xtensa.c"
+     "src/ap/wpa_auth_ie.c"
+     "src/common/wpa_common.c"
+     "src/utils/bitfield.c"
+-    "src/crypto/aes-ctr.c"
+-    "src/crypto/aes-siv.c"
+-    "src/crypto/sha256-kdf.c"
+-    "src/crypto/aes-cbc.c"
+-    "src/crypto/aes-ccm.c"
+-    "src/crypto/aes-internal-dec.c"
+-    "src/crypto/aes-internal-enc.c"
+-    "src/crypto/aes-internal.c"
+-    "src/crypto/aes-omac1.c"
+-    "src/crypto/aes-unwrap.c"
+-    "src/crypto/aes-wrap.c"
+-    "src/crypto/aes-omac1.c"
+-    "src/crypto/bignum.c"
+-    "src/crypto/ccmp.c"
+     "src/crypto/crypto_ops.c"
+-    "src/crypto/crypto_internal-cipher.c"
+-    "src/crypto/crypto_internal-modexp.c"
+-    "src/crypto/crypto_internal-rsa.c"
+-    "src/crypto/crypto_internal.c"
+-    "src/crypto/des-internal.c"
+-    "src/crypto/dh_group5.c"
+-    "src/crypto/dh_groups.c"
+-    "src/crypto/md4-internal.c"
+-    "src/crypto/md5-internal.c"
+-    "src/crypto/md5.c"
+-    "src/crypto/ms_funcs.c"
+-    "src/crypto/rc4.c"
+-    "src/crypto/sha1-internal.c"
+-    "src/crypto/sha1-pbkdf2.c"
+-    "src/crypto/sha1.c"
+-    "src/crypto/sha256-internal.c"
+-    "src/crypto/sha256.c"
+-    "src/crypto/sha1-tlsprf.c"
+-    "src/crypto/sha256-tlsprf.c"
+-    "src/crypto/sha384-tlsprf.c"
+-    "src/crypto/sha256-prf.c"
+     "src/eap_peer/chap.c"
+     "src/eap_peer/eap.c"
+     "src/eap_peer/eap_common.c"
+@@ -78,8 +43,12 @@ set(srcs "port/os_xtensa.c"
+     "src/wps/wps_validate.c")
+ 
+ if(CONFIG_WPA_MBEDTLS_CRYPTO)
++		message(STATUS "HI2")
+     set(tls_src "src/crypto/tls_mbedtls.c")
+ 	set(tls_dep mbedtls)
++elseif(CONFIG_WPA_EXTERNAL_TLS)
++	set(tls_src "")
++	set(tls_dep ${CONFIG_WPA_EXTERNAL_TLS_COMPONENT})
+ else()
+     set(tls_src
+     "src/tls/asn1.c"
+@@ -117,10 +86,94 @@ else()
+     set(roaming_src "")
+ endif()
+ 
+-idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}"
++if (CONFIG_WPA_EXTERNAL_TLS_CRYPTO)
++	set (crypto_src "")
++elseif (CONFIG_WPA_EXTERNAL_TLS)
++	set (crypto_src 
++    "src/crypto/aes-ctr.c"
++    "src/crypto/aes-siv.c"
++    "src/crypto/sha256-kdf.c"
++    "src/crypto/aes-cbc.c"
++    "src/crypto/aes-ccm.c"
++    "src/crypto/aes-internal-dec.c"
++    "src/crypto/aes-internal-enc.c"
++    "src/crypto/aes-internal.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/aes-unwrap.c"
++    "src/crypto/aes-wrap.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/bignum.c"
++    "src/crypto/ccmp.c"
++    "src/crypto/crypto_internal-cipher.c"
++    "src/crypto/crypto_internal-modexp.c"
++    "src/crypto/crypto_internal.c"
++    "src/crypto/des-internal.c"
++    "src/crypto/dh_group5.c"
++    "src/crypto/dh_groups.c"
++    "src/crypto/md4-internal.c"
++    "src/crypto/md5-internal.c"
++    "src/crypto/md5.c"
++    "src/crypto/ms_funcs.c"
++    "src/crypto/rc4.c"
++    "src/crypto/sha1-internal.c"
++    "src/crypto/sha1-pbkdf2.c"
++    "src/crypto/sha1.c"
++    "src/crypto/sha256-internal.c"
++    "src/crypto/sha256.c"
++    "src/crypto/sha1-tlsprf.c"
++    "src/crypto/sha256-tlsprf.c"
++    "src/crypto/sha384-tlsprf.c"
++    "src/crypto/sha256-prf.c"
++	)
++else()
++	set (crypto_src 
++    "src/crypto/aes-ctr.c"
++    "src/crypto/aes-siv.c"
++    "src/crypto/sha256-kdf.c"
++    "src/crypto/aes-cbc.c"
++    "src/crypto/aes-ccm.c"
++    "src/crypto/aes-internal-dec.c"
++    "src/crypto/aes-internal-enc.c"
++    "src/crypto/aes-internal.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/aes-unwrap.c"
++    "src/crypto/aes-wrap.c"
++    "src/crypto/aes-omac1.c"
++    "src/crypto/bignum.c"
++    "src/crypto/ccmp.c"
++    "src/crypto/crypto_internal-cipher.c"
++    "src/crypto/crypto_internal-modexp.c"
++    "src/crypto/crypto_internal-rsa.c"
++    "src/crypto/crypto_internal.c"
++    "src/crypto/des-internal.c"
++    "src/crypto/dh_group5.c"
++    "src/crypto/dh_groups.c"
++    "src/crypto/md4-internal.c"
++    "src/crypto/md5-internal.c"
++    "src/crypto/md5.c"
++    "src/crypto/ms_funcs.c"
++    "src/crypto/rc4.c"
++    "src/crypto/sha1-internal.c"
++    "src/crypto/sha1-pbkdf2.c"
++    "src/crypto/sha1.c"
++    "src/crypto/sha256-internal.c"
++    "src/crypto/sha256.c"
++    "src/crypto/sha1-tlsprf.c"
++    "src/crypto/sha256-tlsprf.c"
++    "src/crypto/sha384-tlsprf.c"
++    "src/crypto/sha256-prf.c"
++	)
++endif()
++
++idf_component_register(SRCS "${srcs}" "${tls_src}" "${roaming_src}" "${crypto_src}"
+                     INCLUDE_DIRS include port/include include/esp_supplicant
+                     PRIV_INCLUDE_DIRS src
+-					PRIV_REQUIRES freertos heap newlib ${tls_dep})
++					PRIV_REQUIRES freertos heap newlib)
++
++if (CONFIG_WPA_EXTERNAL_TLS)
++	idf_component_get_property(tls_lib_name ${tls_dep} COMPONENT_LIB)
++	target_link_libraries(${COMPONENT_LIB} PRIVATE ${tls_lib_name})
++endif()
+ 
+ set_source_files_properties(
+     src/crypto/crypto_ops.c
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/Kconfig
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/Kconfig
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/Kconfig
+@@ -14,6 +14,21 @@ config LTM_FAST
+         help
+             Select this option to use MbedTLS crypto API's which utilize hardware acceleration.
+ 
++	config WPA_EXTERNAL_TLS
++		bool "Use external TLS/crypto API"
++		default n
++
++	if WPA_EXTERNAL_TLS
++		config WPA_EXTERNAL_TLS_COMPONENT
++			string "External crypto API component"
++			default ""
++
++		config WPA_EXTERNAL_TLS_CRYPTO
++			bool "Use external TLS lib for crypto"
++			default n
++
++	endif
++
+     config WPA_DEBUG_PRINT
+         bool "Print debug messages from WPA Supplicant"
+         default n
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/include/wpatls/common.h
+===================================================================
+--- /dev/null
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/include/wpatls/common.h
+@@ -0,0 +1,475 @@
++/*
++ * wpa_supplicant/hostapd / common helper functions, etc.
++ * Copyright (c) 2002-2007, Jouni Malinen <j@w1.fi>
++ *
++ * This software may be distributed under the terms of the BSD license.
++ * See README for more details.
++ */
++
++#ifndef COMMON_H
++#define COMMON_H
++
++#if defined(__ets__)
++#endif /* ets */
++#include "os.h"
++#include "esp_bit_defs.h"
++#include "utils/list.h"
++
++/* Define platform specific variable type macros */
++#if defined(ESP_PLATFORM)
++#include <stdint.h>
++typedef uint64_t u64;
++typedef uint32_t u32;
++typedef uint16_t u16;
++typedef uint8_t u8;
++typedef int64_t s64;
++typedef int32_t s32;
++typedef int16_t s16;
++typedef int8_t s8;
++#endif /*ESP_PLATFORM*/
++
++#if defined(__XTENSA__)
++#include <machine/endian.h>
++#define __BYTE_ORDER     BYTE_ORDER
++#define __LITTLE_ENDIAN  LITTLE_ENDIAN
++#define __BIG_ENDIAN     BIG_ENDIAN
++#endif /*__XTENSA__*/
++
++#if defined(__linux__) || defined(__GLIBC__) || defined(__ets__)
++#include <machine/endian.h>
++#include <byteswap.h>
++#endif /* __linux__ */
++
++/* Define platform specific byte swapping macros */
++
++#if defined(__CYGWIN__) || defined(CONFIG_NATIVE_WINDOWS)
++
++static inline unsigned short wpa_swap_16(unsigned short v)
++{
++	return ((v & 0xff) << 8) | (v >> 8);
++}
++
++static inline unsigned int wpa_swap_32(unsigned int v)
++{
++	return ((v & 0xff) << 24) | ((v & 0xff00) << 8) |
++		((v & 0xff0000) >> 8) | (v >> 24);
++}
++
++#define le_to_host16(n) (n)
++#define host_to_le16(n) (n)
++#define be_to_host16(n) wpa_swap_16(n)
++#define host_to_be16(n) wpa_swap_16(n)
++#define le_to_host32(n) (n)
++#define host_to_le32(n) (n)
++#define be_to_host32(n) wpa_swap_32(n)
++#define host_to_be32(n) wpa_swap_32(n)
++
++#define WPA_BYTE_SWAP_DEFINED
++
++#endif /* __CYGWIN__ || CONFIG_NATIVE_WINDOWS */
++
++
++#ifndef WPA_BYTE_SWAP_DEFINED
++
++#ifndef __BYTE_ORDER
++#ifndef __LITTLE_ENDIAN
++#ifndef __BIG_ENDIAN
++#define __LITTLE_ENDIAN 1234
++#define __BIG_ENDIAN 4321
++#if defined(sparc)
++#define __BYTE_ORDER __BIG_ENDIAN
++#endif
++#endif /* __BIG_ENDIAN */
++#endif /* __LITTLE_ENDIAN */
++#endif /* __BYTE_ORDER */
++
++#if __BYTE_ORDER == __LITTLE_ENDIAN
++#define le_to_host16(n) ((__force u16) (le16) (n))
++#define host_to_le16(n) ((__force le16) (u16) (n))
++#define be_to_host16(n) __bswap_16((__force u16) (be16) (n))
++#define host_to_be16(n) ((__force be16) __bswap_16((n)))
++#define le_to_host32(n) ((__force u32) (le32) (n))
++#define host_to_le32(n) ((__force le32) (u32) (n))
++#define be_to_host32(n) __bswap_32((__force u32) (be32) (n))
++#define host_to_be32(n) ((__force be32) __bswap_32((n)))
++#define le_to_host64(n) ((__force u64) (le64) (n))
++#define host_to_le64(n) ((__force le64) (u64) (n))
++#define be_to_host64(n) __bswap_64((__force u64) (be64) (n))
++#define host_to_be64(n) ((__force be64) bswap_64((n)))
++#elif __BYTE_ORDER == __BIG_ENDIAN
++#define le_to_host16(n) __bswap_16(n)
++#define host_to_le16(n) __bswap_16(n)
++#define be_to_host16(n) (n)
++#define host_to_be16(n) (n)
++#define le_to_host32(n) __bswap_32(n)
++#define be_to_host32(n) (n)
++#define host_to_be32(n) (n)
++#define le_to_host64(n) __bswap_64(n)
++#define host_to_le64(n) __bswap_64(n)
++#define be_to_host64(n) (n)
++#define host_to_be64(n) (n)
++#ifndef WORDS_BIGENDIAN
++#define WORDS_BIGENDIAN
++#endif
++#else
++#error Could not determine CPU byte order
++#endif
++
++#define WPA_BYTE_SWAP_DEFINED
++#endif /* !WPA_BYTE_SWAP_DEFINED */
++
++#define SSID_MAX_LEN 32
++
++struct wpa_ssid_value {
++	u8 ssid[SSID_MAX_LEN];
++	size_t ssid_len;
++};
++
++/* Macros for handling unaligned memory accesses */
++
++static inline u16 WPA_GET_BE16(const u8 *a)
++{
++	return (a[0] << 8) | a[1];
++}
++
++static inline void WPA_PUT_BE16(u8 *a, u16 val)
++{
++	a[0] = val >> 8;
++	a[1] = val & 0xff;
++}
++
++static inline u16 WPA_GET_LE16(const u8 *a)
++{
++	return (a[1] << 8) | a[0];
++}
++
++static inline void WPA_PUT_LE16(u8 *a, u16 val)
++{
++	a[1] = val >> 8;
++	a[0] = val & 0xff;
++}
++
++static inline u32 WPA_GET_BE24(const u8 *a)
++{
++	return (a[0] << 16) | (a[1] << 8) | a[2];
++}
++
++static inline void WPA_PUT_BE24(u8 *a, u32 val)
++{
++	a[0] = (val >> 16) & 0xff;
++	a[1] = (val >> 8) & 0xff;
++	a[2] = val & 0xff;
++}
++
++static inline u32 WPA_GET_BE32(const u8 *a)
++{
++	return ((u32) a[0] << 24) | (a[1] << 16) | (a[2] << 8) | a[3];
++}
++
++static inline void WPA_PUT_BE32(u8 *a, u32 val)
++{
++	a[0] = (val >> 24) & 0xff;
++	a[1] = (val >> 16) & 0xff;
++	a[2] = (val >> 8) & 0xff;
++	a[3] = val & 0xff;
++}
++
++static inline u32 WPA_GET_LE32(const u8 *a)
++{
++	return ((u32) a[3] << 24) | (a[2] << 16) | (a[1] << 8) | a[0];
++}
++
++static inline void WPA_PUT_LE32(u8 *a, u32 val)
++{
++	a[3] = (val >> 24) & 0xff;
++	a[2] = (val >> 16) & 0xff;
++	a[1] = (val >> 8) & 0xff;
++	a[0] = val & 0xff;
++}
++
++static inline u64 WPA_GET_BE64(const u8 *a)
++{
++	return (((u64) a[0]) << 56) | (((u64) a[1]) << 48) |
++		(((u64) a[2]) << 40) | (((u64) a[3]) << 32) |
++		(((u64) a[4]) << 24) | (((u64) a[5]) << 16) |
++		(((u64) a[6]) << 8) | ((u64) a[7]);
++}
++
++static inline void WPA_PUT_BE64(u8 *a, u64 val)
++{
++	a[0] = val >> 56;
++	a[1] = val >> 48;
++	a[2] = val >> 40;
++	a[3] = val >> 32;
++	a[4] = val >> 24;
++	a[5] = val >> 16;
++	a[6] = val >> 8;
++	a[7] = val & 0xff;
++}
++
++static inline u64 WPA_GET_LE64(const u8 *a)
++{
++	return (((u64) a[7]) << 56) | (((u64) a[6]) << 48) |
++		(((u64) a[5]) << 40) | (((u64) a[4]) << 32) |
++		(((u64) a[3]) << 24) | (((u64) a[2]) << 16) |
++		(((u64) a[1]) << 8) | ((u64) a[0]);
++}
++
++static inline void WPA_PUT_LE64(u8 *a, u64 val)
++{
++	a[7] = val >> 56;
++	a[6] = val >> 48;
++	a[5] = val >> 40;
++	a[4] = val >> 32;
++	a[3] = val >> 24;
++	a[2] = val >> 16;
++	a[1] = val >> 8;
++	a[0] = val & 0xff;
++}
++
++
++#ifndef ETH_ALEN
++#define ETH_ALEN 6
++#endif
++#ifndef ETH_HLEN
++#define ETH_HLEN 14
++#endif
++#ifndef IFNAMSIZ
++#define IFNAMSIZ 16
++#endif
++#ifndef ETH_P_ALL
++#define ETH_P_ALL 0x0003
++#endif
++#ifndef ETH_P_80211_ENCAP
++#define ETH_P_80211_ENCAP 0x890d /* TDLS comes under this category */
++#endif
++#ifndef ETH_P_PAE
++#define ETH_P_PAE 0x888E /* Port Access Entity (IEEE 802.1X) */
++#endif /* ETH_P_PAE */
++#ifndef ETH_P_EAPOL
++#define ETH_P_EAPOL ETH_P_PAE
++#endif /* ETH_P_EAPOL */
++#ifndef ETH_P_RSN_PREAUTH
++#define ETH_P_RSN_PREAUTH 0x88c7
++#endif /* ETH_P_RSN_PREAUTH */
++#ifndef ETH_P_RRB
++#define ETH_P_RRB 0x890D
++#endif /* ETH_P_RRB */
++
++
++#ifdef __GNUC__
++#define PRINTF_FORMAT(a,b) __attribute__ ((format (printf, (a), (b))))
++#define STRUCT_PACKED __attribute__ ((packed))
++#else
++#define PRINTF_FORMAT(a,b)
++#define STRUCT_PACKED
++#endif
++
++
++#ifdef CONFIG_ANSI_C_EXTRA
++
++#if !defined(_MSC_VER) || _MSC_VER < 1400
++/* snprintf - used in number of places; sprintf() is _not_ a good replacement
++ * due to possible buffer overflow; see, e.g.,
++ * http://www.ijs.si/software/snprintf/ for portable implementation of
++ * snprintf. */
++int snprintf(char *str, size_t size, const char *format, ...);
++
++/* vsnprintf - only used for wpa_msg() in wpa_supplicant.c */
++int vsnprintf(char *str, size_t size, const char *format, va_list ap);
++#endif /* !defined(_MSC_VER) || _MSC_VER < 1400 */
++
++/* getopt - only used in main.c */
++int getopt(int argc, char *const argv[], const char *optstring);
++extern char *optarg;
++extern int optind;
++
++#ifndef CONFIG_NO_SOCKLEN_T_TYPEDEF
++#ifndef __socklen_t_defined
++typedef int socklen_t;
++#endif
++#endif
++
++/* inline - define as __inline or just define it to be empty, if needed */
++#ifdef CONFIG_NO_INLINE
++#define inline
++#else
++#define inline __inline
++#endif
++
++#ifndef __func__
++#define __func__ "__func__ not defined"
++#endif
++
++#ifndef bswap_16
++#define bswap_16(a) ((((u16) (a) << 8) & 0xff00) | (((u16) (a) >> 8) & 0xff))
++#endif
++
++#ifndef bswap_32
++#define bswap_32(a) ((((u32) (a) << 24) & 0xff000000) | \
++		     (((u32) (a) << 8) & 0xff0000) | \
++     		     (((u32) (a) >> 8) & 0xff00) | \
++     		     (((u32) (a) >> 24) & 0xff))
++#endif
++
++#ifndef MSG_DONTWAIT
++#define MSG_DONTWAIT 0
++#endif
++
++#ifdef _WIN32_WCE
++void perror(const char *s);
++#endif /* _WIN32_WCE */
++
++#endif /* CONFIG_ANSI_C_EXTRA */
++
++#ifndef MAC2STR
++#define MAC2STR(a) (a)[0], (a)[1], (a)[2], (a)[3], (a)[4], (a)[5]
++#define MACSTR "%02x:%02x:%02x:%02x:%02x:%02x"
++
++/*
++ * Compact form for string representation of MAC address
++ * To be used, e.g., for constructing dbus paths for P2P Devices
++ */
++#define COMPACT_MACSTR "%02x%02x%02x%02x%02x%02x"
++#endif
++
++#ifndef BIT
++#define BIT(x) (1U << (x))
++#endif
++
++/*
++ * Definitions for sparse validation
++ * (http://kernel.org/pub/linux/kernel/people/josh/sparse/)
++ */
++#ifdef __CHECKER__
++#define __force __attribute__((force))
++#define __bitwise __attribute__((bitwise))
++#else
++#define __force
++#define __bitwise
++#endif
++
++typedef u16 __bitwise be16;
++typedef u16 __bitwise le16;
++typedef u32 __bitwise be32;
++typedef u32 __bitwise le32;
++typedef u64 __bitwise be64;
++typedef u64 __bitwise le64;
++
++#ifndef __must_check
++#if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
++#define __must_check __attribute__((__warn_unused_result__))
++#else
++#define __must_check
++#endif /* __GNUC__ */
++#endif /* __must_check */
++
++#ifndef __maybe_unused
++#if __GNUC__ > 3 || (__GNUC__ == 3 && __GNUC_MINOR__ >= 4)
++#define __maybe_unused __attribute__((unused))
++#else
++#define __maybe_unused
++#endif /* __GNUC__ */
++#endif /* __must_check */
++
++int hwaddr_aton(const char *txt, u8 *addr);
++int hwaddr_masked_aton(const char *txt, u8 *addr, u8 *mask, u8 maskable);
++int hwaddr_compact_aton(const char *txt, u8 *addr);
++int hwaddr_aton2(const char *txt, u8 *addr);
++int hex2byte(const char *hex);
++int hexstr2bin(const char *hex, u8 *buf, size_t len);
++void inc_byte_array(u8 *counter, size_t len);
++void wpa_get_ntp_timestamp(u8 *buf);
++int wpa_scnprintf(char *buf, size_t size, const char *fmt, ...);
++int wpa_snprintf_hex_sep(char *buf, size_t buf_size, const u8 *data, size_t len,
++			 char sep);
++int wpa_snprintf_hex(char *buf, size_t buf_size, const u8 *data, size_t len);
++int wpa_snprintf_hex_uppercase(char *buf, size_t buf_size, const u8 *data,
++			       size_t len);
++
++int hwaddr_mask_txt(char *buf, size_t len, const u8 *addr, const u8 *mask);
++u8 rssi_to_rcpi(int rssi);
++int os_time_expired(struct os_time *now,
++		struct os_time *ts,
++		os_time_t timeout_secs);
++
++#ifdef CONFIG_NATIVE_WINDOWS
++void wpa_unicode2ascii_inplace(TCHAR *str);
++TCHAR * wpa_strdup_tchar(const char *str);
++#else /* CONFIG_NATIVE_WINDOWS */
++#define wpa_unicode2ascii_inplace(s) do { } while (0)
++#define wpa_strdup_tchar(s) strdup((s))
++#endif /* CONFIG_NATIVE_WINDOWS */
++
++void printf_encode(char *txt, size_t maxlen, const u8 *data, size_t len);
++size_t printf_decode(u8 *buf, size_t maxlen, const char *str);
++
++const char * wpa_ssid_txt(const u8 *ssid, size_t ssid_len);
++
++char * wpa_config_parse_string(const char *value, size_t *len);
++int wpa_is_hex(const u8 *data, size_t len);
++size_t wpa_merge_byte_arrays(u8 *res, size_t res_len,
++			 const u8 *src1, size_t src1_len,
++			 const u8 *src2, size_t src2_len);
++char * dup_binstr(const void *src, size_t len);
++
++static inline int is_zero_ether_addr(const u8 *a)
++{
++	return !(a[0] | a[1] | a[2] | a[3] | a[4] | a[5]);
++}
++
++static inline int is_broadcast_ether_addr(const u8 *a)
++{
++	return (a[0] & a[1] & a[2] & a[3] & a[4] & a[5]) == 0xff;
++}
++
++static inline int is_multicast_ether_addr(const u8 *a)
++{
++	return a[0] & 0x01;
++}
++
++#define broadcast_ether_addr (const u8 *) "\xff\xff\xff\xff\xff\xff"
++
++
++#include "utils/wpa_debug.h"
++
++
++struct wpa_freq_range_list {
++	struct wpa_freq_range {
++		unsigned int min;
++		unsigned int max;
++	} *range;
++	unsigned int num;
++};
++
++#define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
++
++void wpa_bin_clear_free(void *bin, size_t len);
++int int_array_len(const int *a);
++void bin_clear_free(void *bin, size_t len);
++void str_clear_free(char *str);
++char * get_param(const char *cmd, const char *param);
++void * os_memdup(const void *src, size_t len);
++
++/*
++ * gcc 4.4 ends up generating strict-aliasing warnings about some very common
++ * networking socket uses that do not really result in a real problem and
++ * cannot be easily avoided with union-based type-punning due to struct
++ * definitions including another struct in system header files. To avoid having
++ * to fully disable strict-aliasing warnings, provide a mechanism to hide the
++ * typecast from aliasing for now. A cleaner solution will hopefully be found
++ * in the future to handle these cases.
++ */
++void * __hide_aliasing_typecast(void *foo);
++#define aliasing_hide_typecast(a,t) (t *) __hide_aliasing_typecast((a))
++
++#ifdef CONFIG_VALGRIND
++#include <valgrind/memcheck.h>
++#define WPA_MEM_DEFINED(ptr, len) VALGRIND_MAKE_MEM_DEFINED((ptr), (len))
++#else /* CONFIG_VALGRIND */
++#define WPA_MEM_DEFINED(ptr, len) do { } while (0)
++#endif /* CONFIG_VALGRIND */
++
++#define IANA_SECP256R1 19
++
++#endif /* COMMON_H */
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/crypto/tls_mbedtls.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/crypto/tls_mbedtls.c
+@@ -618,6 +618,7 @@ struct wpabuf * tls_connection_server_ha
+ 						struct wpabuf **appl_data)
+ {
+ 	wpa_printf(MSG_ERROR, "%s: not supported %d", __func__, __LINE__);
++
+ 	return NULL;
+ }
+ 
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap.c
+@@ -29,7 +29,7 @@
+ #include "crypto/crypto.h"
+ 
+ #include "utils/ext_password.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_config.h"
+ #include "eap_peer/eap.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_mschapv2.c
+@@ -14,7 +14,7 @@
+ #include "utils/common.h"
+ #include "crypto/random.h"
+ #include "crypto/ms_funcs.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_defs.h"
+ #include "eap_peer/eap_tls_common.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
+@@ -10,7 +10,7 @@
+ #ifdef EAP_PEAP
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_tlv_common.h"
+ #include "eap_peer/eap_peap_common.h"
+ #include "eap_peer/eap_i.h"
+@@ -1349,4 +1349,4 @@ eap_peer_peap_register(void)
+ 	return ret;
+ }
+ 
+-#endif /* EAP_PEAP */
+\ No newline at end of file
++#endif /* EAP_PEAP */
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls.c
+@@ -9,7 +9,7 @@
+ 
+ #ifdef EAP_TLS
+ #include "utils/common.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_defs.h"
+ #include "eap_peer/eap_tls_common.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_tls_common.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_tls_common.h"
+ #include "eap_peer/eap_config.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_ttls.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_ttls.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_ttls.c
+@@ -11,7 +11,7 @@
+ #ifdef EAP_TTLS
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap.h"
+ #include "eap_peer/eap_ttls.h"
+ #include "eap_peer/mschapv2.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+@@ -33,7 +33,7 @@
+ #include "crypto/crypto.h"
+ 
+ #include "utils/ext_password.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "eap_peer/eap_i.h"
+ #include "eap_peer/eap_config.h"
+ #include "eap_peer/eap.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tls_internal.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tls_internal.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tls_internal.c
+@@ -14,7 +14,7 @@
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+ #include "crypto/md5.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_client.h"
+ #include "tls/tlsv1_server.h"
+ 
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+ #include "tls/tlsv1_client.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_read.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_read.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_read.c
+@@ -12,7 +12,7 @@
+ #include "crypto/md5.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_write.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_write.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_client_write.c
+@@ -13,7 +13,7 @@
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+ #include "crypto/random.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_common.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_common.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_common.c
+@@ -11,7 +11,7 @@
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "eap_peer/eap_i.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server.c
+@@ -10,7 +10,7 @@
+ 
+ #include "utils/common.h"
+ #include "crypto/sha1.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+ #include "tls/tlsv1_server.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_read.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_read.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_read.c
+@@ -12,7 +12,7 @@
+ #include "crypto/md5.h"
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_write.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_write.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tlsv1_server_write.c
+@@ -13,7 +13,7 @@
+ #include "crypto/sha1.h"
+ #include "crypto/sha256.h"
+ #include "crypto/random.h"
+-#include "tls/tls.h"
++#include "wpatls/tls.h"
+ #include "tls/x509v3.h"
+ #include "tls/tlsv1_common.h"
+ #include "tls/tlsv1_record.h"
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/include/wpatls/tls.h
+===================================================================
+--- /dev/null
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/include/wpatls/tls.h
+@@ -0,0 +1,515 @@
++/*
++ * SSL/TLS interface definition
++ * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
++ *
++ * This software may be distributed under the terms of the BSD license.
++ * See README for more details.
++ */
++
++#ifndef TLS_H
++#define TLS_H
++
++struct tls_connection;
++
++struct tls_random {
++	const u8 *client_random;
++	size_t client_random_len;
++	const u8 *server_random;
++	size_t server_random_len;
++};
++
++enum tls_event {
++	TLS_CERT_CHAIN_SUCCESS,
++	TLS_CERT_CHAIN_FAILURE,
++	TLS_PEER_CERTIFICATE,
++	TLS_ALERT
++};
++
++/*
++ * Note: These are used as identifier with external programs and as such, the
++ * values must not be changed.
++ */
++enum tls_fail_reason {
++	TLS_FAIL_UNSPECIFIED = 0,
++	TLS_FAIL_UNTRUSTED = 1,
++	TLS_FAIL_REVOKED = 2,
++	TLS_FAIL_NOT_YET_VALID = 3,
++	TLS_FAIL_EXPIRED = 4,
++	TLS_FAIL_SUBJECT_MISMATCH = 5,
++	TLS_FAIL_ALTSUBJECT_MISMATCH = 6,
++	TLS_FAIL_BAD_CERTIFICATE = 7,
++	TLS_FAIL_SERVER_CHAIN_PROBE = 8
++};
++
++union tls_event_data {
++	struct {
++		int depth;
++		const char *subject;
++		enum tls_fail_reason reason;
++		const char *reason_txt;
++		const struct wpabuf *cert;
++	} cert_fail;
++
++	struct {
++		int depth;
++		const char *subject;
++		const struct wpabuf *cert;
++		const u8 *hash;
++		size_t hash_len;
++	} peer_cert;
++
++	struct {
++		int is_local;
++		const char *type;
++		const char *description;
++	} alert;
++};
++
++struct tls_config {
++	const char *opensc_engine_path;
++	const char *pkcs11_engine_path;
++	const char *pkcs11_module_path;
++	int fips_mode;
++	int cert_in_cb;
++
++	void (*event_cb)(void *ctx, enum tls_event ev,
++			 union tls_event_data *data);
++	void *cb_ctx;
++};
++
++#define TLS_CONN_ALLOW_SIGN_RSA_MD5 BIT(0)
++#define TLS_CONN_DISABLE_TIME_CHECKS BIT(1)
++#define TLS_CONN_DISABLE_SESSION_TICKET BIT(2)
++#define TLS_CONN_REQUEST_OCSP BIT(3)
++#define TLS_CONN_REQUIRE_OCSP BIT(4)
++
++/**
++ * struct tls_connection_params - Parameters for TLS connection
++ * @ca_cert: File or reference name for CA X.509 certificate in PEM or DER
++ * format
++ * @ca_cert_blob: ca_cert as inlined data or %NULL if not used
++ * @ca_cert_blob_len: ca_cert_blob length
++ * @ca_path: Path to CA certificates (OpenSSL specific)
++ * @subject_match: String to match in the subject of the peer certificate or
++ * %NULL to allow all subjects
++ * @altsubject_match: String to match in the alternative subject of the peer
++ * certificate or %NULL to allow all alternative subjects
++ * @client_cert: File or reference name for client X.509 certificate in PEM or
++ * DER format
++ * @client_cert_blob: client_cert as inlined data or %NULL if not used
++ * @client_cert_blob_len: client_cert_blob length
++ * @private_key: File or reference name for client private key in PEM or DER
++ * format (traditional format (RSA PRIVATE KEY) or PKCS#8 (PRIVATE KEY)
++ * @private_key_blob: private_key as inlined data or %NULL if not used
++ * @private_key_blob_len: private_key_blob length
++ * @private_key_passwd: Passphrase for decrypted private key, %NULL if no
++ * passphrase is used.
++ * @dh_file: File name for DH/DSA data in PEM format, or %NULL if not used
++ * @dh_blob: dh_file as inlined data or %NULL if not used
++ * @dh_blob_len: dh_blob length
++ * @engine: 1 = use engine (e.g., a smartcard) for private key operations
++ * (this is OpenSSL specific for now)
++ * @engine_id: engine id string (this is OpenSSL specific for now)
++ * @ppin: pointer to the pin variable in the configuration
++ * (this is OpenSSL specific for now)
++ * @key_id: the private key's id when using engine (this is OpenSSL
++ * specific for now)
++ * @cert_id: the certificate's id when using engine
++ * @ca_cert_id: the CA certificate's id when using engine
++ * @flags: Parameter options (TLS_CONN_*)
++ * @ocsp_stapling_response: DER encoded file with cached OCSP stapling response
++ *	or %NULL if OCSP is not enabled
++ *
++ * TLS connection parameters to be configured with tls_connection_set_params()
++ * and tls_global_set_params().
++ *
++ * Certificates and private key can be configured either as a reference name
++ * (file path or reference to certificate store) or by providing the same data
++ * as a pointer to the data in memory. Only one option will be used for each
++ * field.
++ */
++struct tls_connection_params {
++	const char *ca_cert;
++	const u8 *ca_cert_blob;
++	size_t ca_cert_blob_len;
++	const char *ca_path;
++	const char *subject_match;
++	const char *altsubject_match;
++	const char *client_cert;
++	const u8 *client_cert_blob;
++	size_t client_cert_blob_len;
++	const char *private_key;
++	const u8 *private_key_blob;
++	size_t private_key_blob_len;
++	const char *private_key_passwd;
++	const char *dh_file;
++	const u8 *dh_blob;
++	size_t dh_blob_len;
++
++	/* OpenSSL specific variables */
++	int engine;
++	const char *engine_id;
++	const char *pin;
++	const char *key_id;
++	const char *cert_id;
++	const char *ca_cert_id;
++
++	unsigned int flags;
++	const char *ocsp_stapling_response;
++};
++
++
++/**
++ * tls_init - Initialize TLS library
++ * @conf: Configuration data for TLS library
++ * Returns: Context data to be used as tls_ctx in calls to other functions,
++ * or %NULL on failure.
++ *
++ * Called once during program startup and once for each RSN pre-authentication
++ * session. In other words, there can be two concurrent TLS contexts. If global
++ * library initialization is needed (i.e., one that is shared between both
++ * authentication types), the TLS library wrapper should maintain a reference
++ * counter and do global initialization only when moving from 0 to 1 reference.
++ */
++void * tls_init(void);
++
++/**
++ * tls_deinit - Deinitialize TLS library
++ * @tls_ctx: TLS context data from tls_init()
++ *
++ * Called once during program shutdown and once for each RSN pre-authentication
++ * session. If global library deinitialization is needed (i.e., one that is
++ * shared between both authentication types), the TLS library wrapper should
++ * maintain a reference counter and do global deinitialization only when moving
++ * from 1 to 0 references.
++ */
++void tls_deinit(void *tls_ctx);
++
++/**
++ * tls_get_errors - Process pending errors
++ * @tls_ctx: TLS context data from tls_init()
++ * Returns: Number of found error, 0 if no errors detected.
++ *
++ * Process all pending TLS errors.
++ */
++int tls_get_errors(void *tls_ctx);
++
++/**
++ * tls_connection_init - Initialize a new TLS connection
++ * @tls_ctx: TLS context data from tls_init()
++ * Returns: Connection context data, conn for other function calls
++ */
++struct tls_connection * tls_connection_init(void *tls_ctx);
++
++/**
++ * tls_connection_deinit - Free TLS connection data
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ *
++ * Release all resources allocated for TLS connection.
++ */
++void tls_connection_deinit(void *tls_ctx, struct tls_connection *conn);
++
++/**
++ * tls_connection_established - Has the TLS connection been completed?
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: 1 if TLS connection has been completed, 0 if not.
++ */
++int tls_connection_established(void *tls_ctx, struct tls_connection *conn);
++
++/**
++ * tls_connection_shutdown - Shutdown TLS connection
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: 0 on success, -1 on failure
++ *
++ * Shutdown current TLS connection without releasing all resources. New
++ * connection can be started by using the same conn without having to call
++ * tls_connection_init() or setting certificates etc. again. The new
++ * connection should try to use session resumption.
++ */
++int tls_connection_shutdown(void *tls_ctx, struct tls_connection *conn);
++
++enum {
++	TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED = -3,
++	TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED = -2
++};
++
++/**
++ * tls_connection_set_params - Set TLS connection parameters
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @params: Connection parameters
++ * Returns: 0 on success, -1 on failure,
++ * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
++ * PKCS#11 engine failure, or
++ * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
++ * PKCS#11 engine private key.
++ */
++int __must_check
++tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
++			  const struct tls_connection_params *params);
++
++/**
++ * tls_global_set_params - Set TLS parameters for all TLS connection
++ * @tls_ctx: TLS context data from tls_init()
++ * @params: Global TLS parameters
++ * Returns: 0 on success, -1 on failure,
++ * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
++ * PKCS#11 engine failure, or
++ * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
++ * PKCS#11 engine private key.
++ */
++int __must_check tls_global_set_params(
++	void *tls_ctx, const struct tls_connection_params *params);
++
++/**
++ * tls_global_set_verify - Set global certificate verification options
++ * @tls_ctx: TLS context data from tls_init()
++ * @check_crl: 0 = do not verify CRLs, 1 = verify CRL for the user certificate,
++ * 2 = verify CRL for all certificates
++ * Returns: 0 on success, -1 on failure
++ */
++int __must_check tls_global_set_verify(void *tls_ctx, int check_crl);
++
++/**
++ * tls_connection_set_verify - Set certificate verification options
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @verify_peer: 1 = verify peer certificate
++ * Returns: 0 on success, -1 on failure
++ */
++int __must_check tls_connection_set_verify(void *tls_ctx,
++					   struct tls_connection *conn,
++					   int verify_peer);
++
++/**
++ * tls_connection_get_random - Get random data from TLS connection
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @keys: Structure of key/random data (filled on success)
++ * Returns: 0 on success, -1 on failure
++ */
++int __must_check tls_connection_get_random(void *tls_ctx,
++					 struct tls_connection *conn,
++					 struct tls_random *data);
++
++/**
++ * tls_connection_export_key - Derive keying material from a TLS connection
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @label: Label (e.g., description of the key) for PRF
++ * @out: Buffer for output data from TLS-PRF
++ * @out_len: Length of the output buffer
++ * Returns: 0 on success, -1 on failure
++ *
++ * Exports keying material using the mechanism described in RFC 5705.
++ */
++int __must_check tls_connection_export_key(void *tls_ctx,
++					   struct tls_connection *conn,
++					   const char *label,
++					   u8 *out, size_t out_len);
++
++/**
++ * tls_connection_handshake - Process TLS handshake (client side)
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @in_data: Input data from TLS server
++ * @appl_data: Pointer to application data pointer, or %NULL if dropped
++ * Returns: Output data, %NULL on failure
++ *
++ * The caller is responsible for freeing the returned output data. If the final
++ * handshake message includes application data, this is decrypted and
++ * appl_data (if not %NULL) is set to point this data. The caller is
++ * responsible for freeing appl_data.
++ *
++ * This function is used during TLS handshake. The first call is done with
++ * in_data == %NULL and the library is expected to return ClientHello packet.
++ * This packet is then send to the server and a response from server is given
++ * to TLS library by calling this function again with in_data pointing to the
++ * TLS message from the server.
++ *
++ * If the TLS handshake fails, this function may return %NULL. However, if the
++ * TLS library has a TLS alert to send out, that should be returned as the
++ * output data. In this case, tls_connection_get_failed() must return failure
++ * (> 0).
++ *
++ * tls_connection_established() should return 1 once the TLS handshake has been
++ * completed successfully.
++ */
++struct wpabuf * tls_connection_handshake(void *tls_ctx,
++					 struct tls_connection *conn,
++					 const struct wpabuf *in_data,
++					 struct wpabuf **appl_data);
++
++struct wpabuf * tls_connection_handshake2(void *tls_ctx,
++					  struct tls_connection *conn,
++					  const struct wpabuf *in_data,
++					  struct wpabuf **appl_data,
++					  int *more_data_needed);
++
++/**
++ * tls_connection_server_handshake - Process TLS handshake (server side)
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @in_data: Input data from TLS peer
++ * @appl_data: Pointer to application data pointer, or %NULL if dropped
++ * Returns: Output data, %NULL on failure
++ *
++ * The caller is responsible for freeing the returned output data.
++ */
++struct wpabuf * tls_connection_server_handshake(void *tls_ctx,
++						struct tls_connection *conn,
++						const struct wpabuf *in_data,
++						struct wpabuf **appl_data);
++
++/**
++ * tls_connection_encrypt - Encrypt data into TLS tunnel
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @in_data: Plaintext data to be encrypted
++ * Returns: Encrypted TLS data or %NULL on failure
++ *
++ * This function is used after TLS handshake has been completed successfully to
++ * send data in the encrypted tunnel. The caller is responsible for freeing the
++ * returned output data.
++ */
++struct wpabuf * tls_connection_encrypt(void *tls_ctx,
++				       struct tls_connection *conn,
++				       const struct wpabuf *in_data);
++
++/**
++ * tls_connection_decrypt - Decrypt data from TLS tunnel
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @in_data: Encrypted TLS data
++ * Returns: Decrypted TLS data or %NULL on failure
++ *
++ * This function is used after TLS handshake has been completed successfully to
++ * receive data from the encrypted tunnel. The caller is responsible for
++ * freeing the returned output data.
++ */
++struct wpabuf * tls_connection_decrypt(void *tls_ctx,
++				       struct tls_connection *conn,
++				       const struct wpabuf *in_data);
++
++struct wpabuf * tls_connection_decrypt2(void *tls_ctx,
++					struct tls_connection *conn,
++					const struct wpabuf *in_data,
++					int *more_data_needed);
++
++/**
++ * tls_connection_resumed - Was session resumption used
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: 1 if current session used session resumption, 0 if not
++ */
++int tls_connection_resumed(void *tls_ctx, struct tls_connection *conn);
++
++enum {
++	TLS_CIPHER_NONE,
++	TLS_CIPHER_RC4_SHA /* 0x0005 */,
++	TLS_CIPHER_AES128_SHA /* 0x002f */,
++	TLS_CIPHER_RSA_DHE_AES128_SHA /* 0x0031 */,
++	TLS_CIPHER_ANON_DH_AES128_SHA /* 0x0034 */
++};
++
++/**
++ * tls_connection_set_cipher_list - Configure acceptable cipher suites
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @ciphers: Zero (TLS_CIPHER_NONE) terminated list of allowed ciphers
++ * (TLS_CIPHER_*).
++ * Returns: 0 on success, -1 on failure
++ */
++int __must_check tls_connection_set_cipher_list(void *tls_ctx,
++						struct tls_connection *conn,
++						u8 *ciphers);
++
++/**
++ * tls_get_cipher - Get current cipher name
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @buf: Buffer for the cipher name
++ * @buflen: buf size
++ * Returns: 0 on success, -1 on failure
++ *
++ * Get the name of the currently used cipher.
++ */
++int __must_check tls_get_cipher(void *tls_ctx, struct tls_connection *conn,
++				char *buf, size_t buflen);
++
++/**
++ * tls_connection_enable_workaround - Enable TLS workaround options
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: 0 on success, -1 on failure
++ *
++ * This function is used to enable connection-specific workaround options for
++ * buffer SSL/TLS implementations.
++ */
++int __must_check tls_connection_enable_workaround(void *tls_ctx,
++						  struct tls_connection *conn);
++
++/**
++ * tls_connection_client_hello_ext - Set TLS extension for ClientHello
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * @ext_type: Extension type
++ * @data: Extension payload (%NULL to remove extension)
++ * @data_len: Extension payload length
++ * Returns: 0 on success, -1 on failure
++ */
++int __must_check tls_connection_client_hello_ext(void *tls_ctx,
++						 struct tls_connection *conn,
++						 int ext_type, const u8 *data,
++						 size_t data_len);
++
++/**
++ * tls_connection_get_failed - Get connection failure status
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ *
++ * Returns >0 if connection has failed, 0 if not.
++ */
++int tls_connection_get_failed(void *tls_ctx, struct tls_connection *conn);
++
++/**
++ * tls_connection_get_read_alerts - Get connection read alert status
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: Number of times a fatal read (remote end reported error) has
++ * happened during this connection.
++ */
++int tls_connection_get_read_alerts(void *tls_ctx, struct tls_connection *conn);
++
++/**
++ * tls_connection_get_write_alerts - Get connection write alert status
++ * @tls_ctx: TLS context data from tls_init()
++ * @conn: Connection context data from tls_connection_init()
++ * Returns: Number of times a fatal write (locally detected error) has happened
++ * during this connection.
++ */
++int tls_connection_get_write_alerts(void *tls_ctx,
++				    struct tls_connection *conn);
++
++/**
++ * tls_capabilities - Get supported TLS capabilities
++ * @tls_ctx: TLS context data from tls_init()
++ * Returns: Bit field of supported TLS capabilities (TLS_CAPABILITY_*)
++ */
++unsigned int tls_capabilities(void *tls_ctx);
++
++typedef int (*tls_session_ticket_cb)
++(void *ctx, const u8 *ticket, size_t len, const u8 *client_random,
++ const u8 *server_random, u8 *master_secret);
++
++int __must_check  tls_connection_set_session_ticket_cb(
++	void *tls_ctx, struct tls_connection *conn,
++	tls_session_ticket_cb cb, void *ctx);
++
++int tls_prf_sha1_md5(const u8 *secret, size_t secret_len, const char *label,
++             const u8 *seed, size_t seed_len, u8 *out, size_t outlen);
++
++#endif /* TLS_H */
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tls.h
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/tls/tls.h
++++ /dev/null
+@@ -1,515 +0,0 @@
+-/*
+- * SSL/TLS interface definition
+- * Copyright (c) 2004-2013, Jouni Malinen <j@w1.fi>
+- *
+- * This software may be distributed under the terms of the BSD license.
+- * See README for more details.
+- */
+-
+-#ifndef TLS_H
+-#define TLS_H
+-
+-struct tls_connection;
+-
+-struct tls_random {
+-	const u8 *client_random;
+-	size_t client_random_len;
+-	const u8 *server_random;
+-	size_t server_random_len;
+-};
+-
+-enum tls_event {
+-	TLS_CERT_CHAIN_SUCCESS,
+-	TLS_CERT_CHAIN_FAILURE,
+-	TLS_PEER_CERTIFICATE,
+-	TLS_ALERT
+-};
+-
+-/*
+- * Note: These are used as identifier with external programs and as such, the
+- * values must not be changed.
+- */
+-enum tls_fail_reason {
+-	TLS_FAIL_UNSPECIFIED = 0,
+-	TLS_FAIL_UNTRUSTED = 1,
+-	TLS_FAIL_REVOKED = 2,
+-	TLS_FAIL_NOT_YET_VALID = 3,
+-	TLS_FAIL_EXPIRED = 4,
+-	TLS_FAIL_SUBJECT_MISMATCH = 5,
+-	TLS_FAIL_ALTSUBJECT_MISMATCH = 6,
+-	TLS_FAIL_BAD_CERTIFICATE = 7,
+-	TLS_FAIL_SERVER_CHAIN_PROBE = 8
+-};
+-
+-union tls_event_data {
+-	struct {
+-		int depth;
+-		const char *subject;
+-		enum tls_fail_reason reason;
+-		const char *reason_txt;
+-		const struct wpabuf *cert;
+-	} cert_fail;
+-
+-	struct {
+-		int depth;
+-		const char *subject;
+-		const struct wpabuf *cert;
+-		const u8 *hash;
+-		size_t hash_len;
+-	} peer_cert;
+-
+-	struct {
+-		int is_local;
+-		const char *type;
+-		const char *description;
+-	} alert;
+-};
+-
+-struct tls_config {
+-	const char *opensc_engine_path;
+-	const char *pkcs11_engine_path;
+-	const char *pkcs11_module_path;
+-	int fips_mode;
+-	int cert_in_cb;
+-
+-	void (*event_cb)(void *ctx, enum tls_event ev,
+-			 union tls_event_data *data);
+-	void *cb_ctx;
+-};
+-
+-#define TLS_CONN_ALLOW_SIGN_RSA_MD5 BIT(0)
+-#define TLS_CONN_DISABLE_TIME_CHECKS BIT(1)
+-#define TLS_CONN_DISABLE_SESSION_TICKET BIT(2)
+-#define TLS_CONN_REQUEST_OCSP BIT(3)
+-#define TLS_CONN_REQUIRE_OCSP BIT(4)
+-
+-/**
+- * struct tls_connection_params - Parameters for TLS connection
+- * @ca_cert: File or reference name for CA X.509 certificate in PEM or DER
+- * format
+- * @ca_cert_blob: ca_cert as inlined data or %NULL if not used
+- * @ca_cert_blob_len: ca_cert_blob length
+- * @ca_path: Path to CA certificates (OpenSSL specific)
+- * @subject_match: String to match in the subject of the peer certificate or
+- * %NULL to allow all subjects
+- * @altsubject_match: String to match in the alternative subject of the peer
+- * certificate or %NULL to allow all alternative subjects
+- * @client_cert: File or reference name for client X.509 certificate in PEM or
+- * DER format
+- * @client_cert_blob: client_cert as inlined data or %NULL if not used
+- * @client_cert_blob_len: client_cert_blob length
+- * @private_key: File or reference name for client private key in PEM or DER
+- * format (traditional format (RSA PRIVATE KEY) or PKCS#8 (PRIVATE KEY)
+- * @private_key_blob: private_key as inlined data or %NULL if not used
+- * @private_key_blob_len: private_key_blob length
+- * @private_key_passwd: Passphrase for decrypted private key, %NULL if no
+- * passphrase is used.
+- * @dh_file: File name for DH/DSA data in PEM format, or %NULL if not used
+- * @dh_blob: dh_file as inlined data or %NULL if not used
+- * @dh_blob_len: dh_blob length
+- * @engine: 1 = use engine (e.g., a smartcard) for private key operations
+- * (this is OpenSSL specific for now)
+- * @engine_id: engine id string (this is OpenSSL specific for now)
+- * @ppin: pointer to the pin variable in the configuration
+- * (this is OpenSSL specific for now)
+- * @key_id: the private key's id when using engine (this is OpenSSL
+- * specific for now)
+- * @cert_id: the certificate's id when using engine
+- * @ca_cert_id: the CA certificate's id when using engine
+- * @flags: Parameter options (TLS_CONN_*)
+- * @ocsp_stapling_response: DER encoded file with cached OCSP stapling response
+- *	or %NULL if OCSP is not enabled
+- *
+- * TLS connection parameters to be configured with tls_connection_set_params()
+- * and tls_global_set_params().
+- *
+- * Certificates and private key can be configured either as a reference name
+- * (file path or reference to certificate store) or by providing the same data
+- * as a pointer to the data in memory. Only one option will be used for each
+- * field.
+- */
+-struct tls_connection_params {
+-	const char *ca_cert;
+-	const u8 *ca_cert_blob;
+-	size_t ca_cert_blob_len;
+-	const char *ca_path;
+-	const char *subject_match;
+-	const char *altsubject_match;
+-	const char *client_cert;
+-	const u8 *client_cert_blob;
+-	size_t client_cert_blob_len;
+-	const char *private_key;
+-	const u8 *private_key_blob;
+-	size_t private_key_blob_len;
+-	const char *private_key_passwd;
+-	const char *dh_file;
+-	const u8 *dh_blob;
+-	size_t dh_blob_len;
+-
+-	/* OpenSSL specific variables */
+-	int engine;
+-	const char *engine_id;
+-	const char *pin;
+-	const char *key_id;
+-	const char *cert_id;
+-	const char *ca_cert_id;
+-
+-	unsigned int flags;
+-	const char *ocsp_stapling_response;
+-};
+-
+-
+-/**
+- * tls_init - Initialize TLS library
+- * @conf: Configuration data for TLS library
+- * Returns: Context data to be used as tls_ctx in calls to other functions,
+- * or %NULL on failure.
+- *
+- * Called once during program startup and once for each RSN pre-authentication
+- * session. In other words, there can be two concurrent TLS contexts. If global
+- * library initialization is needed (i.e., one that is shared between both
+- * authentication types), the TLS library wrapper should maintain a reference
+- * counter and do global initialization only when moving from 0 to 1 reference.
+- */
+-void * tls_init(void);
+-
+-/**
+- * tls_deinit - Deinitialize TLS library
+- * @tls_ctx: TLS context data from tls_init()
+- *
+- * Called once during program shutdown and once for each RSN pre-authentication
+- * session. If global library deinitialization is needed (i.e., one that is
+- * shared between both authentication types), the TLS library wrapper should
+- * maintain a reference counter and do global deinitialization only when moving
+- * from 1 to 0 references.
+- */
+-void tls_deinit(void *tls_ctx);
+-
+-/**
+- * tls_get_errors - Process pending errors
+- * @tls_ctx: TLS context data from tls_init()
+- * Returns: Number of found error, 0 if no errors detected.
+- *
+- * Process all pending TLS errors.
+- */
+-int tls_get_errors(void *tls_ctx);
+-
+-/**
+- * tls_connection_init - Initialize a new TLS connection
+- * @tls_ctx: TLS context data from tls_init()
+- * Returns: Connection context data, conn for other function calls
+- */
+-struct tls_connection * tls_connection_init(void *tls_ctx);
+-
+-/**
+- * tls_connection_deinit - Free TLS connection data
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- *
+- * Release all resources allocated for TLS connection.
+- */
+-void tls_connection_deinit(void *tls_ctx, struct tls_connection *conn);
+-
+-/**
+- * tls_connection_established - Has the TLS connection been completed?
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: 1 if TLS connection has been completed, 0 if not.
+- */
+-int tls_connection_established(void *tls_ctx, struct tls_connection *conn);
+-
+-/**
+- * tls_connection_shutdown - Shutdown TLS connection
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: 0 on success, -1 on failure
+- *
+- * Shutdown current TLS connection without releasing all resources. New
+- * connection can be started by using the same conn without having to call
+- * tls_connection_init() or setting certificates etc. again. The new
+- * connection should try to use session resumption.
+- */
+-int tls_connection_shutdown(void *tls_ctx, struct tls_connection *conn);
+-
+-enum {
+-	TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED = -3,
+-	TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED = -2
+-};
+-
+-/**
+- * tls_connection_set_params - Set TLS connection parameters
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @params: Connection parameters
+- * Returns: 0 on success, -1 on failure,
+- * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
+- * PKCS#11 engine failure, or
+- * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
+- * PKCS#11 engine private key.
+- */
+-int __must_check
+-tls_connection_set_params(void *tls_ctx, struct tls_connection *conn,
+-			  const struct tls_connection_params *params);
+-
+-/**
+- * tls_global_set_params - Set TLS parameters for all TLS connection
+- * @tls_ctx: TLS context data from tls_init()
+- * @params: Global TLS parameters
+- * Returns: 0 on success, -1 on failure,
+- * TLS_SET_PARAMS_ENGINE_PRV_INIT_FAILED (-2) on possible PIN error causing
+- * PKCS#11 engine failure, or
+- * TLS_SET_PARAMS_ENGINE_PRV_VERIFY_FAILED (-3) on failure to verify the
+- * PKCS#11 engine private key.
+- */
+-int __must_check tls_global_set_params(
+-	void *tls_ctx, const struct tls_connection_params *params);
+-
+-/**
+- * tls_global_set_verify - Set global certificate verification options
+- * @tls_ctx: TLS context data from tls_init()
+- * @check_crl: 0 = do not verify CRLs, 1 = verify CRL for the user certificate,
+- * 2 = verify CRL for all certificates
+- * Returns: 0 on success, -1 on failure
+- */
+-int __must_check tls_global_set_verify(void *tls_ctx, int check_crl);
+-
+-/**
+- * tls_connection_set_verify - Set certificate verification options
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @verify_peer: 1 = verify peer certificate
+- * Returns: 0 on success, -1 on failure
+- */
+-int __must_check tls_connection_set_verify(void *tls_ctx,
+-					   struct tls_connection *conn,
+-					   int verify_peer);
+-
+-/**
+- * tls_connection_get_random - Get random data from TLS connection
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @keys: Structure of key/random data (filled on success)
+- * Returns: 0 on success, -1 on failure
+- */
+-int __must_check tls_connection_get_random(void *tls_ctx,
+-					 struct tls_connection *conn,
+-					 struct tls_random *data);
+-
+-/**
+- * tls_connection_export_key - Derive keying material from a TLS connection
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @label: Label (e.g., description of the key) for PRF
+- * @out: Buffer for output data from TLS-PRF
+- * @out_len: Length of the output buffer
+- * Returns: 0 on success, -1 on failure
+- *
+- * Exports keying material using the mechanism described in RFC 5705.
+- */
+-int __must_check tls_connection_export_key(void *tls_ctx,
+-					   struct tls_connection *conn,
+-					   const char *label,
+-					   u8 *out, size_t out_len);
+-
+-/**
+- * tls_connection_handshake - Process TLS handshake (client side)
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @in_data: Input data from TLS server
+- * @appl_data: Pointer to application data pointer, or %NULL if dropped
+- * Returns: Output data, %NULL on failure
+- *
+- * The caller is responsible for freeing the returned output data. If the final
+- * handshake message includes application data, this is decrypted and
+- * appl_data (if not %NULL) is set to point this data. The caller is
+- * responsible for freeing appl_data.
+- *
+- * This function is used during TLS handshake. The first call is done with
+- * in_data == %NULL and the library is expected to return ClientHello packet.
+- * This packet is then send to the server and a response from server is given
+- * to TLS library by calling this function again with in_data pointing to the
+- * TLS message from the server.
+- *
+- * If the TLS handshake fails, this function may return %NULL. However, if the
+- * TLS library has a TLS alert to send out, that should be returned as the
+- * output data. In this case, tls_connection_get_failed() must return failure
+- * (> 0).
+- *
+- * tls_connection_established() should return 1 once the TLS handshake has been
+- * completed successfully.
+- */
+-struct wpabuf * tls_connection_handshake(void *tls_ctx,
+-					 struct tls_connection *conn,
+-					 const struct wpabuf *in_data,
+-					 struct wpabuf **appl_data);
+-
+-struct wpabuf * tls_connection_handshake2(void *tls_ctx,
+-					  struct tls_connection *conn,
+-					  const struct wpabuf *in_data,
+-					  struct wpabuf **appl_data,
+-					  int *more_data_needed);
+-
+-/**
+- * tls_connection_server_handshake - Process TLS handshake (server side)
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @in_data: Input data from TLS peer
+- * @appl_data: Pointer to application data pointer, or %NULL if dropped
+- * Returns: Output data, %NULL on failure
+- *
+- * The caller is responsible for freeing the returned output data.
+- */
+-struct wpabuf * tls_connection_server_handshake(void *tls_ctx,
+-						struct tls_connection *conn,
+-						const struct wpabuf *in_data,
+-						struct wpabuf **appl_data);
+-
+-/**
+- * tls_connection_encrypt - Encrypt data into TLS tunnel
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @in_data: Plaintext data to be encrypted
+- * Returns: Encrypted TLS data or %NULL on failure
+- *
+- * This function is used after TLS handshake has been completed successfully to
+- * send data in the encrypted tunnel. The caller is responsible for freeing the
+- * returned output data.
+- */
+-struct wpabuf * tls_connection_encrypt(void *tls_ctx,
+-				       struct tls_connection *conn,
+-				       const struct wpabuf *in_data);
+-
+-/**
+- * tls_connection_decrypt - Decrypt data from TLS tunnel
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @in_data: Encrypted TLS data
+- * Returns: Decrypted TLS data or %NULL on failure
+- *
+- * This function is used after TLS handshake has been completed successfully to
+- * receive data from the encrypted tunnel. The caller is responsible for
+- * freeing the returned output data.
+- */
+-struct wpabuf * tls_connection_decrypt(void *tls_ctx,
+-				       struct tls_connection *conn,
+-				       const struct wpabuf *in_data);
+-
+-struct wpabuf * tls_connection_decrypt2(void *tls_ctx,
+-					struct tls_connection *conn,
+-					const struct wpabuf *in_data,
+-					int *more_data_needed);
+-
+-/**
+- * tls_connection_resumed - Was session resumption used
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: 1 if current session used session resumption, 0 if not
+- */
+-int tls_connection_resumed(void *tls_ctx, struct tls_connection *conn);
+-
+-enum {
+-	TLS_CIPHER_NONE,
+-	TLS_CIPHER_RC4_SHA /* 0x0005 */,
+-	TLS_CIPHER_AES128_SHA /* 0x002f */,
+-	TLS_CIPHER_RSA_DHE_AES128_SHA /* 0x0031 */,
+-	TLS_CIPHER_ANON_DH_AES128_SHA /* 0x0034 */
+-};
+-
+-/**
+- * tls_connection_set_cipher_list - Configure acceptable cipher suites
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @ciphers: Zero (TLS_CIPHER_NONE) terminated list of allowed ciphers
+- * (TLS_CIPHER_*).
+- * Returns: 0 on success, -1 on failure
+- */
+-int __must_check tls_connection_set_cipher_list(void *tls_ctx,
+-						struct tls_connection *conn,
+-						u8 *ciphers);
+-
+-/**
+- * tls_get_cipher - Get current cipher name
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @buf: Buffer for the cipher name
+- * @buflen: buf size
+- * Returns: 0 on success, -1 on failure
+- *
+- * Get the name of the currently used cipher.
+- */
+-int __must_check tls_get_cipher(void *tls_ctx, struct tls_connection *conn,
+-				char *buf, size_t buflen);
+-
+-/**
+- * tls_connection_enable_workaround - Enable TLS workaround options
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: 0 on success, -1 on failure
+- *
+- * This function is used to enable connection-specific workaround options for
+- * buffer SSL/TLS implementations.
+- */
+-int __must_check tls_connection_enable_workaround(void *tls_ctx,
+-						  struct tls_connection *conn);
+-
+-/**
+- * tls_connection_client_hello_ext - Set TLS extension for ClientHello
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * @ext_type: Extension type
+- * @data: Extension payload (%NULL to remove extension)
+- * @data_len: Extension payload length
+- * Returns: 0 on success, -1 on failure
+- */
+-int __must_check tls_connection_client_hello_ext(void *tls_ctx,
+-						 struct tls_connection *conn,
+-						 int ext_type, const u8 *data,
+-						 size_t data_len);
+-
+-/**
+- * tls_connection_get_failed - Get connection failure status
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- *
+- * Returns >0 if connection has failed, 0 if not.
+- */
+-int tls_connection_get_failed(void *tls_ctx, struct tls_connection *conn);
+-
+-/**
+- * tls_connection_get_read_alerts - Get connection read alert status
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: Number of times a fatal read (remote end reported error) has
+- * happened during this connection.
+- */
+-int tls_connection_get_read_alerts(void *tls_ctx, struct tls_connection *conn);
+-
+-/**
+- * tls_connection_get_write_alerts - Get connection write alert status
+- * @tls_ctx: TLS context data from tls_init()
+- * @conn: Connection context data from tls_connection_init()
+- * Returns: Number of times a fatal write (locally detected error) has happened
+- * during this connection.
+- */
+-int tls_connection_get_write_alerts(void *tls_ctx,
+-				    struct tls_connection *conn);
+-
+-/**
+- * tls_capabilities - Get supported TLS capabilities
+- * @tls_ctx: TLS context data from tls_init()
+- * Returns: Bit field of supported TLS capabilities (TLS_CAPABILITY_*)
+- */
+-unsigned int tls_capabilities(void *tls_ctx);
+-
+-typedef int (*tls_session_ticket_cb)
+-(void *ctx, const u8 *ticket, size_t len, const u8 *client_random,
+- const u8 *server_random, u8 *master_secret);
+-
+-int __must_check  tls_connection_set_session_ticket_cb(
+-	void *tls_ctx, struct tls_connection *conn,
+-	tls_session_ticket_cb cb, void *ctx);
+-
+-int tls_prf_sha1_md5(const u8 *secret, size_t secret_len, const char *label,
+-             const u8 *seed, size_t seed_len, u8 *out, size_t outlen);
+-
+-#endif /* TLS_H */
