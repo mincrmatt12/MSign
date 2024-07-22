@@ -17,6 +17,14 @@ namespace transit::ttc {
 		if (impl == TTC) load_static_info("ttc");
 	}
 
+	bool match_dirtag(const config::string_t& comb, const char *received) {
+		if (!comb) return false;
+		if (auto length = strlen(comb); comb[length - 1] == '*') {
+			return !strncmp(comb.get(), received, length - 1);
+		}
+		else return comb == received;
+	}
+
 	// Populate the info and times with the information for this slot.
 	bool update_slot_times_and_info(const TTCEntry& entry, uint8_t slot, slots::TTCInfo& info, uint64_t times[6], uint64_t times_b[6]) {
 
@@ -60,13 +68,13 @@ namespace transit::ttc {
 				if (strcmp(top.name, "dirTag") == 0 && v.type == json::Value::STR)
 				{
 					for (int i = 0; i < 4 && entry.dirtag[i]; ++i) {
-						if (entry.dirtag[i] == v.str_val) {
+						if (match_dirtag(entry.dirtag[i], v.str_val)) {
 							ESP_LOGD(TAG, "matched on %s", entry.dirtag[i].get());
 							state.tag = 1; break;
 						}
 					}
 					for (int i = 0; i < 4 && entry.alt_dirtag[i]; ++i) {
-						if (entry.alt_dirtag[i] == v.str_val) {
+						if (match_dirtag(entry.alt_dirtag[i], v.str_val)) {
 							ESP_LOGD(TAG, "matched on %s (alt)", entry.alt_dirtag[i].get());
 							state.tag = 2; break;
 						}
