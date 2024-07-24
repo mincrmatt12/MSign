@@ -205,7 +205,7 @@ namespace weather {
 				block_is_active = true;
 				return true;
 			}
-			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].likely_flag) {
+			else if (blocks[block_index - 1].right - blocks[block_index - 1].left < 3 && !blocks[block_index - 1].likely_flag && blocks[block_index - 1].left > 1) {
 				// If the previous block is too short, destroy it and replace it with this one.
 				--block_index;
 				blocks[block_index] = {};
