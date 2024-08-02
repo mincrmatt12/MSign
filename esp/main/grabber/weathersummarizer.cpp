@@ -176,7 +176,7 @@ namespace weather {
 			end = -1;
 
 			// Count likely precipitation.
-			if (precipitation.probability > /* 87% */ 220)
+			if (precipitation.probability > /* 75% */ 191)
 				likely_flag = true;
 		}
 		else {
