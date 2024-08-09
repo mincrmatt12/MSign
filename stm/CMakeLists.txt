@@ -186,6 +186,11 @@ target_compile_options(stm
 	-ffast-math
 )
 
+target_compile_options(stm
+	PUBLIC
+	-fexec-charset=cp1252
+)
+
 target_compile_options(stm_crash
 	PRIVATE
 	-O2
