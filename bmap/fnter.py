@@ -5,7 +5,7 @@ import string
 import math
 import os.path
 
-CHARS = string.ascii_letters + string.digits + string.punctuation
+CHARS = string.ascii_letters + string.digits + string.punctuation + '°'
 CHAR_NUMS = [ord(x) for x in CHARS]
 
 if len(sys.argv) != 3:

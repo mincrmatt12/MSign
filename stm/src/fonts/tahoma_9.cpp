@@ -895,6 +895,12 @@ const uint8_t data_126[] = {
 	152,   // #  ## 
 };
 
+const uint8_t data_176[] = {
+	64,    //  # 
+	160,   // # #
+	64,    //  # 
+};
+
 }
 const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bearingY
 	{0, 0, 0, 0, 0, 0}, // no char here
@@ -1073,7 +1079,7 @@ const int16_t metrics[][6] = { // width, height, n_bytes, advance, bearingX, bea
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
-	{0, 0, 0, 0, 0, 0}, // no char here
+	{ 3, 3, 1, 4, 0, 7 }, // °  
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
 	{0, 0, 0, 0, 0, 0}, // no char here
@@ -1331,7 +1337,7 @@ const uint8_t * const data[] = {
 	nullptr,
 	nullptr,
 	nullptr,
-	nullptr,
+	data_176,
 	nullptr,
 	nullptr,
 	nullptr,
