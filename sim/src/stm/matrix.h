@@ -32,7 +32,7 @@ namespace led {
 					for (size_t x = 0; x < Width; ++x) {                                                                                                                              
 						std::cout << "\x1b[48;2;" << std::to_string(_remap(_at(x, y).r)) << ";" << std::to_string(_remap(_at(x, y).g)) << ";" << std::to_string(_remap(_at(x, y).b)) << "m  "; 
 					}                                                                                                                                                                 
-					std::cout << std::endl;                                                                                                                                           
+					std::cout << '\n';                                                                                                                                           
 				}                                                                                                                                                                     
 				portEXIT_CRITICAL();
 			}                                                                                                                                                                         
