@@ -1344,10 +1344,10 @@ void screen::WeatherScreen::draw_big_graphs() {
 
 		switch (graph) {
 			case FEELS_TEMP:
-				txt = "feels like (C)";
+				txt = "feels like (°C)";
 				break;
 			case REAL_TEMP:
-				txt = "temp (C)";
+				txt = "temp (°C)";
 				break;
 			case WIND:
 				txt = "wind (km/h)";
@@ -1356,10 +1356,10 @@ void screen::WeatherScreen::draw_big_graphs() {
 				txt = "wind gusts (km/h)";
 				break;
 			case PRECIP_DAY:
-				txt = "precip (day, mm/h)";
+				txt = "precip (hourly, mm/h)";
 				break;
 			case PRECIP_HOUR:
-				txt = "precip (hour, mm/h)";
+				txt = "precip (minutely, mm/h)";
 			default:
 				break;
 		}
