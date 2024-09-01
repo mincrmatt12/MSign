@@ -264,7 +264,7 @@ RAMFUNC void do_update_bootloader() {
 	while (1) {;}
 }
 
-int __attribute__((noreturn)) main() {
+void __attribute__((noreturn)) main() {
 	bootcmd_init();
 	MODIFY_REG(FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_3WS);
 

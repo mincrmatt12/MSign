@@ -27,7 +27,7 @@ tasks::Timekeeper   timekeeper{rtc_time};
 tasks::DispMan      dispman{};
 tasks::DebugConsole dbgtim{timekeeper};
 
-int main() {
+void main() {
 	rcc::init();
 	nvic::init();
 	rng::init();
