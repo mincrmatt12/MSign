@@ -58,6 +58,7 @@ namespace draw {
 		}
 		while ((c = *(text++)) != 0) {
 			if (c == ' ') {
+				c_prev = ' ';
 				pen += 2;
 				continue;
 			}
