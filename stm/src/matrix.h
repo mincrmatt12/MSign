@@ -118,9 +118,9 @@ namespace led {
 		};
 
 	public:
-		inline or_oob_ref at(uint16_t x, uint16_t y) {
+		inline or_oob_ref at(int x, int y) {
 			if (on_screen(x, y)) {
-				return Storage::_at(data, x, y);
+				return Storage::_at(data, (uint16_t)x, (uint16_t)y);
 			}
 			return {};
 		}
@@ -129,9 +129,9 @@ namespace led {
 			return Storage::_at(data, x, y);
 		}
 
-		inline color_t at(uint16_t x, uint16_t y) const {
+		inline color_t at(int x, int y) const {
 			if (on_screen(x, y)) {
-				return Storage::_at(data, x, y);
+				return Storage::_at(data, (uint16_t)x, (uint16_t)y);
 			}
 			return {};
 		}
@@ -140,8 +140,8 @@ namespace led {
 			return Storage::_at(data, x, y);
 		}
 
-		inline bool on_screen(uint16_t x, uint16_t y) const {
-			return (x < Width && y < Height);
+		inline bool on_screen(int x, int y) const {
+			return (x >= 0 && y >= 0) && (x < Width && y < Height);
 		}
 
 		static constexpr inline uint16_t width = Width;
