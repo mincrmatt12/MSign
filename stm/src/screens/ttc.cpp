@@ -304,9 +304,10 @@ screen::TTCScreen::TTCScreen() {
 void screen::TTCScreen::request_slots(uint32_t temp) {
 	servicer.take_lock();
 	const auto info = *servicer.slot<slots::TTCInfo>(slots::TTC_INFO);
+	auto info_flags = info.flags;
 	servicer.give_lock();
 
-#define DO(x, y) if (info.flags & info.EXIST_ ## x ) servicer.set_temperature_all<slots::TTC_NAME_ ## y, slots::TTC_TIME_ ## y ## a, slots::TTC_TIME_ ## y ## b>(temp)
+#define DO(x, y) if (info_flags & info.EXIST_ ## x ) servicer.set_temperature_all<slots::TTC_NAME_ ## y, slots::TTC_TIME_ ## y ## a, slots::TTC_TIME_ ## y ## b>(temp)
 
 	// We use this format to avoid filling the request queue too much.
 	DO(0, 1);
