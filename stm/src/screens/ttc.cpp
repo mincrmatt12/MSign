@@ -234,7 +234,7 @@ bool screen::TTCScreen::draw_subslot(uint16_t y, char dircode, const bheap::Type
 	if (!drawn_anything) return false;
 
 	// draw line
-	draw::rect(matrix.get_inactive_buffer(), 0, y + 7, 128, y + 8, 50_c);
+	draw::rect(matrix.get_inactive_buffer(), 0, y + 7, 128, y + 8, 38_c);
 
 	// draw blade if necessary
 	if (dircode != 0 && dircode != ' ') {
@@ -271,7 +271,7 @@ int16_t screen::TTCScreen::draw_slot(uint16_t y, const uint8_t * name, const bhe
 
 	if (height) {
 		draw::text(matrix.get_inactive_buffer(), name, font::tahoma_9::info, t_pos, y + 8, 255_c);
-		draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 35_c);
+		draw::rect(matrix.get_inactive_buffer(), 0, y+9, 128, y+10, 47_c);
 
 		height += 10;
 	}
