@@ -1456,6 +1456,11 @@ void srv::Servicer::process_update_cmd(slots::protocol::UpdateCmd cmd) {
 				this->update_state = USTATE_WAITING_FOR_FINISH_WRITE;
 				break;
 			}
+		case UpdateCmd::SKIP_STM_UPDATE:
+			{
+				this->update_state = USTATE_WAITING_FOR_FINISH;
+				break;
+			}
 		default:
 			{
 				update_state = USTATE_FAILED;

@@ -424,6 +424,7 @@ namespace slots {
 		enum struct UpdateCmd : uint8_t {
 			CANCEL_UPDATE = 0x10,
 			PREPARE_FOR_IMAGE,
+			SKIP_STM_UPDATE,
 
 			ERR_IMG_READ = 0x30,
 			ERR_IMG_CSUM,

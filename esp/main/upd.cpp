@@ -139,7 +139,7 @@ namespace upd {
 	void update_system() {
 		// check the files are present
 		uint16_t crc_esp, crc_stm;
-		if (f_stat("/upd/stm.bin", NULL) || f_stat("/upd/chck.sum", NULL)) {
+		if (f_stat("/upd/chck.sum", NULL)) {
 			ESP_LOGE(TAG, "missing files.");
 
 			f_unlink("/upd/state");
@@ -220,6 +220,12 @@ namespace upd {
 
 					ESP_LOGI(TAG, "Connected to STM32 for update.");
 
+					if (f_stat("/upd/stm.bin", NULL)) {
+						// No STM update, skip
+						send_update_status(slots::protocol::UpdateCmd::SKIP_STM_UPDATE);
+						goto doesp;
+					}
+
 					set_update_state(USTATE_CURRENT_SENDING_STM);  // mark current state
 
 					// tell to prepare for image
@@ -292,6 +298,9 @@ namespace upd {
 				if (status != slots::protocol::UpdateStatus::COPY_COMPLETED) {
 					ESP_LOGD(TAG, "huh? ignoring invalid status.");
 				}
+			}
+			{
+	doesp:
 
 				// setting update status accordingly and resetting
 				if (!f_stat("/upd/esp.bin", NULL)) {
