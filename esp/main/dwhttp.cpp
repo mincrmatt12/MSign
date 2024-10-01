@@ -41,7 +41,10 @@ namespace dwhttp {
 			const static char * const TAG = "d_adapter";
 			struct HttpAdapter {
 				bool connect(const char *host, const char* port="80") {
-					if (is_connected()) return false;
+					if (is_connected()) {
+						ESP_LOGW(TAG, "httpadapter still connecting, closing");
+						close();
+					}
 
 					addrinfo hints{};
 					addrinfo *result{}, *rp{};
@@ -51,6 +54,7 @@ namespace dwhttp {
 					int stat;
 					if ((stat = lwip_getaddrinfo(host, port, &hints, &result))) {
 						ESP_LOGE(TAG, "gai fail: %s/%d", lwip_strerr(stat), stat);
+						return false;
 					}
 
 					for (rp = result; rp != nullptr; rp = rp->ai_next) {
