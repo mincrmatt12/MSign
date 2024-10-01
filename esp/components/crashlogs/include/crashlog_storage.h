@@ -57,6 +57,8 @@ namespace crashlogs {
 			if (!log_data)
 				return WriteNotStarted;
 			size_t available_space = max_message_size - log_data.data.length_of_message;
+			if (available_space == 0)
+				return WriteBufferFull;
 			size_t new_length = length > available_space ? available_space : length;
 			memmove(free_message_space + log_data.data.length_of_message, data, new_length);
 			log_data.data = typename LogHeader::LogHeaderData(free_message_space, log_data.data.length_of_message + new_length);
