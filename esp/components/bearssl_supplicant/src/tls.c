@@ -425,7 +425,11 @@ static int wpabuf_append(struct wpabuf ** buf, void * data, size_t length) {
 		}
 	}
 	else {
-		wpabuf_resize(buf, length);
+		if (wpabuf_resize(buf, length))
+		{
+			ESP_LOGE(TAG, "No memory to append to.");
+			return -1;
+		}
 	}
 	wpabuf_put_data(*buf, data, length);
 	return 0;
