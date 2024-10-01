@@ -662,10 +662,10 @@ void screen::WeatherScreen::fill_hourlybar(int16_t x0, int16_t y0, int16_t x1, i
 			col = led::color_t(70_c); break;
 		case FOG:
 			do_hatch = true;
-			hatch = 245_c;
+			hatch = 250_c;
 		case LIGHT_FOG:
 			text_out = code == FOG ? "Fog" : "Light fog";
-			col = led::color_t(215_c);
+			col = led::color_t(195_c);
 		    break;
 		case FLURRIES:
 		case LIGHT_SNOW:
