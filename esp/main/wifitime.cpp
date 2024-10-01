@@ -61,6 +61,8 @@ void kill_grab_task(TimerHandle_t xTimer) {
 
 slots::WifiStatus current_wifi_status;
 
+int wifi_conn_attempts = 0;
+
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
 
@@ -79,6 +81,8 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			}
 			serial::interface.update_slot_nosync(slots::WIFI_STATUS, current_wifi_status);
 			xEventGroupSetBits(wifi::events, wifi::WifiConnected);
+
+			wifi_conn_attempts = 0;
 
 			if (grab_killer) {
 				ESP_LOGD(TAG, "disabling grab killer");
@@ -129,8 +133,21 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				xTimerStart(grab_killer, pdMS_TO_TICKS(5));
 				ESP_LOGD(TAG, "scheduled grab killer");
 			}
-			ESP_LOGW(TAG, "Trying to reconnect...");
-			esp_wifi_connect();
+
+			if (wifi_conn_attempts++ == 0 && (!wifi::force_memory_check || esp_get_free_heap_size() > 12000)) {
+				ESP_LOGW(TAG, "Trying to reconnect...");
+				esp_wifi_connect();
+			}
+			else {
+				auto delay = std::min(wifi_conn_attempts - 1, 3) * pdMS_TO_TICKS(5000);
+				ESP_LOGW(TAG, "Waiting before reconnect..");
+
+				auto newt = xTimerCreate("wrC", delay, false, nullptr, +[](TimerHandle_t xTimer){
+					esp_wifi_connect();
+					xTimerDelete(xTimer, pdMS_TO_TICKS(100));
+				});
+				xTimerStart(newt, pdMS_TO_TICKS(5));
+			}
 			break;
 		default:
 			break;
