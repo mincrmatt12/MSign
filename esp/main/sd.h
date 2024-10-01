@@ -22,6 +22,8 @@ namespace sd {
 
 	void log_putc(char c);
 
+	size_t copy_pending_logs(char *buf, size_t max);
+
 	extern FATFS fs;
 }
 

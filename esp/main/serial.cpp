@@ -434,7 +434,18 @@ bool serial::process_stored_crashlogs() {
 #include <crashlog_writer.h>
 
 extern "C" void esp_custom_panic_handler(void *frame, int wdt) {
-	crashlogs::write_panic_frame(dum, frame, wdt);
+	if (!crashlogs::write_panic_frame(dum, frame, wdt))
+		return;
+
+	// Also, try to dump the sd log data
+	auto sdat = dum.log_scratch_buffer();
+	if (sdat.second < 64)
+		return;
+
+	auto amt = snprintf(sdat.first, sdat.second, "\nLog buffer:\n");
+	amt += sd::copy_pending_logs(sdat.first + amt, sdat.second - amt);
+
+	dum.write_log(sdat.first, amt);
 }
 
 #endif

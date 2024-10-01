@@ -1,7 +1,7 @@
 #include <FreeRTOS.h>
 #include <stream_buffer.h>
 #include <timers.h>
-#include <algorithm>
+#include <string.h>
 #include "esp_log.h"
 #include "sd.h"
 #include <ff.h>
@@ -11,13 +11,19 @@ static const char * const TAG = "sdlog";
 
 namespace sd {
 	struct LogBuf {
-		static const size_t Len = 512;
+		static const size_t Len = 1024;
+
+		size_t pos = 0;
+		volatile size_t lendpos = 0;
+		size_t end = 0;
 
 		char buf[Len];
-		bool in_use = false;
+
+		volatile bool in_use = false;
+		volatile bool lending = false;
+
 		bool mask = false;
 		bool ovf = false;
-		size_t pos = 0;
 
 		void putc(char c) {
 			if (mask) {
@@ -29,13 +35,26 @@ namespace sd {
 				return;
 			}
 
-			if (in_use) return;
-			if (pos == Len) {
+			if (in_use)
+				return;
+
+			bool lending_ = lending;
+
+			if (!lending_ && end != lendpos) {
+				memmove(buf, buf + lendpos, end - lendpos);
+
+				pos = end - lendpos;
+				lendpos = end = 0;
+			}
+
+			size_t& pos_ = lending_ ? end : pos;
+
+			if (pos_ == Len) {
 				ovf = true;
 				return;
 			}
 			else {
-				buf[pos++] = c;
+				buf[pos_++] = c;
 			}
 		}
 
@@ -44,7 +63,14 @@ namespace sd {
 		}
 
 		FRESULT dump(FIL* fp) {
+			if (!lending && end != lendpos)
+				return FR_OK;
+			portENTER_CRITICAL();
 			in_use = true;
+			lending = true;
+			end = lendpos = pos;
+			in_use = false;
+			portEXIT_CRITICAL();
 			UINT bw = 0;
 			while (bw < pos) {
 				UINT bw_ = 0;
@@ -67,9 +93,13 @@ namespace sd {
 
 	private:
 		FRESULT clear(FRESULT passthrough) {
+			portENTER_CRITICAL();
+			in_use = true;
 			pos = 0;
 			ovf = false;
+			lending = false;
 			in_use = false;
+			portEXIT_CRITICAL();
 			return passthrough;
 		}
 	} logbuf;
@@ -133,5 +163,14 @@ namespace sd {
 
 	void log_putc(char c) {
 		logbuf.putc(c);
+	}
+
+	size_t copy_pending_logs(char *buf, size_t max) {
+		if (max > logbuf.pos)
+			max = logbuf.pos;
+
+		memcpy(buf, logbuf.buf, max);
+
+		return max;
 	}
 }
