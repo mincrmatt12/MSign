@@ -688,7 +688,6 @@ ok:
 
 	DataUpdateManager::StmMemoryBudgetInfo DataUpdateManager::calculate_memory_budget() {
 		auto budget = StmMemoryBudgetInfo{};
-		uint32_t cs = 0;
 		budget.unused_space = STM_HEAP_SIZE - target_free_space_buffer;
 		// Filter out at least 4 bytes per slot
 		for (const auto &b : arena) {
@@ -743,7 +742,7 @@ ok:
 				}
 			}
 		}
-		ESP_LOGD(TAG, "membudget: %d free, %d hot, %d warm %d cold, %d remote", budget.unused_space, budget.hot(), budget.allocated_warm(), budget.cold_remote, budget.remote());
+		ESP_LOGV(TAG, "membudget: %d free, %d hot, %d warm %d cold, %d remote", budget.unused_space, budget.hot(), budget.allocated_warm(), budget.cold_remote, budget.remote());
 		return budget;
 	}
 
