@@ -273,8 +273,13 @@ ok:
 		int e_str = 0;
 		bool div = false;
 		next();
-		if (peek() == '-') div = true;
-		next();
+		if (peek() == '-') {
+			div = true;
+			next();
+		}
+		else if (peek() == '+') {
+			next();
+		}
 		while (peek() != 0) {
 			if (peek() >= '0' && peek() <= '9') {
 				e_str *= 10;
