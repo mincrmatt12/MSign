@@ -1,0 +1,212 @@
+Backports some changes from esp-idf, but also
+fixes a deadlock from the wifi libs not enabling
+the scheduler before calling into wpa2 in all cases
+(so that when trying to kill wpa2T, it can actually
+switch to it to clean it up)
+Index: vendor/ESP8266_RTOS_SDK/components/esp_event/event_send.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/esp_event/event_send.c
++++ vendor/ESP8266_RTOS_SDK/components/esp_event/event_send.c
+@@ -16,6 +16,9 @@
+ #include "esp_event.h"
+ #include "esp_event_legacy.h"
+ 
++#include <FreeRTOS.h>
++#include <task.h>
++
+ esp_err_t esp_event_send_noop(system_event_t *event);
+ 
+ extern esp_err_t esp_event_send_legacy(system_event_t *event) __attribute__((weak, alias("esp_event_send_noop")));
+@@ -29,17 +32,28 @@ esp_err_t esp_event_send_noop(system_eve
+ 
+ esp_err_t esp_event_send(system_event_t *event)
+ {
++	// sometimes the wifi blobs call this without first resuming the scheduler, so ensure it's running first.
++	bool should_resume = false;
++	if (xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED) {
++		xTaskResumeAll();
++		should_resume = true;
++	}
++
+     // send the event to the new style event loop
+     esp_err_t err = esp_event_send_to_default_loop(event);
+     if (err != ESP_OK) {
+-        return err;
++		goto out;
+     }
+ 
+     // send the event to the legacy event loop
+     err = esp_event_send_legacy(event);
+     if (err != ESP_OK) {
+-        return err;
++		goto out;
+     }
+ 
++out:
++	if (should_resume) {
++		vTaskSuspendAll();
++	}
+     return ESP_OK;
+ }
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+@@ -120,6 +120,9 @@ static inline void wpa2_task_delete(void
+     void *my_task_hdl = xTaskGetCurrentTaskHandle();
+     int ret = ESP_OK;
+ 
++	if (s_wpa2_task_hdl == NULL)
++		return;
++
+     if (my_task_hdl == s_wpa2_task_hdl) {
+         wpa_printf(MSG_ERROR, "WPA2: should never call task delete api in wpa2 task context");
+         return;
+@@ -189,7 +192,7 @@ void wpa2_task(void *pvParameters )
+     bool task_del = false;
+ 
+     if (!sm) {
+-        return;
++		goto exit;
+     }
+ 
+     for (;;) {
+@@ -238,6 +241,7 @@ void wpa2_task(void *pvParameters )
+         }
+     }
+ 
++exit:
+     wpa_printf(MSG_DEBUG, "WPA2: queue deleted");
+     vQueueDelete(s_wpa2_queue);
+     wpa_printf(MSG_DEBUG, "WPA2: task deleted");
+@@ -248,6 +252,7 @@ void wpa2_task(void *pvParameters )
+     } else {
+         wpa_printf(MSG_ERROR, "WPA2: null wifi->wpa2 sync sem");
+     }
++	s_wpa2_task_hdl = NULL;
+ 
+     /* At this point, we completed */
+     vTaskDelete(NULL);
+@@ -737,20 +742,30 @@ static int eap_peer_sm_init(void)
+     int ret = 0;
+     struct eap_sm *sm;
+ 
++	bool should_resume = xTaskGetSchedulerState() == taskSCHEDULER_SUSPENDED;
++
++	if (should_resume)
++		xTaskResumeAll();
++
+     if (gEapSm) {
+-        wpa_printf(MSG_ERROR, "WPA2: wpa2 sm not null, deinit it");
+-        eap_peer_sm_deinit();
++        wpa_printf(MSG_ERROR, "EAP: EAP sm not null, deinit it");
++		eap_peer_sm_deinit();
+     }
+ 
+     sm = (struct eap_sm *)os_zalloc(sizeof(*sm));
+     if (sm == NULL) {
+-        return ESP_ERR_NO_MEM;
++        ret = ESP_ERR_NO_MEM;
++		if (should_resume)
++			vTaskSuspendAll();
++        return ret;
+     }
+ 
++    gEapSm = sm;
+     s_wpa2_data_lock = xSemaphoreCreateRecursiveMutex();
+     if (!s_wpa2_data_lock) {
+-        wpa_printf(MSG_ERROR, "wpa2 eap_peer_sm_init: failed to alloc data lock");  // NOLINT(clang-analyzer-unix.Malloc)
+-        return ESP_ERR_NO_MEM;
++        wpa_printf(MSG_ERROR, "EAP eap_peer_sm_init: failed to alloc data lock");
++        ret = ESP_ERR_NO_MEM;
++        goto _err;
+     }
+ 
+     wpa2_set_eap_state(WPA2_ENT_EAP_STATE_NOT_START);
+@@ -758,54 +773,58 @@ static int eap_peer_sm_init(void)
+     esp_wifi_get_macaddr_internal(WIFI_IF_STA, sm->ownaddr);
+     ret = eap_peer_blob_init(sm);
+     if (ret) {
+-        wpa_printf(MSG_ERROR, "eap_peer_blob_init failed\n");
+-        os_free(sm);
+-        vSemaphoreDelete(s_wpa2_data_lock);
+-        return ESP_FAIL;
++        wpa_printf(MSG_ERROR, "eap_peer_blob_init failed");
++        ret = ESP_FAIL;
++        goto _err;
+     }
+ 
+     ret = eap_peer_config_init(sm, g_wpa_private_key_passwd, g_wpa_private_key_passwd_len);
+     if (ret) {
+-        wpa_printf(MSG_ERROR, "eap_peer_config_init failed\n");
+-        eap_peer_blob_deinit(sm);
+-        os_free(sm);
+-        vSemaphoreDelete(s_wpa2_data_lock);
+-        return ESP_FAIL;
++        wpa_printf(MSG_ERROR, "eap_peer_config_init failed");
++        ret = ESP_FAIL;
++        goto _err;
+     }
+ 
+     sm->ssl_ctx = tls_init();
+     if (sm->ssl_ctx == NULL) {
+-        wpa_printf(MSG_WARNING, "SSL: Failed to initialize TLS "
+-                   "context.");
+-        eap_peer_blob_deinit(sm);
+-        eap_peer_config_deinit(sm);
+-        os_free(sm);
+-        vSemaphoreDelete(s_wpa2_data_lock);
+-        return ESP_FAIL;
++        wpa_printf(MSG_WARNING, "SSL: Failed to initialize TLS context.");
++        ret = ESP_FAIL;
++        goto _err;
+     }
+ 
+     wpa2_rxq_init();
+ 
+     gEapSm = sm;
+ #ifdef USE_WPA2_TASK
+-    s_wpa2_queue = xQueueCreate(SIG_WPA2_MAX, sizeof( void * ) );
+-    xTaskCreate(wpa2_task, "wpa2T", WPA2_TASK_STACK_SIZE, NULL, 2, &s_wpa2_task_hdl);
++    s_wpa2_queue = xQueueCreate(SIG_WPA2_MAX, sizeof(void *));
++    ret = xTaskCreate(wpa2_task, "wpa2T", WPA2_TASK_STACK_SIZE, NULL, 2, &s_wpa2_task_hdl);
++    if (ret != pdPASS) {
++        wpa_printf(MSG_ERROR, "wps enable: failed to create task");
++        ret = ESP_FAIL;
++        goto _err;
++    }
+     s_wifi_wpa2_sync_sem = xSemaphoreCreateCounting(1, 0);
+     if (!s_wifi_wpa2_sync_sem) {
+-        vQueueDelete(s_wpa2_queue);
+-        s_wpa2_queue = NULL;
+-        eap_peer_blob_deinit(sm);
+-        eap_peer_config_deinit(sm);
+-        os_free(sm);
+-        vSemaphoreDelete(s_wpa2_data_lock);
+-        wpa_printf(MSG_ERROR, "WPA2: failed create wifi wpa2 task sync sem");
+-        return ESP_FAIL;
++        wpa_printf(MSG_ERROR, "EAP: failed create wifi EAP task sync sem");
++        ret = ESP_FAIL;
++        goto _err;
+     }
+ 
+-    wpa_printf(MSG_INFO, "wpa2_task prio:%d, stack:%d\n", 2, WPA2_TASK_STACK_SIZE);
+-
++    wpa_printf(MSG_INFO, "wifi_task prio:%d, stack:%d", 2, WPA2_TASK_STACK_SIZE);
+ #endif
++
++	if (should_resume)
++		vTaskSuspendAll();
++
+     return ESP_OK;
++
++_err:
++    eap_peer_sm_deinit();
++
++	if (should_resume)
++		vTaskSuspendAll();
++
++    return ret;
+ }
+ 
+ /**
