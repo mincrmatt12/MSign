@@ -134,7 +134,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				ESP_LOGD(TAG, "scheduled grab killer");
 			}
 
-			if (wifi_conn_attempts++ == 0 && (!wifi::force_memory_check || esp_get_free_heap_size() > 12000)) {
+			if (wifi_conn_attempts++ == 0 && (!wifi::force_memory_check || esp_get_free_heap_size() > 10000)) {
 				ESP_LOGW(TAG, "Trying to reconnect...");
 				esp_wifi_connect();
 			}
