@@ -1,0 +1,13 @@
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+@@ -53,7 +53,7 @@
+ 
+ static void *s_wpa2_data_lock = NULL;
+ 
+-static struct eap_sm *gEapSm = NULL;
++struct eap_sm *gEapSm = NULL;
+ 
+ static int eap_peer_sm_init(void);
+ static void eap_peer_sm_deinit(void);
