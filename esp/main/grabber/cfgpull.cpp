@@ -62,6 +62,8 @@ void cfgpull::init() {
 	if (!enabled) ESP_LOGI(TAG, "cfgpull is not turned on");
 }
 
+extern "C" void * gEapSm;
+
 bool cfgpull::loop() {
 	if (!pull_host && !enabled) return true;
 	// Check if endpoint url is configured
@@ -89,6 +91,9 @@ bool cfgpull::loop() {
 			resp.write(metrics_buf);
 			resp.write("; grab_task_watermark ");
 			snprintf(metrics_buf, sizeof metrics_buf, "%d", (int)uxTaskGetStackHighWaterMark(NULL));
+			resp.write(metrics_buf);
+			resp.write("; geapsm_allocated ");
+			snprintf(metrics_buf, sizeof metrics_buf, "%d", (int)(gEapSm != NULL));
 			resp.write(metrics_buf);
 		}
 #endif
