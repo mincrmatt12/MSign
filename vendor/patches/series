@@ -11,3 +11,4 @@ ESP8266_RTOS_SDK-update-to-gcc-13
 ESP8266_RTOS_SDK-fix-sched-deadlocks
 ESP8266_RTOS_SDK-make-freertos-internals-public
 ESP8266_RTOS_SDK-backport-wpa-supplicant
+ESP8266_RTOS_SDK-debug-make-geapsm-public
