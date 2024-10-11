@@ -64,6 +64,7 @@ void kill_grab_task(TimerHandle_t xTimer) {
 slots::WifiStatus current_wifi_status;
 
 int wifi_conn_attempts = 0;
+extern "C" void * gEapSm;
 
 esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
     system_event_info_t &info = event->event_info;
@@ -75,6 +76,15 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			serial::interface.update_slot_nosync(slots::WIFI_STATUS, current_wifi_status);
 			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
+			// If the EAP sm is still allocated here, give up and reconnect.
+
+			if (gEapSm != NULL) {
+				ESP_LOGE(TAG, "EAP sm was not freed from internal code; trying to reconnect instead.");
+
+				esp_wifi_disconnect();
+				break;
+			}
+
 			ESP_LOGI(TAG, "Connected with IP %s", ip4addr_ntoa(&info.got_ip.ip_info.ip));
 			current_wifi_status.connected = true;
 			for (int i = 0; i < 4; ++i) {
