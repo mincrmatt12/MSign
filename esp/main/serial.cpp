@@ -301,7 +301,7 @@ void serial::SerialInterface::reset() {
 
 	send_pkt(pkt);
 	ESP_LOGE(TAG, "The system is going down for reset.");
-	vTaskDelay(pdMS_TO_TICKS(100));
+	vTaskDelay(pdMS_TO_TICKS(1000)); // wait long enough for logs to flush, hopefully
 	esp_restart();
 }
 

@@ -79,9 +79,24 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			// If the EAP sm is still allocated here, give up and reconnect.
 
 			if (gEapSm != NULL) {
-				ESP_LOGE(TAG, "EAP sm was not freed from internal code; trying to reconnect instead.");
+				ESP_LOGW(TAG, "EAP sm was not freed from internal code; trying to reconnect instead.");
 
-				esp_wifi_disconnect();
+				if (auto code = esp_wifi_disconnect(); code == ESP_OK) {
+					ESP_LOGW(TAG, "Disconnected; attempting reconnect.");
+				}
+				else {
+					ESP_LOGE(TAG, "Failed to disconnect (%d)", code);
+
+					// Attempting full WIFI reset
+					if (code = esp_wifi_stop(); code != ESP_OK) {
+						ESP_LOGE(TAG, "Failed to stop wifi, resetting.");
+						serial::interface.reset();
+					}
+
+					// Otherwise, reinit wifi
+					wifi::init(true);
+				}
+
 				break;
 			}
 
@@ -241,7 +256,7 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 
 #ifndef SIM
 
-bool wifi::init() {
+bool wifi::init(bool is_reconnect) {
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
 	WifiSdConfig cfg_blob{};
 
@@ -257,8 +272,17 @@ bool wifi::init() {
 	}
 
 	// Setup tcpip/event handlers
-	tcpip_adapter_init();
-	ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
+	if (!is_reconnect) {
+		tcpip_adapter_init();
+		ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
+	}
+
+	if (is_reconnect) {
+		if (cfg_blob.enterprise) {
+			esp_wifi_sta_wpa2_ent_disable();
+		}
+		ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_deinit());
+	}
 
 	// Initialize wifi
 	{
