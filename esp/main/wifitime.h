@@ -7,7 +7,7 @@
 #include <time.h>
 
 namespace wifi {
-	bool init();
+	bool init(bool is_reconnect=false);
 
 	extern EventGroupHandle_t events;
 	uint64_t get_localtime();
