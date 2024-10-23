@@ -7,7 +7,7 @@ namespace wifi {
 	//!cfg: holds .time.server, default "pool.ntp.org"
 	extern config::string_t time_server;
 
-	//!cfg: holds .wifi.force_memory_check, default true
+	//!cfg: holds .wifi.force_memory_check, default false
 	extern bool force_memory_check;
 
 	// Wifi configuration data
