@@ -22,6 +22,8 @@ EventGroupHandle_t wifi::events;
 static const char * const TAG = "wifiman";
 static const char * const T_TAG = "sntp";
 
+static bool has_wpa2_ent = false;
+
 #ifndef SIM
 void sntp_timer_cb(TimerHandle_t xTimer) {
 	// Wait for time to be set
@@ -134,7 +136,7 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				ESP_LOGD(TAG, "scheduled grab killer");
 			}
 
-			if (wifi_conn_attempts++ == 0 && (!wifi::force_memory_check || esp_get_free_heap_size() > 10000)) {
+			if (wifi_conn_attempts++ == 0 && (!(wifi::force_memory_check || has_wpa2_ent) || esp_get_free_heap_size() > 15000)) {
 				ESP_LOGW(TAG, "Trying to reconnect...");
 				esp_wifi_connect();
 			}
@@ -294,7 +296,9 @@ bool wifi::init() {
 			esp_wifi_sta_wpa2_ent_set_password((const uint8_t *)cfg_blob.enterprise.password(), strlen(cfg_blob.enterprise.password()));
 
 			esp_wifi_sta_wpa2_ent_enable();
+			has_wpa2_ent = true;
 		}
+		else has_wpa2_ent = false;
 	}
 	ESP_ERROR_CHECK(esp_wifi_start());
 	
