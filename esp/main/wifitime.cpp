@@ -54,6 +54,7 @@ void start_grab_task() {
 
 TimerHandle_t grab_killer = nullptr;
 bool grab_never_started = true;
+bool doing_emergency_reset = false;
 
 void kill_grab_task(TimerHandle_t xTimer) {
 	if (grab_killer == nullptr) return;
@@ -75,6 +76,21 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			current_wifi_status.connected = false;
 			serial::interface.update_slot_nosync(slots::WIFI_STATUS, current_wifi_status);
 			break;
+		case SYSTEM_EVENT_STA_STOP:
+			if (doing_emergency_reset) {
+				doing_emergency_reset = false;
+
+				if (has_wpa2_ent) {
+					esp_wifi_sta_wpa2_ent_disable();
+					esp_wifi_sta_wpa2_ent_enable();
+
+					if (gEapSm != NULL)
+						ESP_LOGW(TAG, "even after reinit, the EAP sm was not freed");
+				}
+
+				esp_wifi_start();
+			}
+			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
 			// If the EAP sm is still allocated here, give up and reconnect.
 
@@ -85,18 +101,15 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 					ESP_LOGW(TAG, "Disconnected; attempting reconnect.");
 				}
 				else {
-					ESP_LOGE(TAG, "Failed to disconnect (%d)", code);
+					ESP_LOGE(TAG, "Failed to disconnect (%04x)", code);
 
 					// Attempting full WIFI reset
+					doing_emergency_reset = true;
 					if (code = esp_wifi_stop(); code != ESP_OK) {
-						ESP_LOGE(TAG, "Failed to stop wifi, resetting.");
+						ESP_LOGE(TAG, "Failed to stop wifi, (%04x) resetting.", code);
 						serial::interface.reset();
 					}
-
-					// Otherwise, reinit wifi
-					wifi::init(true);
 				}
-
 				break;
 			}
 
@@ -256,7 +269,7 @@ uint64_t wifi::millis_to_local(uint64_t millis) {
 
 #ifndef SIM
 
-bool wifi::init(bool is_reconnect) {
+bool wifi::init() {
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
 	WifiSdConfig cfg_blob{};
 
@@ -272,17 +285,8 @@ bool wifi::init(bool is_reconnect) {
 	}
 
 	// Setup tcpip/event handlers
-	if (!is_reconnect) {
-		tcpip_adapter_init();
-		ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
-	}
-
-	if (is_reconnect) {
-		if (cfg_blob.enterprise) {
-			esp_wifi_sta_wpa2_ent_disable();
-		}
-		ESP_ERROR_CHECK_WITHOUT_ABORT(esp_wifi_deinit());
-	}
+	tcpip_adapter_init();
+	ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, nullptr));
 
 	// Initialize wifi
 	{
