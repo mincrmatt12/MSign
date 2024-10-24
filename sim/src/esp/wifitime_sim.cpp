@@ -3,7 +3,7 @@
 #include "common/slots.h"
 #include "serial.h"
 
-bool wifi::init(bool) {
+bool wifi::init() {
 	// Init events
 	ESP_LOGW("wifiman", "Fake wifi init: ok");
 
