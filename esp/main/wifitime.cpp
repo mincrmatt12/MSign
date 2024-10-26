@@ -1,9 +1,11 @@
 #include "wifitime.h"
 #include "common/slots.h"
 #include "config.h"
+#include "projdefs.h"
 #include "serial.h"
 
 #include "wifitime.cfg.h"
+#include <cstddef>
 
 #ifndef SIM
 #include <esp_log.h>
@@ -54,12 +56,39 @@ void start_grab_task() {
 
 TimerHandle_t grab_killer = nullptr;
 bool grab_never_started = true;
-bool doing_emergency_reset = false;
+enum {
+	NOT_RESETTING = 0,
+	WAITING_STOP = 1,
+	WAITING_RESTART = 2,
+	WAITING_RECONNECT = 3
+} doing_emergency_reset = NOT_RESETTING;
 
 void kill_grab_task(TimerHandle_t xTimer) {
 	if (grab_killer == nullptr) return;
 	ESP_LOGW(TAG, "killing grabber task");
 	xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
+}
+
+void restart_wifi_task(TimerHandle_t xTimer) {
+	if (doing_emergency_reset < WAITING_RESTART) {
+		if (doing_emergency_reset < WAITING_RECONNECT) {
+			if (auto code = esp_wifi_start(); code != ESP_OK) {
+				ESP_LOGW(TAG, "Failed to restart wifi (%04x)", code);
+				return;
+			}
+		}
+
+		doing_emergency_reset = WAITING_RECONNECT;
+
+		if (auto code = esp_wifi_connect(); code != ESP_OK) {
+			ESP_LOGE(TAG, "failed to re-connect wifi in reset (%04x)", code);
+			return;
+		}
+
+		doing_emergency_reset = NOT_RESETTING;
+	}
+	xTimerDelete(xTimer, 0);
+	return;
 }
 
 slots::WifiStatus current_wifi_status;
@@ -77,8 +106,8 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 			serial::interface.update_slot_nosync(slots::WIFI_STATUS, current_wifi_status);
 			break;
 		case SYSTEM_EVENT_STA_STOP:
-			if (doing_emergency_reset) {
-				doing_emergency_reset = false;
+			if (doing_emergency_reset == WAITING_STOP) {
+				doing_emergency_reset = WAITING_RESTART;
 
 				if (has_wpa2_ent) {
 					esp_wifi_sta_wpa2_ent_disable();
@@ -88,7 +117,9 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 						ESP_LOGW(TAG, "even after reinit, the EAP sm was not freed");
 				}
 
-				esp_wifi_start();
+				ESP_LOGI(TAG, "Wifi stopped: scheduling restart timer");
+				auto th = xTimerCreate("wrst", pdMS_TO_TICKS(200), pdTRUE, NULL, restart_wifi_task);
+				xTimerStart(th, pdMS_TO_TICKS(5));
 			}
 			break;
 		case SYSTEM_EVENT_STA_GOT_IP:
@@ -103,11 +134,16 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				else {
 					ESP_LOGE(TAG, "Failed to disconnect (%04x)", code);
 
-					// Attempting full WIFI reset
-					doing_emergency_reset = true;
-					if (code = esp_wifi_stop(); code != ESP_OK) {
-						ESP_LOGE(TAG, "Failed to stop wifi, (%04x) resetting.", code);
-						serial::interface.reset();
+					if (doing_emergency_reset == NOT_RESETTING) {
+						// Attempting full WIFI reset
+						doing_emergency_reset = WAITING_STOP;
+						if (code = esp_wifi_stop(); code != ESP_OK) {
+							ESP_LOGE(TAG, "Failed to stop wifi, (%04x) resetting.", code);
+							serial::interface.reset();
+						}
+					}
+					else {
+						ESP_LOGW(TAG, "re-entered wifi sta got ip while still resetting.");
 					}
 				}
 				break;
