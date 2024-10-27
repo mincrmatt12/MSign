@@ -70,7 +70,7 @@ void kill_grab_task(TimerHandle_t xTimer) {
 }
 
 void restart_wifi_task(TimerHandle_t xTimer) {
-	if (doing_emergency_reset < WAITING_RESTART) {
+	if (doing_emergency_reset >= WAITING_RESTART) {
 		if (doing_emergency_reset < WAITING_RECONNECT) {
 			if (auto code = esp_wifi_start(); code != ESP_OK) {
 				ESP_LOGW(TAG, "Failed to restart wifi (%04x)", code);
