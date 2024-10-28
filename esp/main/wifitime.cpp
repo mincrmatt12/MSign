@@ -141,12 +141,12 @@ esp_err_t wifi_event_handler(void *ctx, system_event_t *event) {
 				esp_wifi_connect();
 			}
 			else {
-				auto delay = std::min(wifi_conn_attempts - 1, 3) * pdMS_TO_TICKS(5000);
+				auto delay = std::min(pdMS_TO_TICKS(7100), std::min(wifi_conn_attempts, 3) * pdMS_TO_TICKS(5000));
 				ESP_LOGW(TAG, "Waiting before reconnect..");
 
 				auto newt = xTimerCreate("wrC", delay, false, nullptr, +[](TimerHandle_t xTimer){
 					esp_wifi_connect();
-					xTimerDelete(xTimer, pdMS_TO_TICKS(100));
+					xTimerDelete(xTimer, 0);
 				});
 				xTimerStart(newt, pdMS_TO_TICKS(5));
 			}
