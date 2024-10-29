@@ -172,7 +172,7 @@ namespace crash {
 
 		// Setup systick
 		LL_SYSTICK_DisableIT();
-		LL_Init1msTick(SystemCoreClock);
+		LL_InitTick(F_CPU, 1000);
 
 		// Turn on interrupts
 		NVIC_SetPriority(DMA2_Stream5_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),1,0));

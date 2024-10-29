@@ -29,7 +29,7 @@ extern "C" {
 	extern void (*__init_array_start [])(void);
 	extern void (*__init_array_end [])(void);
 
-	uint32_t SystemCoreClock;
+	// required by USART init routines
 	const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3, 4, 6, 7, 8, 9};
 	const uint8_t APBPrescTable[8]  = {0, 0, 0, 0, 1, 2, 3, 4};
 }
@@ -69,8 +69,6 @@ void rcc::init() {
 
 	// Wait for clock to be switched
 	while (LL_RCC_GetSysClkSource() != LL_RCC_SYS_CLKSOURCE_STATUS_PLL) {}
-
-	LL_SetSystemCoreClock(F_CPU);
 
 	// Let FREERTOS init the systick, we just leech off of it
 
