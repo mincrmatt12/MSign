@@ -901,7 +901,7 @@ void screen::WeatherScreen::draw_big_hourlybar() {
 	}
 }
 
-void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax, bool decimals) {
+void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, int32_t &ymin, int32_t &ymax, bool decimals, bool non_negative) {
 	// Assume ymax/ymin have been set properly; we will do the ceil/floor operations
 	
 	// Draw axis at coordinate x.
@@ -909,7 +909,10 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 
 	// Update min/max
 	if (!decimals) {
-		ymin = intmath::floor10(ymin)*100 - 100;
+		if (non_negative)
+			ymin = 0;
+		else
+			ymin = intmath::floor10(ymin)*100 - 100;
 		ymax = intmath::ceil10(ymax)*100 + 100;
 	}
 	else {
@@ -1318,7 +1321,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 			expanded_graph_scroll = maxscroll * 128;
 
 		draw_graph_xaxis_full(bottom, leftside, 128, expanded_graph_scroll / 128, maxscroll + 128 - leftside, graph != PRECIP_HOUR);
-		draw_graph_yaxis(leftside, top, bottom, min_, max_, blk_precip != nullptr);
+		draw_graph_yaxis(leftside, top, bottom, min_, max_, blk_precip != nullptr, graph == WIND || graph == GUST);
 
 		if (blk_16) {
 			draw_graph_lines(leftside + 1, top, 128, bottom, blk_16, 24, 120, min_, max_, graph < WIND, expanded_graph_scroll / 128);
