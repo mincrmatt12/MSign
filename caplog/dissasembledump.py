@@ -24,6 +24,9 @@ for block in blocks["records"][int(sys.argv[2])]["blocks"]:
 
 for key in sorted(contents_map):
     raw = contents_map[key]
+    if key not in slotlib.slot_types:
+        print(f"< UNK: {key} >")
+        continue
     print(f"< {slotlib.slot_types[key][0]} >")
     if raw is None:
         print(f"... is incomplete in dump")
