@@ -1,0 +1,54 @@
+Adds a call to explicitly mark the WPA2 EAP sm finished
+if PMKSA caching is used
+
+(also explicitly marks the WPA2 EAP sm finished after the
+handshake finishes regardless, although the underlying sdk
+binary code only actually checks the completion state after
+the reception of a packet)
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/esp_supplicant/esp_wpa2.c
+@@ -115,6 +115,10 @@ static void wpa2_set_eap_state(wpa2_ent_
+     esp_wifi_set_wpa2_ent_state_internal(state);
+ }
+ 
++void wpa2_mark_externally_completed(void) {
++	wpa2_set_eap_state(WPA2_ENT_EAP_STATE_SUCCESS);
++}
++
+ static inline void wpa2_task_delete(void *arg)
+ {
+     void *my_task_hdl = xTaskGetCurrentTaskHandle();
+@@ -706,6 +710,7 @@ static int wpa2_start_eapol_internal(voi
+     if (wpa_sta_cur_pmksa_matches_akm()) {
+         wpa_printf(MSG_DEBUG,
+                 "RSN: PMKSA caching - do not send EAPOL-Start");
++		wpa2_set_eap_state(WPA2_ENT_EAP_STATE_SUCCESS);
+         return ESP_FAIL;
+     }
+ 
+Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.c
+===================================================================
+--- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.c
++++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/rsn_supp/wpa.c
+@@ -754,6 +754,8 @@ int   wpa_supplicant_check_group_cipher(
+ void   wpa_supplicant_key_neg_complete(struct wpa_sm *sm,
+                         const u8 *addr, int secure)
+ {
++	extern void wpa2_mark_externally_completed(void);
++
+ #ifdef DEBUG_PRINT
+     wpa_printf(MSG_DEBUG, "WPA: Key negotiation completed with "
+           MACSTR " [PTK=%s GTK=%s]\n", MAC2STR(addr),
+@@ -781,6 +783,10 @@ void   wpa_supplicant_key_neg_complete(s
+          */ 
+     }
+ 
++	// ensure the EAP sm is also dead at this point
++	if (wpa_key_mgmt_wpa_ieee8021x(sm->key_mgmt)) {
++		wpa2_mark_externally_completed();
++	}
+ }
+ 
+ 
