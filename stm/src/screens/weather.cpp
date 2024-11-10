@@ -920,13 +920,35 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 		ymax = intmath::ceil10<int32_t>(ymax, 10)*10 + 10;
 	}
 
+	int32_t precision = decimals ? 10 : 100;
+
 	// Draw tickmarks
-	int32_t space = (y1 - y0);
-	int32_t tickmark_min = intmath::ceil10<int32_t>(6 * (ymax - ymin) / space, decimals ? 10 : 100);
+	int32_t space = (y1 - y0) - 1;
+	int32_t tickmark_min = intmath::ceil10<int32_t>(6 * (ymax - ymin) / space, precision);
+
+	int max_pos = 0;
 
 	for (int i = 0;; ++i) {
-		int32_t value = (tickmark_min * i) * (decimals ? 10 : 100);
-		int32_t pos = y0 + intmath::round10((space*100 - 100) - ((space * value * 100) / (ymax - ymin)));
+		int32_t value = (tickmark_min * i) * precision;
+		int32_t pos = y1 - 1 - intmath::round10((value * space * 100) / (ymax - ymin));
+		if (pos < y0) break;
+		pos += 3;
+		if (pos < 5) break;
+		max_pos = pos;
+	}
+
+	// Compute how much slack space there is
+	
+	int slack_pixels = max_pos - std::max(5, y0 + 3);
+	int offset_space = 0;
+
+	if (slack_pixels > 0) {
+		offset_space = intmath::round10(((ymax - ymin) * slack_pixels) , (precision * space * 2));
+	}
+
+	for (int i = 0;; ++i) {
+		int32_t value = (offset_space + tickmark_min * i) * precision;
+		int32_t pos = y1 - 1 - intmath::round10((value * space * 100) / (ymax - ymin));
 
 		if (pos < y0) break;
 
@@ -1044,7 +1066,7 @@ void screen::WeatherScreen::draw_graph_xaxis_full(int16_t y, int16_t x0, int16_t
 }
 
 void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const int16_t * data, int per_screen, int total_amount, int32_t ymin, int32_t ymax, bool show_temp_colors, int x_scroll) {
-	int space = (y1 - y0);
+	int space = (y1 - y0) - 1;
 	int xspace = (x1 - x0);
 
 	int16_t previous_pos = INT16_MIN;
@@ -1109,7 +1131,7 @@ void screen::WeatherScreen::draw_graph_lines(int16_t x0, int16_t y0, int16_t x1,
 }
 
 void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1, int16_t y1, const bheap::TypedBlock<slots::PrecipData *>& precip_data, int per_screen, int desired_amount, int index_offset, int32_t ymin, int32_t ymax, int x_scroll) {
-	int32_t space = (y1 - y0);
+	int32_t space = (y1 - y0) - 1;
 	int i0, i1, nx, px, x, effx;
 
 	auto access_at = [&](int index) -> const slots::PrecipData& {
