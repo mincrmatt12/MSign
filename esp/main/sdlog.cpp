@@ -68,7 +68,7 @@ namespace sd {
 			portENTER_CRITICAL();
 			in_use = true;
 			lending = true;
-			end = lendpos = pos;
+			lendpos = end = pos;
 			in_use = false;
 			portEXIT_CRITICAL();
 			UINT bw = 0;

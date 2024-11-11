@@ -63,6 +63,6 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
 	target_link_options(${COMPONENT_LIB} PUBLIC -Wl,-u -Wl,_printf_float)
-	target_compile_options(${COMPONENT_LIB} PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -std=gnu++17>
+	target_compile_options(${COMPONENT_LIB} PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -std=gnu++20>
 )
 endif()
