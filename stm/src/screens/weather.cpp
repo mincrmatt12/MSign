@@ -1193,10 +1193,10 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 }
 
 void screen::WeatherScreen::draw_small_tempgraph() {
-	const int16_t * tempgraph_data = *servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
+	const auto &tempgraph_data = servicer.slot<int16_t *>(slots::WEATHER_TEMP_GRAPH);
 
 	int32_t min_ = INT16_MAX, max_ = INT16_MIN;
-	for (uint8_t i = 0; i < 24; ++i) {
+	for (int i = 0; i < std::min<unsigned>(25, tempgraph_data.size()); ++i) {
 		min_ = std::min<int32_t>(min_, tempgraph_data[i]);
 		max_ = std::max<int32_t>(max_, tempgraph_data[i]);
 	}
@@ -1207,7 +1207,7 @@ void screen::WeatherScreen::draw_small_tempgraph() {
 	draw_graph_xaxis(24, 79, 128, first, true);
 	draw_graph_yaxis(79, 0, 24, min_, max_);
 
-	draw_graph_lines(80, 0, 128, 24, tempgraph_data, 24, 120, min_, max_, true);
+	draw_graph_lines(80, 0, 128, 24, *tempgraph_data, 24, 120, min_, max_, true);
 }
 
 void screen::WeatherScreen::draw_small_precgraph() {
