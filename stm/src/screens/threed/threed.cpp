@@ -168,7 +168,7 @@ namespace threed {
 
 		while (current_tri < tri_count) {
 			if (x) {
-				if (sizeof(slots::Tri)*current_tri < x.datasize) {
+				if (current_tri < x.size()) {
 					Tri embiggened; const slots::Tri& shortened = x.data()[current_tri];
 					embiggened.r = shortened.r;
 					embiggened.g = shortened.g;

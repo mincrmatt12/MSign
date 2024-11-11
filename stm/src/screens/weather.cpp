@@ -1137,7 +1137,7 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 	auto access_at = [&](int index) -> const slots::PrecipData& {
 		const static slots::PrecipData null{};
 		if (index < index_offset) return null;
-		if (index - index_offset >= precip_data.datasize / sizeof(slots::PrecipData)) return null;
+		if (index - index_offset >= precip_data.size()) return null;
 		return precip_data[index - index_offset];
 	};
 
@@ -1775,13 +1775,13 @@ void screen::WeatherScreen::draw_fiveday() {
 	};
 
 	if (selected_fiveday < 0) {
-		selected_fiveday = times.end() - times.begin() - 1;
+		selected_fiveday = times.size() - 1;
 	}
-	else if (selected_fiveday >= times.end() - times.begin()) {
+	else if (selected_fiveday >= times.size()) {
 		selected_fiveday = 0;
 	}
 
-	for (int i = 0; i < times.end() - times.begin(); ++i) {
+	for (int i = 0; i < times.size(); ++i) {
 		int first_hr = 0, end_hr = 23;
 
 		if (i == 0) {
@@ -1795,10 +1795,10 @@ void screen::WeatherScreen::draw_fiveday() {
 		if (i == selected_fiveday) {
 			fiveday_cur_y = with_center(y - prev_y);
 		}
-		else if (i == selected_fiveday - 1 || i == (times.end() - times.begin() - 1) && selected_fiveday == 0) {
+		else if (i == selected_fiveday - 1 || i == (times.size() - 1) && selected_fiveday == 0) {
 			fiveday_prev_y = with_center(y - prev_y);
 		}
-		else if (i == selected_fiveday + 1 || selected_fiveday == (times.end() - times.begin() - 1) && i == 0) {
+		else if (i == selected_fiveday + 1 || selected_fiveday == (times.size() - 1) && i == 0) {
 			fiveday_next_y = with_center(y - prev_y);
 		}
 
