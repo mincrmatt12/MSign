@@ -213,7 +213,6 @@ namespace bheap {
 	// Helper type to access blocks of a known type
 	template<typename T>
 	struct TypedBlock : protected Block {
-#if __cpp_if_constexpr >= 201603
 		using data_type = std::conditional_t<std::is_pointer<std::decay_t<T>>::value, T, T&>;
 		using const_data_type = std::conditional_t<std::is_pointer<std::decay_t<T>>::value, std::add_pointer_t<const std::remove_pointer_t<T>>, const T&>;
 
@@ -243,10 +242,17 @@ namespace bheap {
 		data_type operator*() {return data();}
 		const_data_type operator*() const {return data();}
 		template<typename Idx>
-		decltype(auto) operator[](Idx idx) const {return (*(*this))[idx];}
+		decltype(auto) operator[](Idx idx) const 
+			requires std::is_pointer_v<std::decay_t<T>> {return (*(*this))[idx];}
 		template<typename Idx>
-		decltype(auto) operator[](Idx idx) {return (*(*this))[idx];}
-#endif
+		decltype(auto) operator[](Idx idx) 
+			requires std::is_pointer_v<std::decay_t<T>> {return (*(*this))[idx];}
+
+		size_t size() const 
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{ 
+			return datasize / sizeof(std::remove_pointer_t<data_type>); 
+		}
 
 		using Block::next;
 
@@ -261,34 +267,40 @@ namespace bheap {
 		}
 
 		// If this is an array type, allow iterating over it with begin/end
-		auto begin() {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+		auto begin() 
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
 			return data();
 		}
 
-		auto begin() const {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+		auto begin() const
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
 			return data();
 		}
 
-		auto cbegin() const {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
+		auto cbegin() const
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
 			return data();
 		}
 
-		auto end() {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
-			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		auto end()
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
+			return data() + size();
 		}
 
-		auto end() const {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
-			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		auto end() const
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
+			return data() + size();
 		}
 
-		auto cend() const {
-			static_assert(std::is_pointer_v<std::decay_t<T>>, "must be array type for iterator api");
-			return data() + (datasize / sizeof(std::remove_pointer_t<data_type>));
+		auto cend() const
+			requires std::is_pointer_v<std::decay_t<T>> 
+		{
+			return data() + size();
 		}
 	};
 
