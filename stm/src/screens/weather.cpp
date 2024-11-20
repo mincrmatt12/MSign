@@ -1709,7 +1709,7 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 			char pbuf[8];
 			snprintf(pbuf, sizeof pbuf, "%d%%", (precip.probability * 100) / 255);
 			draw::text(matrix.get_inactive_buffer(), pbuf, font::lcdpixel_6::info, 11, y1 - 1, 
-					draw::cvt((0x77_ccu).mix((0_ccu).mix(icon_color, 220), precip.probability)));
+					draw::cvt(led::color_t(0x77_cu).mix((0_ccu).mix(icon_color, 220), precip.probability)));
 		}
 
 		icon_color = draw::cvt(icon_color);
