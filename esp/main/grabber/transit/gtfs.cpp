@@ -104,6 +104,12 @@ namespace transit::gtfs {
 		}
 
 		auto remain = req.content_length();
+
+		if (remain == 0) {
+			ESP_LOGW(TAG, "discarding update of size 0");
+			return false;
+		}
+
 		uint8_t buf[768];
 
 		gtfs_tripupdate_state_t parser;
