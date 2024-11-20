@@ -6,6 +6,7 @@
 #include <esp_log.h>
 #include "parcels.cfg.h"
 #include <time.h>
+#include <algorithm>
 
 static const char * const TAG = "parcels";
 

@@ -13,6 +13,8 @@
 #include <time.h>
 #include <ctype.h>
 
+#include <algorithm>
+
 const static char* const TAG = "weathersummarizer";
 
 namespace weather {

@@ -11,6 +11,8 @@
 #include <gtfs_tripupdate.h>
 #include "esp_log.h"
 
+#include <algorithm>
+
 const static char * const TAG = "gtfs";
 
 namespace {
