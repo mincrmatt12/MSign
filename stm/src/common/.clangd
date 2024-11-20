@@ -1,0 +1,5 @@
+If:
+  PathMatch: [bheap.h, lru.h, slots.h]
+CompileFlags:
+  CompilationDatabase: None
+  Add: [-xc++, --std=c++20]
