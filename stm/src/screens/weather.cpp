@@ -1684,7 +1684,7 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 				break;
 			case slots::PrecipData::SNOW:
 				icon_color = 0xff_cu;
-				icon_bitmap = rain;
+				icon_bitmap = snow;
 				break;
 			case slots::PrecipData::FREEZING_RAIN:
 				icon_color = {50_cu, 202_cu, 255_cu};
