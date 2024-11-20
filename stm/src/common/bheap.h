@@ -352,7 +352,7 @@ namespace bheap {
 			Iterator operator++(int) {
 				// Copy
 				auto copy = *this;
-				++this;
+				++(*this);
 				return copy;
 			}
 
