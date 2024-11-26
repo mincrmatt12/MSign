@@ -1183,6 +1183,7 @@ void screen::WeatherScreen::draw_graph_precip(int16_t x0, int16_t y0, int16_t x1
 				draw::rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix({55_cu, 55_cu, 220_cu}, colprob)));
 				break;
 			case SNOW:
+			case SNOW_RATE:
 				draw::hatched_rect(matrix.get_inactive_buffer(), x, pos, x+1, y1, draw::cvt((0_ccu).mix(200_cu, colprob)), draw::cvt((0_ccu).mix(80_cu, colprob)));
 				break;
 			case SLEET:
@@ -1683,6 +1684,7 @@ int16_t screen::WeatherScreen::draw_day_summary(int16_t y0, int day, const slots
 				icon_bitmap = rain;
 				break;
 			case slots::PrecipData::SNOW:
+			case slots::PrecipData::SNOW_RATE:
 				icon_color = 0xff_cu;
 				icon_bitmap = snow;
 				break;

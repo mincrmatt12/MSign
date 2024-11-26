@@ -213,7 +213,11 @@ namespace slots {
 			RAIN,
 			SNOW,
 			FREEZING_RAIN,
-			SLEET
+			SLEET,
+
+			// only used for snow in a day summary, means the value is a rate instead of amount.
+			// for hourly/minutely precip arrays this is the same as snow (because those are always rate)
+			SNOW_RATE = SNOW | 0x80
 		} kind;
 		byte_percent probability; // from 0-255 as 0.0-1.0
 		int16_t amount; // mm / hr * 100
