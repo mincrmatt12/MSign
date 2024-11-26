@@ -3,9 +3,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "common/slots.h"
-#include "common/bheap.h"
-#include "common/heapsize.h"
 #include "dupm.h"
 #include "protocol.h"
 #include <type_traits>
