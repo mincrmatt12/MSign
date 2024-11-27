@@ -115,6 +115,20 @@ namespace bitmap::parcels {
 		0b00000000,0b00000000
 	};
 	// w=11, h=11, stride=2, color=255, 255, 255
+	const uint8_t not_found[] = {
+		0b00000100,0b00000000,
+		0b00001010,0b00000000,
+		0b00000010,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00000100,0b00000000,
+		0b00000000,0b00000000,
+		0b00001110,0b00000000,
+		0b00001010,0b00000000,
+		0b00001110,0b00000000,
+		0b00000000,0b00000000
+	};
+	// w=11, h=11, stride=2, color=255, 255, 255
 	const uint8_t in_transit_arrive[] = {
 		0b00000000,0b00000000,
 		0b00000000,0b00000000,
@@ -602,6 +616,7 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			iconcolorbase = 0xff7777_cc;
 			break;
 		case slots::ParcelInfo::CANCELLED:
+		case slots::ParcelInfo::NOT_FOUND:
 			iconcolorbase = 0xfa9b9b_cc;
 			break;
 		case slots::ParcelInfo::CUSTOMS_NEEDS_INFO:
@@ -660,6 +675,9 @@ led::color_t screen::ParcelScreen::draw_parcel_name(int16_t y, const slots::Parc
 			case slots::ParcelInfo::ERROR:
 				icon = general_error;
 				break;
+			case slots::ParcelInfo::NOT_FOUND:
+				icon = not_found;
+				break;
 			case slots::ParcelInfo::OTHER_EXCEPTION:
 				icon = exception;
 				break;
@@ -709,6 +727,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		else {
 			switch (parcel.status_icon) {
 				case slots::ParcelInfo::PRE_TRANSIT:
+				case slots::ParcelInfo::NOT_FOUND:
 					bulbpos = 12;
 					break;
 				case slots::ParcelInfo::PICKED_UP:

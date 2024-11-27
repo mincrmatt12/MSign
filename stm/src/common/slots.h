@@ -302,7 +302,8 @@ namespace slots {
 			CUSTOMS_NEEDS_INFO = 0x32,
 			OTHER_EXCEPTION = 0x33,
 
-			ERROR = 0x40
+			ERROR = 0x40,
+			NOT_FOUND = 0x41
 		} status_icon;
 
 		millis_timestamp updated_time;   // when was the last status received
