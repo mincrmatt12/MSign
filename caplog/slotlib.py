@@ -83,6 +83,9 @@ def _convert_opaque_to_token(x):
         }[int(x.byte_size)]
 
         try:
+            if declarations.is_enum(x):
+                basetoken = basetoken.upper()
+
             if "unsigned" in x.CPPNAME:
                 basetoken = basetoken.upper()
             
