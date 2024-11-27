@@ -572,21 +572,22 @@ namespace parcels {
 		int epis_for_current = 0;
 
 		json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
-			common_log_17track_rejection(stack, stack_ptr, v);
 			if (stack_ptr < 3) return;
 			if (strcmp(stack[1]->name, "data")) return;
-			if (strcmp(stack[2]->name, "accepted") || !stack[2]->is_array()) return;
+			if (!stack[2]->is_array()) return;
 
-			int s_idx = stack[2]->index;
-			if (s_idx > 6) return;
+			bool accepted = !strcmp(stack[2]->name, "accepted");
 
-			auto& parcel_info = master_pis[s_idx];
+			if (!accepted && strcmp(stack[2]->name, "rejected")) return;
+			if (num_packages > 6) return;
+
+			auto& parcel_info = master_pis[num_packages];
 
 			if (stack_ptr == 3 && v.type == v.OBJ) {
 				if (p_idx < 0) ESP_LOGW(TAG, "Didn't determine package ID in time");
 				// reset for next package
 				text_overflow_counter = 0;
-				num_packages = s_idx + 1;
+				++num_packages;
 				p_idx = -1;
 				text_overflow_effected = false;
 				if (epis_for_current == 0) parcel_info.status.flags |= slots::ParcelStatusLine::EXTRA_INFO_MISSING;
@@ -606,114 +607,127 @@ namespace parcels {
 					parcel_info.name_offset = parcel_dynamic_infos[p_idx].name_offset;
 				}
 			}
-			else if (!strcmp(stack[3]->name, "track_info")) {
-				if (p_idx < 0) return;
-				const auto& dynamic_info = parcel_dynamic_infos[p_idx];
-				bool use_localized = dynamic_info.state == ParcelDynamicInfo::READY && tracker_configs[p_idx].translate_messages;
-				bool use_local_time = tracker_configs[p_idx].raw_timestamp;
+			else {
+				if (!accepted) {
+					// Generate an error code (stack_ptr >= 5 by requirement)
+					// We do this by setting the status flags to have icon + have text
+					if (strcmp(stack[3]->name, "error")) return;
+					parcel_info.status_icon = slots::ParcelInfo::ERROR;
 
-				if (use_local_time)
-					parcel_info.status.flags |= slots::ParcelStatusLine::UPDATED_TIME_IS_LOCAL_TIME;
+					if (!strcmp(stack[4]->name, "message") && v.type == v.STR) {
+						parcel_info.status.status_offset = append_shortheap(v.str_val);
+						parcel_info.status.flags |= parcel_info.status.HAS_STATUS;
+					}
+				}
+				else if (!strcmp(stack[3]->name, "track_info")) {
+					if (p_idx < 0) return;
+					const auto& dynamic_info = parcel_dynamic_infos[p_idx];
+					bool use_localized = dynamic_info.state == ParcelDynamicInfo::READY && tracker_configs[p_idx].translate_messages;
+					bool use_local_time = tracker_configs[p_idx].raw_timestamp;
 
-				if (stack_ptr >= 6 && !strcmp(stack[4]->name, "time_metrics") && !strcmp(stack[5]->name, "estimated_delivery_date")) {
-					if (stack_ptr == 7 && v.type == json::Value::STR) { // record timestamps
-						if (!strcmp(stack[6]->name, "from"))
-							parcel_info.estimated_delivery_from = wifi::from_iso8601(v.str_val, true, true);
-						if (!strcmp(stack[6]->name, "to"))
-							parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true, true);
-					}
-					if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info with flags and move from-->to
-						if (parcel_info.estimated_delivery_from && parcel_info.estimated_delivery_to) {
-							parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY | slots::ParcelStatusLine::HAS_EST_DELIVERY_RANGE;
+					if (use_local_time)
+						parcel_info.status.flags |= slots::ParcelStatusLine::UPDATED_TIME_IS_LOCAL_TIME;
+
+					if (stack_ptr >= 6 && !strcmp(stack[4]->name, "time_metrics") && !strcmp(stack[5]->name, "estimated_delivery_date")) {
+						if (stack_ptr == 7 && v.type == json::Value::STR) { // record timestamps
+							if (!strcmp(stack[6]->name, "from"))
+								parcel_info.estimated_delivery_from = wifi::from_iso8601(v.str_val, true, true);
+							if (!strcmp(stack[6]->name, "to"))
+								parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true, true);
 						}
-						else if (parcel_info.estimated_delivery_from) {
-							parcel_info.estimated_delivery_to = std::exchange(parcel_info.estimated_delivery_from, 0);
-							parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
-						}
-						else if (parcel_info.estimated_delivery_to) {
-							parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
-						}
-					}
-				}
-				else if (stack_ptr >= 5 && !strcmp(stack[4]->name, "latest_event")) {
-					if (stack_ptr == 5 && v.type == v.OBJ) {
-						if (const char *loc = lbuf.result()) {
-							parcel_info.status.location_offset = append_shortheap(loc);
-							parcel_info.status.flags |= slots::ParcelStatusLine::HAS_LOCATION;
-						}
-						lbuf.~LocationBuf();
-						new (&lbuf) LocationBuf{};
-					}
-					else {
-						// Update location info
-						lbuf.push_from_event(stack + 5, stack_ptr - 5, v);
-						// Update status
-						if (const auto* desc_str = resolved_description_str(use_localized, stack + 5, stack_ptr - 5, v)) {
-							parcel_info.status.status_offset = append_shortheap(desc_str);
-							parcel_info.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
-						}
-						// Other metadata
-						else if (stack_ptr == 6) {
-							if (auto new_ts = update_timestamp_on(use_local_time, stack + 5, stack_ptr - 5, v)) {
-								parcel_info.updated_time = new_ts;
-								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+						if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info with flags and move from-->to
+							if (parcel_info.estimated_delivery_from && parcel_info.estimated_delivery_to) {
+								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY | slots::ParcelStatusLine::HAS_EST_DELIVERY_RANGE;
 							}
-							else if (!strcmp(stack[5]->name, "sub_status") && v.type == v.STR) {
-								parcel_info.status_icon = get_icon_enum(v.str_val);
+							else if (parcel_info.estimated_delivery_from) {
+								parcel_info.estimated_delivery_to = std::exchange(parcel_info.estimated_delivery_from, 0);
+								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
+							}
+							else if (parcel_info.estimated_delivery_to) {
+								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
 							}
 						}
 					}
-				}
-				else if (stack_ptr == 6 && !strcmp(stack[4]->name, "latest_status") && !strcmp(stack[5]->name, "sub_status"))
-				{
-					if (v.type == v.STR && parcel_info.status_icon == slots::ParcelInfo::UNK)
-						parcel_info.status_icon = get_icon_enum(v.str_val);
-				}
-				else if (stack_ptr >= 6 && !strcmp(stack[4]->name, "tracking") && !strcmp(stack[5]->name, "providers")) {
-					// If we've overflowed the text counter, ignore any events.
-					if (text_overflow_effected) return;
-					if (stack_ptr == 8 && !strcmp(stack[6]->name, "provider") && !strcmp(stack[7]->name, "name") && v.type == v.STR) {
-						last_provider_entry = append_carriers(v.str_val);
-					}
-					else if (stack_ptr >= 7 && !strcmp(stack[6]->name, "events") && stack[6]->is_array()) {
-						if (stack_ptr == 7 && v.type == v.OBJ) {
-							current_epi.for_parcel = s_idx;
-							if (stack[6]->index == 0) {
-								current_epi.new_subcarrier_offset = std::exchange(last_provider_entry, 0);
-								current_epi.status.flags |= slots::ParcelStatusLine::HAS_NEW_CARRIER;
-							}
-							// fetch location info
+					else if (stack_ptr >= 5 && !strcmp(stack[4]->name, "latest_event")) {
+						if (stack_ptr == 5 && v.type == v.OBJ) {
 							if (const char *loc = lbuf.result()) {
-								current_epi.status.location_offset = append_longheap(loc);
-								current_epi.status.flags |= slots::ParcelStatusLine::HAS_LOCATION;
+								parcel_info.status.location_offset = append_shortheap(loc);
+								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_LOCATION;
 							}
-							if (epi_idx == max_allocated_epis) {
-								max_allocated_epis += 4;
-								serial::interface.allocate_slot_size(slots::PARCEL_EXTRA_INFOS, max_allocated_epis * sizeof(slots::ExtraParcelInfoEntry));
-							}
-							serial::interface.update_slot_at(slots::PARCEL_EXTRA_INFOS, current_epi, epi_idx++, true, false);
-							current_epi.~ExtraParcelInfoEntry();
-							new (&current_epi) slots::ExtraParcelInfoEntry{};
 							lbuf.~LocationBuf();
 							new (&lbuf) LocationBuf{};
-							++epis_for_current;
-
-							if (text_overflow_counter > max_single_entry_textcount) {
-								text_overflow_effected = true;
-								parcel_info.status.flags |= slots::ParcelStatusLine::EXTRA_INFO_TRUNCATED;
+						}
+						else {
+							// Update location info
+							lbuf.push_from_event(stack + 5, stack_ptr - 5, v);
+							// Update status
+							if (const auto* desc_str = resolved_description_str(use_localized, stack + 5, stack_ptr - 5, v)) {
+								parcel_info.status.status_offset = append_shortheap(desc_str);
+								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
+							}
+							// Other metadata
+							else if (stack_ptr == 6) {
+								if (auto new_ts = update_timestamp_on(use_local_time, stack + 5, stack_ptr - 5, v)) {
+									parcel_info.updated_time = new_ts;
+									parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+								}
+								else if (!strcmp(stack[5]->name, "sub_status") && v.type == v.STR) {
+									parcel_info.status_icon = get_icon_enum(v.str_val);
+								}
 							}
 						}
-						else if (stack_ptr >= 8) {
-							lbuf.push_from_event(stack + 7, stack_ptr - 7, v);
-							if (const auto* desc_str = resolved_description_str(use_localized, stack + 7, stack_ptr - 7, v)) {
-								text_overflow_counter += strlen(desc_str);
-								current_epi.status.status_offset = append_longheap(desc_str);
-								current_epi.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
+					}
+					else if (stack_ptr == 6 && !strcmp(stack[4]->name, "latest_status") && !strcmp(stack[5]->name, "sub_status"))
+					{
+						if (v.type == v.STR && parcel_info.status_icon == slots::ParcelInfo::UNK)
+							parcel_info.status_icon = get_icon_enum(v.str_val);
+					}
+					else if (stack_ptr >= 6 && !strcmp(stack[4]->name, "tracking") && !strcmp(stack[5]->name, "providers")) {
+						// If we've overflowed the text counter, ignore any events.
+						if (text_overflow_effected) return;
+						if (stack_ptr == 8 && !strcmp(stack[6]->name, "provider") && !strcmp(stack[7]->name, "name") && v.type == v.STR) {
+							last_provider_entry = append_carriers(v.str_val);
+						}
+						else if (stack_ptr >= 7 && !strcmp(stack[6]->name, "events") && stack[6]->is_array()) {
+							if (stack_ptr == 7 && v.type == v.OBJ) {
+								current_epi.for_parcel = num_packages;
+								if (stack[6]->index == 0) {
+									current_epi.new_subcarrier_offset = std::exchange(last_provider_entry, 0);
+									current_epi.status.flags |= slots::ParcelStatusLine::HAS_NEW_CARRIER;
+								}
+								// fetch location info
+								if (const char *loc = lbuf.result()) {
+									current_epi.status.location_offset = append_longheap(loc);
+									current_epi.status.flags |= slots::ParcelStatusLine::HAS_LOCATION;
+								}
+								if (epi_idx == max_allocated_epis) {
+									max_allocated_epis += 4;
+									serial::interface.allocate_slot_size(slots::PARCEL_EXTRA_INFOS, max_allocated_epis * sizeof(slots::ExtraParcelInfoEntry));
+								}
+								serial::interface.update_slot_at(slots::PARCEL_EXTRA_INFOS, current_epi, epi_idx++, true, false);
+								current_epi.~ExtraParcelInfoEntry();
+								new (&current_epi) slots::ExtraParcelInfoEntry{};
+								lbuf.~LocationBuf();
+								new (&lbuf) LocationBuf{};
+								++epis_for_current;
+
+								if (text_overflow_counter > max_single_entry_textcount) {
+									text_overflow_effected = true;
+									parcel_info.status.flags |= slots::ParcelStatusLine::EXTRA_INFO_TRUNCATED;
+								}
 							}
-							else if (stack_ptr == 8) {
-								if (auto new_ts = update_timestamp_on(use_local_time, stack + 7, stack_ptr - 7, v)) {
-									current_epi.updated_time = new_ts;
-									current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+							else if (stack_ptr >= 8) {
+								lbuf.push_from_event(stack + 7, stack_ptr - 7, v);
+								if (const auto* desc_str = resolved_description_str(use_localized, stack + 7, stack_ptr - 7, v)) {
+									text_overflow_counter += strlen(desc_str);
+									current_epi.status.status_offset = append_longheap(desc_str);
+									current_epi.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
+								}
+								else if (stack_ptr == 8) {
+									if (auto new_ts = update_timestamp_on(use_local_time, stack + 7, stack_ptr - 7, v)) {
+										current_epi.updated_time = new_ts;
+										current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+									}
 								}
 							}
 						}
