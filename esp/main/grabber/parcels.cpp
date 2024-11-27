@@ -612,9 +612,19 @@ namespace parcels {
 					// Generate an error code (stack_ptr >= 5 by requirement)
 					// We do this by setting the status flags to have icon + have text
 					if (strcmp(stack[3]->name, "error")) return;
-					parcel_info.status_icon = slots::ParcelInfo::ERROR;
 
-					if (!strcmp(stack[4]->name, "message") && v.type == v.STR) {
+					if (!strcmp(stack[4]->name, "code") && v.type == v.INT) {
+						switch (v.int_val) {
+							case -18019909:
+							case -18019903:
+								parcel_info.status_icon = slots::ParcelInfo::NOT_FOUND;
+								break;
+							default:
+								parcel_info.status_icon = slots::ParcelInfo::ERROR;
+								break;
+						}
+					}
+					else if (!strcmp(stack[4]->name, "message") && v.type == v.STR) {
 						parcel_info.status.status_offset = append_shortheap(v.str_val);
 						parcel_info.status.flags |= parcel_info.status.HAS_STATUS;
 					}
