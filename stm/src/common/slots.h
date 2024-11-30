@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <type_traits>
 
 namespace slots {
 	// The comments here are important, as they get parsed by the dissector.
@@ -76,11 +77,24 @@ namespace slots {
 	
 	using millis_timestamp = uint64_t; // millisecond timestamp in local time
 	using byte_percent = uint8_t; // 0-255 percentage
+	
+	namespace detail {
+		template<typename T>
+			requires std::is_enum_v<T>
+		struct bitmask_of_impl {
+#ifndef __castxml__
+			using type = std::underlying_type_t<T>;
+#else
+			using type = T;
+#endif
+		};
+	}
+
+	template<typename T>
+	using bitmask_of = detail::bitmask_of_impl<T>::type;
 
 #pragma pack (push, 1)
 	struct WebuiStatus {
-		uint16_t flags;
-
 		enum Flags : uint16_t {
 			RECEIVING_SYSUPDATE = 1,
 			RECEIVING_WEBUI_PACK = 2,
@@ -90,6 +104,8 @@ namespace slots {
 
 			LAST_RX_FAILED = 16,
 		};
+
+		bitmask_of<Flags> flags;
 	};
 
 	struct WifiStatus {
@@ -99,11 +115,6 @@ namespace slots {
 	};
 
 	struct TTCInfo {
-		uint32_t flags;
-		char altdircodes_a[5]; // direction code for times_a
-		char altdircodes_b[5]; // direction code for times_b (if null, no data should be present there)
-		uint8_t stopdistance[5]; // minutes to walk to a given stop. if 0, assume a sane default.
-
 		enum Flags : uint32_t {
 			EXIST_0 = (1 << 0),
 			EXIST_1 = (1 << 1),  // the slot has data r.n.
@@ -115,6 +126,11 @@ namespace slots {
 			SUBWAY_DELAYED = (1 << 21), // we think the alert means there's a delay
 			SUBWAY_OFF = (1 << 22), // we think the alert means the subway is currently broken / out of service / off
 		};
+
+		bitmask_of<Flags> flags;
+		char altdircodes_a[5]; // direction code for times_a
+		char altdircodes_b[5]; // direction code for times_b (if null, no data should be present there)
+		uint8_t stopdistance[5]; // minutes to walk to a given stop. if 0, assume a sane default.
 
 		bool exist_set(int slot) const {
 			if (slot < 0 || slot > 4) return false;
@@ -191,15 +207,16 @@ namespace slots {
 	};
 
 	struct ScCfgInfo {
-		uint16_t enabled_mask;
-
-		enum EnabledMask : uint16_t {
+		enum ScreenMask : uint16_t {
 			TTC = 1 << ScCfgTime::TTC,
 			WEATHER = 1 << ScCfgTime::WEATHER,
 			MODEL = 1 << ScCfgTime::MODEL,
 			PARCELS = 1 << ScCfgTime::PARCELS,
 			PRINTER = 1 << ScCfgTime::PRINTER
 		};
+
+		bitmask_of<ScreenMask> enabled_mask, late_mask, failed_mask;
+		ScCfgTime::ScreenId current_updating;
 	};
 
 	struct ModelInfo {
@@ -274,7 +291,7 @@ namespace slots {
 			UPDATED_TIME_IS_LOCAL_TIME = 128,  // cannot be set on ExtraParcelInfoEntry
 		};
 
-		uint8_t flags;
+		bitmask_of<Flags> flags;
 	};
 
 	struct ParcelInfo {

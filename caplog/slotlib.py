@@ -16,7 +16,7 @@ with open(os.path.join(os.path.dirname(__file__), "../stm/src/common/slots.h"), 
 # parse the file
 gp, gn = utils.find_xml_generator()
 xml_generator_config = parser.xml_generator_configuration_t(
-    cflags="--std=c++17",
+    cflags="--std=c++20",
     xml_generator_path=gp,
     xml_generator=gn)
 
@@ -29,23 +29,19 @@ def _create_member_list(struct_info):
             continue
         bitfield = None
         enumer = None
-        if declarations.is_integral(i.decl_type):
+        if declarations.is_enum(i.decl_type):
             try:
-                for enumerator in struct_info.enumerations():
-                    if enumerator.byte_size != declarations.remove_alias(i.decl_type).byte_size:
-                        continue
-                    elif enumerator.name != snake_to_camel(i.name):
-                        continue
-                    else:
-                        bitfield = enumerator.get_name2value_dict()
-                        break;
-            except RuntimeError:
-                bitfield = None
-        elif declarations.is_enum(i.decl_type):
-            try:
-                enumer = global_namespace.enumeration(i.decl_type.decl_string).get_name2value_dict()
+                enumer = global_namespace.enumeration(declarations.remove_alias(i.decl_type).decl_string).get_name2value_dict()
             except RuntimeError:
                 enumer = {}
+
+            if isinstance(i.decl_type, declarations.declarated_t) and isinstance(i.decl_type.declaration, declarations.typedef_t):
+                upper = i.decl_type.declaration
+                if upper.parent is not None and declarations.templates.is_instantiation(upper.parent.decl_string):
+                    name, args = declarations.templates.split(upper.parent.decl_string)
+                    if name == '::slots::detail::bitmask_of_impl':
+                        bitfield = enumer
+                        enumer = None
 
         if declarations.is_class(i.decl_type):
             new_type_members.append(DeclaredMemberStruct(i.name, _create_member_list(i.decl_type.declaration)))
@@ -72,7 +68,7 @@ def _convert_opaque_to_token(x):
             "FLOAT": "f",
             "DOUBLE": "d"
         }[x.upper()]
-    elif isinstance(x, declarations.declarated_t) and not declarations.is_enum(x):
+    elif isinstance(x, declarations.declarated_t) and declarations.remove_alias(x) != x:
         return _convert_opaque_to_token(declarations.remove_alias(x))
     elif declarations.is_integral(x) or declarations.is_enum(x):
         basetoken = {
@@ -191,3 +187,8 @@ for entry in dataid_enum.values:
         raise RuntimeError("couldn't find index " + str(entry[0]))
 
     _handle_match(entry[1], comment_matches_indexed[entry[0]])
+
+if __name__ == "__main__":
+    import pprint
+
+    pprint.pprint(slot_types)
