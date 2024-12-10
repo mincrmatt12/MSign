@@ -681,16 +681,12 @@ namespace parcels {
 									parcel_info.updated_time = new_ts;
 									parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 								}
-								else if (!strcmp(stack[5]->name, "sub_status") && v.type == v.STR) {
-									parcel_info.status_icon = get_icon_enum(v.str_val);
-								}
 							}
 						}
 					}
-					else if (stack_ptr == 6 && !strcmp(stack[4]->name, "latest_status") && !strcmp(stack[5]->name, "sub_status"))
+					else if (stack_ptr == 6 && !strcmp(stack[4]->name, "latest_status") && !strcmp(stack[5]->name, "sub_status") && v.type == v.STR)
 					{
-						if (v.type == v.STR && parcel_info.status_icon == slots::ParcelInfo::UNK)
-							parcel_info.status_icon = get_icon_enum(v.str_val);
+						parcel_info.status_icon = get_icon_enum(v.str_val);
 					}
 					else if (stack_ptr >= 6 && !strcmp(stack[4]->name, "tracking") && !strcmp(stack[5]->name, "providers")) {
 						// If we've overflowed the text counter, ignore any events.
