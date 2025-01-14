@@ -45,7 +45,7 @@ namespace sccfg {
 		serial::interface.update_slot_raw(slots::SCCFG_TIMING, &times[0], sizeof(slots::ScCfgTime)*number_configured);
 	}
 
-	void set_force_disable_screen(slots::ScCfgInfo::EnabledMask e, bool on) {
+	void set_force_disable_screen(slots::ScCfgInfo::ScreenMask e, bool on) {
 		auto old = force_disabled_mask;
 
 		if (on) force_disabled_mask |= e;
@@ -56,7 +56,7 @@ namespace sccfg {
 		send_mask();
 	}
 
-	void set_force_enable_screen(slots::ScCfgInfo::EnabledMask e, bool on) {
+	void set_force_enable_screen(slots::ScCfgInfo::ScreenMask e, bool on) {
 		auto old = force_enabled_mask;
 
 		if (on) force_enabled_mask |= e;
