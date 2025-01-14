@@ -63,6 +63,7 @@ if (NOT CMAKE_BUILD_EARLY_EXPANSION)
 
 	target_include_directories(${COMPONENT_LIB} PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/parser)
 	target_link_options(${COMPONENT_LIB} PUBLIC -Wl,-u -Wl,_printf_float)
-	target_compile_options(${COMPONENT_LIB} PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -std=gnu++20>
-)
+	target_compile_options(${COMPONENT_LIB} PUBLIC $<$<COMPILE_LANGUAGE:CXX>: -std=gnu++20>)
+
+	set_source_files_properties(${CMAKE_CURRENT_LIST_DIR}/grabber/octoprintbitmap.cpp PROPERTIES COMPILE_OPTIONS "-O3")
 endif()
