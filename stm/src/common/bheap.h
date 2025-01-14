@@ -6,14 +6,9 @@
 #include <type_traits>
 #include <iterator>
 #include <alloca.h>
+#include <span>
 
 #include "lru.h"
-
-#if __cpp_inline_variables >= 201603
-#define MSN_BHEAP_INLINE_V const inline static
-#else
-#define MSN_BHEAP_INLINE_V constexpr static
-#endif
 
 #if defined(STM32F205xx) || defined(STM32F207xx) || defined(STM32F405xx)
 #include "../crash/main.h"
@@ -47,21 +42,21 @@ namespace bheap {
 		uint32_t location : 2;
 		uint32_t flags : 2;
 
-		MSN_BHEAP_INLINE_V uint32_t TemperatureHot = 0b11;
-		MSN_BHEAP_INLINE_V uint32_t TemperatureWarm = 0b10;
-		MSN_BHEAP_INLINE_V uint32_t TemperatureColdWantsWarm = 0b01; // block that wants to be warm but no space for it
-		MSN_BHEAP_INLINE_V uint32_t TemperatureCold =          0b00;
+		const inline static uint32_t TemperatureHot = 0b11;
+		const inline static uint32_t TemperatureWarm = 0b10;
+		const inline static uint32_t TemperatureColdWantsWarm = 0b01; // block that wants to be warm but no space for it
+		const inline static uint32_t TemperatureCold =          0b00;
 
-		//MSN_BHEAP_INLINE_V uint32_t LocationHotPotato = 0b00;
-		MSN_BHEAP_INLINE_V uint32_t LocationCanonical = 0b01;
-		MSN_BHEAP_INLINE_V uint32_t LocationEphemeral = 0b10;
-		MSN_BHEAP_INLINE_V uint32_t LocationRemote = 0b11;
+		//const inline static uint32_t LocationHotPotato = 0b00;
+		const inline static uint32_t LocationCanonical = 0b01;
+		const inline static uint32_t LocationEphemeral = 0b10;
+		const inline static uint32_t LocationRemote = 0b11;
 
-		MSN_BHEAP_INLINE_V uint32_t SlotEmpty = 0xff0;
-		MSN_BHEAP_INLINE_V uint32_t SlotEnd = 0xff1;
+		const inline static uint32_t SlotEmpty = 0xff0;
+		const inline static uint32_t SlotEnd = 0xff1;
 
-		MSN_BHEAP_INLINE_V uint32_t FlagDirty = 1;
-		MSN_BHEAP_INLINE_V uint32_t FlagLast = 2;
+		const inline static uint32_t FlagDirty = 1;
+		const inline static uint32_t FlagLast = 2;
 
 		// DATA ACCESS
 
@@ -237,8 +232,10 @@ namespace bheap {
 		}
 
 		// Allow use as a pointer type
-		T* operator->() {return &data();}
-		const T* operator->() const {return &data();}
+		T* operator->() 
+			requires (!std::is_pointer_v<std::decay_t<T>>) {return &data();}
+		const T* operator->() const
+			requires (!std::is_pointer_v<std::decay_t<T>>) {return &data();}
 		data_type operator*() {return data();}
 		const_data_type operator*() const {return data();}
 		template<typename Idx>
@@ -301,6 +298,18 @@ namespace bheap {
 			requires std::is_pointer_v<std::decay_t<T>> 
 		{
 			return data() + size();
+		}
+
+		template<typename Tail>
+			requires (!std::is_pointer_v<std::decay_t<T>>)
+		std::span<Tail> tail() {
+			return {reinterpret_cast<Tail *>(data() + 1), (this->datasize - sizeof(T)) / sizeof(Tail)};
+		}
+
+		template<typename Tail>
+			requires (!std::is_pointer_v<std::decay_t<T>>)
+		std::span<const Tail> tail() const {
+			return {reinterpret_cast<const Tail *>(data() + 1), (this->datasize - sizeof(T)) / sizeof(Tail)};
 		}
 	};
 
@@ -807,7 +816,7 @@ finish_setting:
 		// DATA ACCESS OPERATIONS
 
 		// Size/offset for something that doesn't exist
-		MSN_BHEAP_INLINE_V uint32_t npos = ~0u;
+		const inline static uint32_t npos = ~0u;
 
 		// Return the offset into the slot id this block is at.
 		//
@@ -831,14 +840,14 @@ finish_setting:
 		}
 
 		// Get the total free space (with various flags for what counts as "free" space)
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceEmpty = 1; // Total size of empty regions + their headers
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceZeroSizeCanonical = 2; // Headers for empty canonical blocks
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceEphemeral = 4; // Headers + data for ephemeral blocks (cold + warm)
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
+		const inline static uint32_t FreeSpaceEmpty = 1; // Total size of empty regions + their headers
+		const inline static uint32_t FreeSpaceZeroSizeCanonical = 2; // Headers for empty canonical blocks
+		const inline static uint32_t FreeSpaceEphemeral = 4; // Headers + data for ephemeral blocks (cold + warm)
+		const inline static uint32_t FreeSpaceHomogenizeable = 8; // Headers for noncontiguous regions.
 
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceAllocatable = FreeSpaceEmpty; // Free space for new allocations
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceEphemeral; // Free space after removing stuff
-		MSN_BHEAP_INLINE_V uint32_t FreeSpaceDefrag = FreeSpaceAllocatable | FreeSpaceHomogenizeable | FreeSpaceZeroSizeCanonical; // Free space after defrag()
+		const inline static uint32_t FreeSpaceAllocatable = FreeSpaceEmpty; // Free space for new allocations
+		const inline static uint32_t FreeSpaceCleanup = FreeSpaceAllocatable | FreeSpaceEphemeral; // Free space after removing stuff
+		const inline static uint32_t FreeSpaceDefrag = FreeSpaceAllocatable | FreeSpaceHomogenizeable | FreeSpaceZeroSizeCanonical; // Free space after defrag()
 
 		inline uint32_t free_space(uint32_t mode=FreeSpaceAllocatable) const {
 			return free_space(first, mode);
