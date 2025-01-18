@@ -211,47 +211,31 @@ namespace octoprint {
 			return true;
 		}
 
-		void line_impl_low(int x0, int y0, int x1, int y1) {
+		template<bool Hi>
+		void line_impl(int x0, int y0, int x1, int y1) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
-			int yi = 1;
-			if (dy < 0) {
-				yi = -1;
-				dy = -dy;
-			}
-			int D = 2*dy - dx;
-			int y = y0;
+			int inc = 1;
 
-			for (int x = x0; x <= x1; ++x) {
-				plot(x, y);
+			if ((Hi ? dx : dy) < 0) {
+				inc = -1;
+				(Hi ? dx : dy) = -(Hi ? dx : dy);
+			}
+
+			int D = 2*(Hi ? dx : dy) - (Hi ? dy : dx);
+			int a = (Hi ? x0 : y0);
+
+			for (int b = (Hi ? y0 : x0); b <= (Hi ? y1 : x1); ++b) {
+				if constexpr (Hi)
+					plot(a, b);
+				else
+					plot(b, a);
 
 				if (D > 0) {
-					y += yi;
-					D -= 2*dx;
+					a += inc;
+					D -= 2*(Hi ? dy : dx);
 				}
-				D += 2*dy;
-			}
-		}
-
-		void line_impl_high(int x0, int y0, int x1, int y1) {
-			int dx = x1 - x0;
-			int dy = y1 - y0;
-			int xi = 1;
-			if (dx < 0) {
-				xi = -1;
-				dx = -dx;
-			}
-			int D = 2*dx - dy;
-			int x = x0;
-
-			for (int y = y0; y <= y1; ++y) {
-				plot(x, y);
-
-				if (D > 0) {
-					x += xi;
-					D -= 2*dy;
-				}
-				D += 2*dx;
+				D += 2*(Hi ? dx : dy);
 			}
 		}
 
@@ -268,15 +252,15 @@ namespace octoprint {
 
 			if (abs(y1 - y0) < abs(x1 - x0)) {
 				if (x0 > x1)
-					line_impl_low(x1, y1, x0, y0);
+					line_impl<false>(x1, y1, x0, y0);
 				else
-					line_impl_low(x0, y0, x1, y1);
+					line_impl<false>(x0, y0, x1, y1);
 			}
 			else
 				if (y0 > y1)
-					line_impl_high(x1, y1, x0, y0);
+					line_impl<true>(x1, y1, x0, y0);
 				else
-					line_impl_high(x0, y0, x1, y1);
+					line_impl<true>(x0, y0, x1, y1);
 		}
 
 		struct LayerInfo {
