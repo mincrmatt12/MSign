@@ -5,7 +5,7 @@ import re
 import time
 import os
 
-from slotlib_inner import SlotType, SlotTypeArray, SlotTypeString, DeclaredMember, DeclaredMemberStruct, SlotTypeBits
+from slotlib_inner import SlotType, SlotTypeArray, SlotTypeString, SlotTypeTailed, DeclaredMember, DeclaredMemberStruct, SlotTypeBits
 
 def snake_to_camel(text):
     return "".join(x.title() for x in text.split("_"))
@@ -103,7 +103,7 @@ def _convert_opaque_to_token(x):
         raise ValueError("unknown instance: " + repr(x))
 
 # don't you just love regexes?
-comment_interpreter = re.compile(r"^\s*(\w+)\s*=\s*0x\w+,\s*//\s+([A-Z0-9_']+(?:\[\])?)(?:;[^\S\n\r]*(\w+)?)?(.+)?$", re.MULTILINE)
+comment_interpreter = re.compile(r"^\s*(\w+)\s*=\s*0x\w+,\s*//\s+([A-Z0-9_'+]+(?:\[\])?)(?:;[^\S\n\r]*([\w+]+)?)?(.+)?$", re.MULTILINE)
 
 """
 primary dict of type info
@@ -149,7 +149,15 @@ def _handle_match(entryname, match_data):
     global slot_types
     global previous_match
 
-    if match_data[0].endswith("[]"):
+    if "+" in match_data[0] and len(match_data) >= 2 and "+" in match_data[1]:
+        lst, _, rst = match_data[0].partition("+")
+        lsa, _, rsa = match_data[1].partition("+")
+        _handle_match(entryname, [lst, lsa])
+        ls = slot_types[entryname][1]
+        _handle_match(entryname, [rst, rsa])
+        rs = slot_types[entryname][1]
+        slot_types[entryname][1] = SlotTypeTailed(ls, rs)
+    elif match_data[0].endswith("[]"):
         _handle_match(entryname, (match_data[0].rstrip("[]"), *match_data[1:]))
         slot_types[entryname][1] = SlotTypeArray(slot_types[entryname][1])
     elif len(match_data) == 1:

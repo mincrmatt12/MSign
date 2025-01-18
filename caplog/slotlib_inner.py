@@ -197,6 +197,24 @@ class SlotTypeArray:
             response += text + "\n"
         return response[:-1]
 
+class SlotTypeTailed:
+    def __init__(self, header, trailer):
+        self.header = header
+        self.trailer = trailer
+
+    def __repr__(self):
+        return f"SlotTypeTailed({self.header!r}, {self.trailer!r})"
+
+    def parse(self, dat):
+        amt = self.header.get_length(dat)
+        hdr = self.header.parse(dat[:amt])
+        trailer = self.trailer.parse(dat[amt:])
+        
+        return hdr, trailer
+
+    def get_formatted(self, data, min_pos=0, max_pos=0):
+        return self.header.get_formatted(data[0]) + "\n" + self.trailer.get_formatted(data[1])
+
 class SlotTypeString:
     def __repr__(self):
         return "SlotTypeString()"
