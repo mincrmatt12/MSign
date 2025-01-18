@@ -1,7 +1,6 @@
 #include "sccfg.h"
 #include "../serial.h"
 #include "../config.h"
-#include <string.h>
 #include "../wifitime.h"
 #include "esp_log.h"
 #include "sccfg.cfg.h"
@@ -25,7 +24,7 @@ namespace sccfg {
 
 		ESP_LOGD(TAG, "enabled data: %d", enabled_mask);
 
-		serial::interface.update_slot(slots::SCCFG_INFO, obj);
+		serial::interface.update_slot_at(slots::SCCFG_INFO, &slots::ScCfgInfo::enabled_mask, enabled_mask);
 	}
 	
 	void init() {
@@ -43,6 +42,7 @@ namespace sccfg {
 		}
 
 		serial::interface.update_slot_raw(slots::SCCFG_TIMING, &times[0], sizeof(slots::ScCfgTime)*number_configured);
+		serial::interface.update_slot(slots::SCCFG_INFO, slots::ScCfgInfo{});
 	}
 
 	void set_force_disable_screen(slots::ScCfgInfo::ScreenMask e, bool on) {

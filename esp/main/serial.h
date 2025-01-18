@@ -34,19 +34,13 @@ namespace serial {
 
 		// Replace a slot with the contents of the object referenced by obj
 		template<typename T>
+			requires (!std::is_pointer_v<std::decay_t<T>> || (
+				std::is_array_v<T> && std::extent_v<T, 0> != 0))
 		inline void update_slot(uint16_t slotid, const T& obj, bool should_sync=true, bool should_mark_dirty=true) {
-			// Specially defer for array types
-			static_assert(!std::is_pointer_v<T> || (
-				std::is_array_v<T> && std::extent_v<T, 0> != 0
-			), "This will not work with pointers, use update_slot_raw instead, or derefence the pointer. For bounded arrays, pass them directly or use update_slot_range");
 			update_slot_raw(slotid, &obj, sizeof(T), should_sync, should_mark_dirty);
 		}
 		// Replace a slot with a null-terminated string
 		inline void update_slot(uint16_t slotid, const char *str, bool should_sync=true, bool should_mark_dirty=true) {
-			update_slot_raw(slotid, str, strlen(str) + 1, should_sync, should_mark_dirty); // include null terminator
-		}
-		// Replace a slot with a null-terminated string
-		inline void update_slot(uint16_t slotid, char *str, bool should_sync=true, bool should_mark_dirty=true) {
 			update_slot_raw(slotid, str, strlen(str) + 1, should_sync, should_mark_dirty); // include null terminator
 		}
 		// Replace a slot with an initializer-list of objects. No nosync version is provided since the init list
@@ -68,6 +62,7 @@ namespace serial {
 
 		// Update slotid as if it were an array of T[], setting T[index] = obj
 		template<typename T>
+			requires (!std::is_pointer_v<T>)
 		inline void update_slot_at(uint16_t slotid, const T& obj, size_t index, bool should_sync=true, bool should_mark_dirty=true) {
 			update_slot_partial(slotid, index * sizeof(T), &obj, sizeof(T), should_sync, should_mark_dirty);
 		}
@@ -86,6 +81,23 @@ namespace serial {
 		template<typename T>
 		inline void update_slot_range(uint16_t slotid, const T* obj, size_t index, size_t quantity, bool should_sync=true, bool should_mark_dirty=true) {
 			update_slot_partial(slotid, index * sizeof(T), obj, quantity * sizeof(T), should_sync, should_mark_dirty);
+		}
+
+		// Update a specific field in slotid, setting T->*ptr = value.
+		template<typename T, typename Ptd>
+		inline void update_slot_at(uint16_t slotid, Ptd (T::* ptr), const Ptd& value, bool should_sync=true, bool should_mark_dirty=true) {
+			auto &&dummy = *reinterpret_cast<const T *>(0);
+			auto offset = reinterpret_cast<uintptr_t>(static_cast<const void *>(std::addressof(dummy.*ptr))) - 
+				reinterpret_cast<uintptr_t>(static_cast<const void *>(std::addressof(dummy)));
+			update_slot_partial(slotid, offset, &value, sizeof(Ptd), should_sync, should_mark_dirty);
+		}
+
+		// Update a slot with a fixed size header followed by some number of trailing entries.
+		template<typename Head, typename Tail>
+		inline void update_slot_tailed(uint16_t slotid, const Head& head, const Tail *tail, size_t amt, bool should_mark_dirty=true) {
+			allocate_slot_size(slotid, sizeof(Head) + sizeof(Tail) * amt);
+			update_slot_partial(slotid, 0, &head, sizeof(Head), should_mark_dirty);
+			update_slot_partial(slotid, sizeof(Head), tail, sizeof(Tail) * amt, should_mark_dirty);
 		}
 
 		// Clear out a slot
