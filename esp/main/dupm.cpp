@@ -34,7 +34,7 @@ namespace serial {
 	}
 
 	void DataUpdateManager::init() {
-		pending = xQueueCreate(10, sizeof(DataUpdateRequest));
+		pending = xQueueCreate(16, sizeof(DataUpdateRequest));
 		if (!pending) {
 			ESP_LOGE(TAG, "failed to create dur queue");
 			while (1) {;}
