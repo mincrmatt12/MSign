@@ -263,6 +263,239 @@ namespace octoprint {
 					line_impl<true>(x0, y0, x1, y1);
 		}
 
+		void arc(int x0, int y0, int x1, int y1, int xc, int yc) {
+			constexpr static class OctantMap {
+				// Octants go clockwise from north of the center. The fields
+				// represent the transform from coordinates in octant 0 _to_ the given octant.
+				// Transforming from octant 1 to octant 0 is performed by flipping x/y, so transitively
+				// going to octant 1 is performed by flipping swap_xy.
+				struct {
+					bool swap_xy, neg_y, neg_x;
+				} xforms[8] = {
+					/* [0] = */ {false, false,  false},
+					/* [1] = */ {true,  false,  false},
+					/* [2] = */ {true,  true,   false},
+					/* [3] = */ {false, true,   false},
+					/* [4] = */ {false, true,   true},
+					/* [5] = */ {true,  true,   true},
+					/* [6] = */ {true,  false,  true},
+					/* [7] = */ {false, false,  true},
+				};
+
+				int octants[8];
+
+				// Octant 0 has coordinates with negative y, positive x, and where abs(dx) <= abs(dy)
+				// (i.e. where the effective slope is less than one). Thus, referencing the table
+				// we have that neg_x==true corresponds to dx < 0, neg_y = true corresponds to dy > 0
+				// and swap_xy==true corresponds to abs(dx) > abs(dy)
+			public:
+				constexpr OctantMap() {
+					for (int i = 0; i < 8; ++i) {
+						const auto& xform = xforms[i];
+						bool dx_gt_dy = xform.swap_xy;
+						bool dx_neg   = xform.neg_x;
+						bool dy_pos   = xform.neg_y;
+						octants[
+							dx_gt_dy * 4 +
+							dx_neg   * 2 +
+							dy_pos   * 1
+						] = i;
+					}
+				};
+
+				inline std::pair<int, int> to_octant(int dx, int dy, int octant, bool src_is_octant_1) const {
+					auto &xform = xforms[octant];
+					int px = (src_is_octant_1 ^ xform.swap_xy) ? -dy : dx;
+					int py = (src_is_octant_1 ^ xform.swap_xy) ? -dx : dy;
+					if (xform.neg_x) px = -px;
+					if (xform.neg_y) py = -py;
+					return {px, py};
+				}
+
+				inline int as_octant(int dx, int dy) const {
+					return octants[
+						(abs(dx) > abs(dy)) * 4 +
+						(dx < 0) * 2 +
+						(dy > 0) * 1
+					];
+				}
+			} OCTANTS{};
+
+			// The idea behind this is similar to a typical Bresenham/midpoint circle implementation, where
+			// we iteratively step along the edge of the circle and pick pixels which minimize the total radius
+			// error. 
+			//
+			// We treat the (xy0 -- xyc) line as a radius, while the (xy1 -- xyc) line is just used to define the end angle
+			// (so if they have different radii the algorithm will still terminate but not actually reach xy1 (just a point
+			// collinear with it).
+			//
+			// We avoid directly computing the radius (as that introduces a sqrt), instead always working with an implicit
+			// radius squared term. This means we cannot compute the normal starting point (0, -r). Instead we assume xy0
+			// is on the circle (even if there isn't an actual integer radius that would place a circle at that exact pixel.)
+			//
+			// Normally, the algorithm can assume its current dx/dy are in some known octant (usually 0) and mirror the remaining
+			// 7 octants to fill a circle. We instead notice that of the 8 octants, each half is rotationally symmetric (so octants
+			// 0, 2, 4, 6 are all identical modulo some rotation, and the same for 1, 3, 5, 7), and so we can mirror the input point
+			// into one of octants 0 or 1 without changing the relative angle from the start of the octant (going clockwise) to that
+			// new point. This means that when we re-mirror back into the original octant, points clockwise of the internal dx,dy point
+			// are still clockwise of xy0 and so are on the arc.
+			//
+			// This lets us draw clockwise from xy0 until the edge of its containing octant. We can similarly run the algorithm in reverse
+			// to draw the rest of xy0's octant - filling an entire octant and letting us fill in the entire circle. Since we want an arc,
+			// we limit the filled octants to the ones between xy0 and xy1 - the ones not containing xy0 and xy1 can be completely filled,
+			// the one containing xy0 is filled unconditionally in the forward clockwise pass and the one containing xy1 is filled until
+			// reaching xy1 -- the handedness check is done with a cross product -- x cross y is positive where y is counterclockwise of x.
+			
+			// Determine if we need to use the octant 0 (lo) or 1 (hi) implementation.
+
+			int dx0 = x0 - xc;
+			int dy0 = y0 - yc;
+
+			int dx1 = x1 - xc;
+			int dy1 = y1 - yc;
+
+			// Escape hatch: if xc/yc are _really_ far away from the endpoints, the thing is basically just
+			// a line (and integer overflow will break in that case)
+			if (std::max(abs(dx0), abs(dy0)) > 1e5) {
+				return line(x0, y0, x1, y1);
+			}
+
+			int o0 = OCTANTS.as_octant(dx0, dy0);
+			int o1 = OCTANTS.as_octant(dx1, dy1);
+
+			// Calculate number of octants to draw.
+			int oc = o1 - o0 + 1;
+			if (oc <= 0) oc += 8;
+			else if (oc == 1) {
+				// If both points are in the same octant, we either:
+				// 	- fill a single arc section, if xy0 is before xy1
+				// 	- fill the entire circle, otherwise
+				if (dx0 * dy1 - dy0 * dx1 <= 0) // allow = 0 for full circle
+					// Set octant count to 9 to indicate full circle, as we need
+					// to process the backwards pass into the first octant in this
+					// special case.
+					oc = 9;
+			}
+
+			// Move dy/dx into quadrant 0 (leave the octant to the IMPL block)
+			dy0 = -abs(dy0);
+			dx0 =  abs(dx0);
+
+			auto IMPL = [=, this] <bool Hi> () mutable {
+				if ((Hi && dx0 < -dy0) || (!Hi && dx0 > -dy0)) {
+					std::swap(dx0, dy0);
+					dx0 = -dx0;
+					dy0 = -dy0;
+				}
+
+				// Clockwise block
+				{
+					int dx = dx0;
+					int dy = dy0;
+					int oc0 = oc == 9 ? 8 : oc;
+					int err = 1 + (Hi ? (dx + 2*dy) : (2*dx + dy));
+
+					goto pixel; // Draw first pixel at (x0,y0) unconditionally
+
+					while ((Hi && 0 > dy) || // in octant 1, CW until at x-axis
+						   (!Hi && dx < -dy) // in octant 0, CW until at x=y line
+					) {
+						if constexpr (Hi) {
+							if (err > 0) {
+								err += 2*dy + 3;
+							}
+							else {
+								err += 2*(dx + dy) + 5;
+								++dx;
+							}
+							++dy;
+						}
+						else {
+							if (err < 0) {
+								err += 2*dx + 3;
+							}
+							else {
+								err += 2*(dx + dy) + 5;
+								++dy;
+							}
+							++dx;
+						}
+pixel:
+						for (int i = 0, oct = o0; i < oc0;
+							   ++i,     oct = (oct + 1) % 8)
+						{
+							auto [px, py] = OCTANTS.to_octant(dx, dy, oct, Hi);
+							// notice that for the full circle case oc0 == 8 so i < oc - 1 == i < 8 is always true -
+							// this ensures that we fill even CW of the endpoint because of the "inverted" nature
+							// of the arc. when oc == 1, we _do_ want to do the CCW check because the first octant
+							// genuinely is the last octant.
+							if (i < oc - 1 ||  // ... if not the last octant, always fill
+								px * dy1 - py * dx1 > 0) // ... or if we are ccw of the end point
+								plot(xc + px, yc + py);
+						}
+					}
+				}
+
+				--oc;
+				if (oc <= 0) // if only filling a single octant, we don't need the backwards pass
+					return;
+
+				// Counterclockwise block 
+				{
+					int dx = dx0;
+					int dy = dy0;
+					int err = -(Hi ? dx + 2*dy : 2*dx + dy) + 1;
+
+					// do not plot into the first octant
+					++o0;
+					o0 %= 8;
+
+					while ((Hi && dx > -dy) || // in octant 1, CCW until at x=y line
+						   (!Hi && 0 < dx)     // in octant 0, CCW until at y-axis
+					) {
+						if constexpr (Hi) {
+							if (err < 0) {
+								err -= 2*dy - 3;
+							}
+							else {
+								err -= 2*(dx + dy) - 5;
+								--dx;
+							}
+							--dy;
+						}
+						else {
+							if (err > 0) {
+								err -= 2*dx - 3;
+							}
+							else {
+								err -= 2*(dx + dy) - 5;
+								--dy;
+							}
+							--dx;
+						}
+
+						for (int i = 0, oct = o0; i < oc;
+							   ++i,     oct = (oct + 1) % 8) {
+							auto [px, py] = OCTANTS.to_octant(dx, dy, oct, Hi);
+							if (oct != o1 ||             // ... if not the last octant, always fill
+								px * dy1 - py * dx1 > 0) // ... or if we are ccw of the end point
+								plot(xc + px, yc + py);
+							// Unlike the forward block, we check for oct == o1 explicitly here:
+							// for one, it's faster than doing the arithmetic on oc, but also
+							// because unlike the forward pass we want to do the CCW check
+							// for o1 even if o1 == o0 (unlike in the forward pass where we
+							// explicitly _don't_ want that iff oc == 9)
+						}
+					}
+				}
+			};
+
+			if (o0 % 2 == 0)
+				IMPL.operator()<false>();
+			else
+				IMPL.operator()<true>();
+		}
+
 		struct LayerInfo {
 			fixed_t minx{}, miny{}, maxx{}, maxy{};
 
@@ -618,6 +851,8 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 
 	switch (state->c.command_type) {
 		case GCODE_SCAN_COMMAND_TYPE_G_MOVE:
+		case GCODE_SCAN_COMMAND_TYPE_G_ARC_CW:
+		case GCODE_SCAN_COMMAND_TYPE_G_ARC_CCW:
 			{
 				GcodeMachineState::Pos last = gstate->pos;
 				if (gstate->relative_g)
@@ -641,7 +876,7 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 					if (state->c.e_decimal >= 0) gstate->pos.e = fixed_t(state->c.e_int, state->c.e_decimal);
 				}
 
-				bool did_extrude = (last.x != gstate->pos.x || last.y != gstate->pos.y || last.z != gstate->pos.z) && last.e < gstate->pos.e;
+				bool did_extrude = (last.x != gstate->pos.x || last.y != gstate->pos.y || last.z != gstate->pos.z) && last.e < gstate->pos.e && state->c.wipe_nesting == 0;
 				if (!did_extrude)
 					return;
 
@@ -675,16 +910,43 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 				}
 
 				if (gstate->drawing) {
-					gstate->line(
-						gstate->draw_info.scale_x(last.x),
-						gstate->draw_info.scale_y(last.y),
-						gstate->draw_info.scale_x(gstate->pos.x),
-						gstate->draw_info.scale_y(gstate->pos.y)
-					);
+					switch (state->c.command_type) {
+						case GCODE_SCAN_COMMAND_TYPE_G_MOVE:
+							gstate->line(
+								gstate->draw_info.scale_x(last.x),
+								gstate->draw_info.scale_y(last.y),
+								gstate->draw_info.scale_x(gstate->pos.x),
+								gstate->draw_info.scale_y(gstate->pos.y)
+							);
+							break;
+						case GCODE_SCAN_COMMAND_TYPE_G_ARC_CW:
+							gstate->arc(
+								gstate->draw_info.scale_x(last.x),
+								gstate->draw_info.scale_y(last.y),
+								gstate->draw_info.scale_x(gstate->pos.x),
+								gstate->draw_info.scale_y(gstate->pos.y),
+								gstate->draw_info.scale_x(last.x + fixed_t(state->c.i_int, state->c.i_decimal)),
+								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal))
+							);
+							break;
+						// CCW is equivalent to swapping endpoints since we're just plotting
+						case GCODE_SCAN_COMMAND_TYPE_G_ARC_CCW:
+							gstate->arc(
+								gstate->draw_info.scale_x(gstate->pos.x),
+								gstate->draw_info.scale_y(gstate->pos.y),
+								gstate->draw_info.scale_x(last.x),
+								gstate->draw_info.scale_y(last.y),
+								gstate->draw_info.scale_x(last.x + fixed_t(state->c.i_int, state->c.i_decimal)),
+								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal))
+							);
+							break;
+						default: break;
+					}
 				}
 				else {
 					gstate->layer_info.append_point(last);
 					gstate->layer_info.append_point(gstate->pos);
+					// todo: arc bbox
 				}
 			}
 			break;
