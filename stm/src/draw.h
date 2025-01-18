@@ -54,11 +54,6 @@ namespace draw {
 
 	// Fill the entire screen.
 	void fill(matrix_type::framebuffer_type &fb, led::color_t rgb); 
-
-	namespace detail {
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb); 
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb); 
-	}
 	
 	// Draw a line including both endpoints
 	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb); 

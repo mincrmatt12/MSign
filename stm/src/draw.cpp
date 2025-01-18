@@ -234,49 +234,31 @@ namespace draw {
 	}
 
 	namespace detail {
-		
-		void line_impl_low(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
+		template<bool Hi>
+		void line_impl(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 			int dx = x1 - x0;
 			int dy = y1 - y0;
-			int yi = 1;
-			if (dy < 0) {
-				yi = -1;
-				dy = -dy;
-			}
-			int D = 2*dy - dx;
-			int16_t y = y0;
+			int inc = 1;
 
-			for (int16_t x = x0; x <= x1; ++x) {
-				fb.at((uint16_t)x, (uint16_t)y) = rgb;
-				
+			if ((Hi ? dx : dy) < 0) {
+				inc = -1;
+				(Hi ? dx : dy) = -(Hi ? dx : dy);
+			}
+
+			int D = 2*(Hi ? dx : dy) - (Hi ? dy : dx);
+			int a = (Hi ? x0 : y0);
+
+			for (int b = (Hi ? y0 : x0); b <= (Hi ? y1 : x1); ++b) {
+				if constexpr (Hi)
+					fb.at(a, b) = rgb;
+				else
+					fb.at(b, a) = rgb;
+
 				if (D > 0) {
-					y += yi;
-					D -= 2*dx;
+					a += inc;
+					D -= 2*(Hi ? dy : dx);
 				}
-				D += 2*dy;
-			}
-		}
-
-		
-		void line_impl_high(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
-			int dx = x1 - x0;
-			int dy = y1 - y0;
-			int xi = 1;
-			if (dx < 0) {
-				xi = -1;
-				dx = -dx;
-			}
-			int D = 2*dx - dy;
-			int16_t x = x0;
-
-			for (int16_t y = y0; y <= y1; ++y) {
-				fb.at((uint16_t)x, (uint16_t)y) = rgb;
-				
-				if (D > 0) {
-					x += xi;
-					D -= 2*dy;
-				}
-				D += 2*dx;
+				D += 2*(Hi ? dx : dy);
 			}
 		}
 	}
@@ -288,15 +270,15 @@ namespace draw {
 	void line(matrix_type::framebuffer_type &fb, int16_t x0, int16_t y0, int16_t x1, int16_t y1, led::color_t rgb) {
 		if (intmath::abs(y1 - y0) < intmath::abs(x1 - x0)) {
 			if (x0 > x1)
-				detail::line_impl_low(fb, x1, y1, x0, y0, rgb);
+				detail::line_impl<false>(fb, x1, y1, x0, y0, rgb);
 			else
-				detail::line_impl_low(fb, x0, y0, x1, y1, rgb);
+				detail::line_impl<false>(fb, x0, y0, x1, y1, rgb);
 		}
 		else {
 			if (y0 > y1)
-				detail::line_impl_high(fb, x1, y1, x0, y0, rgb);
+				detail::line_impl<true>(fb, x1, y1, x0, y0, rgb);
 			else
-				detail::line_impl_high(fb, x0, y0, x1, y1, rgb);
+				detail::line_impl<true>(fb, x0, y0, x1, y1, rgb);
 		}
 	}
 
