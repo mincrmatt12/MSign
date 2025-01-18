@@ -26,9 +26,57 @@ namespace octoprint {
 		fixed_t(float flt) : value(flt * Fac) {}
 		fixed_t(intmax_t real, int8_t decimal)
 		{
-			real *= Fac;
-			while (decimal--) real /= 10;
-			value = int(real);
+			switch (decimal) {
+				// if (Fac/10**decimal) > 1, multiply directly.
+				// the extra additions are for the fractional part (.6, .36, .536, .5536)
+				case 0:
+					value = int(real) * Fac;
+					return;
+				case 1:
+					value = int(real) * (Fac / 10);
+					return;
+				case 2:
+					value = int(real) * (Fac / 100) + int(real >> 2);
+					return;
+				case 3:
+					value = int(real) * (Fac / 1000) + int(real >> 1) + int(real >> 5);
+					return;
+				case 4:
+					value = int(real) * (Fac / 10000) + int(real >> 1) + int(real >> 5) + int(real >> 6);
+					return;
+				// if between 5-12, use a table of powers of 10 and work in intmax_t precision
+				case 5:
+				case 6:
+				case 7:
+				case 8:
+				case 9:
+				case 10:
+				case 11:
+					{
+						const static intmax_t factors[6] = {
+							100000LL,
+							1000000LL,
+							10000000LL,
+							100000000LL,
+							1000000000LL,
+							10000000000LL
+						};
+						real *= Fac;
+						real /= factors[decimal - 5];
+						value = int(real);
+					}
+					return;
+				default:
+					{
+						real *= Fac;
+						real /= 100000000000LL;
+						// if greater than 12, do repeated division for the remaining places
+						decimal -= 12;
+						while (decimal--) real /= 10;
+						value = int(real);
+					}
+					return;
+			}
 		}
 
 #define rel_op(x) inline bool operator x (fixed_t other) const { return value x other.value; } \
