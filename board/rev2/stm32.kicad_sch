@@ -3106,7 +3106,7 @@
 	)
 	(symbol
 		(lib_id "MCU_ST_STM32U5:STM32U575VGTx")
-		(at 200.66 90.17 0)
+		(at 100.33 100.33 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -3115,7 +3115,7 @@
 		(fields_autoplaced yes)
 		(uuid "f4c729e9-bcd8-44cf-bf21-ef0d56db8674")
 		(property "Reference" "U5"
-			(at 205.3941 156.21 0)
+			(at 105.0641 166.37 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3124,7 +3124,7 @@
 			)
 		)
 		(property "Value" "STM32U575VGTx"
-			(at 205.3941 158.75 0)
+			(at 105.0641 168.91 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3133,7 +3133,7 @@
 			)
 		)
 		(property "Footprint" "Package_QFP:LQFP-100_14x14mm_P0.5mm"
-			(at 182.88 153.67 0)
+			(at 82.55 163.83 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3143,7 +3143,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.st.com/resource/en/datasheet/stm32u575vg.pdf"
-			(at 200.66 90.17 0)
+			(at 100.33 100.33 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3152,7 +3152,7 @@
 			)
 		)
 		(property "Description" "STMicroelectronics Arm Cortex-M33 MCU, 1024KB flash, 786KB RAM, 160 MHz, 1.71-3.6V, 82 GPIO, LQFP100"
-			(at 200.66 90.17 0)
+			(at 100.33 100.33 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3471,7 +3471,7 @@
 	)
 	(symbol
 		(lib_id "Power_Protection:TPD6S300A")
-		(at 73.66 99.06 0)
+		(at 204.47 91.44 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -3480,7 +3480,7 @@
 		(fields_autoplaced yes)
 		(uuid "fcb9d952-08b3-47d0-84f9-bf6327b0834f")
 		(property "Reference" "U7"
-			(at 75.8541 81.28 0)
+			(at 206.6641 73.66 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3489,7 +3489,7 @@
 			)
 		)
 		(property "Value" "TPD6S300A"
-			(at 75.8541 83.82 0)
+			(at 206.6641 76.2 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3498,7 +3498,7 @@
 			)
 		)
 		(property "Footprint" "Package_DFN_QFN:WQFN-20-1EP_3x3mm_P0.4mm_EP1.7x1.7mm_ThermalVias"
-			(at 73.66 124.46 0)
+			(at 204.47 116.84 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3507,7 +3507,7 @@
 			)
 		)
 		(property "Datasheet" "https://www.ti.com/lit/ds/symlink/tpd6s300a.pdf"
-			(at 73.66 127 0)
+			(at 204.47 119.38 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3516,7 +3516,7 @@
 			)
 		)
 		(property "Description" "USB Type-C Port Protector: Short-to-VBUS Overvoltage and IEC ESD Protection, WQFN-20"
-			(at 73.66 99.06 0)
+			(at 204.47 91.44 0)
 			(effects
 				(font
 					(size 1.27 1.27)
