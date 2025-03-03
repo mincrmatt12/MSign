@@ -181,6 +181,9 @@ namespace tasks {
 				if (servicer.crashed())
 					goto when_crashed;
 			}
+
+			if (servicer.updating())
+				goto do_update;
 		}
 		else {
 			show_test_pattern(0, matrix.get_inactive_buffer());
@@ -195,6 +198,7 @@ when_crashed:
 			}
 
 			if (servicer.updating()) {
+do_update:
 				while (true) {
 					show_test_pattern(3, matrix.get_inactive_buffer(), servicer.update_status());
 					matrix.swap_buffers();
