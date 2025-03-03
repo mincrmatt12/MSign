@@ -1100,7 +1100,7 @@ namespace weather {
 			/* [RAIN] = */ {"rain", "Rain", "thunderstorms", "Thunderstorms"},
 			/* [SNOW] = */ {"snow", "Snow", "thundersnow", "Thundersnow"},
 			/* [FREEZING_RAIN] = */ {"freezing rain", "Freezing rain", "thundering freezing rain", "Thundering freezing rain"},
-			/* [SLEET] = */ {"sleet", "Sleet", "thundersleet", "Thundersleet"},
+			/* [SLEET] = */ {"ice pellets", "Ice pellets", "thunderice", "Thunderice"},
 		};
 
 		// Begin formatting the amount string. The amount string does not get a space after it.
