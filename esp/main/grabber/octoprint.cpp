@@ -327,10 +327,7 @@ namespace octoprint {
 
 		uint32_t filepos_now{};
 		bool has_job = false, needs_download = false;
-		struct as_deleter {
-			void operator()(char * x) const { free(x); }
-		};
-		std::unique_ptr<char, as_deleter> pending_gcode_download_path;
+		std::unique_ptr<char[]> pending_gcode_download_path;
 
 		// Get the current job info
 		{
@@ -365,9 +362,13 @@ namespace octoprint {
 						process_display_name(v.str_val);
 					}
 					else if (!strcmp(stack[3]->name, "path")) {
-						char *tgt{};
-						if (asprintf(&tgt, "/downloads/files/local/%s", v.str_val) < 0) return;
-						pending_gcode_download_path.reset(tgt);
+						static const char PFX[] = "/downloads/files/local/";
+						size_t tgt_size = sizeof(PFX) + dwhttp::url_encoded_size(v.str_val, true);
+						pending_gcode_download_path.reset(new (std::nothrow) char[tgt_size]);
+						if (pending_gcode_download_path) {
+							memcpy(pending_gcode_download_path.get(), PFX, sizeof PFX);
+							dwhttp::url_encode(v.str_val, pending_gcode_download_path.get() + sizeof PFX - 1, tgt_size - sizeof PFX + 1);
+						}
 					}
 				}
 				else if (stack_ptr == 3 && !strcmp(stack[1]->name, "progress")) {
