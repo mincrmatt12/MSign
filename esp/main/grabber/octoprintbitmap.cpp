@@ -24,7 +24,7 @@ namespace octoprint {
 		fixed_t(int raw, std::nullptr_t) : value(raw) {}
 		fixed_t(int nonraw) : value(nonraw * Fac) {}
 		fixed_t(float flt) : value(flt * Fac) {}
-		fixed_t(intmax_t real, int8_t decimal)
+		__attribute__((noinline)) fixed_t(intmax_t real, int8_t decimal)
 		{
 			switch (decimal) {
 				// if (Fac/10**decimal) > 1, multiply directly.
