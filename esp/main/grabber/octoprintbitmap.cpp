@@ -517,13 +517,13 @@ pixel:
 			}
 		};
 		struct DrawInfo {
-			fixed_t minx{-1}, miny{-1}, sizex{0}, sizey{0};
+			fixed_t minx{-1}, miny{-1}, scalex{0}, scaley{0};
 			int16_t xdim{}, ydim{};
 
 			DrawInfo() = default;
 			DrawInfo(const LayerInfo& recorded) {
-				sizex = (recorded.maxx - recorded.minx);
-				sizey = (recorded.maxy - recorded.miny);
+				fixed_t sizex = (recorded.maxx - recorded.minx);
+				fixed_t sizey = (recorded.maxy - recorded.miny);
 
 				float A = float(sizex) / float(sizey);
 				int y_size = sqrtf(BITMAP_BITS / A);
@@ -564,13 +564,15 @@ pixel:
 				miny = (recorded.miny + recorded.maxy - sizey) / 2;
 				xdim = x_size;
 				ydim = y_size;
+				scalex = fixed_t(xdim - 1) / sizex;
+				scaley = fixed_t(ydim - 1) / sizey;
 			}
 
 			int scale_x(fixed_t x) const {
-				return int(((x - minx) / sizex) * (xdim - 1));
+				return int((x - minx) * scalex);
 			}
 			int scale_y(fixed_t y) const {
-				return int(((y - miny) / sizey) * (ydim - 1));
+				return int((y - miny) * scaley);
 			}
 			int bitindex(int x, int y) const {
 				if (x < 0 || x >= xdim) return -1;
