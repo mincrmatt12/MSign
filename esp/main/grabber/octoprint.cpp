@@ -72,8 +72,12 @@ namespace octoprint {
 		int start = 0;
 		int end = strlen(original_string);
 
-		// Check if string ends with .gcode
-		if (!strcasecmp(".gcode", original_string + end - 6)) {
+		// Remove .3mf & .gcode suffixes
+		if (end > 4 && !strcasecmp(".3mf", original_string + end - 4)) {
+			end -= 4;
+		}
+
+		if (end > 6 && !strcasecmp(".gcode", original_string + end - 6)) {
 			end -= 6;
 		}
 
