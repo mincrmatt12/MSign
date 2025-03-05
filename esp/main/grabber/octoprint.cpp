@@ -72,8 +72,12 @@ namespace octoprint {
 		int start = 0;
 		int end = strlen(original_string);
 
-		// Check if string ends with .gcode
-		if (!strcasecmp(".gcode", original_string + end - 6)) {
+		// Remove .3mf & .gcode suffixes
+		if (end > 4 && !strcasecmp(".3mf", original_string + end - 4)) {
+			end -= 4;
+		}
+
+		if (end > 6 && !strcasecmp(".gcode", original_string + end - 6)) {
 			end -= 6;
 		}
 
@@ -284,7 +288,8 @@ namespace octoprint {
 			serial::interface.delete_slot(slots::PRINTER_BITMAP_INFO);
 			serial::interface.delete_slot(slots::PRINTER_BITMAP);
 			serial::interface.update_slot_nosync(slots::PRINTER_INFO, pi);
-			serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
+			if (state_message)
+				serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
 			serial::interface.delete_slot(slots::PRINTER_FILENAME);
 			serial::interface.sync();
 			sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, true);
@@ -311,6 +316,8 @@ namespace octoprint {
 				if (stack_ptr == 4 && !strcmp(stack[1]->name, "state") && !strcmp(stack[2]->name, "flags")) {
 					if ((!strcmp(stack[3]->name, "printing") || !strcmp(stack[3]->name, "paused")) && v.type == v.BOOL && v.bool_val)
 						pi.status_code = pi.PRINTING;
+					if (!strcmp(stack[3]->name, "operational") && v.type == v.BOOL && !v.bool_val)
+						pi.status_code = pi.DISCONNECTED;
 				}
 
 				if (stack_ptr == 3 && !strcmp(stack[1]->name, "state") && !strcmp(stack[2]->name, "text") && v.type == v.STR) {
@@ -321,16 +328,16 @@ namespace octoprint {
 			if (!jp.parse(printer_resp)) {
 				return fail("Unreachable");
 			}
+
+			if (pi.status_code == pi.DISCONNECTED)
+				return fail(nullptr);
 		}
 
 		sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, false);
 
 		uint32_t filepos_now{};
 		bool has_job = false, needs_download = false;
-		struct as_deleter {
-			void operator()(char * x) const { free(x); }
-		};
-		std::unique_ptr<char, as_deleter> pending_gcode_download_path;
+		std::unique_ptr<char[]> pending_gcode_download_path;
 
 		// Get the current job info
 		{
@@ -365,9 +372,13 @@ namespace octoprint {
 						process_display_name(v.str_val);
 					}
 					else if (!strcmp(stack[3]->name, "path")) {
-						char *tgt{};
-						if (asprintf(&tgt, "/downloads/files/local/%s", v.str_val) < 0) return;
-						pending_gcode_download_path.reset(tgt);
+						static const char PFX[] = "/downloads/files/local/";
+						size_t tgt_size = sizeof(PFX) + dwhttp::url_encoded_size(v.str_val, true);
+						pending_gcode_download_path.reset(new (std::nothrow) char[tgt_size]);
+						if (pending_gcode_download_path) {
+							memcpy(pending_gcode_download_path.get(), PFX, sizeof PFX);
+							dwhttp::url_encode(v.str_val, pending_gcode_download_path.get() + sizeof PFX - 1, tgt_size - sizeof PFX + 1);
+						}
 					}
 				}
 				else if (stack_ptr == 3 && !strcmp(stack[1]->name, "progress")) {

@@ -1,5 +1,7 @@
 #include "dwhttp.h"
 #include "esp_log.h"
+#include <cctype>
+#include <cstdio>
 #include <esp_system.h>
 #include <cstdlib>
 #include <memory>
@@ -912,5 +914,32 @@ void dwhttp::Connection::end_body() {
 	else {
 		adapter->stop();
 		current_state = CLOSED;
+	}
+}
+
+size_t dwhttp::url_encoded_size(const char *path, bool ignore_slashes) {
+	size_t outsz = 0;
+	int c;
+	while ((c = *path++)) {
+		if (isalnum(c) || c == '~' || c == '-' || c == '.' || c == '_' || (ignore_slashes && c == '/')) ++outsz;
+		else outsz += 3;
+	}
+	return outsz;
+}
+
+void dwhttp::url_encode(const char *src, char *target, size_t tgtlen, bool ignore_slashes) {
+	int c;
+	while (tgtlen > 1 && (c = *src++)) {
+		if (isalnum(c) || c == '~' || c == '-' || c == '.' || c == '_' || (ignore_slashes && c == '/')) {
+			--tgtlen;
+			*target++ = c;
+		}
+		else {
+			if (tgtlen < 4) return;
+			snprintf(target, tgtlen, "%%%02X", c);
+			tgtlen -= 3;
+			target += 3;
+		}
+		*target = 0;
 	}
 }

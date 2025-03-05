@@ -147,6 +147,9 @@ namespace dwhttp {
 	Connection open_site(const char * host, const char * path, const char * method="GET");
 
 	void close_connection(bool ssl);
+
+	size_t url_encoded_size(const char *path, bool ignore_slashes = false); 
+	void url_encode(const char *src, char *target, size_t tgtlen, bool ignore_slashes = false);
 }
 
 #endif
