@@ -288,7 +288,8 @@ namespace octoprint {
 			serial::interface.delete_slot(slots::PRINTER_BITMAP_INFO);
 			serial::interface.delete_slot(slots::PRINTER_BITMAP);
 			serial::interface.update_slot_nosync(slots::PRINTER_INFO, pi);
-			serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
+			if (state_message)
+				serial::interface.update_slot(slots::PRINTER_STATUS, state_message);
 			serial::interface.delete_slot(slots::PRINTER_FILENAME);
 			serial::interface.sync();
 			sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, true);
@@ -315,6 +316,8 @@ namespace octoprint {
 				if (stack_ptr == 4 && !strcmp(stack[1]->name, "state") && !strcmp(stack[2]->name, "flags")) {
 					if ((!strcmp(stack[3]->name, "printing") || !strcmp(stack[3]->name, "paused")) && v.type == v.BOOL && v.bool_val)
 						pi.status_code = pi.PRINTING;
+					if (!strcmp(stack[3]->name, "operational") && v.type == v.BOOL && !v.bool_val)
+						pi.status_code = pi.DISCONNECTED;
 				}
 
 				if (stack_ptr == 3 && !strcmp(stack[1]->name, "state") && !strcmp(stack[2]->name, "text") && v.type == v.STR) {
@@ -325,6 +328,9 @@ namespace octoprint {
 			if (!jp.parse(printer_resp)) {
 				return fail("Unreachable");
 			}
+
+			if (pi.status_code == pi.DISCONNECTED)
+				return fail(nullptr);
 		}
 
 		sccfg::set_force_disable_screen(slots::ScCfgInfo::PRINTER, false);
