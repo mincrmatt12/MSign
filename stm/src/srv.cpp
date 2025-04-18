@@ -1519,11 +1519,6 @@ srv::Servicer::DebugInfo srv::Servicer::get_debug_information() {
 		.used_hot_space_arena = STM_HEAP_SIZE - arena.free_space(arena.FreeSpaceCleanup | arena.FreeSpaceDefrag)
 	};
 }
-// override _write
-
-extern "C" int __attribute__((used)) _write(int file, char* ptr, int len) {
-	return 0; // todo
-}
 
 #ifdef USE_F4
 __attribute__((section(".ccmram")))
