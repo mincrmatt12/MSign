@@ -1423,7 +1423,7 @@ namespace weather {
 					timespec.hourly = true;
 
 					append(snprintf(ptr, remain, code == WINDY_SOON ? "Very windy " : "Very windy conditions "));
-					if (prior_result == SummaryResult::PartialSummary || (prior_result == SummaryResult::Empty && wind.wind_gust_speed < 5500)) {
+					if (prior_result == SummaryResult::PartialSummary || (prior_result == SummaryResult::Empty && (wind.wind_gust_speed < 5500 || wind.wind_speed <= 4500))) {
 						if (wind.wind_speed > 4500)
 							append(snprintf(ptr, remain, "(up to %d km/h) ", wind.wind_speed / 100));
 						else
