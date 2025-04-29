@@ -57,18 +57,22 @@ namespace crash::decode {
 		// First, adjust SP to point to the start of the virtual stack frame
 		// for the CPU interrupt return mechanism (the saved chunk of registers)
 
-		if (PC == EXC_RETURN_THREAD_PSP) {
-			if (!(__get_CONTROL() & 2)) {  // currently using MSP, switch to PSP
-				SP = __get_PSP();
-			}
-		}
+		bool exit_into_psp = PC == EXC_RETURN_THREAD_PSP;
 
 		uint32_t *SP_at_isr = reinterpret_cast<uint32_t *>(SP);
 		PC = SP_at_isr[6];
 		LR = SP_at_isr[5];
 		// xPSR & STKALIGN
 		bool aligned = SP_at_isr[7] & (1 << 9);
-		SP = reinterpret_cast<uint32_t>(&SP_at_isr[8]) + aligned * 4;
+
+		if (exit_into_psp) {
+			if (!(__get_CONTROL() & 2)) {  // currently using MSP, switch to PSP
+				SP = __get_PSP();
+			}
+		}
+		else {
+			SP = reinterpret_cast<uint32_t>(&SP_at_isr[8]) + aligned * 4;
+		}
 	}
 
 	// Sliding window backtrace parser
