@@ -318,6 +318,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -327,6 +328,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -336,6 +338,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -384,6 +387,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -393,6 +397,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -402,6 +407,7 @@
 			(effects
 				(font
 					(size 1.27 1.27)
+					(color 255 255 194 1)
 				)
 				(hide yes)
 			)
@@ -414,6 +420,264 @@
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f"
 					(reference "#PWR011")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(sheet
+		(at 167.64 58.42)
+		(size 43.18 50.8)
+		(fields_autoplaced yes)
+		(stroke
+			(width 0.1524)
+			(type solid)
+		)
+		(fill
+			(color 0 0 0 0.0000)
+		)
+		(uuid "2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc")
+		(property "Sheetname" "Decoder"
+			(at 167.64 57.7084 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left bottom)
+			)
+		)
+		(property "Sheetfile" "decoder.kicad_sch"
+			(at 167.64 109.8046 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left top)
+			)
+		)
+		(pin "MEM_WE" input
+			(at 167.64 60.96 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "e8577f2d-f265-4e01-abd4-64bc55384e14")
+		)
+		(pin "MEM_OE" input
+			(at 167.64 63.5 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "b82edf7d-4861-438c-9dfe-91513ef0cb57")
+		)
+		(pin "PANEL_RGB_OE" input
+			(at 167.64 66.04 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "1a02b95a-545f-40c4-b024-fc0c6cde08bd")
+		)
+		(pin "RGB_CNT_DIN0" input
+			(at 167.64 69.85 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "c5d25d34-e055-4d9f-a11f-93a2448a0b52")
+		)
+		(pin "RGB_CNT_DIN1" input
+			(at 167.64 72.39 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "1b797ddb-2879-40de-8bfd-511a7fa39321")
+		)
+		(pin "RGB_CNT_CE" input
+			(at 167.64 74.93 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "a90d9037-5fcf-4606-abb2-747dd1da7ee3")
+		)
+		(pin "RGB_CNT_RST" input
+			(at 167.64 77.47 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "263bce64-179d-4f7a-9179-6a6573580717")
+		)
+		(pin "RGB_CLK" input
+			(at 167.64 80.01 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "2dc028f4-5929-494f-aad4-fc9237b8046f")
+		)
+		(pin "PIX_CNT_PLD" input
+			(at 167.64 86.36 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "b4b0f867-beea-4d93-a9ce-fb4587ada999")
+		)
+		(pin "PIX_CNT_CE" input
+			(at 167.64 88.9 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "e3d87741-9f62-44a6-8ca7-7f7680601041")
+		)
+		(pin "PIX_CLK" input
+			(at 167.64 91.44 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "09b46257-7f11-4d73-a893-9e6891656e64")
+		)
+		(pin "PIX_CNT_DIN[0..3]" input
+			(at 167.64 93.98 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "73f04da4-6eff-47e5-8060-609b02962799")
+		)
+		(pin "PIX_CNT_RST" input
+			(at 167.64 96.52 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "4322ba3d-9018-4f2a-8ad3-fa0121842256")
+		)
+		(pin "PANEL_B1" output
+			(at 210.82 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "6dfd9527-a288-4d60-88f2-384fe390d011")
+		)
+		(pin "PANEL_G0" output
+			(at 210.82 77.47 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "61702ab9-33fa-4856-a603-1ff39ee50569")
+		)
+		(pin "PANEL_R0" output
+			(at 210.82 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "218455c2-a557-457f-893f-55805959137a")
+		)
+		(pin "PANEL_G1" output
+			(at 210.82 85.09 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "c1d0e582-84df-4cab-a84d-283602544e0d")
+		)
+		(pin "PANEL_R1" output
+			(at 210.82 82.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "3dd0a99d-7116-4dec-ac9c-fb099bc89118")
+		)
+		(pin "PANEL_B0" output
+			(at 210.82 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+			(uuid "007af67d-16db-49de-ba6a-b26943349ebc")
+		)
+		(pin "MEM_A13" input
+			(at 167.64 100.33 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "aedf538e-fd23-4c18-9eb2-4ffe7c1be2f8")
+		)
+		(pin "MEM_IO" bidirectional
+			(at 167.64 102.87 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "81607460-8abd-4c75-96d9-81579fa5e5c5")
+		)
+		(pin "PIX_MEM_A[0..7]" input
+			(at 167.64 106.68 180)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+			(uuid "4d38d15d-1ce6-45b3-a994-3ee9ffe5953c")
+		)
+		(instances
+			(project "mainboard"
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f"
+					(page "8")
 				)
 			)
 		)
@@ -615,7 +879,7 @@
 		)
 	)
 	(sheet
-		(at 90.932 91.186)
+		(at 89.662 101.346)
 		(size 50.292 45.72)
 		(fields_autoplaced yes)
 		(stroke
@@ -627,7 +891,7 @@
 		)
 		(uuid "ab8e590b-cde3-4860-87b4-37e60f787bc4")
 		(property "Sheetname" "WiFi MCU"
-			(at 90.932 90.4744 0)
+			(at 89.662 100.6344 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -636,7 +900,7 @@
 			)
 		)
 		(property "Sheetfile" "esp32.kicad_sch"
-			(at 90.932 137.4906 0)
+			(at 89.662 147.6506 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -653,7 +917,7 @@
 		)
 	)
 	(sheet
-		(at 180.34 56.134)
+		(at 229.87 59.944)
 		(size 44.958 41.148)
 		(fields_autoplaced yes)
 		(stroke
@@ -665,7 +929,7 @@
 		)
 		(uuid "b5a611d3-6308-4792-ad5f-d479afbae4ce")
 		(property "Sheetname" "LED Connection"
-			(at 180.34 55.4224 0)
+			(at 229.87 59.2324 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -674,7 +938,7 @@
 			)
 		)
 		(property "Sheetfile" "matrixandbuffer.kicad_sch"
-			(at 180.34 97.8666 0)
+			(at 229.87 101.6766 0)
 			(effects
 				(font
 					(size 1.27 1.27)

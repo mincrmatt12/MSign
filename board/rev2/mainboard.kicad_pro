@@ -602,6 +602,10 @@
     [
       "b5a611d3-6308-4792-ad5f-d479afbae4ce",
       "LED Connection"
+    ],
+    [
+      "2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc",
+      "Decoder"
     ]
   ],
   "text_variables": {}
