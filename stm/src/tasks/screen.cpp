@@ -47,7 +47,7 @@ namespace tasks {
 		draw::text(fb, "MSIGN V" MSIGN_MAJOR_VERSION_STRING MSIGN_GIT_REV, font::lcdpixel_6::info, 0, 7, 0x00ff00_cc);
 		draw::text(fb, "STM OK", font::lcdpixel_6::info, 0, 21, {4095});
 		char buf[5] = {0};
-		strncpy(buf, bootcmd_get_bl_revision(), 4);
+		memcpy(buf, bootcmd_get_bl_revision(), 4);
 		draw::multi_text(fb, font::lcdpixel_6::info, 0, 14, "BLOAD ", led::color_t{14, 4095, 127_c}, buf, led::color_t{4095});
 		switch (stage) {
 			case 1:

@@ -113,7 +113,7 @@ namespace {
 
 		srv::ServicerLockGuard g(servicer);
 		const auto& remote_ver_blk = servicer.slot<const char *>(slots::ESP_VER_STR);
-		char buf[5] = {0}; strncpy(buf, bootcmd_get_bl_revision(), 4);
+		char buf[5] = {0}; memcpy(buf, bootcmd_get_bl_revision(), 4);
 		
 		op.multi_text("bl rev: ", 0xff_c, buf, 0x6666ff_cc);
 		op.multi_text("stm ver: ", 0xff_c, "V" MSIGN_MAJOR_VERSION_STRING MSIGN_GIT_REV, 0x6666ff_cc);
