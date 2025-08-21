@@ -237,7 +237,7 @@ add_custom_command(TARGET stm
 	COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/dbg/create_blob.py $<TARGET_FILE:stm> ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin
 	COMMAND ${OBJCOPY_EXECUTABLE} --set-section-flags .fw_dbg=ALLOC,LOAD,CONTENTS,READONLY,DATA --update-section .fw_dbg=${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin $<TARGET_FILE:stm> > ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.log 2>&1
 	BYPRODUCTS ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.bin ${CMAKE_CURRENT_BINARY_DIR}/stm.dbg.log
-	COMMENT Generating and appending debug blob
+	COMMENT "Generating and appending debug blob"
 )
 
 if (EXISTS ${openocd_executable})
