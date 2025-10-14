@@ -263,7 +263,7 @@ namespace octoprint {
 					line_impl<true>(x0, y0, x1, y1);
 		}
 
-		void arc(int x0, int y0, int x1, int y1, int xc, int yc) {
+		void arc(int x0, int y0, int x1, int y1, int xc, int yc, bool full_circle) {
 			constexpr static class OctantMap {
 				// Octants go clockwise from north of the center. The fields
 				// represent the transform from coordinates in octant 0 _to_ the given octant.
@@ -370,7 +370,7 @@ namespace octoprint {
 				// If both points are in the same octant, we either:
 				// 	- fill a single arc section, if xy0 is before xy1
 				// 	- fill the entire circle, otherwise
-				if (dx0 * dy1 - dy0 * dx1 <= 0) // allow = 0 for full circle
+				if (full_circle && dx0 * dy1 - dy0 * dx1 <= 0) // allow = 0 for full circle
 					// Set octant count to 9 to indicate full circle, as we need
 					// to process the backwards pass into the first octant in this
 					// special case.
@@ -928,7 +928,8 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 								gstate->draw_info.scale_x(gstate->pos.x),
 								gstate->draw_info.scale_y(gstate->pos.y),
 								gstate->draw_info.scale_x(last.x + fixed_t(state->c.i_int, state->c.i_decimal)),
-								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal))
+								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal)),
+								last.x == gstate->pos.x && last.y == gstate->pos.y
 							);
 							break;
 						// CCW is equivalent to swapping endpoints since we're just plotting
@@ -939,7 +940,8 @@ extern "C" void gcode_scan_got_command_hook(gcode_scan_state_t *state, uint8_t i
 								gstate->draw_info.scale_x(last.x),
 								gstate->draw_info.scale_y(last.y),
 								gstate->draw_info.scale_x(last.x + fixed_t(state->c.i_int, state->c.i_decimal)),
-								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal))
+								gstate->draw_info.scale_y(last.y - fixed_t(state->c.j_int, state->c.j_decimal)),
+								last.x == gstate->pos.x && last.y == gstate->pos.y
 							);
 							break;
 						default: break;
