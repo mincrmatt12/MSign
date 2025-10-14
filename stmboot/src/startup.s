@@ -16,6 +16,7 @@
 
 .section .text,"ax",%progbits
 
+.type fault_handler, %function
 fault_handler:
 	b fault_handler
 
