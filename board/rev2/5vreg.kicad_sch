@@ -2507,7 +2507,7 @@
 				)
 			)
 		)
-		(property "Value" "820nH"
+		(property "Value" "1uH"
 			(at 198.12 85.09 90)
 			(effects
 				(font
@@ -2545,7 +2545,7 @@
 				(hide yes)
 			)
 		)
-		(property "Part" "TMPC1265HP-R82MG-D"
+		(property "Part" "CKST1707-1uH/M"
 			(at 195.834 89.916 90)
 			(effects
 				(font

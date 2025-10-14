@@ -3,4 +3,5 @@
   (lib (name "Vishay_DCDC")(type "KiCad")(uri "${KIPRJMOD}/Vishay_DCDC.kicad_sym")(options "")(descr ""))
   (lib (name "TI_EFuse")(type "KiCad")(uri "${KIPRJMOD}/TI_EFuse.kicad_sym")(options "")(descr ""))
   (lib (name "WUXI_GateDriver")(type "KiCad")(uri "${KIPRJMOD}/WUXI_GateDriver.kicad_sym")(options "")(descr ""))
+  (lib (name "MCU_RaspberryPi_RP2350")(type "KiCad")(uri "${KIPRJMOD}/MCU_RaspberryPi_RP2350.kicad_sym")(options "")(descr ""))
 )

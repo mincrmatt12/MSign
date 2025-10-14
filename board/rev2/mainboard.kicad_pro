@@ -604,7 +604,7 @@
     ],
     [
       "4f7f35d0-2952-4294-913c-05f668985375",
-      "Display MCU"
+      "Power MCU"
     ],
     [
       "d8dbf604-5384-4c21-88e4-d3f4969843cb",
@@ -615,12 +615,16 @@
       "WiFi MCU"
     ],
     [
-      "b5a611d3-6308-4792-ad5f-d479afbae4ce",
-      "LED Connection"
+      "09159769-9a8d-41b9-89ab-3a0a86692893",
+      "Display MCU"
     ],
     [
       "2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc",
       "Decoder"
+    ],
+    [
+      "b5a611d3-6308-4792-ad5f-d479afbae4ce",
+      "LED Connection"
     ]
   ],
   "text_variables": {}
