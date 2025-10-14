@@ -5,7 +5,7 @@ Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
 ===================================================================
 --- vendor.orig/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
 +++ vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
-@@ -1096,6 +1096,14 @@ eap_peap_process(struct eap_sm *sm, void
+@@ -1127,6 +1127,14 @@ eap_peap_process(struct eap_sm *sm, void
  						  data->peap_version, id, pos,
  						  left, &resp);
  

@@ -715,7 +715,7 @@ Index: vendor/ESP8266_RTOS_SDK/components/wpa_supplicant/src/eap_peer/eap_peap.c
  #include "eap_peer/eap_tlv_common.h"
  #include "eap_peer/eap_peap_common.h"
  #include "eap_peer/eap_i.h"
-@@ -1349,4 +1349,4 @@ eap_peer_peap_register(void)
+@@ -1380,4 +1380,4 @@ eap_peer_peap_register(void)
  	return ret;
  }
  

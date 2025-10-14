@@ -19,7 +19,7 @@ Index: vendor/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
 ===================================================================
 --- vendor.orig/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
 +++ vendor/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
-@@ -117,20 +117,6 @@ SECTIONS
+@@ -126,20 +126,6 @@ SECTIONS
      . = ALIGN(4);
    } > dram0_0_seg
  
@@ -40,8 +40,8 @@ Index: vendor/ESP8266_RTOS_SDK/components/esp8266/ld/esp8266.project.ld.in
    /* Shared RAM */
    .dram0.bss (NOLOAD) :
    {
-@@ -155,6 +141,20 @@ SECTIONS
-     _bss_end = ABSOLUTE(.);
+@@ -173,6 +159,20 @@ SECTIONS
+     *(.flash.patch.rodata)
    } > dram0_0_seg
  
 +  /*This section holds data that should not be initialized at power up.
