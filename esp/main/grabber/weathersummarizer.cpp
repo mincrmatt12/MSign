@@ -486,6 +486,10 @@ namespace weather {
 			}
 		}
 
+		uint16_t latest_or_center() const {
+			return ranged ? latest : center();
+		}
+
 		RelativeHourDescription describe_as_vague_time() const {
 			int center = this->center();
 			if (!hourly) {
@@ -553,7 +557,10 @@ namespace weather {
 			int minute_diff = as_minutes(center());
 
 			if (previous_amt) {
-				minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
+				if (previous[previous_amt - 1].worth_showing_as_ranged())
+					minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest);
+				else
+					minute_diff = as_minutes(center()) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].center());
 			}
 
 			switch (m) {
@@ -568,13 +575,11 @@ namespace weather {
 						}
 						
 					reuse_for:
-						bool use_ranged = previous_amt > 0 ? previous[previous_amt - 1].worth_showing_as_ranged() && worth_showing_as_ranged() : worth_showing_as_ranged();
-						
 						if (minute_diff > 90 || hourly) {
-							if (use_ranged) {
+							if (worth_showing_as_ranged()) {
 								int hr_a, hr_b;
 								if (previous_amt) {
-									hr_a = as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest);
+									hr_a = as_hours(earliest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].latest_or_center());
 									hr_b = as_hours(latest) - previous[previous_amt - 1].as_hours(previous[previous_amt - 1].earliest);
 								}
 								else {
@@ -583,7 +588,7 @@ namespace weather {
 								}
 
 								if (hr_a == hr_b || (hr_b < 4 && !hourly)) {
-									int min_a = !previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest));
+									int min_a = !previous_amt ? as_minutes(earliest) : (as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest_or_center()));
 									int min_b = !previous_amt ? as_minutes(latest) : (as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest));
 									if (min_a == 0)
 										return snprintf(buf, buflen, "%sup to %dh:%02dm%s", for_prefix, min_b / 60, min_b % 60, for_suffix);
@@ -611,7 +616,7 @@ namespace weather {
 								return snprintf(buf, buflen, "%s%dh:%02dm%s", for_prefix, minute_diff / 60, minute_diff % 60, for_suffix);
 						}
 						else {
-							if (use_ranged) {
+							if (worth_showing_as_ranged()) {
 								if (previous_amt) {
 									if (auto min_a = as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest); min_a != 0) {
 										return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
