@@ -237,7 +237,7 @@ void screen::OctoprintScreen::draw() {
 		}
 	}
 	else if (filename && pinfo->percent_done == 100) {
-		draw::outline_text(matrix.get_inactive_buffer(), "finished", font::lcdpixel_6::info, 1, y, 0x2222ff_cc);
+		draw::outline_text(matrix.get_inactive_buffer(), "finished", font::lcdpixel_6::info, 1, y, 0x22ff22_cc);
 	}
 }
 
