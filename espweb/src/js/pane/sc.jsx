@@ -17,9 +17,7 @@ function parseTime(tm) {
 	let text = tm.trim();
 	if (text.includes(":") && text.length == 5) {
 		var hour, minute;
-		console.log(text.split(":"));
 		[hour, minute] = text.split(":").map((x) => Number.parseInt(x));
-		console.log(hour, minute);
 
 		if (Number.isNaN(hour) || Number.isNaN(minute)) return Number.NaN;
 
@@ -52,6 +50,7 @@ function ScEntry({data, updateData}) {
 	const alwaysOn = !("times" in data) || data["times"] === undefined;
 	const [startText, setStartText] = React.useState(alwaysOn ? "00:00" : displayTime(data.times.start));
 	const [endText, setEndText] = React.useState(alwaysOn ? "23:59" : displayTime(data.times.end));
+	const [durText, setDurText] = React.useState((data.length / 1000).toString());
 
 	let startTime = parseTime(startText); if (Number.isNaN(startTime)) startTime = 0;
 	let endTime = parseTime(endText); if (Number.isNaN(endTime)) endTime = 86400000-1;
@@ -84,10 +83,11 @@ function ScEntry({data, updateData}) {
 
 			<div className="my-2">
 				<Form.Label>duration</Form.Label>
-				<Form.Control value={data.length / 1000} type="text" onChange={(e) => {
-					if (e.target.value == "") e.target.value = "0.0";
-					if (Number.isNaN(Number.parseFloat(e.target.value))) e.preventDefault();
-					else updateData(["length"], Math.trunc(Number.parseFloat(e.target.value)*1000));
+				<Form.Control value={durText} type="text" isInvalid={Number.isNaN(Number.parseFloat(durText))} onChange={(e) => {
+					setDurText(e.target.value);
+					const flt = Number.parseFloat(e.target.value);
+					if (!Number.isNaN(flt))
+						updateData(["length"], Math.trunc(flt * 1000));
 				}} />
 			</div>
 		</Card.Body>
@@ -106,7 +106,6 @@ function ScCfgPane() {
 			"length": 10000
 		});
 		updateCfg("sccfg.screens", newe);
-		console.log(newe);
 	}
 
 	const remove = (at) => {
