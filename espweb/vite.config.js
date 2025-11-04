@@ -19,7 +19,7 @@ export default (() => {
 				{
 				  name: 'three',
 				  var: 'THREE',
-				  path: 'https://unpkg.com/three@${version}/build/three.min.js',
+				  path: 'https://unpkg.com/three@{version}/build/three.min.js',
 				},
 			  ],
 			}),
