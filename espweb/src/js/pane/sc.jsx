@@ -9,7 +9,7 @@ import Container from 'react-bootstrap/Container'
 import Button from 'react-bootstrap/Button'
 
 import ConfigContext from "../ctx"
-import _ from "lodash"
+import * as _ from "lodash-es"
 
 function parseTime(tm) {
 	if (tm === "") return Number.NaN;

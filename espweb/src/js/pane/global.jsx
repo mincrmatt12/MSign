@@ -5,7 +5,7 @@ import Form from 'react-bootstrap/Form'
 import Tab from 'react-bootstrap/Tab';
 import Tabs from 'react-bootstrap/Tabs';
 
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 import ConfigContext from '../ctx';
 import VersionTag from "./common/vertag";

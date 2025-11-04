@@ -9,7 +9,7 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 
 import ConfigContext from "../ctx"
-import _ from "lodash"
+import * as _ from "lodash-es"
 
 const TrackerListSource = React.createContext([]);
 

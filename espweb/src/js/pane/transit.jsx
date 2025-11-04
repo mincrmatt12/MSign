@@ -2,7 +2,7 @@ import React from 'react'
 import Pagination from 'react-bootstrap/Pagination';
 
 import ConfigContext from '../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 import TTCPane from './transit/ttc';
 import GTFSPane from './transit/gtfs';

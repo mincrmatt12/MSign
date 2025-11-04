@@ -8,7 +8,7 @@ import Button from 'react-bootstrap/Button'
 
 import ConfigContext, { intInteract } from '../../ctx';
 import {directions} from './enums.js';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function TTCPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);

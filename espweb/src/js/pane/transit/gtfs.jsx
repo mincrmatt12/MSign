@@ -8,7 +8,7 @@ import Card from 'react-bootstrap/Card'
 import Button from 'react-bootstrap/Button'
 
 import ConfigContext, {intInteract} from '../../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 import {directions} from './enums';
 import {getURLPrefix, HostnameEdit} from '../common/hostname';

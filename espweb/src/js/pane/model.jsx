@@ -10,10 +10,23 @@ import Button from 'react-bootstrap/Button'
 import ListGroup from 'react-bootstrap/ListGroup'
 import Alert from 'react-bootstrap/Alert'
 import Modal from 'react-bootstrap/Modal'
-import * as THREE from "three";
+import {
+	Scene,
+	PerspectiveCamera,
+	WebGLRenderer,
+	BufferGeometry,
+	BufferAttribute,
+	MeshBasicMaterial,
+	DoubleSide,
+	Mesh,
+	BoxGeometry,
+	Color,
+	SphereGeometry,
+	Vector3,
+} from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import ConfigContext from "../ctx";
-import _ from "lodash";
+import * as _ from "lodash-es";
 
 function ModelPaneListEntry(props) {
 	return (<ListGroup.Item active={props.modelPresent && props.selected ? true : null} className="d-flex align-items-center" onClick={props.onClick} action disabled={!props.modelPresent}>
@@ -51,8 +64,8 @@ class ModelRenderer extends React.Component {
 		const width = this.el.clientWidth;
 		const height = width / 2;
 
-		this.scene = new THREE.Scene();
-		this.camera = new THREE.PerspectiveCamera(
+		this.scene = new Scene();
+		this.camera = new PerspectiveCamera(
 			90,
 			width / height,
 			0.01, // near plane
@@ -60,7 +73,7 @@ class ModelRenderer extends React.Component {
 		);
 		this.camera.position.z = 1;
 		this.controls = new OrbitControls(this.camera, this.el);
-		this.renderer = new THREE.WebGLRenderer();
+		this.renderer = new WebGLRenderer();
 		this.renderer.setSize(width, height);
 		this.el.appendChild(this.renderer.domElement); // mount using React ref
 
@@ -70,7 +83,7 @@ class ModelRenderer extends React.Component {
 		let fv = new Float32Array(ab.slice(2));
 		let pts = new Float32Array(this.triangleCount * 9);
 		let cols = new Float32Array(this.triangleCount * 9);
-		let geometry = new THREE.BufferGeometry();
+		let geometry = new BufferGeometry();
 		for (let i = 0; i < this.triangleCount; ++i) {
 			for (let c = 0; c < 9; ++c) {
 				pts[i*9 + c] = (c % 3 == 0 ? -1 : 1) * fv[i*12 + c];
@@ -78,15 +91,15 @@ class ModelRenderer extends React.Component {
 			}
 		}
 
-		geometry.setAttribute("position", new THREE.BufferAttribute(pts, 3));
-		geometry.setAttribute("color", new THREE.BufferAttribute(cols, 3));
+		geometry.setAttribute("position", new BufferAttribute(pts, 3));
+		geometry.setAttribute("color", new BufferAttribute(cols, 3));
 
-		const material = new THREE.MeshBasicMaterial({
+		const material = new MeshBasicMaterial({
 			vertexColors: true,
-			side: THREE.DoubleSide
+			side: DoubleSide
 		});
 
-		this.mesh = new THREE.Mesh(geometry, material);
+		this.mesh = new Mesh(geometry, material);
 		this.scene.add(this.mesh);
 	}
 
@@ -116,23 +129,23 @@ class ModelPropertiesRenderer extends ModelRenderer {
 	generateScene(ab) {
 		super.generateScene(ab);
 
-		const cambox_geom = new THREE.BoxGeometry(1, 1, 1);
-		const cambox_mat = new THREE.MeshBasicMaterial({
-			color: new THREE.Color(1, 0.2, 0.2),
+		const cambox_geom = new BoxGeometry(1, 1, 1);
+		const cambox_mat = new MeshBasicMaterial({
+			color: new Color(1, 0.2, 0.2),
 			transparent: true,
 			opacity: 0.5,
 			wireframe: true
 		});
-		this.cambox = new THREE.Mesh(cambox_geom, cambox_mat);
+		this.cambox = new Mesh(cambox_geom, cambox_mat);
 
-		const focpoint_geom = new THREE.SphereGeometry(0.025);
-		const focpoint_mat = new THREE.MeshBasicMaterial({
-			color: new THREE.Color(1, 1, 1),
+		const focpoint_geom = new SphereGeometry(0.025);
+		const focpoint_mat = new MeshBasicMaterial({
+			color: new Color(1, 1, 1),
 		});
 
-		this.focpoints = [new THREE.Mesh(focpoint_geom, focpoint_mat),
-			new THREE.Mesh(focpoint_geom, focpoint_mat),
-			new THREE.Mesh(focpoint_geom, focpoint_mat)
+		this.focpoints = [new Mesh(focpoint_geom, focpoint_mat),
+			new Mesh(focpoint_geom, focpoint_mat),
+			new Mesh(focpoint_geom, focpoint_mat)
 		];
 
 		this.mesh.add(this.cambox);
@@ -164,8 +177,8 @@ class ModelPropertiesRenderer extends ModelRenderer {
 		this.cambox.visible = true;
 		
 		// compute size of box
-		const minpos = new THREE.Vector3(...this.props.minpos);
-		const maxpos = new THREE.Vector3(...this.props.maxpos);
+		const minpos = new Vector3(...this.props.minpos);
+		const maxpos = new Vector3(...this.props.maxpos);
 		let mx = minpos.x
 		minpos.setX(-maxpos.x);
 		maxpos.setX(-mx);

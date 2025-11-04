@@ -9,7 +9,7 @@ import Button from 'react-bootstrap/Button'
 import Alert from 'react-bootstrap/Alert'
 
 import ConfigContext from '../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function RawPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);

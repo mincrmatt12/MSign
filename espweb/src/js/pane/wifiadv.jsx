@@ -4,7 +4,8 @@ import Form from 'react-bootstrap/Form'
 import InputGroup from 'react-bootstrap/InputGroup'
 
 import ConfigContext, { intInteract } from '../ctx';
-import _, { parseInt } from 'lodash';
+import * as _ from 'lodash-es';
+import { parseInt } from 'lodash-es';
 
 function parseBssid(str) {
 	const regex = /^([0-9A-F]{2}[:-])([0-9A-F]{2}[:-])([0-9A-F]{2}[:-])([0-9A-F]{2}[:-])([0-9A-F]{2}[:-])([0-9A-F]{2})$/i;

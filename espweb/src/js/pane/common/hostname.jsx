@@ -4,7 +4,7 @@ import InputGroup from 'react-bootstrap/InputGroup'
 import Dropdown from 'react-bootstrap/Dropdown'
 import DropdownButton from 'react-bootstrap/DropdownButton'
 
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function getURLPrefix(underscoreEncoded) {
 	if (underscoreEncoded[0] == "_") return "https://" + underscoreEncoded.slice(1);

@@ -26,7 +26,7 @@ import WifiPane from "./pane/wifiadv"
 import ConfigContext from "./ctx"
 import BackendVersionContext from "./ver"
 
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function App() {
 	const [loading, setLoading] = React.useState(true);

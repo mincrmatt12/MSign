@@ -7,7 +7,7 @@ import Button from 'react-bootstrap/Button'
 import {HostnameEdit} from './common/hostname';
 
 import ConfigContext, { floatInteract } from '../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function convertColorToString(color) {
 	return "#" + color.map((x) => x.toString(16).padStart(2, "0")).join("");

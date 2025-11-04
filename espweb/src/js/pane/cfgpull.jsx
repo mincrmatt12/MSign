@@ -1,7 +1,7 @@
 import React from 'react'
 import Form from 'react-bootstrap/Form'
 
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 import ConfigContext from '../ctx';
 import {HostnameEdit} from './common/hostname';

@@ -6,7 +6,7 @@ import Row from 'react-bootstrap/Row'
 import Button from 'react-bootstrap/Button'
 
 import ConfigContext, { floatInteract } from '../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function WeatherPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);

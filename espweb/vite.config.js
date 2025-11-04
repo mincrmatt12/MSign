@@ -2,6 +2,7 @@ import {defineConfig} from 'vite'
 import react from '@vitejs/plugin-react'
 import {resolve} from 'path'
 import {execSync} from 'child_process';
+import importToCDN from 'vite-plugin-cdn-import'
 
 export default (() => {
 	let verstr = execSync("git describe --tags --always").toString();
@@ -11,6 +12,17 @@ export default (() => {
 		root: "./src/",
 		plugins: [
 			react(),
+			importToCDN({
+			  modules: [
+			    'react',
+				'react-dom',
+				{
+				  name: 'three',
+				  var: 'THREE',
+				  path: 'https://unpkg.com/three@${version}/build/three.min.js',
+				},
+			  ],
+			}),
 			{
 				name: "manual-spa",
 				configureServer(server) {
@@ -44,6 +56,9 @@ export default (() => {
 
 						return null;
 					},
+					globals: {
+						three: "THREE",
+					}
 				},
 			}
 		},

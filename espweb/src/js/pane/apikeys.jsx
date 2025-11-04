@@ -3,7 +3,7 @@ import FormControl from 'react-bootstrap/FormControl'
 import Form from 'react-bootstrap/Form'
 
 import ConfigContext from '../ctx';
-import _ from 'lodash';
+import * as _ from 'lodash-es';
 
 function ApiPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
