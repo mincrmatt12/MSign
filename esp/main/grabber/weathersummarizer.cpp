@@ -618,7 +618,7 @@ namespace weather {
 						else {
 							if (worth_showing_as_ranged()) {
 								if (previous_amt) {
-									if (auto min_a = as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest); min_a != 0) {
+									if (auto min_a = as_minutes(earliest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].latest_or_center()); min_a != 0) {
 										return snprintf(buf, buflen, "%s%d-%d minutes%s", for_prefix,
 											min_a,
 											as_minutes(latest) - previous[previous_amt - 1].as_minutes(previous[previous_amt - 1].earliest), for_suffix);
