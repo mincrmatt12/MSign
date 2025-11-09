@@ -1390,9 +1390,17 @@ namespace weather {
 
 		// Otherwise if fog is present in the future, use that.
 		if (is_present(fog) && fog.latest - fog.earliest + 1 >= 2) {
-			return starting_later(fog) ? FOG_LATER : FOG_CLEARING_UP;
+			if (starting_later(fog)) {
+				if (fog.earliest < 24)
+					return FOG_LATER;
+			}
+			else {
+				if (fog.latest < 24)
+					return FOG_CLEARING_UP;
+			}
 		}
-		else switch (current_code) {
+
+		switch (current_code) {
 			case slots::WeatherStateCode::PARTLY_CLOUDY:
 			case slots::WeatherStateCode::CLOUDY:
 			case slots::WeatherStateCode::MOSTLY_CLOUDY:
@@ -1494,9 +1502,6 @@ namespace weather {
 					stopping_at.earliest = fog.latest;
 					stopping_at.hourly = true;
 
-					if (stopping_at.earliest > 24)
-						goto current_conditions;	
-
 					append(snprintf(ptr, remain, "%s clearing up ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
 					append(stopping_at.format_as(TimeSpec::IN, &stopping_at, 0, ptr, remain));
 				}
@@ -1507,16 +1512,12 @@ namespace weather {
 					starting_at.earliest = fog.earliest;
 					starting_at.hourly = true;
 
-					if (starting_at.earliest > 24)
-						goto current_conditions;	
-
 					append(snprintf(ptr, remain, "%s ", fog_titles[fog.strongest_fog == slots::WeatherStateCode::FOG]));
 					append(starting_at.format_as(TimeSpec::IN, &starting_at, 0, ptr, remain));
 				}
 				break;
 			case CLOUDS_CLEARING:
 			case CURRENT_CONDITIONS:
-			current_conditions:
 				// First, print the current condition title.
 				{
 					const char *title = "Unknown weather";
