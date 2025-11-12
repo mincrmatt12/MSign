@@ -3801,7 +3801,7 @@
 		(uuid "66af50cd-b0c1-4e71-b9de-b099384fe78f")
 	)
 	(hierarchical_label "5V_REG_SALRT"
-		(shape input)
+		(shape output)
 		(at 125.476 34.29 180)
 		(effects
 			(font
@@ -5819,7 +5819,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/802d77e5-f72d-443e-abfe-d20b44acef6c"
-					(page "5")
+					(page "4")
 				)
 			)
 		)

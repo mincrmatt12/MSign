@@ -540,12 +540,36 @@
           "label": "DNP",
           "name": "${DNP}",
           "show": true
+        },
+        {
+          "group_by": false,
+          "label": "#",
+          "name": "${ITEM_NUMBER}",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "ESR",
+          "name": "ESR",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Part",
+          "name": "Part",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "Description",
+          "name": "Description",
+          "show": false
         }
       ],
       "filter_string": "",
       "group_symbols": true,
       "include_excluded_from_bom": false,
-      "name": "Grouped By Value",
+      "name": "",
       "sort_asc": true,
       "sort_field": "Reference"
     },
@@ -577,6 +601,14 @@
       "version": 1
     },
     "net_format_name": "",
+    "ngspice": {
+      "fix_include_paths": true,
+      "meta": {
+        "version": 0
+      },
+      "model_mode": 4,
+      "workbook_filename": ""
+    },
     "page_layout_descr_file": "",
     "plot_directory": "",
     "space_save_all_events": true,
@@ -603,12 +635,12 @@
       "5V Mux"
     ],
     [
-      "4f7f35d0-2952-4294-913c-05f668985375",
-      "Power MCU"
-    ],
-    [
       "d8dbf604-5384-4c21-88e4-d3f4969843cb",
       "5V Reg"
+    ],
+    [
+      "4f7f35d0-2952-4294-913c-05f668985375",
+      "Power MCU"
     ],
     [
       "ab8e590b-cde3-4860-87b4-37e60f787bc4",
@@ -623,8 +655,20 @@
       "Decoder"
     ],
     [
+      "1fdb9a92-7450-4af0-9e02-ab97d3a0a007",
+      "Output Stage A"
+    ],
+    [
+      "3c07b397-7ce8-476f-8583-4e671a583d8a",
+      "Output Stage B"
+    ],
+    [
       "b5a611d3-6308-4792-ad5f-d479afbae4ce",
-      "LED Connection"
+      "LED Connection A"
+    ],
+    [
+      "e7e17249-2796-40aa-8cf6-7a1737723276",
+      "LED Connection B"
     ]
   ],
   "text_variables": {}
