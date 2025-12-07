@@ -669,6 +669,10 @@
     [
       "e7e17249-2796-40aa-8cf6-7a1737723276",
       "LED Connection B"
+    ],
+    [
+      "802ce1c9-2668-4fe7-971c-9ba57eb1ffa9",
+      "Peripherals"
     ]
   ],
   "text_variables": {}
