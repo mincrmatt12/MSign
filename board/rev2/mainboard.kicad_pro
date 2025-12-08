@@ -673,6 +673,10 @@
     [
       "802ce1c9-2668-4fe7-971c-9ba57eb1ffa9",
       "Peripherals"
+    ],
+    [
+      "f949a322-cdc0-42f3-8e56-a599c8860839",
+      "USB Mux"
     ]
   ],
   "text_variables": {}

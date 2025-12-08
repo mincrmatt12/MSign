@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "da0ffa8c-739f-4a7e-a5e8-b7c7e3d916d5")
 	(paper "A4")
+	(title_block
+		(title "LED Bitstream Generator (gamma LUT + shifter)")
+		(rev "A")
+		(company "MLABS")
+		(comment 1 "MSign-NG")
+	)
 	(lib_symbols
 		(symbol "74xx:74AHCT595"
 			(exclude_from_sim no)

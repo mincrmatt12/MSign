@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "940d69ec-3eb3-49e2-a0a7-1d26043a7f51")
 	(paper "A4")
+	(title_block
+		(title "5V Multiplexer")
+		(rev "A")
+		(company "MLABS")
+		(comment 1 "MSign-NG")
+	)
 	(lib_symbols
 		(symbol "Device:C_Small"
 			(pin_numbers

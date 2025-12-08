@@ -4,6 +4,12 @@
 	(generator_version "9.0")
 	(uuid "d8fe1d20-8051-455e-ba8d-cdd94a5157e5")
 	(paper "A4")
+	(title_block
+		(title "USB PD 5V Regulator")
+		(rev "A")
+		(company "MLABS")
+		(comment 1 "MSign-NG")
+	)
 	(lib_symbols
 		(symbol "Device:C_Polarized_Small_US"
 			(pin_numbers
