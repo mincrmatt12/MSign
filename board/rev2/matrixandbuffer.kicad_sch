@@ -2992,7 +2992,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "4171a1dd-100e-404c-b02d-23d3487cb604")
-		(property "Reference" "U12"
+		(property "Reference" "U15"
 			(at 99.9333 78.74 0)
 			(effects
 				(font
@@ -3036,6 +3036,15 @@
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "74HCT245"
+			(at 97.79 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
@@ -3103,11 +3112,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "U12")
+					(reference "U15")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "U17")
+					(reference "U16")
 					(unit 1)
 				)
 			)
@@ -3123,7 +3132,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7f0dff01-b433-4427-af35-0520b6a22c09")
-		(property "Reference" "C28"
+		(property "Reference" "C57"
 			(at 41.91 96.5262 0)
 			(effects
 				(font
@@ -3186,11 +3195,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "C28")
+					(reference "C57")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "C35")
+					(reference "C58")
 					(unit 1)
 				)
 			)
@@ -3206,7 +3215,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "86ea2064-58c8-46f9-ade8-ce8db87aa392")
-		(property "Reference" "#PWR0102"
+		(property "Reference" "#PWR045"
 			(at 97.79 73.66 0)
 			(effects
 				(font
@@ -3256,11 +3265,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "#PWR0102")
+					(reference "#PWR045")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "#PWR036")
+					(reference "#PWR047")
 					(unit 1)
 				)
 			)
@@ -3294,7 +3303,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Switch_Slide_SMD:SW-SMD_MS-22D28-G020"
 			(at 228.6 113.03 0)
 			(effects
 				(font
@@ -3314,6 +3323,15 @@
 		)
 		(property "Description" "Slide Switch, dual pole double throw"
 			(at 223.52 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "MS-22D28-G020"
+			(at 223.52 99.06 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3361,7 +3379,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "cd037d59-a723-4755-8c50-dc3b59483ab1")
-		(property "Reference" "J4"
+		(property "Reference" "J5"
 			(at 180.34 88.392 0)
 			(effects
 				(font
@@ -3378,7 +3396,7 @@
 				(hide yes)
 			)
 		)
-		(property "Footprint" "Connector_IDC:IDC-Header_2x07_P2.54mm_Vertical"
+		(property "Footprint" "Connector_IDC:IDC-Header_2x08_P2.54mm_Vertical"
 			(at 179.07 99.06 0)
 			(effects
 				(font
@@ -3459,11 +3477,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "J4")
+					(reference "J5")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "J5")
+					(reference "J6")
 					(unit 1)
 				)
 			)
@@ -3479,7 +3497,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e4240fed-3b82-474a-bbc6-7782b07e71de")
-		(property "Reference" "#PWR0101"
+		(property "Reference" "#PWR046"
 			(at 162.56 132.08 0)
 			(effects
 				(font
@@ -3529,11 +3547,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "#PWR0101")
+					(reference "#PWR046")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "#PWR037")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)

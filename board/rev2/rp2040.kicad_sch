@@ -898,6 +898,242 @@
 			)
 			(embedded_fonts no)
 		)
+		(symbol "Device:R_Pack04_Split"
+			(pin_names
+				(offset 0)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "RN"
+				(at 2.032 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "R_Pack04_Split"
+				(at 0 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at -2.032 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "4 resistor network, parallel topology, split"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "R network parallel topology isolated"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "DIP* SOIC* R*Array*Concave* R*Array*Convex* MSOP*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "R_Pack04_Split_0_1"
+				(rectangle
+					(start 1.016 2.54)
+					(end -1.016 -2.54)
+					(stroke
+						(width 0.254)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "R_Pack04_Split_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R1.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R1.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack04_Split_2_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R2.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R2.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack04_Split_3_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R3.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R3.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(symbol "R_Pack04_Split_4_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "R4.2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "R4.1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
 		(symbol "Device:R_Small_US"
 			(pin_numbers
 				(hide yes)
@@ -3686,6 +3922,16 @@
 	)
 	(wire
 		(pts
+			(xy 147.32 111.76) (xy 167.64 111.76)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "08428604-31f8-4fb1-baad-c104df8909f1")
+	)
+	(wire
+		(pts
 			(xy 63.5 54.61) (xy 62.23 54.61)
 		)
 		(stroke
@@ -3716,7 +3962,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 114.3) (xy 138.43 114.3)
+			(xy 132.08 114.3) (xy 139.7 114.3)
 		)
 		(stroke
 			(width 0)
@@ -4266,7 +4512,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 116.84) (xy 138.43 116.84)
+			(xy 132.08 116.84) (xy 139.7 116.84)
 		)
 		(stroke
 			(width 0)
@@ -4496,7 +4742,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 111.76) (xy 138.43 111.76)
+			(xy 132.08 111.76) (xy 139.7 111.76)
 		)
 		(stroke
 			(width 0)
@@ -4934,16 +5180,6 @@
 		)
 		(uuid "8ec71323-98bc-4d0b-bf81-70e870f92297")
 	)
-	(wire
-		(pts
-			(xy 148.59 109.22) (xy 167.64 109.22)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "8f8e73cc-dcb3-41fc-986b-ab479d40197b")
-	)
 	(bus
 		(pts
 			(xy 170.18 124.46) (xy 170.18 127)
@@ -5146,6 +5382,16 @@
 	)
 	(wire
 		(pts
+			(xy 146.05 109.22) (xy 167.64 109.22)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "a25c9815-e7c1-4923-a0cb-171e85b04dac")
+	)
+	(wire
+		(pts
 			(xy 132.08 165.1) (xy 144.78 165.1)
 		)
 		(stroke
@@ -5193,16 +5439,6 @@
 			(type default)
 		)
 		(uuid "a7c936a7-c08e-44de-b517-5d9dfb27464a")
-	)
-	(wire
-		(pts
-			(xy 148.59 114.3) (xy 167.64 114.3)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "a8cc8d05-8b51-4534-a080-58bef73c534a")
 	)
 	(wire
 		(pts
@@ -5343,16 +5579,6 @@
 			(type default)
 		)
 		(uuid "b8bba9ce-d2a8-47ff-98e4-838a73ec34e4")
-	)
-	(wire
-		(pts
-			(xy 148.59 111.76) (xy 167.64 111.76)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "bb2793b1-c675-40c2-b41a-e518e2f7d5f3")
 	)
 	(wire
 		(pts
@@ -5776,6 +6002,16 @@
 	)
 	(wire
 		(pts
+			(xy 147.32 116.84) (xy 167.64 116.84)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e7723ded-0cde-471f-b1a4-1faf3799d50d")
+	)
+	(wire
+		(pts
 			(xy 106.68 38.1) (xy 106.68 40.64)
 		)
 		(stroke
@@ -5806,6 +6042,16 @@
 	)
 	(wire
 		(pts
+			(xy 147.32 114.3) (xy 167.64 114.3)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f0077f78-51bd-4985-be6c-a64ff392369f")
+	)
+	(wire
+		(pts
 			(xy 254 38.1) (xy 254 43.18)
 		)
 		(stroke
@@ -5826,7 +6072,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 109.22) (xy 138.43 109.22)
+			(xy 132.08 109.22) (xy 140.97 109.22)
 		)
 		(stroke
 			(width 0)
@@ -5873,16 +6119,6 @@
 			(type default)
 		)
 		(uuid "f44c3819-1b1a-4c9b-9750-d356f9e339b9")
-	)
-	(wire
-		(pts
-			(xy 148.59 116.84) (xy 167.64 116.84)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f4e115c5-d1f7-41b7-958e-847708d72172")
 	)
 	(wire
 		(pts
@@ -6589,7 +6825,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "01346ee8-3ae1-415c-a86b-70aa2f9de775")
-		(property "Reference" "C50"
+		(property "Reference" "C45"
 			(at 234.188 33.528 0)
 			(effects
 				(font
@@ -6652,7 +6888,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C50")
+					(reference "C45")
 					(unit 1)
 				)
 			)
@@ -6667,7 +6903,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "05d77e26-753a-491a-b509-ae718d20741a")
-		(property "Reference" "C39"
+		(property "Reference" "C38"
 			(at 58.42 34.2962 0)
 			(effects
 				(font
@@ -6738,7 +6974,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C39")
+					(reference "C38")
 					(unit 1)
 				)
 			)
@@ -6753,7 +6989,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "0a838a05-4641-421e-987a-374034a460f9")
-		(property "Reference" "C51"
+		(property "Reference" "C46"
 			(at 239.268 33.528 0)
 			(effects
 				(font
@@ -6816,7 +7052,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C51")
+					(reference "C46")
 					(unit 1)
 				)
 			)
@@ -6831,7 +7067,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "118dfd2d-2d80-482b-b328-2b384812d985")
-		(property "Reference" "C55"
+		(property "Reference" "C50"
 			(at 259.588 33.528 0)
 			(effects
 				(font
@@ -6894,7 +7130,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C55")
+					(reference "C50")
 					(unit 1)
 				)
 			)
@@ -6909,7 +7145,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "1223b6e0-6f3f-4b49-a75d-4c00691b63f3")
-		(property "Reference" "C48"
+		(property "Reference" "C43"
 			(at 224.028 33.528 0)
 			(effects
 				(font
@@ -6972,7 +7208,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C48")
+					(reference "C43")
 					(unit 1)
 				)
 			)
@@ -6988,7 +7224,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "12a8562d-20f3-4fab-bfdc-786af86cd5b4")
-		(property "Reference" "#PWR051"
+		(property "Reference" "#PWR020"
 			(at 27.94 33.02 0)
 			(effects
 				(font
@@ -7038,23 +7274,23 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR051")
+					(reference "#PWR020")
 					(unit 1)
 				)
 			)
 		)
 	)
 	(symbol
-		(lib_id "Device:R_Pack04")
-		(at 143.51 114.3 270)
+		(lib_id "Device:R_Small_US")
+		(at 143.51 109.22 90)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(uuid "19381848-0c0d-46b7-8ab7-89f27cd7d275")
-		(property "Reference" "RN2"
-			(at 137.16 108.204 90)
+		(uuid "1419211b-e7d1-4c02-ac75-eed7abe21339")
+		(property "Reference" "R19"
+			(at 138.176 108.204 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7062,15 +7298,15 @@
 			)
 		)
 		(property "Value" "33"
-			(at 149.352 108.204 90)
+			(at 148.082 108.204 90)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
 			)
 		)
-		(property "Footprint" ""
-			(at 143.51 121.285 90)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 143.51 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7079,7 +7315,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 143.51 114.3 0)
+			(at 143.51 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7087,8 +7323,8 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "4 resistor network, parallel topology"
-			(at 143.51 114.3 0)
+		(property "Description" "Resistor, small US symbol"
+			(at 143.51 109.22 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -7096,34 +7332,25 @@
 				(hide yes)
 			)
 		)
-		(pin "5"
-			(uuid "81e55ef0-cc52-4e97-b709-d6756a169c9f")
-		)
-		(pin "4"
-			(uuid "bab49053-7bc1-4642-8a30-1d44bf50f197")
-		)
-		(pin "6"
-			(uuid "c119b299-528d-4d82-ac44-527684e83097")
+		(property "Part" "0402WGF330JTCE"
+			(at 143.51 109.22 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
 		)
 		(pin "2"
-			(uuid "07857f29-c293-4482-8a6f-a85ec44b8530")
-		)
-		(pin "3"
-			(uuid "224718ba-07c8-4e27-b63f-7a861972ec80")
-		)
-		(pin "7"
-			(uuid "59a63299-4abd-499b-a7ca-0624f9c4f533")
+			(uuid "ae9e680a-9b63-4627-aa98-b7919ac6a88b")
 		)
 		(pin "1"
-			(uuid "fd8ffdb3-94a9-48f8-9ed7-264360a99f4b")
-		)
-		(pin "8"
-			(uuid "f87592f4-242c-452f-90e0-548c83bb2544")
+			(uuid "27591646-1f72-4f41-8665-8a30a29700da")
 		)
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "RN2")
+					(reference "R19")
 					(unit 1)
 				)
 			)
@@ -7139,7 +7366,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "196b0cf5-4b0c-4608-ba6d-4883fd86a006")
-		(property "Reference" "#PWR053"
+		(property "Reference" "#PWR021"
 			(at 29.21 53.34 0)
 			(effects
 				(font
@@ -7189,7 +7416,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR053")
+					(reference "#PWR021")
 					(unit 1)
 				)
 			)
@@ -7205,7 +7432,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "1c334aea-05fc-4730-ab57-ec7e3dfdb9bc")
-		(property "Reference" "R30"
+		(property "Reference" "R21"
 			(at 199.39 149.8599 0)
 			(effects
 				(font
@@ -7268,7 +7495,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R30")
+					(reference "R21")
 					(unit 1)
 				)
 			)
@@ -7283,7 +7510,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "1e58dbfd-66e6-431e-8e15-feb38d734593")
-		(property "Reference" "C54"
+		(property "Reference" "C49"
 			(at 254.508 33.528 0)
 			(effects
 				(font
@@ -7346,7 +7573,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C54")
+					(reference "C49")
 					(unit 1)
 				)
 			)
@@ -7362,7 +7589,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "29f9073d-8d1a-42c4-8ccb-9e956e5d4058")
-		(property "Reference" "#PWR022"
+		(property "Reference" "#PWR025"
 			(at 60.96 120.65 0)
 			(effects
 				(font
@@ -7413,7 +7640,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR022")
+					(reference "#PWR025")
 					(unit 1)
 				)
 			)
@@ -7429,7 +7656,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2d978f0f-9b66-4365-a33d-5184e578aec9")
-		(property "Reference" "U13"
+		(property "Reference" "U8"
 			(at 45.72 22.86 0)
 			(effects
 				(font
@@ -7473,6 +7700,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part" "TLV74311"
+			(at 45.72 31.75 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ef39c9b1-89ff-448d-a2ca-ac8bf89cbe2f")
 		)
@@ -7491,7 +7727,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "U13")
+					(reference "U8")
 					(unit 1)
 				)
 			)
@@ -7512,7 +7748,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "303117ba-b560-4994-a293-49405af4c8f2")
-		(property "Reference" "C52"
+		(property "Reference" "C47"
 			(at 244.348 33.528 0)
 			(effects
 				(font
@@ -7575,7 +7811,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C52")
+					(reference "C47")
 					(unit 1)
 				)
 			)
@@ -7590,7 +7826,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "32b196b0-4324-4997-a2a0-d795197bd425")
-		(property "Reference" "C43"
+		(property "Reference" "C37"
 			(at 56.642 102.362 0)
 			(effects
 				(font
@@ -7653,7 +7889,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C43")
+					(reference "C37")
 					(unit 1)
 				)
 			)
@@ -7669,7 +7905,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "34eb59ec-8ad3-45b6-b4d7-075d8fd3a408")
-		(property "Reference" "#PWR041"
+		(property "Reference" "#PWR027"
 			(at 196.85 152.4 0)
 			(effects
 				(font
@@ -7719,7 +7955,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR041")
+					(reference "#PWR027")
 					(unit 1)
 				)
 			)
@@ -7734,7 +7970,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "3ca1cd4a-6b33-4a0e-8826-825920390fe8")
-		(property "Reference" "C53"
+		(property "Reference" "C48"
 			(at 249.428 33.528 0)
 			(effects
 				(font
@@ -7797,7 +8033,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C53")
+					(reference "C48")
 					(unit 1)
 				)
 			)
@@ -7812,7 +8048,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "485f2e2b-1a77-4cba-b76c-24d89c7a5163")
-		(property "Reference" "C56"
+		(property "Reference" "C51"
 			(at 264.668 33.528 0)
 			(effects
 				(font
@@ -7875,7 +8111,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C56")
+					(reference "C51")
 					(unit 1)
 				)
 			)
@@ -7890,7 +8126,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "59eb402f-3bd1-431d-ab68-acd11f68dd10")
-		(property "Reference" "R58"
+		(property "Reference" "R17"
 			(at 137.414 46.99 90)
 			(effects
 				(font
@@ -7951,7 +8187,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R58")
+					(reference "R17")
 					(unit 1)
 				)
 			)
@@ -7967,7 +8203,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "60aa7d75-dd15-4301-a15c-3893092af0d9")
-		(property "Reference" "U5"
+		(property "Reference" "U9"
 			(at 97.3933 187.96 0)
 			(effects
 				(font
@@ -8004,6 +8240,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 95.25 91.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "RP2354B"
 			(at 95.25 91.44 0)
 			(effects
 				(font
@@ -8258,7 +8503,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "U5")
+					(reference "U9")
 					(unit 1)
 				)
 			)
@@ -8280,7 +8525,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "61adb607-cd6b-41e7-a50a-9bc5cea8bc9c")
-		(property "Reference" "#PWR050"
+		(property "Reference" "#PWR023"
 			(at 45.72 50.8 0)
 			(effects
 				(font
@@ -8330,7 +8575,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR050")
+					(reference "#PWR023")
 					(unit 1)
 				)
 			)
@@ -8345,7 +8590,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "6b7e39c9-8daf-4213-acd3-5f5f3750e305")
-		(property "Reference" "C49"
+		(property "Reference" "C44"
 			(at 229.108 33.528 0)
 			(effects
 				(font
@@ -8408,7 +8653,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C49")
+					(reference "C44")
 					(unit 1)
 				)
 			)
@@ -8466,6 +8711,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part" "ABM8-272-T3"
+			(at 49.53 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0be923e5-985c-4e26-8da2-90e236262414")
 		)
@@ -8490,7 +8744,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "6d09868e-f558-4b32-923d-f400f82430dc")
-		(property "Reference" "R59"
+		(property "Reference" "R18"
 			(at 137.414 49.53 90)
 			(effects
 				(font
@@ -8551,7 +8805,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R59")
+					(reference "R18")
 					(unit 1)
 				)
 			)
@@ -8567,7 +8821,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "75a6e7c0-6334-4ccb-b0c1-87d948e310f4")
-		(property "Reference" "R31"
+		(property "Reference" "R22"
 			(at 208.28 149.8599 0)
 			(effects
 				(font
@@ -8630,7 +8884,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R31")
+					(reference "R22")
 					(unit 1)
 				)
 			)
@@ -8645,7 +8899,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "7972e443-90d8-4649-9f4d-7ca5f3b5ea42")
-		(property "Reference" "C42"
+		(property "Reference" "C35"
 			(at 41.402 102.362 0)
 			(effects
 				(font
@@ -8708,8 +8962,196 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C42")
+					(reference "C35")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_Pack04_Split")
+		(at 143.51 111.76 270)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7b1d786f-876e-4a6c-9469-25be8a90c665")
+		(property "Reference" "RN2"
+			(at 136.906 110.49 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "33"
+			(at 149.352 110.744 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
+			(at 143.51 109.728 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 143.51 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "4 resistor network, parallel topology, split"
+			(at 143.51 111.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 111.76 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "efbeba24-7ed2-45ef-8842-dfc2754b786d")
+		)
+		(pin "3"
+			(uuid "aef2a64a-ff08-46dc-bf7a-b6825589d5b2")
+		)
+		(pin "6"
+			(uuid "30f322dd-fc25-47ed-8ef0-b80e8b250500")
+		)
+		(pin "4"
+			(uuid "415fefa8-5343-4610-b0df-9ef9dad370b5")
+		)
+		(pin "8"
+			(uuid "2dd925a7-9c95-4cef-90a6-a7dbf08a5e2a")
+		)
+		(pin "1"
+			(uuid "26206f01-98ad-4222-b14c-0b07e63e1f98")
+		)
+		(pin "7"
+			(uuid "a225eb4a-a3b1-424b-b22b-3f5a8f99a240")
+		)
+		(pin "2"
+			(uuid "9c8e29ad-9e5e-4dbf-927c-8ee1636d3e14")
+		)
+		(instances
+			(project ""
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
+					(reference "RN2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_Pack04_Split")
+		(at 143.51 116.84 270)
+		(unit 3)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "7b21583b-a305-4ba8-9e81-9296f0dfc9ac")
+		(property "Reference" "RN2"
+			(at 136.906 115.824 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "33"
+			(at 149.352 115.824 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
+			(at 143.51 114.808 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 143.51 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "4 resistor network, parallel topology, split"
+			(at 143.51 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 116.84 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "efbeba24-7ed2-45ef-8842-dfc2754b786e")
+		)
+		(pin "3"
+			(uuid "aef2a64a-ff08-46dc-bf7a-b6825589d5b3")
+		)
+		(pin "6"
+			(uuid "30f322dd-fc25-47ed-8ef0-b80e8b250501")
+		)
+		(pin "4"
+			(uuid "415fefa8-5343-4610-b0df-9ef9dad370b6")
+		)
+		(pin "8"
+			(uuid "2dd925a7-9c95-4cef-90a6-a7dbf08a5e2b")
+		)
+		(pin "1"
+			(uuid "26206f01-98ad-4222-b14c-0b07e63e1f99")
+		)
+		(pin "7"
+			(uuid "a225eb4a-a3b1-424b-b22b-3f5a8f99a241")
+		)
+		(pin "2"
+			(uuid "9c8e29ad-9e5e-4dbf-927c-8ee1636d3e15")
+		)
+		(instances
+			(project ""
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
+					(reference "RN2")
+					(unit 3)
 				)
 			)
 		)
@@ -8723,7 +9165,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "83b52045-27fc-4387-9f4d-8966b74ae08f")
-		(property "Reference" "#PWR058"
+		(property "Reference" "#PWR030"
 			(at 218.44 34.29 0)
 			(effects
 				(font
@@ -8773,7 +9215,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR058")
+					(reference "#PWR030")
 					(unit 1)
 				)
 			)
@@ -8789,7 +9231,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8f120381-5ee4-43a3-a7f8-b343fa4994c2")
-		(property "Reference" "#PWR055"
+		(property "Reference" "#PWR022"
 			(at 39.37 115.57 0)
 			(effects
 				(font
@@ -8839,7 +9281,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR055")
+					(reference "#PWR022")
 					(unit 1)
 				)
 			)
@@ -8855,7 +9297,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8fb671cb-527a-438e-83aa-4300ef5bb750")
-		(property "Reference" "#PWR052"
+		(property "Reference" "#PWR024"
 			(at 48.26 67.31 0)
 			(effects
 				(font
@@ -8905,7 +9347,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR052")
+					(reference "#PWR024")
 					(unit 1)
 				)
 			)
@@ -8921,7 +9363,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "90aab710-1d35-4ed3-83a0-595753d6873b")
-		(property "Reference" "#PWR042"
+		(property "Reference" "#PWR029"
 			(at 205.74 152.4 0)
 			(effects
 				(font
@@ -8971,7 +9413,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR042")
+					(reference "#PWR029")
 					(unit 1)
 				)
 			)
@@ -8987,7 +9429,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "93a557d3-b932-4859-bfa5-c2edd3dae8cd")
-		(property "Reference" "#PWR054"
+		(property "Reference" "#PWR026"
 			(at 116.84 30.48 0)
 			(effects
 				(font
@@ -9037,7 +9479,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR054")
+					(reference "#PWR026")
 					(unit 1)
 				)
 			)
@@ -9052,7 +9494,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "99784ae4-74d7-44c0-b42b-2d4d09efef60")
-		(property "Reference" "C44"
+		(property "Reference" "C39"
 			(at 198.628 33.528 0)
 			(effects
 				(font
@@ -9115,7 +9557,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C44")
+					(reference "C39")
 					(unit 1)
 				)
 			)
@@ -9130,7 +9572,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "a5ea558f-a238-4204-9b66-5d16030bc90f")
-		(property "Reference" "R57"
+		(property "Reference" "R16"
 			(at 58.166 97.028 90)
 			(effects
 				(font
@@ -9191,7 +9633,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R57")
+					(reference "R16")
 					(unit 1)
 				)
 			)
@@ -9207,7 +9649,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "aa0fc381-1a1c-473d-b9ce-c2facfdbe452")
-		(property "Reference" "#PWR056"
+		(property "Reference" "#PWR028"
 			(at 198.12 52.07 0)
 			(effects
 				(font
@@ -9257,7 +9699,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR056")
+					(reference "#PWR028")
 					(unit 1)
 				)
 			)
@@ -9272,7 +9714,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "aabe8240-d995-4dc9-9791-007010a0275f")
-		(property "Reference" "C45"
+		(property "Reference" "C40"
 			(at 203.708 33.528 0)
 			(effects
 				(font
@@ -9335,7 +9777,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C45")
+					(reference "C40")
 					(unit 1)
 				)
 			)
@@ -9351,7 +9793,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "aba1763b-616a-46fe-8928-ef6036b1f56f")
-		(property "Reference" "#PWR057"
+		(property "Reference" "#PWR031"
 			(at 218.44 52.07 0)
 			(effects
 				(font
@@ -9401,7 +9843,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "#PWR057")
+					(reference "#PWR031")
 					(unit 1)
 				)
 			)
@@ -9417,7 +9859,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "b35d3e66-0272-40ec-a420-f4c1b8ff6a10")
-		(property "Reference" "J8"
+		(property "Reference" "J4"
 			(at 45.72 121.9199 0)
 			(effects
 				(font
@@ -9474,7 +9916,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "J8")
+					(reference "J4")
 					(unit 1)
 				)
 			)
@@ -9490,7 +9932,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b368c02f-8e30-4a37-92af-ef8afba7ffaf")
-		(property "Reference" "C40"
+		(property "Reference" "C34"
 			(at 30.48 34.2962 0)
 			(effects
 				(font
@@ -9553,7 +9995,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C40")
+					(reference "C34")
 					(unit 1)
 				)
 			)
@@ -9584,7 +10026,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
 			(at 143.51 111.125 90)
 			(effects
 				(font
@@ -9604,6 +10046,15 @@
 		)
 		(property "Description" "4 resistor network, parallel topology"
 			(at 143.51 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 104.14 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9653,7 +10104,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "c497a885-0c2d-4e21-85c7-a44b2d073a02")
-		(property "Reference" "C46"
+		(property "Reference" "C41"
 			(at 208.788 33.528 0)
 			(effects
 				(font
@@ -9716,7 +10167,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C46")
+					(reference "C41")
 					(unit 1)
 				)
 			)
@@ -9747,7 +10198,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
 			(at 143.51 141.605 90)
 			(effects
 				(font
@@ -9767,6 +10218,15 @@
 		)
 		(property "Description" "4 resistor network, parallel topology"
 			(at 143.51 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 134.62 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -9817,7 +10277,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c6605752-ed4c-4664-bce6-60cc46292d89")
-		(property "Reference" "C41"
+		(property "Reference" "C36"
 			(at 50.8 54.6162 0)
 			(effects
 				(font
@@ -9880,7 +10340,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C41")
+					(reference "C36")
 					(unit 1)
 				)
 			)
@@ -9895,7 +10355,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "cfbc9715-91bb-4043-aee7-e206248a9e48")
-		(property "Reference" "C47"
+		(property "Reference" "C42"
 			(at 218.948 33.528 0)
 			(effects
 				(font
@@ -9958,7 +10418,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "C47")
+					(reference "C42")
 					(unit 1)
 				)
 			)
@@ -9974,7 +10434,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "da396dd6-d9f2-4348-b543-2f0979d88577")
-		(property "Reference" "R40"
+		(property "Reference" "R15"
 			(at 36.83 45.72 90)
 			(effects
 				(font
@@ -10035,8 +10495,102 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R40")
+					(reference "R15")
 					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_Pack04_Split")
+		(at 143.51 114.3 270)
+		(unit 2)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "e00ef576-774d-4c47-a1ac-29ee2d0f8294")
+		(property "Reference" "RN2"
+			(at 136.906 113.03 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "33"
+			(at 149.352 113.284 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
+			(at 143.51 112.268 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 143.51 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "4 resistor network, parallel topology, split"
+			(at 143.51 114.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 114.3 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "5"
+			(uuid "efbeba24-7ed2-45ef-8842-dfc2754b786f")
+		)
+		(pin "3"
+			(uuid "aef2a64a-ff08-46dc-bf7a-b6825589d5b4")
+		)
+		(pin "6"
+			(uuid "30f322dd-fc25-47ed-8ef0-b80e8b250502")
+		)
+		(pin "4"
+			(uuid "415fefa8-5343-4610-b0df-9ef9dad370b7")
+		)
+		(pin "8"
+			(uuid "2dd925a7-9c95-4cef-90a6-a7dbf08a5e2c")
+		)
+		(pin "1"
+			(uuid "26206f01-98ad-4222-b14c-0b07e63e1f9a")
+		)
+		(pin "7"
+			(uuid "a225eb4a-a3b1-424b-b22b-3f5a8f99a242")
+		)
+		(pin "2"
+			(uuid "9c8e29ad-9e5e-4dbf-927c-8ee1636d3e16")
+		)
+		(instances
+			(project ""
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
+					(reference "RN2")
+					(unit 2)
 				)
 			)
 		)
@@ -10066,7 +10620,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "RN_SMD:R_Array_Flat_4x0201"
 			(at 143.51 131.445 90)
 			(effects
 				(font
@@ -10086,6 +10640,15 @@
 		)
 		(property "Description" "4 resistor network, parallel topology"
 			(at 143.51 124.46 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "YC104-FR-0733RL"
+			(at 143.51 124.46 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10136,7 +10699,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f26d325c-c674-45e5-8fcb-e7e358aeda27")
-		(property "Reference" "R32"
+		(property "Reference" "R20"
 			(at 151.13 173.99 90)
 			(effects
 				(font
@@ -10197,7 +10760,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R32")
+					(reference "R20")
 					(unit 1)
 				)
 			)

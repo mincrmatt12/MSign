@@ -5,4 +5,8 @@
   (lib (name "Inductor_Cenker")(type "KiCad")(uri "${KIPRJMOD}/Inductor_Cenker.pretty")(options "")(descr ""))
   (lib (name "Transistor_FET_Winsok")(type "KiCad")(uri "${KIPRJMOD}/Transistor_FET_Winsok.pretty")(options "")(descr ""))
   (lib (name "RN_SMD")(type "KiCad")(uri "${KIPRJMOD}/RN_SMD.pretty")(options "")(descr ""))
+  (lib (name "Switch_Slide_SMD")(type "KiCad")(uri "${KIPRJMOD}/Switch_Slide_SMD.pretty")(options "")(descr ""))
+  (lib (name "TI_EFuse")(type "KiCad")(uri "${KIPRJMOD}/TI_EFuse.pretty")(options "")(descr ""))
+  (lib (name "Package_TSOPI")(type "KiCad")(uri "${KIPRJMOD}/Package_TSOPI.pretty")(options "")(descr ""))
+  (lib (name "PCM_Espressif")(type "KiCad")(uri "${KIPRJMOD}/PCM_Espressif.pretty")(options "")(descr ""))
 )

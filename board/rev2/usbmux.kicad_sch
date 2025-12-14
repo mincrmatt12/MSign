@@ -2040,7 +2040,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2ab502f6-3c0a-493e-aeb5-72d3c977d6af")
-		(property "Reference" "U2"
+		(property "Reference" "U17"
 			(at 172.3233 62.23 0)
 			(effects
 				(font
@@ -2085,6 +2085,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part" "TS3USB30ERSWR"
+			(at 170.18 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "9"
 			(uuid "af2b8164-fb7b-44c0-9546-fd3167e68b22")
 		)
@@ -2118,7 +2127,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "U2")
+					(reference "U17")
 					(unit 1)
 				)
 			)
@@ -2134,7 +2143,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "32e4529b-3974-4003-8cb2-c9d1eee6e129")
-		(property "Reference" "R36"
+		(property "Reference" "R44"
 			(at 73.66 78.7399 0)
 			(effects
 				(font
@@ -2197,7 +2206,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "R36")
+					(reference "R44")
 					(unit 1)
 				)
 			)
@@ -2213,7 +2222,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "32fd6d37-6fd2-4835-b7f5-631985f28517")
-		(property "Reference" "#PWR031"
+		(property "Reference" "#PWR061"
 			(at 170.18 146.05 0)
 			(effects
 				(font
@@ -2263,7 +2272,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "#PWR031")
+					(reference "#PWR061")
 					(unit 1)
 				)
 			)
@@ -2279,7 +2288,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "33ec90ea-0e44-4ff9-abad-d9c7f6d20a50")
-		(property "Reference" "#PWR044"
+		(property "Reference" "#PWR057"
 			(at 97.79 120.65 0)
 			(effects
 				(font
@@ -2329,7 +2338,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "#PWR044")
+					(reference "#PWR057")
 					(unit 1)
 				)
 			)
@@ -2345,7 +2354,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "5f019392-59f5-40d5-bb34-9d58ca3f6964")
-		(property "Reference" "C58"
+		(property "Reference" "C61"
 			(at 160.02 111.7662 0)
 			(effects
 				(font
@@ -2408,7 +2417,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "C58")
+					(reference "C61")
 					(unit 1)
 				)
 			)
@@ -2469,6 +2478,15 @@
 				(hide yes)
 			)
 		)
+		(property "Part" "TS3USB30ERSWR"
+			(at 170.18 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "9"
 			(uuid "af2b8164-fb7b-44c0-9546-fd3167e68b23")
 		)
@@ -2518,7 +2536,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "8abbe366-2d9e-4ca6-a42b-b844404889d3")
-		(property "Reference" "#PWR019"
+		(property "Reference" "#PWR059"
 			(at 170.18 99.06 0)
 			(effects
 				(font
@@ -2568,7 +2586,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "#PWR019")
+					(reference "#PWR059")
 					(unit 1)
 				)
 			)
@@ -2584,7 +2602,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "9e706768-65c8-4d97-b6fe-32cb567c9a5f")
-		(property "Reference" "C57"
+		(property "Reference" "C60"
 			(at 160.02 60.9662 0)
 			(effects
 				(font
@@ -2647,7 +2665,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "C57")
+					(reference "C60")
 					(unit 1)
 				)
 			)
@@ -2663,7 +2681,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a74aae9c-7436-4782-bceb-a160784b83fe")
-		(property "Reference" "R35"
+		(property "Reference" "R45"
 			(at 73.66 97.7899 0)
 			(effects
 				(font
@@ -2726,7 +2744,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "R35")
+					(reference "R45")
 					(unit 1)
 				)
 			)
@@ -2742,7 +2760,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e273b3b0-0b01-4e99-9aff-dd1119efb539")
-		(property "Reference" "#PWR043"
+		(property "Reference" "#PWR060"
 			(at 170.18 110.49 0)
 			(effects
 				(font
@@ -2792,7 +2810,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "#PWR043")
+					(reference "#PWR060")
 					(unit 1)
 				)
 			)
@@ -2824,7 +2842,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Switch_Slide_SMD:SW-SMD_MS-22D28-G020"
 			(at 111.76 95.25 0)
 			(effects
 				(font
@@ -2843,6 +2861,15 @@
 			)
 		)
 		(property "Description" "Slide Switch, dual pole double throw"
+			(at 97.79 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "MS-22D28-G020"
 			(at 97.79 100.33 0)
 			(effects
 				(font
@@ -2888,7 +2915,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "f9869d88-67a8-4ec1-a41c-15bd5cc728ab")
-		(property "Reference" "#PWR018"
+		(property "Reference" "#PWR058"
 			(at 170.18 59.69 0)
 			(effects
 				(font
@@ -2938,7 +2965,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/f949a322-cdc0-42f3-8e56-a599c8860839"
-					(reference "#PWR018")
+					(reference "#PWR058")
 					(unit 1)
 				)
 			)
