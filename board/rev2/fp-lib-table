@@ -2,4 +2,7 @@
   (version 7)
   (lib (name "Vishay_DCDC")(type "KiCad")(uri "${KIPRJMOD}/Vishay_DCDC.pretty")(options "")(descr ""))
   (lib (name "RP2350_80QFN_minimal")(type "KiCad")(uri "${KIPRJMOD}/RP2350_80QFN_minimal.pretty")(options "")(descr ""))
+  (lib (name "Inductor_Cenker")(type "KiCad")(uri "${KIPRJMOD}/Inductor_Cenker.pretty")(options "")(descr ""))
+  (lib (name "Transistor_FET_Winsok")(type "KiCad")(uri "${KIPRJMOD}/Transistor_FET_Winsok.pretty")(options "")(descr ""))
+  (lib (name "RN_SMD")(type "KiCad")(uri "${KIPRJMOD}/RN_SMD.pretty")(options "")(descr ""))
 )

@@ -2133,12 +2133,6 @@
 		(uuid "0501e77d-09bf-4834-be0f-695bfa1b2e30")
 	)
 	(junction
-		(at 50.8 45.72)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "07f1db13-7569-4b63-a777-a84d8185fdd2")
-	)
-	(junction
 		(at 204.47 39.37)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2161,6 +2155,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "ab48f5df-ec40-451c-80cf-4ec5be2a6e87")
+	)
+	(junction
+		(at 50.8 53.34)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "adead953-f065-4b1a-9ada-a218fb25a3a5")
 	)
 	(junction
 		(at 204.47 81.28)
@@ -2492,7 +2492,7 @@
 	)
 	(wire
 		(pts
-			(xy 50.8 52.07) (xy 50.8 62.23)
+			(xy 50.8 50.8) (xy 50.8 53.34)
 		)
 		(stroke
 			(width 0)
@@ -2532,16 +2532,6 @@
 	)
 	(wire
 		(pts
-			(xy 50.8 45.72) (xy 71.12 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "4f321267-2fec-43ca-b19a-3b15d4029a91")
-	)
-	(wire
-		(pts
 			(xy 199.39 110.49) (xy 217.17 110.49)
 		)
 		(stroke
@@ -2549,6 +2539,16 @@
 			(type default)
 		)
 		(uuid "534c2c84-8bfd-4b31-a5d2-5812558d3826")
+	)
+	(wire
+		(pts
+			(xy 50.8 53.34) (xy 50.8 62.23)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "562dc054-d588-487d-9bcc-c83d7498a82e")
 	)
 	(wire
 		(pts
@@ -2692,7 +2692,7 @@
 	)
 	(wire
 		(pts
-			(xy 50.8 45.72) (xy 50.8 46.99)
+			(xy 50.8 43.18) (xy 50.8 45.72)
 		)
 		(stroke
 			(width 0)
@@ -2769,6 +2769,16 @@
 			(type default)
 		)
 		(uuid "8d420a85-eff2-4507-8d02-c6506cef09ed")
+	)
+	(wire
+		(pts
+			(xy 50.8 53.34) (xy 71.12 53.34)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8e27da2c-7612-4273-9a5b-1d159c536235")
 	)
 	(bus
 		(pts
@@ -3050,16 +3060,6 @@
 		)
 		(uuid "efcd1f6a-c370-4cbe-b2cd-9e0e82ea74cf")
 	)
-	(wire
-		(pts
-			(xy 50.8 43.18) (xy 50.8 45.72)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f2553ba6-b747-418c-9d10-1aab44f7e740")
-	)
 	(bus
 		(pts
 			(xy 171.45 41.91) (xy 171.45 46.99)
@@ -3232,7 +3232,7 @@
 	)
 	(global_label "RESET"
 		(shape output)
-		(at 71.12 45.72 0)
+		(at 71.12 53.34 0)
 		(fields_autoplaced yes)
 		(effects
 			(font
@@ -3240,9 +3240,9 @@
 			)
 			(justify left)
 		)
-		(uuid "012b7069-4a86-4e52-9c89-18803f658b30")
+		(uuid "04dc6968-a31b-440d-bf8a-a1f7eeabdf6e")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 79.8503 45.72 0)
+			(at 79.8503 53.34 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3272,7 +3272,7 @@
 			)
 			(justify left)
 		)
-		(uuid "472a8531-d81f-4e00-ad06-fd86e7a2b51c")
+		(uuid "472a8531-d81f-4e00-ad06-fd86e7a2b51d")
 	)
 	(hierarchical_label "AUX_USB_VBUS"
 		(shape output)
@@ -3875,7 +3875,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
 			(at 217.17 134.62 0)
 			(effects
 				(font
@@ -3894,6 +3894,15 @@
 			)
 		)
 		(property "Description" "Resistor, small US symbol"
+			(at 217.17 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "0603WAF5101T5E"
 			(at 217.17 134.62 0)
 			(effects
 				(font
@@ -3945,7 +3954,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Capacitor_SMD:C_0402_1005Metric"
 			(at 193.04 43.18 0)
 			(effects
 				(font
@@ -3964,6 +3973,15 @@
 			)
 		)
 		(property "Description" "Unpolarized capacitor, small symbol"
+			(at 193.04 43.18 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "CL05B104KB54PNC"
 			(at 193.04 43.18 0)
 			(effects
 				(font
@@ -4121,7 +4139,7 @@
 	)
 	(symbol
 		(lib_id "Device:R_Small_US")
-		(at 50.8 49.53 0)
+		(at 50.8 48.26 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4130,7 +4148,7 @@
 		(fields_autoplaced yes)
 		(uuid "a23d9515-4d1d-4bfc-9662-31332c69c8ad")
 		(property "Reference" "R29"
-			(at 53.34 48.2599 0)
+			(at 53.34 46.9899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4138,8 +4156,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "R_Small_US"
-			(at 53.34 50.7999 0)
+		(property "Value" "10k"
+			(at 53.34 49.5299 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4147,8 +4165,8 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
-			(at 50.8 49.53 0)
+		(property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+			(at 50.8 48.26 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4157,7 +4175,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 50.8 49.53 0)
+			(at 50.8 48.26 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4166,7 +4184,16 @@
 			)
 		)
 		(property "Description" "Resistor, small US symbol"
-			(at 50.8 49.53 0)
+			(at 50.8 48.26 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "0805W8F1002T5E"
+			(at 50.8 48.26 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4283,7 +4310,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Resistor_SMD:R_0603_1608Metric"
 			(at 208.28 134.62 0)
 			(effects
 				(font
@@ -4310,11 +4337,20 @@
 				(hide yes)
 			)
 		)
+		(property "Part" "0603WAF5101T5E"
+			(at 208.28 134.62 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
-			(uuid "b714dd05-91d3-4fb8-b047-3f41d9df04d9")
+			(uuid "b714dd05-91d3-4fb8-b047-3f41d9df04da")
 		)
 		(pin "1"
-			(uuid "abf57126-5faa-4d9d-9f36-c0bda77693a5")
+			(uuid "abf57126-5faa-4d9d-9f36-c0bda77693a6")
 		)
 		(instances
 			(project ""
@@ -4351,7 +4387,7 @@
 				)
 			)
 		)
-		(property "Footprint" ""
+		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x09_P2.54mm_Horizontal"
 			(at 48.26 129.54 0)
 			(effects
 				(font

@@ -1,0 +1,154 @@
+(footprint "L_Cenker_CKST1707"
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(layer "F.Cu")
+	(descr "Inductor, Cenker, CKST1707, 17.5x17.5x7.0mm, (https://www.cenkersz.com/file/upload/spae532/2023-07/11/202307110955366446.pdf), generated with kicad-footprint-generator gen_inductor.py")
+	(tags "ckst molded power")
+	(property "Reference" "REF**"
+		(at 0 -9.7 0)
+		(layer "F.SilkS")
+		(uuid "45058f3a-de13-4353-84de-9f2a9a29e4e9")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Value" "L_Cenker_CKST1707"
+		(at 0 9.7 0)
+		(layer "F.Fab")
+		(uuid "6e52c2c8-dcce-4427-a126-035659990dc1")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Datasheet" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "e9a243ae-0612-4b41-bae2-70c9cee424d8")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(property "Description" ""
+		(at 0 0 0)
+		(layer "F.Fab")
+		(hide yes)
+		(uuid "f958e0d0-fdd6-4ae5-a248-e4c03fbc56c3")
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.15)
+			)
+		)
+	)
+	(attr smd)
+	(fp_line
+		(start -8.86 -8.86)
+		(end 8.86 -8.86)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "19f9e256-874f-441e-8c0b-6e8f27ed7d1d")
+	)
+	(fp_line
+		(start -8.86 8.86)
+		(end -8.86 -8.86)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "e4cd972e-c6a6-47d4-a7db-ad14467d866f")
+	)
+	(fp_line
+		(start 8.86 -8.86)
+		(end 8.86 8.86)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "b9fd694d-8e76-4723-86a3-9cbe21148ad7")
+	)
+	(fp_line
+		(start 8.86 8.86)
+		(end -8.86 8.86)
+		(stroke
+			(width 0.12)
+			(type solid)
+		)
+		(layer "F.SilkS")
+		(uuid "a9c1b321-53cd-48c4-93bb-b24d51eb9a69")
+	)
+	(fp_rect
+		(start -9 -9)
+		(end 9 9)
+		(stroke
+			(width 0.05)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.CrtYd")
+		(uuid "462915ef-0e69-4f52-997a-91db78b137ce")
+	)
+	(fp_rect
+		(start -8.75 -8.75)
+		(end 8.75 8.75)
+		(stroke
+			(width 0.1)
+			(type solid)
+		)
+		(fill no)
+		(layer "F.Fab")
+		(uuid "7ac47f43-283b-4f53-9311-6d6a7d18139d")
+	)
+	(fp_text user "${REFERENCE}"
+		(at 0 0 0)
+		(layer "F.Fab")
+		(uuid "5cdcbd46-ba4a-454b-9063-fa15269339b8")
+		(effects
+			(font
+				(size 1 1)
+				(thickness 0.15)
+			)
+		)
+	)
+	(pad "1" smd roundrect
+		(at -6.9 0)
+		(size 3.4 12.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.073529)
+		(uuid "acb9bef8-4a93-4ba4-bb22-2ceb6fe8979a")
+	)
+	(pad "2" smd roundrect
+		(at 6.9 0)
+		(size 3.4 12.6)
+		(layers "F.Cu" "F.Mask" "F.Paste")
+		(roundrect_rratio 0.073529)
+		(uuid "22ceef85-da74-44f3-9c16-dfa9576faf5d")
+	)
+	(embedded_fonts no)
+	(model "${KIPRJMOD}/Inductor_Cenker.3dshapes/L_Cenker_CKST1707.wrl"
+		(offset
+			(xyz 0 0 0)
+		)
+		(scale
+			(xyz 1 1 1)
+		)
+		(rotate
+			(xyz 0 0 0)
+		)
+	)
+)
