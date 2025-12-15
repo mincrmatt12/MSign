@@ -3126,7 +3126,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "0baf7b5f-ebe5-4fea-9986-c3ddf043cf51")
-		(property "Reference" "C31"
+		(property "Reference" "C33"
 			(at 91.44 49.5362 0)
 			(effects
 				(font
@@ -3180,6 +3180,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C307331 "
+			(at 88.9 50.8 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "69f8bce1-ce35-4242-8a5c-f8963541638c")
 		)
@@ -3189,7 +3198,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/4f7f35d0-2952-4294-913c-05f668985375"
-					(reference "C31")
+					(reference "C33")
 					(unit 1)
 				)
 			)
@@ -3271,7 +3280,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "2d3c5790-1e16-4fde-90a0-a46acd5195a2")
-		(property "Reference" "C33"
+		(property "Reference" "C35"
 			(at 153.67 38.1062 0)
 			(effects
 				(font
@@ -3325,6 +3334,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C29823 "
+			(at 151.13 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "69f8bce1-ce35-4242-8a5c-f8963541638d")
 		)
@@ -3334,7 +3352,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/4f7f35d0-2952-4294-913c-05f668985375"
-					(reference "C33")
+					(reference "C35")
 					(unit 1)
 				)
 			)
@@ -3350,7 +3368,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "44a22ae4-3054-431c-8731-944f47485370")
-		(property "Reference" "R12"
+		(property "Reference" "R11"
 			(at 57.15 77.4699 0)
 			(effects
 				(font
@@ -3404,6 +3422,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C4184"
+			(at 54.61 78.74 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "59cda505-0563-4710-8152-21bfa611139a")
 		)
@@ -3413,7 +3440,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/4f7f35d0-2952-4294-913c-05f668985375"
-					(reference "R12")
+					(reference "R11")
 					(unit 1)
 				)
 			)
@@ -3495,8 +3522,8 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "87efc822-9830-4b53-b2b3-d90558ebf65b")
-		(property "Reference" "J3"
-			(at 188.976 91.948 0)
+		(property "Reference" "JDBG1"
+			(at 191.008 91.948 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3538,6 +3565,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" ""
+			(at 186.69 92.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "3f4b45f6-be66-4ecc-8634-9dc3b02dd46c")
 		)
@@ -3550,7 +3586,7 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/4f7f35d0-2952-4294-913c-05f668985375"
-					(reference "J3")
+					(reference "JDBG1")
 					(unit 1)
 				)
 			)
@@ -3632,7 +3668,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "b4d73dea-de91-42b2-9cb7-265d3d1e2265")
-		(property "Reference" "C32"
+		(property "Reference" "C34"
 			(at 142.24 38.1062 0)
 			(effects
 				(font
@@ -3686,6 +3722,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C307331 "
+			(at 139.7 39.37 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "69f8bce1-ce35-4242-8a5c-f8963541638e")
 		)
@@ -3695,7 +3740,7 @@
 		(instances
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/4f7f35d0-2952-4294-913c-05f668985375"
-					(reference "C32")
+					(reference "C34")
 					(unit 1)
 				)
 			)
@@ -3823,7 +3868,16 @@
 				(hide yes)
 			)
 		)
-		(property "Part" "STM32G071CBUx"
+		(property "Part" "STM32G071CBU6"
+			(at 130.81 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C529343"
 			(at 130.81 97.79 0)
 			(effects
 				(font

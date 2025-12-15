@@ -1781,7 +1781,7 @@
 	)
 	(wire
 		(pts
-			(xy 138.43 91.44) (xy 138.43 104.14)
+			(xy 137.16 91.44) (xy 137.16 104.14)
 		)
 		(stroke
 			(width 0)
@@ -1791,7 +1791,7 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 86.36) (xy 139.7 86.36)
+			(xy 110.49 86.36) (xy 138.43 86.36)
 		)
 		(stroke
 			(width 0)
@@ -1861,7 +1861,7 @@
 	)
 	(wire
 		(pts
-			(xy 139.7 101.6) (xy 173.99 101.6)
+			(xy 138.43 101.6) (xy 173.99 101.6)
 		)
 		(stroke
 			(width 0)
@@ -1871,7 +1871,7 @@
 	)
 	(wire
 		(pts
-			(xy 137.16 83.82) (xy 193.04 83.82)
+			(xy 140.97 83.82) (xy 193.04 83.82)
 		)
 		(stroke
 			(width 0)
@@ -1901,7 +1901,7 @@
 	)
 	(wire
 		(pts
-			(xy 137.16 93.98) (xy 137.16 83.82)
+			(xy 140.97 93.98) (xy 140.97 83.82)
 		)
 		(stroke
 			(width 0)
@@ -1911,7 +1911,7 @@
 	)
 	(wire
 		(pts
-			(xy 138.43 104.14) (xy 173.99 104.14)
+			(xy 137.16 104.14) (xy 173.99 104.14)
 		)
 		(stroke
 			(width 0)
@@ -2071,7 +2071,7 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 93.98) (xy 137.16 93.98)
+			(xy 110.49 93.98) (xy 140.97 93.98)
 		)
 		(stroke
 			(width 0)
@@ -2171,7 +2171,7 @@
 	)
 	(wire
 		(pts
-			(xy 135.89 82.55) (xy 213.36 82.55)
+			(xy 139.7 82.55) (xy 213.36 82.55)
 		)
 		(stroke
 			(width 0)
@@ -2181,7 +2181,7 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 88.9) (xy 140.97 86.36)
+			(xy 142.24 88.9) (xy 142.24 85.09)
 		)
 		(stroke
 			(width 0)
@@ -2201,7 +2201,7 @@
 	)
 	(wire
 		(pts
-			(xy 140.97 86.36) (xy 191.77 86.36)
+			(xy 142.24 85.09) (xy 191.77 85.09)
 		)
 		(stroke
 			(width 0)
@@ -2341,7 +2341,7 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 91.44) (xy 138.43 91.44)
+			(xy 110.49 91.44) (xy 137.16 91.44)
 		)
 		(stroke
 			(width 0)
@@ -2351,7 +2351,7 @@
 	)
 	(wire
 		(pts
-			(xy 139.7 86.36) (xy 139.7 101.6)
+			(xy 138.43 86.36) (xy 138.43 101.6)
 		)
 		(stroke
 			(width 0)
@@ -2381,7 +2381,7 @@
 	)
 	(wire
 		(pts
-			(xy 191.77 86.36) (xy 191.77 101.6)
+			(xy 191.77 85.09) (xy 191.77 101.6)
 		)
 		(stroke
 			(width 0)
@@ -2431,7 +2431,7 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 96.52) (xy 135.89 96.52)
+			(xy 110.49 96.52) (xy 139.7 96.52)
 		)
 		(stroke
 			(width 0)
@@ -2451,7 +2451,7 @@
 	)
 	(wire
 		(pts
-			(xy 135.89 96.52) (xy 135.89 82.55)
+			(xy 139.7 96.52) (xy 139.7 82.55)
 		)
 		(stroke
 			(width 0)
@@ -2551,7 +2551,7 @@
 	)
 	(wire
 		(pts
-			(xy 110.49 88.9) (xy 140.97 88.9)
+			(xy 110.49 88.9) (xy 142.24 88.9)
 		)
 		(stroke
 			(width 0)
@@ -3010,7 +3010,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_SO:TSSOP-20-1EP_4.4x6.5mm_P0.65mm_EP2.15x3.35mm"
+		(property "Footprint" "Package_SO:TSSOP-20_4.4x6.5mm_P0.65mm"
 			(at 97.79 99.06 0)
 			(effects
 				(font
@@ -3040,7 +3040,16 @@
 				(hide yes)
 			)
 		)
-		(property "Part" "74HCT245"
+		(property "Part" "74HCT245PW,118"
+			(at 97.79 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C5980"
 			(at 97.79 99.06 0)
 			(effects
 				(font
@@ -3132,7 +3141,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "7f0dff01-b433-4427-af35-0520b6a22c09")
-		(property "Reference" "C57"
+		(property "Reference" "C59"
 			(at 41.91 96.5262 0)
 			(effects
 				(font
@@ -3186,6 +3195,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C307331 "
+			(at 39.37 97.79 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "7f6f1ef2-04e6-4434-a50b-c1a5f4b65aa4")
 		)
@@ -3195,11 +3213,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "C57")
+					(reference "C59")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "C58")
+					(reference "C60")
 					(unit 1)
 				)
 			)
@@ -3215,7 +3233,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "86ea2064-58c8-46f9-ade8-ce8db87aa392")
-		(property "Reference" "#PWR045"
+		(property "Reference" "#PWR046"
 			(at 97.79 73.66 0)
 			(effects
 				(font
@@ -3265,11 +3283,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "#PWR045")
+					(reference "#PWR046")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "#PWR047")
+					(reference "#PWR048")
 					(unit 1)
 				)
 			)
@@ -3339,6 +3357,15 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" "C963205"
+			(at 223.52 99.06 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "5"
 			(uuid "7fdf0828-d55c-4a02-ab80-b708d4c018ad")
 		)
@@ -3379,7 +3406,7 @@
 		(on_board yes)
 		(dnp no)
 		(uuid "cd037d59-a723-4755-8c50-dc3b59483ab1")
-		(property "Reference" "J5"
+		(property "Reference" "JLED1"
 			(at 180.34 88.392 0)
 			(effects
 				(font
@@ -3422,6 +3449,15 @@
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" ""
+			(at 179.07 99.06 0)
+			(effects
+				(font
+					(size 1.27 1.27)
 				)
 				(hide yes)
 			)
@@ -3477,11 +3513,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "J5")
+					(reference "JLED1")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "J6")
+					(reference "JLED2")
 					(unit 1)
 				)
 			)
@@ -3497,7 +3533,7 @@
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "e4240fed-3b82-474a-bbc6-7782b07e71de")
-		(property "Reference" "#PWR046"
+		(property "Reference" "#PWR047"
 			(at 162.56 132.08 0)
 			(effects
 				(font
@@ -3547,11 +3583,11 @@
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/b5a611d3-6308-4792-ad5f-d479afbae4ce"
-					(reference "#PWR046")
+					(reference "#PWR047")
 					(unit 1)
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/e7e17249-2796-40aa-8cf6-7a1737723276"
-					(reference "#PWR048")
+					(reference "#PWR049")
 					(unit 1)
 				)
 			)
