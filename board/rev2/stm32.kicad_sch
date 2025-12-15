@@ -2068,6 +2068,82 @@
 		(color 0 0 0 0)
 		(uuid "d2aff527-133c-4d0f-a9f3-6f7081bfecf3")
 	)
+	(no_connect
+		(at 158.75 95.25)
+		(uuid "0893a5ed-ebe7-47fe-a67f-2c3a40134647")
+	)
+	(no_connect
+		(at 158.75 57.15)
+		(uuid "21328eb3-4c03-4a4a-bfd2-e1b56d9bbdcc")
+	)
+	(no_connect
+		(at 102.87 64.77)
+		(uuid "2f0bf39d-61eb-4ba1-83ce-13f126fd8f65")
+	)
+	(no_connect
+		(at 158.75 133.35)
+		(uuid "34141742-c01c-45c6-bfa9-bb59d8fe73b9")
+	)
+	(no_connect
+		(at 102.87 62.23)
+		(uuid "3c748988-0a86-49c9-819b-434d9166e660")
+	)
+	(no_connect
+		(at 158.75 128.27)
+		(uuid "3ee4f4e5-f65b-4080-ace1-1bd5c9adc251")
+	)
+	(no_connect
+		(at 158.75 102.87)
+		(uuid "41e9c3df-1c68-4fce-ae38-b6f2a5ac5155")
+	)
+	(no_connect
+		(at 158.75 72.39)
+		(uuid "6691c39d-20e1-4507-9109-9c77955beb0d")
+	)
+	(no_connect
+		(at 158.75 110.49)
+		(uuid "67aeebc7-3540-44fe-8e15-3f2dd2840af6")
+	)
+	(no_connect
+		(at 102.87 80.01)
+		(uuid "6a7ff427-7a65-4762-bd45-9a8172dd38d5")
+	)
+	(no_connect
+		(at 158.75 135.89)
+		(uuid "76d85e3f-7c0a-4993-91f4-82e6c91a5ffc")
+	)
+	(no_connect
+		(at 158.75 113.03)
+		(uuid "8d7b0269-2b98-4a07-a620-bb9253b2bacc")
+	)
+	(no_connect
+		(at 158.75 107.95)
+		(uuid "97d2116b-da31-4286-9304-02f12a923fc3")
+	)
+	(no_connect
+		(at 158.75 115.57)
+		(uuid "a1a5ad13-e3e7-4fce-8e26-dac83b991532")
+	)
+	(no_connect
+		(at 158.75 69.85)
+		(uuid "a3b1441d-856e-4454-870e-cb4a92836ee4")
+	)
+	(no_connect
+		(at 158.75 74.93)
+		(uuid "a7b5be22-a2c3-4c67-a1e2-51aeabe2bcb2")
+	)
+	(no_connect
+		(at 158.75 123.19)
+		(uuid "d14bb34a-860d-43e4-8871-613c00d075f6")
+	)
+	(no_connect
+		(at 158.75 105.41)
+		(uuid "daf05dd5-ab0e-4707-a635-df3996431a87")
+	)
+	(no_connect
+		(at 158.75 125.73)
+		(uuid "eb26ae58-62b2-4ca9-8cab-54da6521704a")
+	)
 	(bus_entry
 		(at 209.55 82.55)
 		(size -2.54 2.54)
@@ -2696,6 +2772,16 @@
 	)
 	(wire
 		(pts
+			(xy 180.34 67.31) (xy 158.75 67.31)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "f2f69a3f-93d5-4c79-8549-9b3da75f2590")
+	)
+	(wire
+		(pts
 			(xy 88.9 53.34) (xy 88.9 57.15)
 		)
 		(stroke
@@ -2842,6 +2928,17 @@
 			(justify left)
 		)
 		(uuid "72acf824-27a4-4c3a-8a5a-19f234e588bf")
+	)
+	(hierarchical_label "SD_CARD_DET"
+		(shape input)
+		(at 180.34 67.31 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "751f3212-3faf-4b3c-b94d-308e7a2e85e3")
 	)
 	(hierarchical_label "PIX_CNT_CE"
 		(shape output)

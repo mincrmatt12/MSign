@@ -334,6 +334,15 @@
 		(color 0 0 0 0)
 		(uuid "ef095bfb-8d5b-47c2-ac24-9a324559c17d")
 	)
+	(bus_entry
+		(at 68.58 97.79)
+		(size 2.54 2.54)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7263a966-7f7a-4ca6-9cce-2078a1803348")
+	)
 	(wire
 		(pts
 			(xy 59.69 53.34) (xy 64.77 53.34)
@@ -776,7 +785,7 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 55.88) (xy 52.07 142.24)
+			(xy 52.07 55.88) (xy 52.07 140.97)
 		)
 		(stroke
 			(width 0)
@@ -786,7 +795,7 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 139.7) (xy 53.34 139.7)
+			(xy 95.25 138.43) (xy 53.34 138.43)
 		)
 		(stroke
 			(width 0)
@@ -816,7 +825,7 @@
 	)
 	(wire
 		(pts
-			(xy 52.07 142.24) (xy 95.25 142.24)
+			(xy 52.07 140.97) (xy 95.25 140.97)
 		)
 		(stroke
 			(width 0)
@@ -853,6 +862,16 @@
 			(type default)
 		)
 		(uuid "5602b0ca-e4ad-4ec5-ba98-d6007553f7bf")
+	)
+	(wire
+		(pts
+			(xy 83.82 148.59) (xy 95.25 148.59)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "59591567-f5ce-49ae-9550-f96d78917552")
 	)
 	(wire
 		(pts
@@ -1116,6 +1135,16 @@
 	)
 	(wire
 		(pts
+			(xy 83.82 100.33) (xy 83.82 148.59)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "87da8922-a4b5-4515-b560-8cd8c4f37c61")
+	)
+	(wire
+		(pts
 			(xy 162.56 128.27) (xy 162.56 86.36)
 		)
 		(stroke
@@ -1136,7 +1165,7 @@
 	)
 	(wire
 		(pts
-			(xy 53.34 139.7) (xy 53.34 53.34)
+			(xy 53.34 138.43) (xy 53.34 53.34)
 		)
 		(stroke
 			(width 0)
@@ -1223,6 +1252,16 @@
 			(type default)
 		)
 		(uuid "9081e7eb-a8b0-45f8-9404-6bae14171872")
+	)
+	(wire
+		(pts
+			(xy 71.12 100.33) (xy 83.82 100.33)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "93504d01-0deb-4ec2-9b12-7f5c4a20cf5e")
 	)
 	(bus
 		(pts
@@ -1546,6 +1585,16 @@
 	)
 	(bus
 		(pts
+			(xy 68.58 97.79) (xy 91.44 97.79)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c23142a7-53a2-4637-b9c6-12f91540e5d6")
+	)
+	(bus
+		(pts
 			(xy 91.44 97.79) (xy 91.44 90.17)
 		)
 		(stroke
@@ -1566,7 +1615,7 @@
 	)
 	(wire
 		(pts
-			(xy 95.25 144.78) (xy 50.8 144.78)
+			(xy 95.25 143.51) (xy 50.8 143.51)
 		)
 		(stroke
 			(width 0)
@@ -1756,7 +1805,7 @@
 	)
 	(wire
 		(pts
-			(xy 50.8 144.78) (xy 50.8 58.42)
+			(xy 50.8 143.51) (xy 50.8 58.42)
 		)
 		(stroke
 			(width 0)
@@ -1936,7 +1985,7 @@
 	)
 	(bus
 		(pts
-			(xy 38.1 97.79) (xy 91.44 97.79)
+			(xy 38.1 97.79) (xy 68.58 97.79)
 		)
 		(stroke
 			(width 0)
@@ -2053,6 +2102,16 @@
 			(type default)
 		)
 		(uuid "ff9efbc1-6825-4aac-a57f-6568e1acaf2c")
+	)
+	(label "DET"
+		(at 71.12 100.33 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "f37d34d8-4379-4e95-80bc-b3655d6fecff")
 	)
 	(symbol
 		(lib_id "power:+5V")
@@ -2781,7 +2840,7 @@
 			)
 		)
 		(pin "5V_REG_SCL" bidirectional
-			(at 95.25 144.78 180)
+			(at 95.25 143.51 180)
 			(uuid "3c0776b9-830f-403e-85a4-33798e533614")
 			(effects
 				(font
@@ -2791,7 +2850,7 @@
 			)
 		)
 		(pin "5V_REG_SDA" bidirectional
-			(at 95.25 142.24 180)
+			(at 95.25 140.97 180)
 			(uuid "b921fa86-49ea-4a6d-a4b5-e31a9eb2ad99")
 			(effects
 				(font
@@ -2801,7 +2860,7 @@
 			)
 		)
 		(pin "5V_REG_SMBA" input
-			(at 95.25 139.7 180)
+			(at 95.25 138.43 180)
 			(uuid "8e11d9ed-5ad4-4c84-ae51-70471eec3157")
 			(effects
 				(font
@@ -2883,6 +2942,16 @@
 		(pin "ESP_RESET" output
 			(at 95.25 160.02 180)
 			(uuid "994aaf9b-3ed8-4080-847b-b00361ec0604")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "SD_CARD_DET" input
+			(at 95.25 148.59 180)
+			(uuid "441ece0a-1143-409c-98c5-b4a9e980c901")
 			(effects
 				(font
 					(size 1.27 1.27)

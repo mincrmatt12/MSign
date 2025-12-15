@@ -8,5 +8,5 @@
   (lib (name "Switch_Slide_SMD")(type "KiCad")(uri "${KIPRJMOD}/Switch_Slide_SMD.pretty")(options "")(descr ""))
   (lib (name "TI_EFuse")(type "KiCad")(uri "${KIPRJMOD}/TI_EFuse.pretty")(options "")(descr ""))
   (lib (name "Package_TSOPI")(type "KiCad")(uri "${KIPRJMOD}/Package_TSOPI.pretty")(options "")(descr ""))
-  (lib (name "PCM_Espressif")(type "KiCad")(uri "${KIPRJMOD}/PCM_Espressif.pretty")(options "")(descr ""))
+  (lib (name "Connector_TF")(type "KiCad")(uri "${KIPRJMOD}/Connector_TF.pretty")(options "")(descr ""))
 )

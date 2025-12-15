@@ -240,7 +240,28 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [],
+    "erc_exclusions": [
+      [
+        "endpoint_off_grid|1526540|508000|b3215f2e-1e14-4770-b30e-656c1fac9337|00000000-0000-0000-0000-000000000000|||",
+        ""
+      ],
+      [
+        "missing_unit|1435100|1117600|7b1d786f-876e-4a6c-9469-25be8a90c665|00000000-0000-0000-0000-000000000000|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|",
+        "unused unit (using discrete res to get around corner of chip)"
+      ],
+      [
+        "missing_unit|1435100|1143000|e00ef576-774d-4c47-a1ac-29ee2d0f8294|00000000-0000-0000-0000-000000000000|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|",
+        "not used in package - physical constraints"
+      ],
+      [
+        "power_pin_not_driven|355600|939800|1254ed45-1f68-4ea5-85df-607f65ab19b7|00000000-0000-0000-0000-000000000000|/32eb05c7-b4a6-42f3-8fb3-43453631100f/802d77e5-f72d-443e-abfe-d20b44acef6c|/32eb05c7-b4a6-42f3-8fb3-43453631100f/802d77e5-f72d-443e-abfe-d20b44acef6c|",
+        "gnd from usb-c"
+      ],
+      [
+        "power_pin_not_driven|635000|520700|d33aee8d-00c6-4ff9-bd6f-51bf842466d1|00000000-0000-0000-0000-000000000000|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893|",
+        "unused reg"
+      ]
+    ],
     "meta": {
       "version": 0
     },
@@ -488,13 +509,104 @@
         "via_diameter": 0.6,
         "via_drill": 0.3,
         "wire_width": 6
+      },
+      {
+        "name": "PARL_PA",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 1,
+        "schematic_color": "rgba(0, 0, 0, 0.000)"
+      },
+      {
+        "name": "PARL_PB",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 2,
+        "schematic_color": "rgba(0, 0, 0, 0.000)"
+      },
+      {
+        "name": "USB",
+        "pcb_color": "rgba(0, 0, 0, 0.000)",
+        "priority": 0,
+        "schematic_color": "rgba(0, 0, 0, 0.000)"
       }
     ],
     "meta": {
       "version": 4
     },
     "net_colors": null,
-    "netclass_assignments": null,
+    "netclass_assignments": {
+      "/Decoder/PIX_MEM_PA0": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA1": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA2": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA3": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA4": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA5": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA6": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PA7": [
+        "PARL_PA"
+      ],
+      "/Decoder/PIX_MEM_PB0": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB1": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB2": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB3": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB4": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB5": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB6": [
+        "PARL_PB"
+      ],
+      "/Decoder/PIX_MEM_PB7": [
+        "PARL_PB"
+      ],
+      "/Display MCU/MCU_USB_D+": [
+        "USB"
+      ],
+      "/Display MCU/MCU_USB_D-": [
+        "USB"
+      ],
+      "/Display MCU/USB_D+": [
+        "USB"
+      ],
+      "/Display MCU/USB_D-": [
+        "USB"
+      ],
+      "/USB Mux/ESP_D+": [
+        "USB"
+      ],
+      "/USB Mux/ESP_D-": [
+        "USB"
+      ],
+      "/WiFi MCU/MCU_USB_D+": [
+        "USB"
+      ],
+      "/WiFi MCU/MCU_USB_D-": [
+        "USB"
+      ]
+    },
     "netclass_patterns": []
   },
   "pcbnew": {
@@ -513,7 +625,7 @@
   },
   "schematic": {
     "annotate_start_num": 0,
-    "bom_export_filename": "",
+    "bom_export_filename": "mainboard.csv",
     "bom_fmt_presets": [],
     "bom_fmt_settings": {
       "field_delimiter": ",",
