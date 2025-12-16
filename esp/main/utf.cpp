@@ -39,7 +39,6 @@ namespace utf8 {
 				if (byte >> 6 != 0b10) {
 					// ignore
 					remain = 0;
-					cur = 0;
 					*out++ = '?';
 				}
 				// otherwise, add to cur
@@ -57,6 +56,7 @@ namespace utf8 {
 			else {
 				// Is this a start-of-multibyte marker?
 				if (byte & (1 << 7)) {
+					cur = 0;
 					// Shift away continuation markers
 					while (byte & (1 << 7)) {
 						++remain;
