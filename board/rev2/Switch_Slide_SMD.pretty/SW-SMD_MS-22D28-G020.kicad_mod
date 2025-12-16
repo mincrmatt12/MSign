@@ -275,10 +275,10 @@
 		(uuid "122c9c5d-75c8-4334-acb7-ab37a4d1d08d")
 	)
 	(pad "4" smd rect
-		(at -2 3 90)
+		(at 2 3 90)
 		(size 2 0.8)
 		(layers "F.Cu" "F.Mask" "F.Paste")
-		(uuid "b4cdfc20-f4f8-48be-8921-e09382cf25c1")
+		(uuid "28bb8e29-2df5-4a66-b16a-ddcad97efca8")
 	)
 	(pad "5" smd rect
 		(at 0 3 90)
@@ -287,10 +287,10 @@
 		(uuid "5656f301-be66-4b4c-ba5c-dbe126a2740b")
 	)
 	(pad "6" smd rect
-		(at 2 3 90)
+		(at -2 3 90)
 		(size 2 0.8)
 		(layers "F.Cu" "F.Mask" "F.Paste")
-		(uuid "28bb8e29-2df5-4a66-b16a-ddcad97efca8")
+		(uuid "b4cdfc20-f4f8-48be-8921-e09382cf25c1")
 	)
 	(embedded_fonts no)
 	(model "${KIPRJMOD}/Switch_Slide_SMD.3dshapes/SW-SMD_MS-22D28-G020.wrl"

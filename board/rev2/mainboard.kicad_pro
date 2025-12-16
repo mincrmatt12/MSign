@@ -511,22 +511,28 @@
         "wire_width": 6
       },
       {
+        "clearance": 0.15,
         "name": "PARL_PA",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 1,
-        "schematic_color": "rgba(0, 0, 0, 0.000)"
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.15
       },
       {
+        "clearance": 0.15,
         "name": "PARL_PB",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 2,
-        "schematic_color": "rgba(0, 0, 0, 0.000)"
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.15
       },
       {
+        "clearance": 0.15,
         "name": "USB",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "priority": 0,
-        "schematic_color": "rgba(0, 0, 0, 0.000)"
+        "schematic_color": "rgba(0, 0, 0, 0.000)",
+        "track_width": 0.15
       }
     ],
     "meta": {
