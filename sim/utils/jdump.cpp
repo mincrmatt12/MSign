@@ -45,7 +45,7 @@ void callback(json::PathNode ** stack, uint8_t sptr, const json::Value& value) {
 }
 
 int main(int argc, char ** argv) {
-	json::JSONParser p(callback);
+	json::JSONParser p(callback, argc > 1);
 	int code = p.parse([]() -> int16_t {
 		int x = getchar();
 		if (x == EOF) {
