@@ -386,8 +386,13 @@ reachedend:
 				// Kill off the grab task
 				xEventGroupSetBits(wifi::events, wifi::GrabTaskStop);
 				// Wait for it to be killed
-				if ((xEventGroupWaitBits(wifi::events, wifi::GrabTaskDead, 0, true, pdMS_TO_TICKS(5000)) & wifi::GrabTaskDead) == 0)
-					ESP_LOGW(TAG, "failed to stop grab task in time, loading new config anyways");
+				if ((xEventGroupWaitBits(wifi::events, wifi::GrabTaskDead, 0, true, pdMS_TO_TICKS(5000)) & wifi::GrabTaskDead) == 0) {
+					xEventGroupClearBits(wifi::events, wifi::GrabTaskStop);
+					ESP_LOGW(TAG, "failed to stop grab task in time, aborting");
+
+					send_static_response(503, "Service Unavailable", "Grab task didn't stop in time, try again later");
+					return;
+				}
 
 				f_unlink("0:/config.json.old");
 				f_rename("0:/config.json", "0:/config.json.old");
