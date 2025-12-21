@@ -96,6 +96,8 @@ bool cfgpull::loop() {
 		resp.end_body();
 		if (!resp.ok()) return false;
 
+		if (!enabled) return true;
+
 		json::JSONParser jp([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& jv){
 			if (stack_ptr != 2) return;
 
