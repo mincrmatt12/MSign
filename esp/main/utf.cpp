@@ -3,23 +3,28 @@
 #include <stdint.h>
 
 namespace utf8 {
+	struct lookup_entry {
+		uint32_t uni;
+		char asc;
+		uint8_t range = 1;
+	};
 
-	// TODO: make this use a binary search.
-	const uint32_t lookup[][2] = {
-		{ 0x2013 /* EN DASH */, (uint32_t)'-' },
-		{ 0x2014 /* EM DASH */, (uint32_t)'-' },
-		{ 0x2018 /* LEFT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
-		{ 0x2019 /* RIGHT SINGLE QUOTATION MARK */, (uint32_t)'\'' },
-		{ 0x201C /* LEFT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
-		{ 0x201D /* RIGHT DOUBLE QUOTATION MARK */, (uint32_t)'"' },
-		{ 0x3010 /* LEFT BLACK LENTICULAR BRACKET */, (uint32_t)'[' },
-		{ 0x3011 /* RIGHT BLACK LENTICULAR BRACKET */, (uint32_t)']' }
+	const lookup_entry lookup[] = {
+		{ .uni = 0x2013 /* EN DASH */, .asc='-' },
+		{ .uni = 0x2014 /* EM DASH */, .asc='-' },
+		{ .uni = 0x2018 /* LEFT SINGLE QUOTATION MARK */, .asc='\'' },
+		{ .uni = 0x2019 /* RIGHT SINGLE QUOTATION MARK */, .asc='\'' },
+		{ .uni = 0x201C /* LEFT DOUBLE QUOTATION MARK */, .asc='"' },
+		{ .uni = 0x201D /* RIGHT DOUBLE QUOTATION MARK */, .asc='"' },
+		{ .uni = 0x3010 /* LEFT BLACK LENTICULAR BRACKET */, .asc='[' },
+		{ .uni = 0x3011 /* RIGHT BLACK LENTICULAR BRACKET */, .asc=']' },
+		{ .uni = 0xFF01 /* fullwidth chars (FF01-FF60) */, .asc='!', .range = 0x60 },
 	};
 
 	bool _lookup(uint8_t &out, uint32_t in) {
-		for (int i = 0; i < (sizeof(lookup) / sizeof(lookup[0])); ++i) {
-			if (lookup[i][0] == in) {
-				out = (uint8_t)lookup[i][1];
+		for (const auto &e : lookup) {
+			if (e.uni <= in && in < e.uni + e.range) {
+				out = e.asc + (in - e.uni);
 				return true;
 			}
 		}
