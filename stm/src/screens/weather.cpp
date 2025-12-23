@@ -1365,7 +1365,7 @@ void screen::WeatherScreen::draw_big_graphs() {
 	}
 
 	// Show the current legend
-	if (xTaskGetTickCount() - show_graph_selector_timer < pdMS_TO_TICKS(2500)) {
+	if (xTaskGetTickCount() - show_graph_selector_timer < pdMS_TO_TICKS(1200)) {
 		const char * txt;
 
 		switch (graph) {
