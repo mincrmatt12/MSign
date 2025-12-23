@@ -2955,7 +2955,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Resistor_SMD:R_0805_2012Metric"
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
 			(at 36.83 130.81 0)
 			(effects
 				(font
@@ -2985,7 +2985,7 @@
 				(hide yes)
 			)
 		)
-		(property "Part" "0805W8F1002T5E"
+		(property "Part" "0402WGF1002TCE"
 			(at 36.83 130.81 0)
 			(effects
 				(font
@@ -2994,7 +2994,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C17414 "
+		(property "LCSC" "C25744"
 			(at 36.83 130.81 0)
 			(effects
 				(font
