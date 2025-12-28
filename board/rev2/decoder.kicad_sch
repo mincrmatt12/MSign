@@ -532,144 +532,6 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Device:R_Small_US"
-			(pin_numbers
-				(hide yes)
-			)
-			(pin_names
-				(offset 0.254)
-				(hide yes)
-			)
-			(exclude_from_sim no)
-			(in_bom yes)
-			(on_board yes)
-			(property "Reference" "R"
-				(at 0.762 0.508 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Value" "R_Small_US"
-				(at 0.762 -1.016 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(justify left)
-				)
-			)
-			(property "Footprint" ""
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Datasheet" "~"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "Description" "Resistor, small US symbol"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_keywords" "r resistor"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(property "ki_fp_filters" "R_*"
-				(at 0 0 0)
-				(effects
-					(font
-						(size 1.27 1.27)
-					)
-					(hide yes)
-				)
-			)
-			(symbol "R_Small_US_1_1"
-				(polyline
-					(pts
-						(xy 0 1.524) (xy 1.016 1.143) (xy 0 0.762) (xy -1.016 0.381) (xy 0 0)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 0) (xy 1.016 -0.381) (xy 0 -0.762) (xy -1.016 -1.143) (xy 0 -1.524)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(pin passive line
-					(at 0 2.54 270)
-					(length 1.016)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 0 -2.54 90)
-					(length 1.016)
-					(name "~"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-			)
-			(embedded_fonts no)
-		)
 		(symbol "power:GND"
 			(power)
 			(pin_numbers
@@ -923,6 +785,12 @@
 		(uuid "457597e8-efdc-446d-bd8e-1744fe4075ab")
 	)
 	(junction
+		(at 173.99 76.2)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "46d7aaae-a28c-4dd1-b35b-13fc0422d31a")
+	)
+	(junction
 		(at 177.8 43.18)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -939,12 +807,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "a9b5abef-f6c9-4a63-8763-60b335ad566f")
-	)
-	(junction
-		(at 161.29 95.25)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "ba816a73-f569-4b6f-931c-374b79fa7eb5")
 	)
 	(junction
 		(at 168.91 68.58)
@@ -1092,16 +954,6 @@
 		)
 		(uuid "0dde45cb-1a3a-4c37-885a-850c7a82cf46")
 	)
-	(wire
-		(pts
-			(xy 161.29 95.25) (xy 161.29 50.8)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "11110130-fdcf-4ff9-ae17-6d207d3afaac")
-	)
 	(bus
 		(pts
 			(xy 146.05 57.15) (xy 180.34 57.15)
@@ -1124,7 +976,7 @@
 	)
 	(wire
 		(pts
-			(xy 142.24 95.25) (xy 161.29 95.25)
+			(xy 142.24 76.2) (xy 173.99 76.2)
 		)
 		(stroke
 			(width 0)
@@ -1161,6 +1013,16 @@
 			(type default)
 		)
 		(uuid "1981ec27-d1b7-4ed3-8070-07ee9680d1a0")
+	)
+	(wire
+		(pts
+			(xy 173.99 76.2) (xy 173.99 50.8)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "19a7f290-459b-437c-a803-d1f5ca8e7a4b")
 	)
 	(wire
 		(pts
@@ -1344,7 +1206,7 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 50.8) (xy 171.45 50.8)
+			(xy 173.99 50.8) (xy 180.34 50.8)
 		)
 		(stroke
 			(width 0)
@@ -1391,6 +1253,16 @@
 			(type default)
 		)
 		(uuid "7960bb5a-99db-47ac-9fd6-148a1407f78c")
+	)
+	(wire
+		(pts
+			(xy 173.99 76.2) (xy 173.99 106.68)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "7b3c7972-507a-41ab-a227-4c65988957ed")
 	)
 	(wire
 		(pts
@@ -1464,7 +1336,7 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 106.68) (xy 171.45 106.68)
+			(xy 173.99 106.68) (xy 180.34 106.68)
 		)
 		(stroke
 			(width 0)
@@ -1524,16 +1396,6 @@
 	)
 	(wire
 		(pts
-			(xy 161.29 95.25) (xy 161.29 106.68)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b28d9f00-e200-43f5-90e6-7ff16c0b46a7")
-	)
-	(wire
-		(pts
 			(xy 44.45 48.26) (xy 67.31 48.26)
 		)
 		(stroke
@@ -1551,16 +1413,6 @@
 			(type default)
 		)
 		(uuid "b8827c09-d95e-4155-a5e0-2b882deabd2e")
-	)
-	(wire
-		(pts
-			(xy 176.53 50.8) (xy 180.34 50.8)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "b9b9f114-4a6c-4912-ae9d-745de7fc3d7c")
 	)
 	(wire
 		(pts
@@ -1621,16 +1473,6 @@
 			(type default)
 		)
 		(uuid "c67b74ab-af2e-427b-854f-7f744f4117c2")
-	)
-	(wire
-		(pts
-			(xy 176.53 106.68) (xy 180.34 106.68)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c6faa9ad-34f2-4ec5-83ac-43b41c066107")
 	)
 	(wire
 		(pts
@@ -1902,7 +1744,7 @@
 	)
 	(hierarchical_label "RGB_CLK"
 		(shape input)
-		(at 142.24 95.25 180)
+		(at 142.24 76.2 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2133,91 +1975,6 @@
 		)
 	)
 	(symbol
-		(lib_id "Device:R_Small_US")
-		(at 173.99 50.8 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "82d6f532-2950-4c50-92a9-1622e7ac52db")
-		(property "Reference" "R22"
-			(at 173.99 53.086 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "33"
-			(at 173.99 55.118 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 173.99 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 173.99 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor, small US symbol"
-			(at 173.99 50.8 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part" "0402WGF330JTCE"
-			(at 173.99 50.8 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C25105"
-			(at 173.99 50.8 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "ef95d15e-cd2b-435b-a897-ede41a874c84")
-		)
-		(pin "1"
-			(uuid "ae38e49d-b012-40e7-ba11-8e98dc99fd95")
-		)
-		(instances
-			(project "mainboard"
-				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc"
-					(reference "R22")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "Device:C_Small")
 		(at 99.06 58.42 90)
 		(unit 1)
@@ -2365,91 +2122,6 @@
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc"
 					(reference "#PWR036")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_Small_US")
-		(at 173.99 106.68 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "c5de84a9-c885-4d8a-b082-b5a96387d17d")
-		(property "Reference" "R23"
-			(at 173.99 108.966 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "33"
-			(at 173.99 110.998 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 173.99 106.68 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 173.99 106.68 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor, small US symbol"
-			(at 173.99 106.68 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part" "0402WGF330JTCE"
-			(at 173.99 106.68 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C25105"
-			(at 173.99 106.68 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "aac6133f-efcb-487e-9283-36d61aefa385")
-		)
-		(pin "1"
-			(uuid "e135dd64-df0b-4be2-aed2-1659d7935e40")
-		)
-		(instances
-			(project ""
-				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc"
-					(reference "R23")
 					(unit 1)
 				)
 			)
