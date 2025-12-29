@@ -1624,12 +1624,6 @@
 		(uuid "17e4e34e-69ea-42cb-b3be-a90e1382a428")
 	)
 	(junction
-		(at 172.72 80.01)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "2ffff0b6-86c7-4642-9cee-4102c336535e")
-	)
-	(junction
 		(at 151.13 102.87)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -1682,12 +1676,6 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "d22d4e32-6e06-4351-bf64-72f58a1a107d")
-	)
-	(junction
-		(at 171.45 102.87)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "e9236858-a5d6-4b92-9c82-5a1b7419cce7")
 	)
 	(junction
 		(at 151.13 129.54)
@@ -1991,16 +1979,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 86.36) (xy 165.1 102.87)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "113db4ea-d1c0-4af2-b75b-b760333e80ac")
-	)
-	(wire
-		(pts
 			(xy 139.7 129.54) (xy 120.65 129.54)
 		)
 		(stroke
@@ -2011,7 +1989,7 @@
 	)
 	(wire
 		(pts
-			(xy 167.64 109.22) (xy 171.45 109.22)
+			(xy 168.91 102.87) (xy 173.99 102.87)
 		)
 		(stroke
 			(width 0)
@@ -2041,7 +2019,7 @@
 	)
 	(wire
 		(pts
-			(xy 138.43 74.93) (xy 138.43 87.63)
+			(xy 138.43 74.93) (xy 138.43 78.74)
 		)
 		(stroke
 			(width 0)
@@ -2351,16 +2329,6 @@
 	)
 	(wire
 		(pts
-			(xy 171.45 109.22) (xy 171.45 102.87)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "6c4cabc2-3ee8-4299-8890-4979be35158d")
-	)
-	(wire
-		(pts
 			(xy 143.51 129.54) (xy 139.7 129.54)
 		)
 		(stroke
@@ -2451,16 +2419,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 80.01) (xy 165.1 81.28)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "83d67b5c-8405-402f-b12c-6f89639d25de")
-	)
-	(wire
-		(pts
 			(xy 194.31 87.63) (xy 210.82 87.63)
 		)
 		(stroke
@@ -2548,6 +2506,16 @@
 			(type default)
 		)
 		(uuid "9b337ea5-96ad-4bfa-be78-c6e3f7b2279b")
+	)
+	(wire
+		(pts
+			(xy 138.43 83.82) (xy 138.43 87.63)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "9bc7342e-0f90-454d-9991-f357a94280c5")
 	)
 	(wire
 		(pts
@@ -2741,16 +2709,6 @@
 	)
 	(wire
 		(pts
-			(xy 165.1 80.01) (xy 172.72 80.01)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "c3e27f9d-12ac-4cc5-9245-b78c530b3c84")
-	)
-	(wire
-		(pts
 			(xy 151.13 97.79) (xy 151.13 100.33)
 		)
 		(stroke
@@ -2798,16 +2756,6 @@
 			(type default)
 		)
 		(uuid "d4fc6490-17a8-46c2-b8ec-f9668dd3e0a8")
-	)
-	(wire
-		(pts
-			(xy 171.45 102.87) (xy 173.99 102.87)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dabf9a11-3fad-4932-ab80-9af524f9953e")
 	)
 	(bus
 		(pts
@@ -2898,16 +2846,6 @@
 			(type default)
 		)
 		(uuid "f68f58bc-b4ce-4cb1-a080-ee83f4141cfc")
-	)
-	(wire
-		(pts
-			(xy 171.45 102.87) (xy 165.1 102.87)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "f9206557-88d2-431c-b8e1-ebbac91b3f42")
 	)
 	(wire
 		(pts
@@ -3153,7 +3091,7 @@
 	)
 	(hierarchical_label "PANEL_RGB_OE"
 		(shape input)
-		(at 167.64 109.22 180)
+		(at 168.91 102.87 180)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4142,6 +4080,100 @@
 	)
 	(symbol
 		(lib_id "Device:R_Small_US")
+		(at 138.43 81.28 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "a67a6159-e215-47c5-8878-6ba146836c69")
+		(property "Reference" "R17"
+			(at 139.954 80.01 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "1k"
+			(at 139.954 82.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
+			(at 138.43 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(color 255 255 194 1)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 138.43 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(color 255 255 194 1)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Resistor, small US symbol"
+			(at 138.43 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+					(color 255 255 194 1)
+				)
+				(hide yes)
+			)
+		)
+		(property "Part" "0402WGF1001TCE"
+			(at 138.43 81.28 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C11702"
+			(at 138.43 81.28 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "d6242c57-c10e-48ee-adad-fe0c78e6789a")
+		)
+		(pin "1"
+			(uuid "9e867e86-b34e-476c-8af2-8658b9369135")
+		)
+		(instances
+			(project "mainboard"
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc/1fdb9a92-7450-4af0-9e02-ab97d3a0a007"
+					(reference "R17")
+					(unit 1)
+				)
+				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc/3c07b397-7ce8-476f-8583-4e671a583d8a"
+					(reference "R52")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R_Small_US")
 		(at 139.7 92.71 90)
 		(unit 1)
 		(exclude_from_sim no)
@@ -4717,100 +4749,6 @@
 				)
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc/3c07b397-7ce8-476f-8583-4e671a583d8a"
 					(reference "#PWR043")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_Small_US")
-		(at 165.1 83.82 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "fbd66f41-5fab-4db2-85db-26b140d25978")
-		(property "Reference" "R31"
-			(at 167.64 82.5499 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "10k"
-			(at 167.64 85.0899 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 165.1 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(color 255 255 194 1)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 165.1 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(color 255 255 194 1)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor, small US symbol"
-			(at 165.1 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-					(color 255 255 194 1)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part" "0402WGF1002TCE"
-			(at 165.1 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C25744"
-			(at 165.1 83.82 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "2aba312e-5861-47bd-a8bd-b455d577a376")
-		)
-		(pin "1"
-			(uuid "d13824a8-8a12-47e1-8016-aee25ee1b50f")
-		)
-		(instances
-			(project "mainboard"
-				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc/1fdb9a92-7450-4af0-9e02-ab97d3a0a007"
-					(reference "R31")
-					(unit 1)
-				)
-				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc/3c07b397-7ce8-476f-8583-4e671a583d8a"
-					(reference "R39")
 					(unit 1)
 				)
 			)

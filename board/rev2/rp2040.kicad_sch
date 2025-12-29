@@ -4604,7 +4604,7 @@
 	)
 	(wire
 		(pts
-			(xy 132.08 180.34) (xy 148.59 180.34)
+			(xy 132.08 180.34) (xy 137.16 180.34)
 		)
 		(stroke
 			(width 0)
@@ -5444,16 +5444,6 @@
 	)
 	(wire
 		(pts
-			(xy 153.67 180.34) (xy 160.02 180.34)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dbe81e26-a024-4be3-a423-17d62cf22bc0")
-	)
-	(wire
-		(pts
 			(xy 85.09 40.64) (xy 85.09 38.1)
 		)
 		(stroke
@@ -6173,7 +6163,7 @@
 	)
 	(hierarchical_label "MEM_IO"
 		(shape output)
-		(at 160.02 180.34 0)
+		(at 137.16 180.34 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -10896,92 +10886,6 @@
 			(project ""
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
 					(reference "R14")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_Small_US")
-		(at 151.13 180.34 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "f26d325c-c674-45e5-8fcb-e7e358aeda27")
-		(property "Reference" "R17"
-			(at 151.13 173.99 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1k"
-			(at 151.13 176.53 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0402_1005Metric"
-			(at 151.13 180.34 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 151.13 180.34 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Resistor, small US symbol"
-			(at 151.13 180.34 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Part" "0402WGF1001TCE"
-			(at 151.13 180.34 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" "C11702"
-			(at 151.13 180.34 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "608b0eb9-7451-498d-ad85-c6fdab5edb8f")
-		)
-		(pin "1"
-			(uuid "2b031f6f-17ae-4145-b23f-b33e5b3445b6")
-		)
-		(instances
-			(project "mainboard"
-				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f/09159769-9a8d-41b9-89ab-3a0a86692893"
-					(reference "R17")
 					(unit 1)
 				)
 			)
