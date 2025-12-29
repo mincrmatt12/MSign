@@ -13,7 +13,7 @@ WORKDIR /opt/build
 
 # install deps
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt gunicorn
 
 COPY setup.py .
 COPY cfgserver/ ./cfgserver
@@ -30,8 +30,5 @@ RUN apt-get update \
 
 COPY --from=py-build /opt/venv /opt/venv
 ENV PATH "/opt/venv/bin:$PATH"
-ENV FLASK_APP "cfgserver.app"
-ENV FLASK_RUN_PORT "8080"
-ENV FLASK_RUN_HOST "0.0.0.0"
 
-CMD ["flask", "run"]
+CMD ["gunicorn", "-w", "2", "cfgserver.app:app", "-b", "0.0.0.0:8080"]
