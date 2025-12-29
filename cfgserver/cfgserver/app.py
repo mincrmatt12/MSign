@@ -78,7 +78,7 @@ def serve_metrics():
         if nm in metric_doc:
             data += f"# HELP {real_name} {metric_doc[nm][0]}\n#TYPE {real_name} {metric_doc[nm][1]}\n"
         data += "msign_{} {}\n".format(nm, ndat)
-    return data
+    return Response(data, content_type="text/plain")
 
 @app.route("/login", methods=["GET", "POST"])
 def show_or_login():

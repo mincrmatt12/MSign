@@ -3,7 +3,7 @@ version: "3.7"
 services:
   cfgserver:
     build: ./
-    image: docker-registry.i.mm12.xyz/msign-cfgserver:0.1.5
+    image: docker-registry.i.mm12.xyz/msign-cfgserver:0.1.6
     ports:
       - "8080:8080"
     secrets:
