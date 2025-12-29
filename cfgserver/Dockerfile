@@ -1,4 +1,4 @@
-FROM debian:buster-slim AS py-build
+FROM debian:trixie-slim AS py-build
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --no-install-suggests \
@@ -20,7 +20,7 @@ COPY cfgserver/ ./cfgserver
 
 RUN pip install .
 
-FROM debian:buster-slim
+FROM debian:trixie-slim
 
 RUN apt-get update \
  && apt-get install -y --no-install-recommends --no-install-suggests \
