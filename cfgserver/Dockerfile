@@ -31,4 +31,4 @@ RUN apt-get update \
 COPY --from=py-build /opt/venv /opt/venv
 ENV PATH "/opt/venv/bin:$PATH"
 
-CMD ["gunicorn", "-w", "2", "cfgserver.app:app", "-b", "0.0.0.0:8080"]
+CMD ["gunicorn", "-w", "1", "cfgserver.app:app", "-b", "0.0.0.0:8080"]
