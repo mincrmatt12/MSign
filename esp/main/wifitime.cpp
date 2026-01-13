@@ -300,8 +300,9 @@ bool wifi::init() {
 		}
 		else has_wpa2_ent = false;
 	}
+	ESP_ERROR_CHECK(esp_wifi_set_ps(WIFI_PS_NONE));
 	ESP_ERROR_CHECK(esp_wifi_start());
-	
+
 	if (cfg_blob.country) {
 		wifi_country_t country_settings{};
 		country_settings.policy = WIFI_COUNTRY_POLICY_MANUAL;
