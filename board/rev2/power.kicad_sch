@@ -4588,6 +4588,26 @@
 		)
 		(uuid "21fa1154-c6e1-42cb-9a87-07fd3cba604b")
 	)
+	(label "C_USB_D+"
+		(at 53.34 163.83 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "3a5d4ec4-69d5-4471-850c-e207c99aceb9")
+	)
+	(label "C_USB_D-"
+		(at 53.34 161.29 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "72c14c75-c118-48b4-b36f-601939e53377")
+	)
 	(label "5V_REG"
 		(at 191.77 63.5 0)
 		(effects
