@@ -17,13 +17,15 @@ Code + designs for an LED sign display board powered by an STM32 and ESP8266. Ma
 
 ## Dependencies
 
-- A recent `arm-none-eabi-gcc` installation (recommended at least version 9, tested with version 10)
-- A recent `xtensa-lx106-elf-gcc` installation (tested against 5.2)
+- A recent `arm-none-eabi-gcc` installation (suitably modern to deal with C++20; GCC 14 is what's tested)
+- A `xtensa-lx106-elf-gcc` that can deal with C++20; preferably version 13.2.0 (which was available at one point in debian)
+  - A suitable newlib/libstdc++ archive is available in `Dockerfile.build`
 - Python 3 and the packages in `requirements.txt`
   - If you aren't building the `espweb` directory you do not require the `cryptography` package listed
 - OpenOCD (for flashing)
   - If you have PlatformIO installed we use its OpenOCD by default, so you may not need to install it system-wide.
 - CMake (version 3.13 or later is recommended)
+- `quilt`, to apply the patches in `vendor` for the ESP8266 SDK
 
 and everything checked out in the `vendor` directory. The ESP8266 SDK also usually requests you have python (specifically _system_ python, whatever runs from `python`) installed with it's requirements (`vendor/ESP8266_RTOS_SDK/requirements.txt`)
 
