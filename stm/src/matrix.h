@@ -50,7 +50,7 @@ namespace led {
 			memset(data, 0x0, sizeof(data));
 		}
 
-		void RAMFUNC prepare_stream(uint16_t i, uint8_t pos, uint8_t * bs) {
+		void prepare_stream(uint16_t i, uint8_t pos, uint8_t * bs) {
 			switch (pos) {
 				case 0:
 					prepare_stream_bf<0>(i, bs);

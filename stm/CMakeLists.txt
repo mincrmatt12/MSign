@@ -223,7 +223,7 @@ endif()
 
 target_link_options(stm
 	PUBLIC
-	-Wl,-T${CMAKE_CURRENT_SOURCE_DIR}/ld/$<IF:$<STREQUAL:${MSIGN_BUILD_TYPE},minisign>,f4.ld,f2.ld>
+	-T${CMAKE_CURRENT_SOURCE_DIR}/ld/$<IF:$<STREQUAL:${MSIGN_BUILD_TYPE},minisign>,f4.ld,f2.ld>
 	-Wl,--undefined=uxTopUsedPriority
 	-Wl,--gc-sections,--relax
 	-Wl,--nmagic

@@ -21,8 +21,6 @@
 #define FL_LATENCY LL_FLASH_LATENCY_5
 #endif
 
-#include <reent.h>
-
 extern "C" {
 	extern void (*__preinit_array_start [])(void);
 	extern void (*__preinit_array_end [])(void);
