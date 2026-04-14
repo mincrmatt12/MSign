@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20250114)
+	(version 20260306)
 	(generator "eeschema")
-	(generator_version "9.0")
+	(generator_version "10.0")
 	(uuid "32eb05c7-b4a6-42f3-8fb3-43453631100f")
 	(paper "A4")
 	(title_block
@@ -12,7 +12,7 @@
 	)
 	(lib_symbols
 		(symbol "power:+5V"
-			(power)
+			(power global)
 			(pin_numbers
 				(hide yes)
 			)
@@ -23,17 +23,23 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
 			(property "Reference" "#PWR"
 				(at 0 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Value" "+5V"
 				(at 0 3.556 0)
+				(show_name no)
+				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -42,38 +48,46 @@
 			)
 			(property "Footprint" ""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Datasheet" ""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Description" "Power symbol creates a global label with name \"+5V\""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "ki_keywords" "global power"
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(symbol "+5V_0_1"
@@ -118,7 +132,7 @@
 				(pin power_in line
 					(at 0 0 90)
 					(length 0)
-					(name "~"
+					(name ""
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -137,7 +151,7 @@
 			(embedded_fonts no)
 		)
 		(symbol "power:VDD"
-			(power)
+			(power global)
 			(pin_numbers
 				(hide yes)
 			)
@@ -148,17 +162,23 @@
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
+			(in_pos_files yes)
+			(duplicate_pin_numbers_are_jumpers no)
 			(property "Reference" "#PWR"
 				(at 0 -3.81 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Value" "VDD"
 				(at 0 3.556 0)
+				(show_name no)
+				(do_not_autoplace no)
 				(effects
 					(font
 						(size 1.27 1.27)
@@ -167,38 +187,46 @@
 			)
 			(property "Footprint" ""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Datasheet" ""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "Description" "Power symbol creates a global label with name \"VDD\""
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(property "ki_keywords" "global power"
 				(at 0 0 0)
+				(show_name no)
+				(do_not_autoplace no)
+				(hide yes)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
-					(hide yes)
 				)
 			)
 			(symbol "VDD_0_1"
@@ -243,7 +271,7 @@
 				(pin power_in line
 					(at 0 0 90)
 					(length 0)
-					(name "~"
+					(name ""
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -485,16 +513,6 @@
 	)
 	(wire
 		(pts
-			(xy 88.9 160.02) (xy 88.9 26.67)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "1deff455-224b-41cb-839c-65dcc6bd7280")
-	)
-	(wire
-		(pts
 			(xy 40.64 107.95) (xy 40.64 81.28)
 		)
 		(stroke
@@ -572,6 +590,16 @@
 			(type default)
 		)
 		(uuid "2a8e20c6-af87-49e2-81b0-39e513accf5b")
+	)
+	(bus
+		(pts
+			(xy 152.4 144.78) (xy 167.64 144.78)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2ed890cb-ca66-4db5-956c-b700293e83bc")
 	)
 	(wire
 		(pts
@@ -1263,26 +1291,6 @@
 		)
 		(uuid "93504d01-0deb-4ec2-9b12-7f5c4a20cf5e")
 	)
-	(bus
-		(pts
-			(xy 151.13 144.78) (xy 167.64 144.78)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "94bcff93-f499-458f-8ca4-5bd6352ca3fb")
-	)
-	(bus
-		(pts
-			(xy 152.4 142.24) (xy 167.64 142.24)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "95f54d02-0e13-4eeb-82f5-c2d38418a758")
-	)
 	(wire
 		(pts
 			(xy 201.93 68.58) (xy 201.93 59.69)
@@ -1415,7 +1423,7 @@
 	)
 	(bus
 		(pts
-			(xy 151.13 106.68) (xy 151.13 144.78)
+			(xy 151.13 106.68) (xy 151.13 142.24)
 		)
 		(stroke
 			(width 0)
@@ -1552,6 +1560,16 @@
 			(type default)
 		)
 		(uuid "b9c52bc7-8a1e-434d-9824-c7e5901029b8")
+	)
+	(bus
+		(pts
+			(xy 151.13 142.24) (xy 167.64 142.24)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "bcc9a1a6-f2bc-4c63-80fc-6b7fdad543fb")
 	)
 	(wire
 		(pts
@@ -1755,16 +1773,6 @@
 	)
 	(wire
 		(pts
-			(xy 88.9 26.67) (xy 95.25 26.67)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "d04f550b-fe60-46e5-9fdd-ebc721fe412a")
-	)
-	(wire
-		(pts
 			(xy 85.09 53.34) (xy 91.44 53.34)
 		)
 		(stroke
@@ -1835,7 +1843,7 @@
 	)
 	(bus
 		(pts
-			(xy 152.4 104.14) (xy 152.4 142.24)
+			(xy 152.4 104.14) (xy 152.4 144.78)
 		)
 		(stroke
 			(width 0)
@@ -1932,16 +1940,6 @@
 			(type default)
 		)
 		(uuid "ec48f396-9664-4dca-959f-44ad9297454a")
-	)
-	(wire
-		(pts
-			(xy 95.25 160.02) (xy 88.9 160.02)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ed0f2770-79be-448f-a2fe-002e6564469c")
 	)
 	(wire
 		(pts
@@ -2117,23 +2115,29 @@
 		(lib_id "power:+5V")
 		(at 52.07 21.59 0)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
+		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "088df7f8-b592-4276-8f79-6ea8384abe9a")
 		(property "Reference" "#PWR01"
 			(at 52.07 25.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Value" "+5V"
 			(at 52.07 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2142,32 +2146,38 @@
 		)
 		(property "Footprint" ""
 			(at 52.07 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(property "Datasheet" ""
 			(at 52.07 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"+5V\""
 			(at 52.07 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(pin "1"
@@ -2186,23 +2196,29 @@
 		(lib_id "power:VDD")
 		(at 60.96 21.59 0)
 		(unit 1)
+		(body_style 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
+		(in_pos_files yes)
 		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "c86bc22a-eaf1-4ca2-8e8b-7d8fc9f3d9cd")
 		(property "Reference" "#PWR02"
 			(at 60.96 25.4 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
-				(hide yes)
 			)
 		)
 		(property "Value" "VDD"
 			(at 60.96 16.51 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2211,32 +2227,38 @@
 		)
 		(property "Footprint" ""
 			(at 60.96 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(property "Datasheet" ""
 			(at 60.96 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"VDD\""
 			(at 60.96 21.59 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
 					(color 255 255 194 1)
 				)
-				(hide yes)
 			)
 		)
 		(pin "1"
@@ -2264,11 +2286,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "09159769-9a8d-41b9-89ab-3a0a86692893")
 		(property "Sheetname" "Display MCU"
 			(at 95.25 56.4384 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2278,6 +2302,8 @@
 		)
 		(property "Sheetfile" "rp2040.kicad_sch"
 			(at 95.25 117.4246 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2546,11 +2572,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "2c9586de-ca2f-4a0b-8ff8-8fdad1d1abcc")
 		(property "Sheetname" "Decoder"
 			(at 167.64 94.5384 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2560,6 +2588,8 @@
 		)
 		(property "Sheetfile" "decoder.kicad_sch"
 			(at 167.64 151.7146 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2758,11 +2788,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "4f7f35d0-2952-4294-913c-05f668985375")
 		(property "Sheetname" "Power MCU"
 			(at 95.25 126.2884 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2772,6 +2804,8 @@
 		)
 		(property "Sheetfile" "stm32.kicad_sch"
 			(at 95.25 169.4946 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2939,16 +2973,6 @@
 				(justify right)
 			)
 		)
-		(pin "ESP_RESET" output
-			(at 95.25 160.02 180)
-			(uuid "994aaf9b-3ed8-4080-847b-b00361ec0604")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
 		(pin "SD_CARD_DET" input
 			(at 95.25 148.59 180)
 			(uuid "441ece0a-1143-409c-98c5-b4a9e980c901")
@@ -2980,11 +3004,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "802ce1c9-2668-4fe7-971c-9ba57eb1ffa9")
 		(property "Sheetname" "Peripherals"
 			(at 15.24 90.7284 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -2994,6 +3020,8 @@
 		)
 		(property "Sheetfile" "peripherals.kicad_sch"
 			(at 15.24 117.4246 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3072,11 +3100,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "802d77e5-f72d-443e-abfe-d20b44acef6c")
 		(property "Sheetname" "Power"
 			(at 15.24 23.6724 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3086,6 +3116,8 @@
 		)
 		(property "Sheetfile" "power.kicad_sch"
 			(at 15.24 84.4046 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3264,11 +3296,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "ab8e590b-cde3-4860-87b4-37e60f787bc4")
 		(property "Sheetname" "WiFi MCU"
 			(at 95.25 23.4184 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3278,6 +3312,8 @@
 		)
 		(property "Sheetfile" "esp32.kicad_sch"
 			(at 95.25 48.8446 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3345,16 +3381,6 @@
 				(justify left)
 			)
 		)
-		(pin "RESET" input
-			(at 95.25 26.67 180)
-			(uuid "bb0d742d-8da5-4760-adc1-08741b20ed1a")
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
 		(instances
 			(project "mainboard"
 				(path "/32eb05c7-b4a6-42f3-8fb3-43453631100f"
@@ -3376,11 +3402,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "b5a611d3-6308-4792-ad5f-d479afbae4ce")
 		(property "Sheetname" "LED Connection A"
 			(at 237.49 45.2624 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3390,6 +3418,8 @@
 		)
 		(property "Sheetfile" "matrixandbuffer.kicad_sch"
 			(at 237.49 80.5946 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3518,11 +3548,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "e7e17249-2796-40aa-8cf6-7a1737723276")
 		(property "Sheetname" "LED Connection B"
 			(at 237.49 104.9524 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3532,6 +3564,8 @@
 		)
 		(property "Sheetfile" "matrixandbuffer.kicad_sch"
 			(at 237.49 140.2846 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3660,11 +3694,13 @@
 			(type solid)
 		)
 		(fill
-			(color 0 0 0 0.0000)
+			(color 0 0 0 0)
 		)
 		(uuid "f949a322-cdc0-42f3-8e56-a599c8860839")
 		(property "Sheetname" "USB Mux"
 			(at 64.77 39.9284 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3674,6 +3710,8 @@
 		)
 		(property "Sheetfile" "usbmux.kicad_sch"
 			(at 64.77 64.0846 0)
+			(show_name no)
+			(do_not_autoplace no)
 			(effects
 				(font
 					(size 1.27 1.27)
