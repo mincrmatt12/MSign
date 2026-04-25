@@ -8,3 +8,5 @@
 
 *.kicad*.lck
 *.*-bak
+*.bak
+*/.history/
