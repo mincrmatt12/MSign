@@ -6,10 +6,6 @@
 	path = vendor/FreeRTOS
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel
 	ignore = dirty
-[submodule "vendor/STM32CubeF2"]
-	path = vendor/STM32CubeF2
-	url = https://github.com/STMicroelectronics/STM32CubeF2
-	ignore = dirty
 [submodule "vendor/BearSSL"]
 	path = vendor/BearSSL
 	url = https://github.com/mincrmatt12/bearssl-dyncert
@@ -17,7 +13,18 @@
 [submodule "vendor/lwip"]
 	path = vendor/lwip
 	url = https://github.com/lwip-tcpip/lwip
-[submodule "vendor/STM32CubeF4"]
-	path = vendor/STM32CubeF4
-	url = https://github.com/STMicroelectronics/STM32CubeF4
-	ignore = dirty
+[submodule "vendor/CMSIS_6"]
+	path = vendor/CMSIS_6
+	url = https://github.com/ARM-software/CMSIS_6
+[submodule "vendor/STM32F2xx_HAL_Driver"]
+	path = vendor/STM32F2xx_HAL_Driver
+	url = https://github.com/STMicroelectronics/stm32f2xx-hal-driver
+[submodule "vendor/STM32F4xx_HAL_Driver"]
+	path = vendor/STM32F4xx_HAL_Driver
+	url = https://github.com/STMicroelectronics/stm32f4xx-hal-driver
+[submodule "vendor/CMSIS_Device_STM32F2xx"]
+	path = vendor/CMSIS_Device_STM32F2xx
+	url = https://github.com/STMicroelectronics/cmsis-device-f2
+[submodule "vendor/CMSIS_Device_STM32F4xx"]
+	path = vendor/CMSIS_Device_STM32F4xx
+	url = https://github.com/STMicroelectronics/cmsis-device-f4

@@ -12,9 +12,6 @@ add_compile_options(
 set(MSIGN_BUILD_TYPE "board" CACHE STRING "Build target, either 'nucleo' or 'board' or 'minisign'")
 set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
 
-# find library
-set(cube_ll_dir ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc)
-
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -mcpu=cortex-m4")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=cortex-m4")
@@ -34,17 +31,18 @@ add_executable(stmboot
 	src/common/bootcmd.c
 )
 
+target_include_directories(stmboot PRIVATE
+	${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_6/CMSIS/Core/Include)
+
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	target_include_directories(stmboot PRIVATE
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F4xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_Device_STM32F4xx/Include
 	)
 else()
 	target_include_directories(stmboot PRIVATE
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F2xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_Device_STM32F2xx/Include
 	)
 endif()
 

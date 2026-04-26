@@ -55,24 +55,25 @@ set(cube_ll_drivers
 
 # hal
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
-	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
+	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F4xx_HAL_Driver/Src/stm32f4xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
 else()
-	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
+	list(TRANSFORM cube_ll_drivers PREPEND ${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F2xx_HAL_Driver/Src/stm32f2xx_ll_ OUTPUT_VARIABLE cube_ll_srcs)
 endif()
 
 add_library(cube_ll OBJECT ${cube_ll_srcs})
 
+target_include_directories(cube_ll PUBLIC
+	${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_6/CMSIS/Core/Include)
+
 if (MSIGN_BUILD_TYPE STREQUAL "minisign")
 	target_include_directories(cube_ll PUBLIC
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/STM32F4xx_HAL_Driver/Inc
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Device/ST/STM32F4xx/Include
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF4/Drivers/CMSIS/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F4xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_Device_STM32F4xx/Include
 	)
 else()
 	target_include_directories(cube_ll PUBLIC
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/STM32F2xx_HAL_Driver/Inc
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Device/ST/STM32F2xx/Include
-		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32CubeF2/Drivers/CMSIS/Include
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/STM32F2xx_HAL_Driver/Inc
+		${CMAKE_CURRENT_LIST_DIR}/../vendor/CMSIS_Device_STM32F2xx/Include
 	)
 endif()
 
