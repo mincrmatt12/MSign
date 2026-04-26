@@ -7,11 +7,13 @@ import Dropdown from 'react-bootstrap/Dropdown';
 import Modal from 'react-bootstrap/Modal';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Popover from 'react-bootstrap/Popover';
+import OverlayTrigger from 'react-bootstrap/OverlayTrigger';
 
 import ConfigContext from "../ctx"
 import * as _ from "lodash-es"
 
-const TrackerListSource = React.createContext([]);
+const TrackerListSource = React.createContext({carriers: [], metas: new Map()});
 
 function searchInCarriers(allCarriers, name) {
 	let results = [];
@@ -34,7 +36,7 @@ function nameById(allCarriers, keyF) {
 }
 
 function ChooseCarrierDialog({updateCode, close, isOpen}) {
-	const allCarriers = React.useContext(TrackerListSource);
+	const {carriers: allCarriers} = React.useContext(TrackerListSource);
 	const [search, updateSearch] = React.useState("");
 	const results = searchInCarriers(allCarriers, search);
 
@@ -61,7 +63,7 @@ function ChooseCarrierDialog({updateCode, close, isOpen}) {
 }
 
 function CarrierChooser({code, updateCode}) {
-	const allCarriers = React.useContext(TrackerListSource);
+	const {carriers: allCarriers} = React.useContext(TrackerListSource);
 	const resolved = nameById(allCarriers, code);
 	const [modalOpen, setModalOpen] = React.useState(false);
 
@@ -91,6 +93,44 @@ function CarrierChooser({code, updateCode}) {
 	}
 }
 
+function ParamExtraInfoBadge({carrier}) {
+	const {metas} = React.useContext(TrackerListSource);
+
+	if (metas.has(carrier)) {
+		const parms = metas.get(carrier).parameters;
+
+		const summary = parms.map((x) => {
+			if (x.require) { return "<" + x.paramKey + ">"; }
+			else { return "[" + x.paramKey + "]"; }
+		}).join("-");
+
+		const li_elems = parms.map((x, idx) => {
+			return <li key={idx}>{x.paramKey}{x.paramKey == x.description || <>{" "}(i.e. <b>{x.description}</b>)</>} is {x.require ? "required" : "optional"}{x.options !== null ? ", and has options:" : "; "}
+				{x.options === null || <ul>{Object.keys(x.options).sort().map((k) => <li key={k}><b>{k}</b> is "{x.options[k]}"</li>)}</ul>}
+				e.g. "{x.sample}"
+			</li>
+		});
+
+		const popover = (
+			<Popover style={{ maxWidth: '500px' }}>
+				<Popover.Header as="h4">{summary}</Popover.Header>
+				<Popover.Body>
+					<ul>
+						{li_elems}
+					</ul>
+				</Popover.Body>
+			</Popover>
+		);
+
+		return <OverlayTrigger trigger="click" placement="top" overlay={popover}>
+			<Button variant="secondary">fmt</Button>
+		</OverlayTrigger>
+	}
+	else {
+		return null;
+	}
+}
+
 function ParcelEntry({data, updateData}) {
 	return <Card className="my-3 p-1">
 		<Card.Body>
@@ -105,6 +145,13 @@ function ParcelEntry({data, updateData}) {
 			<Form.Label>tracking number</Form.Label>
 			<Form.Control type="text" value={data["tracking_number"]} placeholder="" 
 				onChange={(e) => updateData(["tracking_number"], e.target.value)} />
+		</Form.Group>
+		<Form.Group className="my-2" controlId="ei">
+			<Form.Label>extra parameter</Form.Label>
+			<InputGroup>
+				<Form.Control type="text" value={data["additional_param"] ?? ""} placeholder="" onChange={(e) => updateData(["additional_param"], e.target.value)} />
+				<ParamExtraInfoBadge carrier={data["carrier_id"] ?? 0} />
+			</InputGroup>
 		</Form.Group>
 
 		<hr className="hr-darkgray" />
@@ -133,11 +180,20 @@ function ParcelEntry({data, updateData}) {
 
 export default function ParcelPane() {
 	const [cfg, updateCfg] = React.useContext(ConfigContext);
-	const [allCarriers, updateAllCarriers] = React.useState([]);
+	const [allCarriers, updateAllCarriers] = React.useState({
+		carriers: [],
+		metas: new Map(),
+	});
 	React.useEffect(() => {
-		fetch("https://res.17track.net/asset/carrier/info/apicarrier.all.json")
-			.then((x) => x.json())
-			.then((x) => {updateAllCarriers(x)});
+		Promise.all([
+			fetch("https://res.17track.net/asset/carrier/info/apicarrier.all.json"),
+			fetch("https://res.17track.net/asset/carrier/info/additional_parameters.json")
+		])
+			.then(([a, b]) => Promise.all([a.json(), b.json()]))
+			.then(([carriers, metas]) => {updateAllCarriers({
+				carriers: carriers,
+				metas: new Map(metas.map(({key, ...rest}) => [key, rest]))
+			})});
 	}, []);
 
 	const entries = _.get(cfg, "parcels.trackers", []);
