@@ -20,7 +20,7 @@ namespace parcels {
 		config::string_t additional_param {};
 
 		//!cfg: holds .translate_messages
-		bool translate_messages = true;
+		bool translate_messages = false;
 
 		//!cfg: holds .raw_timestamp
 		bool raw_timestamp = false;

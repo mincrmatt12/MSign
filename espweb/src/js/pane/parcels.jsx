@@ -124,7 +124,7 @@ function ParcelEntry({data, updateData}) {
 			</Col>
 		</Row>
 
-		<Form.Check checked={data["translate_messages"] ?? true} label="translate messages" onChange={(e) => updateData(["translate_messages"], e.target.checked)} />
+		<Form.Check checked={data["translate_messages"] ?? false} label="translate messages" onChange={(e) => updateData(["translate_messages"], e.target.checked)} />
 		<Form.Check checked={data["raw_timestamp"] ?? false} label="ignore timezone" onChange={(e) => updateData(["raw_timestamp"], e.target.checked)} />
 
 		</Card.Body>
