@@ -112,7 +112,7 @@ function ParamExtraInfoBadge({carrier}) {
 		});
 
 		const popover = (
-			<Popover style={{ maxWidth: '500px' }}>
+			<Popover style={{ maxWidth: 'min(500px, 95vw)' }}>
 				<Popover.Header as="h4">{summary}</Popover.Header>
 				<Popover.Body>
 					<ul>
