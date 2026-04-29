@@ -711,18 +711,10 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 	{
 		int16_t bulbpos = 64;
 
-		if (parcel.status.flags & slots::ParcelStatusLine::HAS_EST_DEILIVERY && parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery_to > rtc_time) {
-			// If more than 5 days out, place close to start
-			int hours = (parcel.estimated_delivery_to - rtc_time) / (60*60*1000LL);
-			if (hours >= 5*24) {
-				bulbpos = 12;
-			}
-			else {
-				if (hours <= 0) bulbpos = 118;
-				else {
-					bulbpos = 12 + ((5*24 - hours) * (118-12))/(5*24);
-				}
-			}
+		if ((parcel.status.flags & (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY)) == (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY) 
+				&& parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery_to > rtc_time) {
+
+			bulbpos = 12 + (118-12) * (rtc_time - parcel.shipped_time) / (parcel.estimated_delivery_to - parcel.shipped_time);
 		}
 		else {
 			switch (parcel.status_icon) {

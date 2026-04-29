@@ -324,6 +324,7 @@ namespace slots {
 		} status_icon;
 
 		millis_timestamp updated_time;   // when was the last status received
+		millis_timestamp shipped_time;   // when was the first (if possible non-PRE_TRANSIT) status received
 		millis_timestamp estimated_delivery_from; // earliest time package is expected to arrive.
 		millis_timestamp estimated_delivery_to;   // latest time package is expected to arrive. if HAS_EST_DELIVERY_RANGE is unset, only this is populated.
 	};

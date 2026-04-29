@@ -571,6 +571,8 @@ namespace parcels {
 		int num_packages = 0;
 		int epis_for_current = 0;
 
+		slots::ParcelInfo::StatusIcon current_shiptime_icon = slots::ParcelInfo::UNK, last_epi_icon = slots::ParcelInfo::UNK;
+
 		json::JSONParser parser([&](json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v){
 			if (stack_ptr < 3) return;
 			if (strcmp(stack[1]->name, "data")) return;
@@ -591,6 +593,10 @@ namespace parcels {
 				p_idx = -1;
 				text_overflow_effected = false;
 				if (epis_for_current == 0) parcel_info.status.flags |= slots::ParcelStatusLine::EXTRA_INFO_MISSING;
+				if (parcel_info.status.flags & slots::ParcelStatusLine::HAS_UPDATED_TIME && current_shiptime_icon == slots::ParcelInfo::UNK) {
+					parcel_info.shipped_time = parcel_info.updated_time;
+				}
+				current_shiptime_icon = slots::ParcelInfo::UNK;
 				epis_for_current = 0;
 				lbuf.~LocationBuf();
 				new (&lbuf) LocationBuf{};
@@ -710,6 +716,14 @@ namespace parcels {
 									max_allocated_epis += 4;
 									serial::interface.allocate_slot_size(slots::PARCEL_EXTRA_INFOS, max_allocated_epis * sizeof(slots::ExtraParcelInfoEntry));
 								}
+
+								if ((current_shiptime_icon == slots::ParcelInfo::UNK || last_epi_icon != slots::ParcelInfo::PRE_TRANSIT || last_epi_icon == current_shiptime_icon) && (current_epi.status.flags & slots::ParcelStatusLine::HAS_UPDATED_TIME)) {
+									if ((current_epi.updated_time < parcel_info.shipped_time) || (current_shiptime_icon == slots::ParcelInfo::UNK)) {
+										current_shiptime_icon = last_epi_icon;
+										parcel_info.shipped_time = current_epi.updated_time;
+									}
+								}
+
 								serial::interface.update_slot_at(slots::PARCEL_EXTRA_INFOS, current_epi, epi_idx++, true, false);
 								current_epi.~ExtraParcelInfoEntry();
 								new (&current_epi) slots::ExtraParcelInfoEntry{};
@@ -733,6 +747,9 @@ namespace parcels {
 									if (auto new_ts = update_timestamp_on(use_local_time, stack + 7, stack_ptr - 7, v)) {
 										current_epi.updated_time = new_ts;
 										current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+									}
+									else if (!strcmp(stack[7]->name, "sub_status") && v.type == v.STR) {
+										last_epi_icon = get_icon_enum(v.str_val);
 									}
 								}
 							}
