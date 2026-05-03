@@ -32,6 +32,17 @@ pipeline {
 						archiveArtifacts artifacts: 'stm/build_*/stm'
 					}
 				}
+				stage("Build PWR") {
+					steps {
+						dir("pwr/build") {
+							sh "cmake .. -GNinja -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake -DCMAKE_BUILD_TYPE=Release"
+							sh "ninja"
+						}
+
+						archiveArtifacts artifacts: 'pwr/build/pwr.bin', fingerprint: true
+						archiveArtifacts artifacts: 'pwr/build/pwr'
+					}
+				}
 				stage("Build ESP") {
 					steps {
 						dir("vendor") {
