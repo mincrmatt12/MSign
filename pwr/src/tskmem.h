@@ -46,12 +46,14 @@ namespace tskmem {
 			}, name, &obj, priority);
 		}
 
+		operator TaskHandle_t() { return reinterpret_cast<TaskHandle_t>(&task_buffer); }
 	private:
 		StaticTask_t task_buffer;
 		StackType_t  task_stack[Stack]{};
 	};
 
 	extern TaskHolder<256> regman;
+	extern TaskHolder<256> ucpd;
 }
 
 #endif

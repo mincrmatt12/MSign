@@ -47,4 +47,8 @@ void rcc::init() {
 	// Enable CACHE
 	LL_FLASH_EnableInstCache();
 	LL_FLASH_EnablePrefetch();
+
+	// enable common peripherals, like DMA1 / SYSCFG
+	LL_AHB1_GRP1_EnableClock(LL_AHB1_GRP1_PERIPH_DMA1);
+	LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_SYSCFG);
 }

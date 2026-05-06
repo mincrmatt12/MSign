@@ -8,7 +8,7 @@
 void main() {
 	rcc::init();
 
-	tskmem::regman.create(regman::man, "regman", 1);
+	tskmem::regman.create(regman::man, "regman", 2);
 
 	vTaskStartScheduler();
 }

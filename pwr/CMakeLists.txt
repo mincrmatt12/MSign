@@ -14,6 +14,8 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
    add_compile_options (-fcolor-diagnostics)
 endif ()
 
+add_compile_options(-Os)
+
 # specify target
 set(MSIGN_BUILD_TYPE "ngboard" CACHE STRING "Build target, expected to be ngboard since other target don't have a pwr processor")
 set(MSIGN_OCD_INTERFACE "cmsis-dap" CACHE STRING "Interface type to use with OpenOCD")
@@ -43,6 +45,7 @@ set(cube_ll_drivers
 	rcc.c
 	i2c.c
 	ucpd.c
+	dma.c
 )
 
 # hal
@@ -127,7 +130,6 @@ target_link_libraries(pwr
 
 target_compile_options(pwr
 	PRIVATE
-	-O3
 	-ffast-math
 )
 
@@ -171,7 +173,10 @@ if (EXISTS ${openocd_executable})
 
 	# add upload target
 	add_custom_target(upload
-		COMMAND ${openocd_executable} -f interface/${MSIGN_OCD_INTERFACE}.cfg -f target/stm32g0x.cfg -c "program $<TARGET_FILE:pwr> verify reset exit" || echo "program $<TARGET_FILE:pwr> verify reset" | telnet localhost 4444
+		COMMAND /bin/sh -c "nc -z localhost 4444 \
+	&& (echo program $<TARGET_FILE:pwr> verify reset; echo exit) | nc localhost 4444 \
+	|| ${openocd_executable} -f interface/${MSIGN_OCD_INTERFACE}.cfg -f target/stm32g0x.cfg -c 'program $<TARGET_FILE:pwr> verify reset exit'"
+		VERBATIM
 	)
 
 	add_dependencies(upload pwr)

@@ -2,6 +2,7 @@
 
 namespace tskmem {
 	TaskHolder<256> regman;
+	TaskHolder<256> ucpd;
 };
 
 // as copied from the docs
