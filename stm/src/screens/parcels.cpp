@@ -714,7 +714,12 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 		if ((parcel.status.flags & (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY)) == (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY) 
 				&& parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery_to > rtc_time) {
 
-			bulbpos = 12 + (118-12) * (rtc_time - parcel.shipped_time) / (parcel.estimated_delivery_to - parcel.shipped_time);
+			if (parcel.shipped_time > rtc_time) {
+				bulbpos = 12;
+			}
+			else {
+				bulbpos = 12 + (118-12) * (rtc_time - parcel.shipped_time) / (parcel.estimated_delivery_to - parcel.shipped_time);
+			}
 		}
 		else {
 			switch (parcel.status_icon) {
