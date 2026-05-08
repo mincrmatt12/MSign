@@ -775,7 +775,7 @@
       "include_excluded_from_bom": false,
       "name": "",
       "sort_asc": true,
-      "sort_field": "Reference"
+      "sort_field": "Footprint"
     },
     "bus_aliases": {
       "CONTROL": [
@@ -869,7 +869,7 @@
         "uuid": "32eb05c7-b4a6-42f3-8fb3-43453631100f"
       }
     ],
-    "used_designators": "TP1-7,C74,NT1-2",
+    "used_designators": "Q2,R4,TP1-7,C74,NT1-2",
     "variants": []
   },
   "sheets": [

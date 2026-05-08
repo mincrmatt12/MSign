@@ -3568,6 +3568,16 @@
 	)
 	(wire
 		(pts
+			(xy 187.96 45.72) (xy 190.5 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "2e57cd74-7c37-405c-bfb2-3b60f7b57753")
+	)
+	(wire
+		(pts
 			(xy 218.44 118.11) (xy 220.98 118.11)
 		)
 		(stroke
@@ -3948,7 +3958,7 @@
 	)
 	(wire
 		(pts
-			(xy 193.04 43.18) (xy 193.04 55.88)
+			(xy 193.04 43.18) (xy 193.04 54.61)
 		)
 		(stroke
 			(width 0)
@@ -4198,7 +4208,7 @@
 	)
 	(wire
 		(pts
-			(xy 193.04 55.88) (xy 200.66 55.88)
+			(xy 193.04 54.61) (xy 200.66 54.61)
 		)
 		(stroke
 			(width 0)
@@ -4338,6 +4348,16 @@
 	)
 	(wire
 		(pts
+			(xy 200.66 57.15) (xy 190.5 57.15)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "944c8f9c-bd2f-477d-88a1-db1769de7131")
+	)
+	(wire
+		(pts
 			(xy 48.26 107.95) (xy 48.26 109.22)
 		)
 		(stroke
@@ -4428,7 +4448,7 @@
 	)
 	(wire
 		(pts
-			(xy 195.58 53.34) (xy 195.58 40.64)
+			(xy 195.58 52.07) (xy 195.58 40.64)
 		)
 		(stroke
 			(width 0)
@@ -4758,7 +4778,7 @@
 	)
 	(wire
 		(pts
-			(xy 200.66 53.34) (xy 195.58 53.34)
+			(xy 200.66 52.07) (xy 195.58 52.07)
 		)
 		(stroke
 			(width 0)
@@ -4845,6 +4865,16 @@
 			(type default)
 		)
 		(uuid "e345e5ad-95fe-4574-a328-4640d3a94f9b")
+	)
+	(wire
+		(pts
+			(xy 190.5 57.15) (xy 190.5 45.72)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e578876a-da4d-48fb-bec9-e836d11b470a")
 	)
 	(wire
 		(pts
@@ -5303,6 +5333,17 @@
 		)
 		(uuid "dae33eb0-6f5c-456d-97b4-e89d73433e6f")
 	)
+	(hierarchical_label "DISC_5VREG"
+		(shape input)
+		(at 187.96 45.72 180)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "ef5e1910-d5ff-4583-8b3c-92d323f292cd")
+	)
 	(hierarchical_label "5V_REG_SDA"
 		(shape bidirectional)
 		(at 118.11 29.21 180)
@@ -5520,6 +5561,17 @@
 			)
 		)
 		(property "LCSC" "C71121"
+			(at 261.62 118.11 0)
+			(hide yes)
+			(show_name no)
+			(do_not_autoplace no)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Part" "LD1117AG-33-AA3-A-R"
 			(at 261.62 118.11 0)
 			(hide yes)
 			(show_name no)
@@ -9197,7 +9249,7 @@
 			)
 		)
 		(pin "EN_VBUS" input
-			(at 200.66 53.34 180)
+			(at 200.66 52.07 180)
 			(uuid "c862980e-09ef-4741-95d6-a21727aa0d91")
 			(effects
 				(font
@@ -9237,8 +9289,18 @@
 			)
 		)
 		(pin "EN_5VREG" input
-			(at 200.66 55.88 180)
+			(at 200.66 54.61 180)
 			(uuid "5f0e23e0-9b49-4bca-9487-4caa0269286d")
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(pin "5V_DISC" input
+			(at 200.66 57.15 180)
+			(uuid "c19d2a16-d36a-4d52-8f7f-7b7895e537cc")
 			(effects
 				(font
 					(size 1.27 1.27)
