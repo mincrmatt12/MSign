@@ -955,7 +955,7 @@ void screen::WeatherScreen::draw_graph_yaxis(int16_t x, int16_t y0, int16_t y1, 
 		matrix.get_inactive_buffer().at(x - 1, pos) = led::color_t(95_c);
 
 		char buf[10] = {0};
-		if (decimals) {
+		if (decimals && value < 10000) {
 			auto v = intmath::round10<int32_t>(ymin + value, 10);
 			snprintf(buf, 10, "%d.%d", v / 10, intmath::abs(v % 10));
 		}
