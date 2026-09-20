@@ -25,3 +25,7 @@ bool wifi::init() {
 
 	return true;
 }
+
+void wifi::request_reconnection() {
+	ESP_LOGI("wifiman", "Fake wifi requested reconnection");
+}

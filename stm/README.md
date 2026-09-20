@@ -91,6 +91,7 @@ is limited to around 8k in practice.
 | `CONSOLE_MSG` | `0x70` |
 | `REFRESH_GRABBER` | `0x80` |
 | `SLEEP_ENABLE` | `0x81` |
+| `RECONNECT_WIFI` | `0x82` |
 | `UI_GET_CALIBRATION` | `0x90` |
 | `UI_SAVE_CALIBRATION` | `0x91` |
 
@@ -294,6 +295,10 @@ When in sleep mode, the following things occur:
 - all log output is prevented from reaching the serial port (to avoid blinking the led)
 - the screen is turned off
 - update frequency is made much slower
+
+### Reconnect
+
+The STM can ask the ESP to reset its WiFi connection (e.g. to refresh DHCP leases after a router reboot) by sending a `RECONNECT_WIFI` message with no payload.
 
 ### ADC calibration
 

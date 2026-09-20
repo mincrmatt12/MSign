@@ -322,4 +322,8 @@ bool wifi::init() {
 	return true;
 }
 
+void wifi::request_reconnection() {
+	esp_wifi_disconnect();
+}
+
 #endif

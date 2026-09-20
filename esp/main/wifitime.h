@@ -24,6 +24,8 @@ namespace wifi {
 		GrabTaskStop = 16, // if set, grab task should not be running (when unset, grab task is unmasked)
 		GrabTaskDead = 32, // set when the grab task is stopped
 	};
+
+	void request_reconnection();
 }
 
 #endif

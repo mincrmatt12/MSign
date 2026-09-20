@@ -52,6 +52,12 @@ void serial::SerialInterface::process_packet() {
 			}
 			break;
 
+		case RECONNECT_WIFI:
+			{
+				wifi::request_reconnection();
+			}
+			break;
+
 		case QUERY_TIME:
 			{
 				ESP_LOGD(TAG, "got timereq");
@@ -137,7 +143,7 @@ void serial::SerialInterface::process_packet() {
 				esp_restart();
 			}
 
-		case slots::protocol::HANDSHAKE_INIT:
+		case HANDSHAKE_INIT:
 			{
 				// TODO: maybe make this just mark all things in the dum dirty and only reset if data is lost?
 				ESP_LOGW(TAG, "Got handshake init in main loop; resetting");
