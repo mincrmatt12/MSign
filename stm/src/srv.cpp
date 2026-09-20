@@ -189,6 +189,13 @@ void srv::Servicer::refresh_grabber(slots::protocol::GrabberID gid) {
 	immediately_process();
 }
 
+void srv::Servicer::reconnect_wifi() {
+	PendRequest pr;
+	pr.type = PendRequest::TypeReconnectWifi;
+	if (xQueueSendToBack(pending_requests, &pr, pdMS_TO_TICKS(2000)) != pdPASS) return;
+	immediately_process();
+}
+
 void srv::Servicer::set_sleep_mode(bool enabled) {
 	PendRequest pr;
 	pr.type = PendRequest::TypeSleepMode;
@@ -489,6 +496,7 @@ poll_another_pr:
 		switch (active_request.type) {
 			default: break;
 			case PendRequest::TypeRefreshGrabber:
+			case PendRequest::TypeReconnectWifi:
 			case PendRequest::TypeSleepMode:
 			case PendRequest::TypeDumpLogOut:
 			case PendRequest::TypeSync:
@@ -1320,6 +1328,16 @@ bool srv::Servicer::start_pend_request(PendRequest &req) {
 				return true;
 			}
 			break;
+		case PendRequest::TypeReconnectWifi:
+			{
+				wait_for_not_sending();
+				dma_out_pkt.direction = dma_out_pkt.FromStm;
+				dma_out_pkt.cmd_byte = slots::protocol::RECONNECT_WIFI;
+				dma_out_pkt.size = 0;
+
+				send();
+				return true;
+			}
 		case PendRequest::TypeSleepMode:
 			{
 				wait_for_not_sending();

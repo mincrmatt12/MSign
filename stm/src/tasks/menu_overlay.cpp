@@ -386,17 +386,22 @@ void tasks::DispMan::do_menu_overlay() {
 				}
 				else if (ms.selected == 2) goto close;
 			}
+
 			break;
 		case MS::SubmenuConnInfo:
 			draw_menu_list(conn_entries);
 
-			if (ms.selected == 0) {
-				goto close;
-			}
-			else if (ms.selected == 1) {
-				close_panel();
+			if (ui::buttons[ui::Buttons::SEL]) {
+				if (ms.selected == 0) {
+					servicer.reconnect_wifi();
 
-				goto close;
+					goto close;
+				}
+				else if (ms.selected == 1) {
+					close_panel();
+
+					goto close;
+				}
 			}
 			break;
 	}

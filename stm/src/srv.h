@@ -97,6 +97,9 @@ namespace srv {
 		// Ask ESP to refresh a specific grabber (dataset)
 		void refresh_grabber(slots::protocol::GrabberID which);
 
+		// Ask ESP to reconnect its WiFi
+		void reconnect_wifi();
+
 		// Get the current ADC calibration (or return an error code)
 		slots::protocol::AdcCalibrationResult get_adc_calibration(slots::protocol::AdcCalibration& calibration_out);
 
@@ -181,6 +184,7 @@ namespace srv {
 				TypeChangeTempMulti,
 				TypeRefreshGrabber,
 				TypeSleepMode,
+				TypeReconnectWifi,
 				TypeReset,
 				TypeSync,
 				TypeGetCalibration,
