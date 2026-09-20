@@ -258,6 +258,13 @@ void tasks::DispMan::do_menu_overlay() {
 		nullptr
 	};
 
+	const static char * const conn_entries[] = {
+		"reconnect",
+
+		"close",
+		nullptr
+	};
+
 	switch (ms.submenu) {
 		case MS::SubmenuMain:
 			draw_menu_list(menu_entries);
@@ -380,6 +387,18 @@ void tasks::DispMan::do_menu_overlay() {
 				else if (ms.selected == 2) goto close;
 			}
 			break;
+		case MS::SubmenuConnInfo:
+			draw_menu_list(conn_entries);
+
+			if (ms.selected == 0) {
+				goto close;
+			}
+			else if (ms.selected == 1) {
+				close_panel();
+
+				goto close;
+			}
+			break;
 	}
 
 	if (ui::buttons[ui::Buttons::POWER]) {
@@ -393,6 +412,7 @@ closetetris:
 				break;
 			case MS::SubmenuMain:
 			case MS::SubmenuDebug:
+			case MS::SubmenuConnInfo:
 close:
 				last_swapped_at = timekeeper.current_time;
 				interact_mode = InteractNone;

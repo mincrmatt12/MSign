@@ -68,7 +68,7 @@ namespace tasks {
 			uint8_t selected = 0;
 			enum Submenu : uint8_t {
 				SubmenuMain = 0,
-				//SubmenuConnInfo = 1,
+				SubmenuConnInfo = 1,
 				SubmenuSelectScreen = 2,
 				SubmenuDebug = 3,
 				SubmenuDebugCrash = 4,

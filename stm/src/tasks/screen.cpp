@@ -323,6 +323,9 @@ do_update:
 						interact_mode = InteractMenuOpen;
 						interact_timeout = xTaskGetTickCount() + pdMS_TO_TICKS(30000);
 						ms.reset();
+						if (op == OverlayPanelConnInfo) {
+							ms.submenu = ms.SubmenuConnInfo;
+						}
 					}
 					else if (ui::buttons[ui::Buttons::POWER] && override_timeout > xTaskGetTickCount()) {
 						override_timeout = xTaskGetTickCount();
