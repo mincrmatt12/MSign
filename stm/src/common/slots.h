@@ -281,9 +281,10 @@ namespace slots {
 		enum Flags : uint8_t {
 			HAS_STATUS = 1,
 			HAS_LOCATION = 2,
-			HAS_EST_DEILIVERY = 4, // cannot be set on ExtraParcelInfoEntry
-			HAS_EST_DELIVERY_RANGE = 8, // ''
-			HAS_UPDATED_TIME = 16,   
+			HAS_UPDATED_TIME = 4,
+
+			TIME_GRANULARITY_DATE = 8,
+
 			EXTRA_INFO_TRUNCATED = 32, // cannot be set on ExtraParcelInfoEntry
 			EXTRA_INFO_MISSING   = 64, // ''
 

@@ -7,6 +7,7 @@
 #include "../tasks/screen.h"
 #include "../tasks/timekeeper.h"
 #include "../mintime.h"
+#include <optional>
 #include <stdio.h>
 
 extern srv::Servicer servicer;
@@ -373,13 +374,24 @@ bool screen::ParcelScreen::interact() {
 	return false;
 }
 
-void screen::ParcelScreen::format_relative_or_local(char *buf, size_t len, uint64_t updated_time, bool local_time) {
-	if (local_time) {
-		mint::tm res{updated_time};
+screen::ParcelScreen::LocalMode screen::ParcelScreen::from_flags(const slots::ParcelStatusLine &psl, std::optional<bool> force_local) {
+	if (psl.flags & psl.TIME_GRANULARITY_DATE)
+		return LocalModeDateOnly;
+
+	return force_local.value_or(psl.flags & psl.UPDATED_TIME_IS_LOCAL_TIME) ? LocalModeLocal : LocalModeNormal;
+}
+
+void screen::ParcelScreen::format_relative_or_local(char *buf, size_t len, uint64_t updated_time, LocalMode local_mode) {
+	if (local_mode == LocalModeNormal)
+		return draw::format_relative_date(buf, len, updated_time);
+
+	mint::tm res{updated_time};
+
+	if (local_mode == LocalModeLocal) {
 		snprintf(buf, len, "%s %d, %02d:%02d", res.abbrev_month(), res.tm_day, res.tm_hour, res.tm_min);
 	}
-	else {
-		draw::format_relative_date(buf, len, updated_time);
+	else { // LocalModeDateOnly
+		snprintf(buf, len, "%s %d", res.abbrev_month(), res.tm_day);
 	}
 }
 
@@ -458,7 +470,7 @@ int16_t screen::ParcelScreen::draw_long_parcel_entry(int16_t y, const slots::Par
 	if (psl.flags & psl.HAS_UPDATED_TIME) {
 		if (bulb_centering_y == 0) bulb_centering_y = end_y + 6;
 		char buf[32]; 
-		format_relative_or_local(buf, sizeof buf, updated_time, local_time);
+		format_relative_or_local(buf, sizeof buf, updated_time, from_flags(psl, local_time));
 		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
 		if (location_end_x > 127 - sz - 6) {
 			dual_line = true;
@@ -510,8 +522,8 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	auto carriers_size = servicer[slots::PARCEL_CARRIER_NAMES].datasize;
 	
 	// Draw scrollable content first
-	parcel_entries_size = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 0 : -5;
-	int16_t header_height = (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) ? 18 : 12;
+	parcel_entries_size = parcel.estimated_delivery_to ? 0 : -5;
+	int16_t header_height = parcel.estimated_delivery_to ? 18 : 12;
 
 	// Check the parcel-level flag for using the alternate time representation
 	bool use_local_time = (parcel.status.flags & parcel.status.UPDATED_TIME_IS_LOCAL_TIME);
@@ -569,7 +581,7 @@ void screen::ParcelScreen::draw_long_view(const slots::ParcelInfo& parcel) {
 	// Draw header text
 	draw_parcel_name(0, parcel);
 	// Show estimated delivery if present
-	if (parcel.status.flags & parcel.status.HAS_EST_DEILIVERY) {
+	if (parcel.estimated_delivery_to) {
 		char buf[48] = "est. delivery "; draw::format_relative_date(buf+strlen(buf), 48-strlen(buf), parcel.estimated_delivery_to);
 		auto sz = draw::text_size(buf, font::lcdpixel_6::info);
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - sz, 17, 0xaa_c);
@@ -711,9 +723,11 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 	{
 		int16_t bulbpos = 64;
 
-		if ((parcel.status.flags & (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY)) == (slots::ParcelStatusLine::HAS_UPDATED_TIME | slots::ParcelStatusLine::HAS_EST_DEILIVERY) 
-				&& parcel.status_icon != slots::ParcelInfo::DELIVERED && parcel.estimated_delivery_to > rtc_time) {
-
+		if ((parcel.status.flags & (slots::ParcelStatusLine::HAS_UPDATED_TIME)) && 
+				parcel.status_icon != slots::ParcelInfo::DELIVERED && 
+				parcel.estimated_delivery_to && 
+				parcel.estimated_delivery_to > rtc_time) 
+		{
 			if (parcel.shipped_time > rtc_time) {
 				bulbpos = 12;
 			}
@@ -782,7 +796,7 @@ int16_t screen::ParcelScreen::draw_short_parcel_entry(int16_t y, const slots::Pa
 	// draw updated time
 	if (parcel.status.flags & parcel.status.HAS_UPDATED_TIME) {
 		char buf[32];
-		format_relative_or_local(buf, sizeof buf, parcel.updated_time, parcel.status.flags & parcel.status.UPDATED_TIME_IS_LOCAL_TIME);
+		format_relative_or_local(buf, sizeof buf, parcel.updated_time, from_flags(parcel.status));
 		draw::text(matrix.get_inactive_buffer(), buf, font::lcdpixel_6::info, 127 - draw::text_size(buf, font::lcdpixel_6::info), y + 5, 0xaa_c);
 		y += 6; height += 6;
 	}

@@ -2,6 +2,7 @@
 #define PARCELS_H
 
 #include "base.h"
+#include <optional>
 #include <stdint.h>
 #include "../draw.h"
 
@@ -25,7 +26,15 @@ namespace screen {
 
 		led::color_t draw_parcel_name(int16_t y, const slots::ParcelInfo& psl);
 		int16_t draw_long_parcel_entry(int16_t y, const slots::ParcelStatusLine& psl, const uint8_t * heap, size_t heap_size, uint64_t updated_time, const uint8_t * carrier_name, bool local_time);
-		void format_relative_or_local(char *buf, size_t len, uint64_t updated_time, bool local_time);
+
+		enum LocalMode {
+			LocalModeNormal,
+			LocalModeLocal,
+			LocalModeDateOnly
+		};
+
+		static LocalMode from_flags(const slots::ParcelStatusLine& psl, std::optional<bool> force_local = std::nullopt);
+		void format_relative_or_local(char *buf, size_t len, uint64_t updated_time, LocalMode mode);
 
 		// Scroll tracker for parcels
 		constexpr static draw::PageScrollHelper::Params scroll_params = {

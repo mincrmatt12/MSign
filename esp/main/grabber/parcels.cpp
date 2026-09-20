@@ -173,6 +173,11 @@ namespace parcels {
  		return wifi::from_iso8601(v.str_val, use_local_time);
 	}
 
+	bool check_time_granularity(json::PathNode ** stack, uint8_t stack_ptr, const json::Value& v) {
+		if (stack_ptr != 2 || v.type != json::Value::NONE) return false;
+		return !strcmp(stack[0]->name, "time_raw") && !strcmp(stack[1]->name, "time");
+	}
+
 	static_assert(std::is_trivially_destructible_v<LocationBuf>);
 
 	constexpr inline size_t max_total_entry_textcount = 4000;
@@ -651,16 +656,9 @@ namespace parcels {
 							if (!strcmp(stack[6]->name, "to"))
 								parcel_info.estimated_delivery_to = wifi::from_iso8601(v.str_val, true, true);
 						}
-						if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info with flags and move from-->to
-							if (parcel_info.estimated_delivery_from && parcel_info.estimated_delivery_to) {
-								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY | slots::ParcelStatusLine::HAS_EST_DELIVERY_RANGE;
-							}
-							else if (parcel_info.estimated_delivery_from) {
+						if (stack_ptr == 6 && v.type == json::Value::OBJ) { // finalize estimated date info and move from-->to if necessary
+							if (parcel_info.estimated_delivery_from && !parcel_info.estimated_delivery_to) {
 								parcel_info.estimated_delivery_to = std::exchange(parcel_info.estimated_delivery_from, 0);
-								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
-							}
-							else if (parcel_info.estimated_delivery_to) {
-								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_EST_DEILIVERY;
 							}
 						}
 					}
@@ -682,10 +680,13 @@ namespace parcels {
 								parcel_info.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
 							}
 							// Other metadata
-							else if (stack_ptr == 6) {
+							else if (stack_ptr >= 6) {
 								if (auto new_ts = update_timestamp_on(use_local_time, stack + 5, stack_ptr - 5, v)) {
 									parcel_info.updated_time = new_ts;
 									parcel_info.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
+								}
+								else if (check_time_granularity(stack + 5, stack_ptr - 5, v)) {
+									parcel_info.status.flags |= slots::ParcelStatusLine::TIME_GRANULARITY_DATE;
 								}
 							}
 						}
@@ -743,12 +744,15 @@ namespace parcels {
 									current_epi.status.status_offset = append_longheap(desc_str);
 									current_epi.status.flags |= slots::ParcelStatusLine::HAS_STATUS;
 								}
-								else if (stack_ptr == 8) {
+								else if (stack_ptr >= 8) {
 									if (auto new_ts = update_timestamp_on(use_local_time, stack + 7, stack_ptr - 7, v)) {
 										current_epi.updated_time = new_ts;
 										current_epi.status.flags |= slots::ParcelStatusLine::HAS_UPDATED_TIME;
 									}
-									else if (!strcmp(stack[7]->name, "sub_status") && v.type == v.STR) {
+									else if (check_time_granularity(stack + 7, stack_ptr - 7, v)) {
+										current_epi.status.flags |= slots::ParcelStatusLine::TIME_GRANULARITY_DATE;
+									}
+									else if (stack_ptr == 8 && !strcmp(stack[7]->name, "sub_status") && v.type == v.STR) {
 										last_epi_icon = get_icon_enum(v.str_val);
 									}
 								}
