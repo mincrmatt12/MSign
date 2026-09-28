@@ -13,3 +13,4 @@ ESP8266_RTOS_SDK-make-freertos-internals-public
 ESP8266_RTOS_SDK-backport-wpa-supplicant
 ESP8266_RTOS_SDK-wpa-supplicant-terminate-in-cache
 ESP8266_RTOS_SDK-fix-ncurses-detect
+ESP8266_RTOS_SDK-update-to-gcc-16
