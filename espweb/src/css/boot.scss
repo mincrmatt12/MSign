@@ -84,4 +84,27 @@ $pagination-active-bg: $dark;
     }
   }
 }
+
+.input-group > .btn-check:first-child + .btn {
+	margin-left: 0 !important;
+	border-top-left-radius: $btn-border-radius !important;
+	border-bottom-left-radius: $btn-border-radius !important;
+}
+
+.input-group.stack-md:has(> .form-control) {
+	@include media-breakpoint-down(md) {
+		// buttons size to their text and fill row 1; the input's 60% basis forces it onto row 2
+		> .btn { flex: 1 0 auto; }
+		> .form-control { flex: 1 0 60%; margin-left: 0 !important; }
+		> .form-control, > .input-group-text { margin-top: calc(-1 * var(--bs-border-width)); }
+
+		> .btn, > .form-control, > .input-group-text { border-radius: 0 !important; }
+
+		> .btn-check:first-child + .btn { border-top-left-radius: $input-border-radius !important; }
+		> .btn:last-of-type { border-top-right-radius: $input-border-radius !important; }
+		> .form-control { border-bottom-left-radius: $input-border-radius !important; }
+		> .input-group-text:last-child { border-bottom-right-radius: $input-border-radius !important; }
+	}
+}
+
 @import "./ext.scss"

@@ -2,8 +2,7 @@ import React from 'react'
 import FormControl from 'react-bootstrap/FormControl'
 import Form from 'react-bootstrap/Form'
 import InputGroup from 'react-bootstrap/InputGroup'
-import Row from 'react-bootstrap/Row'
-import Button from 'react-bootstrap/Button'
+import ToggleButton from 'react-bootstrap/ToggleButton'
 import {HostnameEdit} from './common/hostname';
 
 import ConfigContext, { floatInteract } from '../ctx';
@@ -69,7 +68,28 @@ function OctoprintPage() {
 			</InputGroup>
 		</Form.Group>
 
-		<Form.Check checked={_.get(cfg, "octoprint.force_gcode_on_sd", false)} label="always download gcode to sd card" onChange={(e) => updateCfg("octoprint.force_gcode_on_sd", e.target.checked)} />
+		<Form.Group className="my-2">
+			<Form.Label>download gcode to sd card</Form.Label>
+			<InputGroup className="stack-md">
+				{[["never", -1], ["always", 0], ["if larger than", 10485760]].map(([label, val]) =>
+					<ToggleButton key={val} id={`streaming_mode_${val}`} type="radio" name="streaming_mode"
+						variant="secondary" value={val}
+						checked={Math.sign(_.get(cfg, "octoprint.max_streaming_size", -1)) === Math.sign(val)}
+						onChange={() => updateCfg("octoprint.max_streaming_size", val)}>
+						{label}
+					</ToggleButton>
+				)}
+				{_.get(cfg, "octoprint.max_streaming_size", -1) > 0 && <>
+					<FormControl type="number" min={1} step={1} 
+						defaultValue={_.get(cfg, "octoprint.max_streaming_size")}
+						onChange={(e) => {
+							const n = Number.parseInt(e.target.value, 10);
+							if (n > 0) updateCfg("octoprint.max_streaming_size", n);
+					}} />
+					<InputGroup.Text>bytes</InputGroup.Text>
+				</>}
+			</InputGroup>
+		</Form.Group>
 
 		<hr className="hr-gray" />
 	</div>
