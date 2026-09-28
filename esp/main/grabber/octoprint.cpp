@@ -157,7 +157,7 @@ namespace octoprint {
 		bool has_download_phase() const override { return false; }
 
 		bool restart() override {
-			if (active.has_value()) {
+			if (active.has_value() && has_read_yet) {
 				active->stop();
 				active.reset();
 			}
@@ -171,6 +171,7 @@ namespace octoprint {
 
 			remain = active->content_length();
 			_is_done = remain == 0;
+			has_read_yet = false;
 
 			return true;
 		}
@@ -183,6 +184,7 @@ namespace octoprint {
 				ESP_LOGE(TAG, "failed to download gcode");
 				return false;
 			}
+			has_read_yet = true;
 			remain -= len;
 			_is_done = remain == 0;
 			return len;
@@ -248,11 +250,12 @@ namespace octoprint {
 		const char * download_path{};
 		OctoprintApiContext& ctx;
 		size_t remain = 0;
+		bool has_read_yet = false;
 	};
 
 	// download_path is freed by caller
 	bool download_current_gcode(const char * download_path, OctoprintApiContext& ctx) {
-		if (host[0] == '_' || force_gcode_on_sd) {
+		if (host[0] == '_' || max_streaming_size == 0) {
 			// If we think downloading will occupy too much RAM, save the gcode to the SD card first.
 
 			{
@@ -262,12 +265,25 @@ namespace octoprint {
 				}
 			}
 
+fallback:
 			// Parse from that downloaded copy
 			SDGcodeProvider sp;
 			return process_gcode(sp, current_layer_count);
 		}
 		else {
 			HTTPGcodeProvider gp{ctx, download_path};
+
+			if (max_streaming_size != -1) {
+				gp.restart();
+
+				if (gp.gcode_size() > max_streaming_size) {
+					if (!gp.save_to_sd()) {
+						return false;
+					}
+
+					goto fallback;
+				}
+			}
 
 			// Parse directly from the web.
 			return process_gcode(gp, current_layer_count);

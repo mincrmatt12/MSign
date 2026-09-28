@@ -20,8 +20,8 @@ namespace octoprint {
 	//!cfg: holds .octoprint.g_relative_is_e, default false
 	extern bool g_relative_is_e;
 
-	//!cfg: holds .octoprint.force_gcode_on_sd, default false
-	extern bool force_gcode_on_sd;
+	//!cfg: holds .octoprint.max_streaming_size, default -1
+	extern int64_t max_streaming_size;
 
 	//!cfg: holds .octoprint.filter_prefixes
 	extern config::string_t filter_prefixes[3];
