@@ -7,6 +7,7 @@
 #include <iterator>
 #include <alloca.h>
 #include <span>
+#include <algorithm>
 
 #include "lru.h"
 
@@ -1174,58 +1175,9 @@ finish_setting:
 			
 			uint32_t * middle_start = reinterpret_cast<uint32_t *>(in_front_of.adjacent());
 			uint32_t * middle_end = reinterpret_cast<uint32_t *>(&to_move);
-			uint32_t * paste_from = middle_end;
-			uint32_t * paste_to = middle_start;
+			uint32_t * to_move_end = reinterpret_cast<uint32_t *>(to_move.adjacent());
 
-			// Try to find some free space.
-			uint32_t * scratch_area = nullptr;
-			size_t     scratch_size = 0;
-
-			// Search for empty space outside the region that will be trashed
-			for (const Block *b = &first; b; b = b->adjacent()) {
-				if (b->slotid != Block::SlotEmpty) continue;
-				// How much space is there?
-				size_t amount = b->rounded_datasize();
-				if (amount < 4 || amount < scratch_size) continue;
-				// Check if this region overlaps the move region
-				if ((uintptr_t)b->data() >= (uintptr_t)in_front_of.data() && (uintptr_t)b->data() <= (uintptr_t)to_move.adjacent()->data()) continue;
-				// Update scratch area
-				scratch_area = (uint32_t *)b->data();
-				scratch_size = amount;
-				// Do we have enough space?
-				if (scratch_size >= (to_move.adjacent() - &to_move) * 4) {
-					scratch_size = (to_move.adjacent() - &to_move) * 4;
-					break;
-				}
-			}
-
-			// If we don't have any free space, make up some
-			if (scratch_area == nullptr || scratch_size < 4) {
-				scratch_area = (uint32_t *)alloca(4);
-				scratch_size = 4;
-			}
-
-			// Compute total length
-			uint32_t paste_amount = (to_move.adjacent() - &to_move) * 4;
-			while (paste_amount) {
-				// Shrink as appropriate
-				if (paste_amount < scratch_size) {
-					scratch_size = paste_amount;
-				}
-				// Read in scratch_size bytes from paste from
-				memcpy(scratch_area, paste_from, scratch_size);
-				paste_from += (scratch_size / 4);
-				// Shift over the middle region
-				memmove(middle_start + (scratch_size / 4), middle_start, (middle_end - middle_start) * 4);
-				// Move the pointers by scratch size
-				middle_start += (scratch_size / 4);
-				middle_end   += (scratch_size / 4);
-				// Write out scratch_size bytes back to the paste pointer
-				memcpy(paste_to, scratch_area, scratch_size);
-				paste_to += (scratch_size / 4);
-
-				paste_amount -= scratch_size;
-			}
+			std::rotate(middle_start, middle_end, to_move_end);
 		}
 	};
 }
