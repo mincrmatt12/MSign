@@ -18,7 +18,7 @@ namespace dwhttp {
 	// headers / body.
 	struct Download {
 		Download(const Download&) = delete;
-		Download(Download&& other) : recvpending(other.recvpending) {
+		Download(Download&& other) : recvpending(other.recvpending), recvread(other.recvread), nonclose(other.nonclose) {
 			adapter = std::exchange(other.adapter, nullptr);
 			recvbuf = std::exchange(other.recvbuf, nullptr);
 		}
@@ -26,8 +26,13 @@ namespace dwhttp {
 		Download& operator=(Download&& other) {
 			if (this != &other) {
 				this->~Download();
+
 				adapter = std::exchange(other.adapter, nullptr);
 				recvbuf = std::exchange(other.recvbuf, nullptr);
+
+				recvpending = other.recvpending;
+				recvread = other.recvread;
+				nonclose = other.nonclose;
 			}
 			return *this;
 		}
