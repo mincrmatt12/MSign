@@ -157,7 +157,10 @@ namespace octoprint {
 		bool has_download_phase() const override { return false; }
 
 		bool restart() override {
-			if (active.has_value() && has_read_yet) {
+			if (active.has_value()) {
+				if (!has_read_yet && active->ok())
+					return true;
+
 				active->stop();
 				active.reset();
 			}
