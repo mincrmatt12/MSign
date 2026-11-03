@@ -93,7 +93,7 @@ namespace dwhttp {
 						auto amt = read_some(buf, max - amount);
 						if (amt == -1) return -1;
 						amount += amt;
-						buf += amount;
+						buf += amt;
 					}
 					return amount;
 				}
