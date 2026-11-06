@@ -68,7 +68,7 @@ namespace threed::m {
 
 #undef make_op
 
-		constexpr fixed_t operator*(fixed_t other) const {
+		[[gnu::pure]] constexpr fixed_t operator*(fixed_t other) const {
 
 			// Converted to assembly because gcc is dumb and doesn't know how to use shift rights properly..
 			//

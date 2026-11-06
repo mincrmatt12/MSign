@@ -163,7 +163,7 @@ namespace threed {
 
 		Mat4& operator*=(const Mat4& other) {*this = *this * other; return *this;}
 
-		Vec4  operator*(const Vec4&  other) const;
+		[[gnu::pure]] Vec4 operator*(const Vec4&  other) const;
 
 		Mat4  operator*(const Mat4 &rhs) const;
 	};
