@@ -160,59 +160,65 @@ namespace led {
 
 			// used to mask out bits while shifting in operand2
 			uint32_t c0 = 1 | (1 << 16);
-
-			// scratch register to store word to write
-			uint32_t scratch;
+			// shifted over for hi row
+			uint32_t c3 = c0 << 3;
 
 			for (uint_fast16_t j = 0; j < Storage::EffectiveWidth / 2; ++j) {
 				asm volatile (
-#define PROCESS_BITS(target) \
-					/* Select G0 & R0 out from the first word, leaving r1 looking like
-					   |0*15|G|0*15|R| */ \
-					"and r1, %[C0], r1, lsr %[Pos]\n\t" \
-					/* Select R1 & B0 out from the second word, leaving r2 looking like
-					   |0*15|R|0*15|B| */ \
-					"and r2, %[C0], r2, lsr %[Pos]\n\t" \
-					/* Move G0 from the top of r1 into the bottom of r1 -- this does not
-					   set extra bits as the upper 15 bits of r1 are always zero. */ \
-					"orr r1, r1, r1, lsr #15\n\t" \
-					/* Move B0 from the bottom of r2 into the bottom of r1 -- the upper bits
-					   of r1 will be corrupted by this but they will be ignored during a final
-					   bit field insert */ \
-					"orr r1, r1, r2, lsl #2\n\t" \
-					/* At this point, R1 is |junk*16|0*13|BGR| for the first pixel.
-					   Now, prepare the second pixel. Select B1 & G1 out of r3,
-					   leaving r3 looking like
-					   |0*15|B|0*15|G| */ \
-					"and r3, %[C0], r3, lsr %[Pos]\n\t" \
-					/* Move G1&B1 into the upper half of r2 after R1 which is already there.
-					   These will corrupt the bottom 3 bits of r2 but those will be overwritten
-					   during the bit field insert. */ \
-					"orr r2, r2, r3, lsl #17\n\t" \
-					/* Instead of writing the result into r2, write it into the scratch register
-					   to later get orred */ \
-					"orr " target ", r2, r3, lsl #2\n\t" \
-					/* Finally, copy the RGB0 part of r1 overwriting the bottom part of r2 to leave r2 in the desired state. */ \
-					"bfi " target ", r1, #0, #3\n\t"
+					// Load 3 words from the first row (or 6 colors / 2 pixels) into r4-r6 using ldm
+					"ldmia %[Lo]!, {r4,r5,r6}\n\t"
+					// Load 3 words from the second row (or 6 colors / 2 pixels) into r8-r10 using ldm
+					// (the registers are chosen to avoid conflicting with ones forced on us by
+					// calling conventions; we can't ask the compiler to give them us for free since
+					// we need 3 ascending registers...)
+					"ldmia %[Hi]!, {r8,r9,r10}\n\t"
+					// Select R0 and G0 to give us
+					// |0*15|G0|0*15|R0| in r4 and the same thing but shifted << 3 in r8
+					"and r4, %[C0], r4, ror %[Pos]\n\t"
+					"and r8, %[C3], r8, ror %[Pos3]\n\t" // Pos3 = (Pos - 3) & 31; wrapped
+					// Ditto for B0, R1 (little endian, so LSB is B0)
+					"and r5, %[C0], r5, ror %[Pos]\n\t"
+					"and r9, %[C3], r9, ror %[Pos3]\n\t"
+					// Ditto for G1, B1
+					"and r6, %[C0],  r6,  ror %[Pos]\n\t"
+					"and r10, %[C3], r10, ror %[Pos3]\n\t"
+					// Combine the top/bottom rows to get
+					// |0*12|G0'|00|G0|0*12|R0'|00|R0
+					// |0*12|R1'|00|R1|0*12|B0'|00|B0
+					// |0*12|B1'|00|B1|0*12|G0'|00|G0
+					// and so on in r4, r5, r6
+					"orr r4, r4, r8\n\t"
+					"orr r5, r5, r9\n\t"
+					"orr r6, r6, r10\n\t"
+					// Move G0 from the top of r4 into the bottom of r4 to
+					// get 0 G0' R0' 0 G0 R0 to be the low 6 bits of r4; the upper
+					// bits have still got G0'/G0 in them but we will ignore them
+					"orr r4, r4, r4, lsr #15\n\t"
+					// Move B0 from the bottom of r5 into the bottom of r4; we only
+					// care about the low 6 bits still so the fact this further screws
+					// up the upper half of the word is irrelevant since we'll bfi from 
+					// this register at the end
+					// (r1  b0) << 2 'slots into' correct place, upper bits ignored,
+					// so now r4 is RGB'/RGB for pixel 0 on both rows
+					"orr r4, r4, r5, lsl #2\n\t"
+					// Move G1 into the upper half of r5, which is still unmodified, so
+					// slots in after R1/R1'
+					"orr r5, r5, r6, lsl #17\n\t"
+					// Move B1 in too - now upper half of r5 is correct with RGB/RGB
+					"orr r5, r5, r6, lsl #2\n\t"
+					// Finally, copy in the low half of r4 and obliterate
+					// the junk already there.
+					"bfi r5, r4, #0, #6\n\t"
+					// R5 is now ready.
 
-					// Load 3 words from the first row (or 6 colors / 2 pixels) into r1-r3 using ldm
-					"ldmia %[Lo]!, {r1,r2,r3}\n\t"
-					// Process them into the temp register
-					PROCESS_BITS("%[Temp]")
-					// Load 3 words from the second row (or 6 colors / 2 pixels) into r1-r3 using ldm
-					"ldmia %[Hi]!, {r1,r2,r3}\n\t"
-					// Process them into r2
-					PROCESS_BITS("r2")
-
-					// Prepare actual value
-					"orr %[Temp], %[Temp], r2, lsl #3\n\t"
-					"orr %[Temp], %[Temp], %[Temp], lsl #8\n\t"
-					"orr %[Temp], %[Temp], #0x40004000\n\t"
+					// Prepare actual value (with clock phases)
+					"orr r5, r5, r5, lsl #8\n\t"
+					"orr r5, r5, #0x40004000\n\t"
 					// Store value 
-					"str %[Temp], [%[Bs]], #4\n\t"
-					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs), [Temp]"=r"(scratch)
-					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [C0]"r"(c0)
-					: "r1", "r2", "r3", "cc"
+					"str r5, [%[Bs]], #4\n\t"
+					: [Lo]"=r"(lo), [Hi]"=r"(hi), [Bs]"=r"(bs)
+					: "0"(lo), "1"(hi), "2"(bs), [Pos]"i"(Pos), [Pos3]"i"((Pos - 3) & 31), [C0]"r"(c0), [C3]"r"(c3)
+					: "r4", "r5", "r6", "r8", "r9", "r10", "memory", "cc"
 				);
 			}
 		}
@@ -322,11 +328,12 @@ namespace led {
 			show = true;
 			delaying = false;
 			should_swap = false;
-			delay_counter = 0;
-			// update timer mode to blank screen / proper
-			TIM4->CCMR1 = (TIM4->CCMR1 & ~(TIM_CCMR1_CC1S_Msk | TIM_CCMR1_OC1M_Msk)) | (force_off ? LL_TIM_OCMODE_FORCED_INACTIVE : LL_TIM_OCMODE_PWM2);
-			// start the whole procedure
-			blast_row();
+			active_dma_buffer = false;
+
+			_get_active_buffer().prepare_stream(0, 0, dma_buffer[active_dma_buffer]);
+			_get_active_buffer().prepare_stream(1, 0, dma_buffer[!active_dma_buffer]);
+
+			blast_active_row_buffer();
 		}
 
 		// This should only be called from an RTOS task
@@ -363,9 +370,7 @@ namespace led {
 			// we don't bother clearing counter enable since OPM will do it for us.
 			delaying = false;
 			if (show) do_next();
-			else {
-				show = true;
-			}
+			else show = true;
 		}
 
 		void sw_trap_fired() {
@@ -381,18 +386,18 @@ namespace led {
 	private:
 		FB fb0, fb1;
 		bool active_buffer = false;
+		bool active_dma_buffer = false;
 		uint8_t pos = 0;
 		uint16_t row = 0;
 		// This is written to via 32-bit writes, and we want there to be at least one 16bit word
 		// at the end with all zeroes, hence the +4.
-		alignas(uint32_t) uint8_t dma_buffer[(FB::effective_width * 2) + 4] {};
+		alignas(uint32_t) uint8_t dma_buffer[2][(FB::effective_width * 2) + 4] {};
 		volatile TaskHandle_t notify_when_swapped = nullptr;
 
-		// impl for the wait system
-		uint16_t delay_counter = 0;
+		// sanity guard on wait
 		bool delaying = false;
 
-		// show variable
+		// counter for both interrupts to have fired; both the OE pulse + dma out
 		bool show = false;
 
 		// should swap buffers
@@ -405,13 +410,10 @@ namespace led {
 
 		inline FB& RAMFUNC _get_active_buffer() {return active_buffer ? fb0 : fb1;}
 
-		void RAMFUNC blast_row() {
-			DMA2_Stream5->M0AR = (uint32_t)dma_buffer;
+		void RAMFUNC blast_active_row_buffer() {
+			DMA2_Stream5->M0AR = (uint32_t)dma_buffer[active_dma_buffer];
 			DMA2_Stream5->PAR  = (uint32_t)(&SIGN_DATA_Port->ODR);
-			DMA2_Stream5->NDTR = sizeof dma_buffer;
-
-			// make sure the active buffer is ready
-			_get_active_buffer().prepare_stream(row, pos, dma_buffer);
+			DMA2_Stream5->NDTR = sizeof dma_buffer[0];
 			DMA2_Stream5->CR |= DMA_SxCR_EN;
 
 			// blasting is a-go
@@ -422,7 +424,6 @@ namespace led {
 			if (delaying) return;
 			// set the counter
 			delaying = true;
-			delay_counter = (ticks);
 			// enable the ticker (happens every 3 ticks of tim1, compute based on width * 3 * amt)
 			TIM4->CNT = 0;
 			TIM4->ARR = ticks;
@@ -430,52 +431,48 @@ namespace led {
 		}
 
 		void RAMFUNC do_next() {
+			strobe = true; // maximize strobe pulse time
 			show = false;
 			uint16_t drawn_pos = 2 << pos; 
-			// set address pins
-			if (pos == 12) {
-				// We have finished clocking out a row, process buffer swaps
-				if (should_swap) {
-					active_buffer = !active_buffer;
-					if (notify_when_swapped) EXTI->SWIER = 1; // Trigger EXTI 1, which will tell the RTOS to swap after this high prio interrupt finishes.
-					should_swap = false;
-					frames_without_refresh = 0;
-				}
-				else {
-					frames_without_refresh += 1;
-				}
-				// Start the display again
-				start_display();
-				return;
-			}
-			strobe = true;
-			// Thing
 			GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
-			++row;
-			if (row < FB::stb_lines) {
-				strobe = false;
-				// Send off the next row
-				blast_row();
-				// Start the waiting.
-				wait(drawn_pos);		
-				return;
-			}
-			else if (++pos < 12) {
-				strobe = false;
-				// Set back to first row
+			if (++row == FB::stb_lines) {
 				row = 0;
-				// Blast and wait
-				blast_row();
-				wait(drawn_pos);		
-				return;
+				if (++pos == 12) {
+					pos = 0;
+
+					// about to send out next frame, activate masking now.
+					TIM4->CCMR1 = (TIM4->CCMR1 & ~(TIM_CCMR1_CC1S_Msk | TIM_CCMR1_OC1M_Msk)) | (force_off ? LL_TIM_OCMODE_FORCED_INACTIVE : LL_TIM_OCMODE_PWM2);
+				}
 			}
-			else {
-				strobe = false;
-				// Alright, pos == 12, so run the wait code
-				// Just wait, but force it to run us again.
-				show = true;
-				wait(drawn_pos);
+			strobe = false;
+			// swap dma buffers, row/pos now reflect content in active buffer
+			active_dma_buffer = !active_dma_buffer;
+			blast_active_row_buffer();
+			// start OE pulse now
+			wait(drawn_pos);
+
+			auto next_row = row;
+			auto next_pos = pos;
+			if (++next_row == FB::stb_lines) {
+				next_row = 0;
+				if (++next_pos == 12) {
+					next_pos = 0;
+					// about to start reading next frame, swap main buffers
+					// We have finished clocking out a row, process buffer swaps
+					if (should_swap) {
+						active_buffer = !active_buffer;
+						if (notify_when_swapped) EXTI->SWIER = 1; // Trigger EXTI 1, which will tell the RTOS to swap after this high prio interrupt finishes.
+						should_swap = false;
+						frames_without_refresh = 0;
+					}
+					else {
+						frames_without_refresh += 1;
+					}
+				}
 			}
+
+			// regardless, we can now prepare the non-sent-out dma buffer
+			_get_active_buffer().prepare_stream(next_row, next_pos, dma_buffer[!active_dma_buffer]);
 		}
 	};
 
