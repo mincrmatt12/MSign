@@ -229,7 +229,6 @@ void srv::ProtocolImpl::start_recv(srv::ProtocolState target_state, int offset) 
 	NVIC_SRV_RXE_CLRF(UART_DMA);
 	NVIC_SRV_RX_CLRF(UART_DMA);
 
-	LL_USART_ClearFlag_RXNE(ESP_USART);
 	LL_USART_ClearFlag_LBD(ESP_USART);
 	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
@@ -249,7 +248,6 @@ void srv::ProtocolImpl::recv_full() {
 	LL_DMA_EnableIT_TC(UART_DMA, UART_DMA_RX_Stream);
 	LL_DMA_EnableIT_TE(UART_DMA, UART_DMA_RX_Stream);
 
-	LL_USART_ClearFlag_RXNE(ESP_USART);
 	LL_USART_EnableDMAReq_RX(ESP_USART);
 	LL_DMA_EnableStream(UART_DMA, UART_DMA_RX_Stream);
 }
