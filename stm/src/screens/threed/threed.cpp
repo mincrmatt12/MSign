@@ -148,13 +148,12 @@ namespace threed {
 	}
 
 	void Renderer::draw() {
-		int tri_count;
+		int tri_count, current_tri = 0;
 		bool enable_lighting = true;
 		{
 			srv::ServicerLockGuard g(servicer);
 			update_matricies();
 			current_lookdir = -(current_look - current_pos).normalize();
-			current_tri = 0;
 			if (!servicer.slot(slots::MODEL_INFO) || servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count == 0) tri_count = default_mesh.tri_count;
 			else {
 				tri_count = servicer.slot<slots::ModelInfo>(slots::MODEL_INFO)->tri_count;
@@ -188,7 +187,7 @@ namespace threed {
 		}
 	}
 
-	void Renderer::update_matricies() {
+	void Renderer::update_matricies(bool and_clear) {
 		interp_progress += (timekeeper.current_time - last_update) * 2u;
 		last_update = timekeeper.current_time;
 
@@ -227,6 +226,9 @@ namespace threed {
 				camera_look_target = servicer.slot<slots::Vec3 *>(slots::MODEL_CAM_FOCUS)[rng::get() % num_focuses];
 			}
 		}
+
+		if (!and_clear)
+			return;
 
 		if (!dispman.interacting()) {
 			current_pos = camera_pos + (camera_target - camera_pos) * m::fixed_t(interp_progress, 4500);

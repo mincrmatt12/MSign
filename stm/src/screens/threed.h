@@ -187,9 +187,7 @@ namespace threed {
 		void refresh();
 	private:
 		void draw_triangle(const Tri& t, bool enable_lighting);
-		void update_matricies();
-
-		int current_tri = 0;
+		void update_matricies(bool and_clear=true);
 
 		Mat4 perpview;
 		Vec3 camera_pos, camera_target;
