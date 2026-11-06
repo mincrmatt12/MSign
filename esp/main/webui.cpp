@@ -516,6 +516,7 @@ reachedend:
 				else if (len == -2) {
 					f_close(&out_model);
 					ok = true;
+					grabber::refresh(slots::protocol::GrabberID::MODELSERVE);
 					return true;
 				}
 				else {
