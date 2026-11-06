@@ -466,7 +466,8 @@ namespace led {
 						frames_without_refresh = 0;
 					}
 					else {
-						frames_without_refresh += 1;
+						if (!(FLASH->SR & FLASH_SR_BSY))
+							frames_without_refresh += 1;
 					}
 				}
 			}
