@@ -7,6 +7,8 @@
 #include "mesh.h"
 #include "../../tasks/timekeeper.h"
 
+#include <algorithm>
+
 extern matrix_type matrix;
 extern tasks::Timekeeper timekeeper;
 extern srv::Servicer servicer;
@@ -364,9 +366,9 @@ namespace threed {
 				return;
 
 			auto depthweight = [
-				scaled_az = (int64_t)a.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
-				scaled_bz = (int64_t)b.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
-				scaled_cz = (int64_t)c.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
+				scaled_az = (int64_t)a.z.value >> (m::fixed_t::Fac - 12), // specifically using right shift since the rounding doesn't matter here
+				scaled_bz = (int64_t)b.z.value >> (m::fixed_t::Fac - 12), // specifically using right shift since the rounding doesn't matter here
+				scaled_cz = (int64_t)c.z.value >> (m::fixed_t::Fac - 12), // specifically using right shift since the rounding doesn't matter here
 				w_sum
 			](int e0, int e1, int e2) {
 				int64_t undivided = scaled_az * e0 + scaled_bz * e1 + scaled_cz * e2;
@@ -391,7 +393,12 @@ namespace threed {
 
 				for (; x <= maxx && (w0|w1|w2) >= 0; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx, d += depth_dx) {
 linestart:
-					int16_t d_unscaled = ((int32_t)d) >> 16;
+					auto d_unscaled = 
+#ifdef __USAT
+						__USAT(d >> 16, 12);
+#else
+						std::clamp(d >> 16, 0u, 4095u);
+#endif
 					if (d_unscaled > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
 					color.set_spare(d_unscaled);
 					matrix.get_inactive_buffer().at_unsafe(x, y) = color;
