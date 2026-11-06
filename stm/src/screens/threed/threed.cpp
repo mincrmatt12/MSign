@@ -4,7 +4,6 @@
 #include "../../draw.h"
 #include "../../common/slots.h"
 #include "../../tasks/screen.h"
-#include "../../fonts/tahoma_9.h"
 #include "mesh.h"
 #include "../../tasks/timekeeper.h"
 
@@ -54,7 +53,7 @@ namespace threed {
 		m::fixed_t l = b * aspect;
 		m::fixed_t r = t * aspect;
 		return {(2*zn)/(r-l), 0, (r+l)/(r-l), 0,
-				0, (2*zn)/(t-b), (t+b)/(t-b), 0,
+				0, -(2*zn)/(t-b), -(t+b)/(t-b), 0,
 				0, 0, -((zf+zn)/(zf-zn)), -((2*zf*zn)/(zf-zn)),
 				0, 0, -1, 0};
 	}
@@ -286,31 +285,23 @@ namespace threed {
 	}
 
 	void Renderer::draw_triangle(const Tri& t, bool enable_lighting) {
+		Vec3 normal_raw = (t.p2 - t.p1).cross(t.p3 - t.p1);
+
+		// behind camera
+		if (normal_raw.dot(current_pos - t.p1) < 0)
+			return;
+
 		Vec4 a = perpview * Vec4(t.p1, 1);
 		Vec4 b = perpview * Vec4(t.p2, 1);
 		Vec4 c = perpview * Vec4(t.p3, 1);
-		
-		if (a.w == 0) return;
-		if (b.w == 0) return;
-		if (c.w == 0) return;
 
-		a = a / a.w;
-		b = b / b.w;
-		c = c / c.w;
+		int vis = 0;
+		vis |= (a.z > -a.w) << 0;
+		vis |= (b.z > -b.w) << 1;
+		vis |= (c.z > -c.w) << 2;
 
-		a.y = -a.y;
-		b.y = -b.y;
-		c.y = -c.y;
-
-		if (Vec3(b - a).cross(c - a).z < 0) return;
-
-		int_fast16_t x0 = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
-		int_fast16_t x1 = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
-		int_fast16_t x2 = (((c.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
-
-		int_fast16_t y0 = (((a.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
-		int_fast16_t y1 = (((b.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
-		int_fast16_t y2 = (((c.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+		if (!vis)
+			return;
 
 		uint16_t cr;
         uint16_t cg;
@@ -318,7 +309,7 @@ namespace threed {
 
 		if (enable_lighting) {
 			// Compute normal
-			Vec3 normal = ((t.p2 - t.p1).cross(t.p3 - t.p1)).normalize();
+			Vec3 normal = normal_raw.normalize();
 			m::fixed_t facingness = normal.dot(current_lookdir);
 			Vec3 centre = (t.p1 + t.p2 + t.p3) / 3;
 			m::fixed_t avg = (centre - current_pos).length();
@@ -335,9 +326,18 @@ namespace threed {
 			cb = draw::cvt(t.b);
 		}
 
-		led::color_t color{cr, cg, cb};
+		auto rasterize = [color = led::color_t(cr, cg, cb)](Vec4 a, Vec4 b, Vec4 c) mutable {
+			int_fast16_t x0 = (((a.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+			int_fast16_t x1 = (((b.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
+			int_fast16_t x2 = (((c.x + 1) / 2) * matrix_type::framebuffer_type::width).round();
 
-		if (1 > a.z && -1 < a.z && 1 > b.z && -1 < b.z && 1 > c.z && -1 < c.z) {
+			int_fast16_t y0 = (((a.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+			int_fast16_t y1 = (((b.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+			int_fast16_t y2 = (((c.y + 1) / 2) * matrix_type::framebuffer_type::height).round();
+
+			if (a.z > 1 || b.z > 1 || c.z > 1)
+				return;
+
 			// compute bounding box of triangle
 			int_fast16_t minx = std::max<int16_t>(0, std::min(std::min(x0, x1), x2));
 			int_fast16_t maxx = std::min<int16_t>(matrix.get_inactive_buffer().width-1, std::max(std::max(x0, x1), x2));
@@ -358,35 +358,125 @@ namespace threed {
 			int w1_row = edgeweight(x2, y2, x0, y0, minx, miny);
 			int w2_row = edgeweight(x0, y0, x1, y1, minx, miny);
 
-			int scaled_az = a.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
-			int scaled_bz = b.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
-			int scaled_cz = c.z.value >> (m::fixed_t::Fac - 11); // specifically using right shift since the rounding doesn't matter here
+
+			int w_sum = w0_row + w1_row + w2_row; // propto area of triangle
+			if (w_sum <= 0)
+				return;
+
+			auto depthweight = [
+				scaled_az = (int64_t)a.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
+				scaled_bz = (int64_t)b.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
+				scaled_cz = (int64_t)c.z.value >> (m::fixed_t::Fac - 11), // specifically using right shift since the rounding doesn't matter here
+				w_sum
+			](int e0, int e1, int e2) {
+				int64_t undivided = scaled_az * e0 + scaled_bz * e1 + scaled_cz * e2;
+				return (uint32_t)((undivided << 16) / w_sum);
+			};
+
+			uint32_t depth_row = depthweight(w0_row, w1_row, w2_row);
+			uint32_t depth_dx  = depthweight(w0_dx, w1_dx, w2_dx);
+			uint32_t depth_dy  = depthweight(w0_dy, w1_dy, w2_dy);
 
 			for (int_fast16_t y = miny; y <= maxy; ++y) {
 				int w0 = w0_row;
 				int w1 = w1_row;
 				int w2 = w2_row;
 				int_fast16_t x = minx;
+				auto d = depth_row;
 
-				for (; x <= maxx; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
+				for (; x <= maxx; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx, d += depth_dx) {
 					if ((w0|w1|w2) >= 0) goto linestart;
 				}
 				goto lineover;
 
-				for (; x <= maxx && (w0|w1|w2) >= 0; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx) {
+				for (; x <= maxx && (w0|w1|w2) >= 0; ++x, w0 += w0_dx, w1 += w1_dx, w2 += w2_dx, d += depth_dx) {
 linestart:
-					int sum = (w0 + w1 + w2);
-					if (!sum) continue;
-					int16_t d = (scaled_az * w0 + scaled_bz * w1 + scaled_cz * w2) / sum;
-					if (d > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
-					color.set_spare(d);
+					int16_t d_unscaled = ((int32_t)d) >> 16;
+					if (d_unscaled > (int16_t)matrix.get_inactive_buffer().at_unsafe(x, y).get_spare()) continue; // z-test
+					color.set_spare(d_unscaled);
 					matrix.get_inactive_buffer().at_unsafe(x, y) = color;
 				}
 lineover:
 				w0_row += w0_dy;
 				w1_row += w1_dy;
 				w2_row += w2_dy;
+				depth_row += depth_dy;
 			}
+		};
+
+		switch (vis) {
+			case 0: 
+				__builtin_unreachable();
+			case 7: // fully visible
+				a = a / a.w;
+				b = b / b.w;
+				c = c / c.w;
+				return rasterize(a, b, c);
+			case 1:
+			case 2:
+			case 4:
+				{
+					// one vertex visible, interpolate to find where it intersects the clipping
+					// plane
+					//
+					//     *
+					//    / \  <- one triangle
+					//   -----
+					//   /   \
+					//  *-----*
+					auto top = (vis == 1) ? a :
+							   (vis == 2) ? b :
+											c;
+					auto right = (vis == 1) ? b :
+								 (vis == 2) ? c :
+											a;
+
+					auto left  = (vis == 1) ? c :
+								 (vis == 2) ? a :
+											b;
+
+					auto topright = top + (right - top) * ((top.w + top.z) / (top.w + top.z - right.w - right.z));
+					auto topleft = top + (left - top) * ((top.w + top.z) / (top.w + top.z - left.w - left.z));
+
+					top /= top.w;
+					topright /= topright.w;
+					topleft /= topleft.w;
+
+					return rasterize(top, topright, topleft);
+				}
+			default:
+				{
+					// one vertex invisible, trapezoid
+					//
+					//     *
+					//    / \
+					//   -----
+					//   / \ \  <- two triangles 
+					//  *-----*
+
+					auto top = (vis == 0b110) ? a :
+							   (vis == 0b101) ? b :
+							                    c;
+
+					auto right = (vis == 0b110) ? b :
+							     (vis == 0b101) ? c :
+							                      a;
+
+					auto left = (vis == 0b110) ? c :
+							    (vis == 0b101) ? a :
+							                     b;
+					
+					auto topright = top + (right - top) * ((top.w + top.z) / (top.w + top.z - right.w - right.z));
+					auto topleft = top + (left - top) * ((top.w + top.z) / (top.w + top.z - left.w - left.z));
+
+					left /= left.w;
+					right /= right.w;
+					topright /= topright.w;
+					topleft /= topleft.w;
+
+					rasterize(topleft, right, left);
+					return rasterize(topleft, topright, right);
+				}
 		}
 	}
 
@@ -408,6 +498,9 @@ lineover:
 			slots::MODEL_INFO,
 			slots::MODEL_DATA
 		>(bheap::Block::TemperatureHot);
+
+		update_matricies(false);
+		interp_progress = 20000;
 	}
 
 	Renderer::~Renderer() {
