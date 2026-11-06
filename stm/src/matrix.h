@@ -263,7 +263,7 @@ namespace led {
 			
 			// roughly 20 MHz (21 in new build)
 #if defined(USE_F2)
-			tim_init.Prescaler  = 3;
+			tim_init.Prescaler  = 4;
 #elif defined(USE_F4)
 			tim_init.Prescaler  = 4;
 #endif
@@ -272,7 +272,7 @@ namespace led {
 			LL_TIM_Init(TIM1, &tim_init);
 
 #if defined(USE_F2)
-			tim_init.Prescaler  = 2;
+			tim_init.Prescaler  = 3;
 #elif defined(USE_F4)
 			tim_init.Prescaler  = 4;
 #endif
@@ -433,7 +433,7 @@ namespace led {
 		void RAMFUNC do_next() {
 			strobe = true; // maximize strobe pulse time
 			show = false;
-			uint16_t drawn_pos = 2 << pos; 
+			uint16_t drawn_pos = 3 << pos; 
 			GPIOB->ODR = (GPIOB->ODR & 0xfff0) | (row & 0x000f);
 			if (++row == FB::stb_lines) {
 				row = 0;
