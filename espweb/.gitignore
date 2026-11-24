@@ -4,5 +4,6 @@ node_modules/*
 *.lock
 !yarn.lock
 yarn-error*
+.yarn/
 *.log
 cacerts.bin

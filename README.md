@@ -17,23 +17,25 @@ Code + designs for an LED sign display board powered by an STM32 and ESP8266. Ma
 
 ## Dependencies
 
-- A recent `arm-none-eabi-gcc` installation (suitably modern to deal with C++20; GCC 14 is what's tested)
-- A `xtensa-lx106-elf-gcc` that can deal with C++20; preferably version 13.2.0 (which was available at one point in debian)
-  - A suitable newlib/libstdc++ archive is available in `Dockerfile.build`
+- A recent `arm-none-eabi-gcc` installation (suitably modern; currently tested against GCC 15, you need at least C++20)
+- A recent `xtensa-esp8266-elf-gcc` (the 'experimental' compiler provided by recent Espressif releases, again you need C++20 support and functioning newlib; we use GCC 16)
 - Python 3 and the packages in `requirements.txt`
   - If you aren't building the `espweb` directory you do not require the `cryptography` package listed
+- CMake (version 3.13 or later is recommended - probably not too much later since the ESP8266 RTOS SDK is old and CMake will probably eventually drop support for its archaisms)
 - OpenOCD (for flashing)
-  - If you have PlatformIO installed we use its OpenOCD by default, so you may not need to install it system-wide.
-- CMake (version 3.13 or later is recommended)
 - `quilt`, to apply the patches in `vendor` for the ESP8266 SDK
 
 and everything checked out in the `vendor` directory. The ESP8266 SDK also usually requests you have python (specifically _system_ python, whatever runs from `python`) installed with it's requirements (`vendor/ESP8266_RTOS_SDK/requirements.txt`)
+Once you've checked out the submodules, apply the quilt patch stack to get the ESP8266's SDK in a state where it will cooperate.
 
 A Docker file with these is provided as `Dockerfile.build`.
 
 For building the `espweb` you also need:
 
-- yarn
-- node 
+- yarn (v4)
+- node (25 or later)
 
-A Docker file with _these_ is also provided as `Dockerfile.webbuild`
+A Docker file with _these_ is also provided as `Dockerfile.webbuild`; which also has a python install with the correct dependencies to be able to build the CA cert archives (basically everything
+necessary on the SD card)
+
+In general, the Jenkins is setup to autobuild everything, so whatever it does should work.
